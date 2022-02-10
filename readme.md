@@ -7,7 +7,7 @@ taking
 Note: much of the autopilot code was taking from https://github.com/skai2/EDAutopilot , many of the routines were turned into classes and tweaks were done on sequences
  and how image matching was performed.   Kudo's to skai2mail@gmail.com
  
-Also Note: This repository is provided for educational purposes and as a in depth programming example of interacting with file based data, computer vision processing, user feedback via voice, win32 integration using python, threading interaction, and python classes.  
+Also Note: This repository is provided for educational purposes as a in depth programming example of interacting with file based data, computer vision processing, user feedback via voice, win32 integration using python, threading interaction, and python classes.  
 
 # Constraints:
 * Will only work with Windows (not Linux)
