@@ -79,7 +79,9 @@ class EDKeys:
             'Key_LeftAlt':'LAlt',
             'Key_RightAlt':'RAlt',
             'Key_LeftControl':'LControl',
-            'Key_RightControl':'RControl'
+            'Key_RightControl':'RControl',
+            'Key_LeftBracket':'LBracket',
+            'Key_RightBracket':'RBracket'
         }
         
         latest_bindings = self.get_latest_keybinds()
