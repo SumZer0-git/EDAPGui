@@ -107,6 +107,9 @@ If you encounter any issues during pip install, try running:
 > python -m pip install -r requirements.txt
 instead of > pip install -r requirements.txt
 
+If you are going to run dist/EDAPGui.exe, you need to have the template directory so your path would be ./templates/<file>
+
+
 ## WARNING:
 
 Use at your own risk.  Have performed over 2000 FSD jumps with this autopilot and have aborted the FSD Assist
