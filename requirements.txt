@@ -1,0 +1,12 @@
+auto_mix_prep==0.2.0
+colorlog==6.5.0
+keyboard==0.13.5
+kthread==0.2.2
+logger==1.4
+numpy==1.21.2
+opencv_python==4.5.5.62
+Pillow==9.0.1
+PyAutoGUI==0.9.53
+pyttsx3==2.90
+pywin32==302
+win32gui==221.6
