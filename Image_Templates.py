@@ -2,6 +2,7 @@ import sys
 from os.path import abspath, getmtime, isfile, join
 
 import cv2
+from EDlogger import logger
 
 """
 File:Image_Templates.py    
@@ -37,6 +38,7 @@ class Image_Templates:
     #  return image and size info    
     def load_template(self, file_name, scaleX, scaleY):
         template = cv2.imread(self.resource_path(file_name), cv2.IMREAD_GRAYSCALE)
+        logger.debug("File:"+self.resource_path(file_name)+" template:"+str(template))
         template = cv2.resize(template, (0, 0), fx=scaleX, fy=scaleY)
         width, height = template.shape[::-1]
         return {'image': template, 'width': width, 'height' : height}
@@ -45,7 +47,8 @@ class Image_Templates:
         """ Get absolute path to resource, works for dev and for PyInstaller """
         try:
             # PyInstaller creates a temp folder and stores path in _MEIPASS
-            base_path = sys._MEIPASS
+            #base_path = sys._MEIPASS
+            base_poath = path.dirname(__file__)
         except Exception:
             base_path = abspath(".")
 
