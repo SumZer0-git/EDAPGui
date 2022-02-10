@@ -77,6 +77,36 @@ Note: the autopilot.log file will capture any required keybindings that are not 
     indicate the % matched with the criteria for matching. Example:  0.55 > 0.5  means 55% match and the criteria
     is that it has to be > 50%, so in this case the match is true
     
+# Approach
+## FSD Assist FLow
+* When entering a new System, Speed to 0
+* Rotate left 90 degree and perform sun aviodance by pitching up until sun just below us
+  * this configuration puts the sun beneath us so we won't be suceptible to sun shining on our console making
+    image matching very difficult for the Compass
+* Accelerate to 100 for <some> seconds, speed to 50, fuel scooping will start
+* if our fuel is below a threshold (hardcode, need to lookup) then put speed to 0
+* Wait for refule complete or 35 sec elapsed
+* Accel back to 100, delay some seconds while we get away from Sun
+* Perform DSS on the System
+* if ELW Scanner enabled, go into FSS, do image matching in specific region looking for filled circle or frequence signal present
+  if so, log weather an Earth, Water or Ammonia world based on where the Signal is at in the image
+* Now do Nav align looking at the Compass on the console, perform roll and pitch based on Nav point in the compass
+* Then perform Target align (as the target should be pretty close in front of us) 
+* if reached destination system then determine if we have a target to a Station, if so, enable SC Assist
+  else have not reach destination so perform frame shift... 
+ 
+## SC Assist Flow
+* Loop 
+  * Do Target align, keeping is us a tight deadband on the target
+  * Do image match checking to see if SC Disengage pops up, if so, disengage
+* Accel for ~10sec... then put speed to 0
+* Do Left Menu... Left twice to get to Contact and the Right to request docking
+  * Do this up to 3 times
+  * if docking rejected, put that info in the log
+* if docking accepted, we are at speed 0 so let Docking Computer take over
+* wait for up to 120 sec for dock complete... then done
+*
+ 
 # Enhancement ideas
 * The Overlay.py is cool, would be nice to show the matched image on the actual ED screen
 * Handle ED in windowed mode
