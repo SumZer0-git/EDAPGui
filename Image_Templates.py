@@ -1,5 +1,5 @@
 import sys
-from os.path import abspath, getmtime, isfile, join
+from os.path import abspath, getmtime, isfile, join, dirname
 
 import cv2
 from EDlogger import logger
@@ -45,13 +45,13 @@ class Image_Templates:
 
     def resource_path(self,relative_path):
         """ Get absolute path to resource, works for dev and for PyInstaller """
-        try:
+        #try:
             # PyInstaller creates a temp folder and stores path in _MEIPASS
-            #base_path = sys._MEIPASS
-            base_poath = path.dirname(__file__)
-        except Exception:
-            base_path = abspath(".")
+        #    base_path = sys._MEIPASS
+        #except Exception:
+            #base_path = abspath(".")
 
+        base_path = abspath(".")
         return join(base_path, relative_path)
 
  

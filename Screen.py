@@ -34,7 +34,7 @@ class Screen:
         #self.scaleX = self.screen_width  / 3440.0
         self.scaleY = self.screen_height / 1440.0
         self.scaleX = self.scaleY
-        logger.warning('screen size: '+str(self.screen_width)+" "+str(self.screen_height))
+        logger.debug('screen size: '+str(self.screen_width)+" "+str(self.screen_height))
 
     # reg defines a box as a percentage of screen width and height
     def get_screen_region(self, reg):
