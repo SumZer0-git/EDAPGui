@@ -56,13 +56,13 @@ Note: the autopilot.log file will capture any required keybindings that are not 
     35 seconds it will abort and continue to next route point.  If fuel goes below 35%, the route assist
     will terminate
 * Supercruise Assist: will keep your ship pointed to target, you target can only be a station for
-    the autodocking to work.  If a settlement or obscured you will end up being kicked out of SC and
+    the autodocking to work.  If a settlement or target is obscured you will end up being kicked out of SC and
     probably have some damage.   When the SC Disenage appears the SC Assist will drop you out of SC
     and attempt request docking (after traveling closer to the Station), if docking granted it will
     put throttle to zero and the autodocking computer will take over
-* ELW Scanner: will perform FSS scans while FSD Assist is traveling between starts.  If the FSS
+* ELW Scanner: will perform FSS scans while FSD Assist is traveling between stars.  If the FSS
     shows a signal in the region of Earth, Water or Ammonia type worlds, it will announce that discovery
-    and log it into elw.txt file.  Note it does not do the scan, you would need to terminate FSD Assist
+    and log it into elw.txt file.  Note: it does not do the FSS scan, you would need to terminate FSD Assist
     and manually perform the detailed FSS scan to get credit.  Or come back later to the elw.txt file
     and go to those systems to perform additional detailed scanning. 
 * AFK Combat Assist: used with a AFK Combat ship in a Rez Zone.  It will detect if shields have
