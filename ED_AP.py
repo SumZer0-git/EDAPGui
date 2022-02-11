@@ -227,7 +227,7 @@ class EDAutopilot:
                 sstr = "Ammonia"
             # log the entry into the elw.txt file
             f = open("elw.txt", 'a')
-            f.write(self.jn.ship_state()["location"]+"  %(dot,sig): {0:6.2f}, {1:6.2f} ".format(maxVal, maxVal1)+sstr+" date: "+str(datetime.now())+str("\n"))
+            f.write(self.jn.ship_state()["location"]+", Type: "+sstr+", Probabilty: Cirle: {0:6.2f}, Signature: {1:6.2f} ".format(maxVal, maxVal1)+", date: "+str(datetime.now())+str("\n"))
             f.close
             self.vce.say(sstr+ " like world discovered ")
             logger.info(sstr+" world at: "+str(self.jn.ship_state()["location"]))
