@@ -18,7 +18,9 @@ Also Note: This repository is provided for educational purposes as a in depth pr
         is grabbed and the scaling factor for scaling down from 3440x1440 is calculated for the
         template images.  Could not test on many resolutions (don't have these others), but if setting the game to these 
         I know it doesn't work (images get squashed).  I.e. monitor is 3440x1440 yet game resolution is different causing the
-        template image scaling to be wrong
+        template image scaling to be wrong making matching difficult
+  * Field of View (Graphics->Display) setting plays here.  I run about 10-15% on the slider scale.  If you have a large FOV then the 
+    template images will likely be too large
 * Focus: ED must have focus when running, so you can't do other things on other windows if AP is active.
            If you change focus, then keyboard events will be sent to the focused window, can mess with the 
            window
@@ -92,16 +94,16 @@ Note: the autopilot.log file will capture any required keybindings that are not 
 * Rotate left 90 degree and perform sun aviodance by pitching up until sun just below us
   * this configuration puts the sun beneath us so we won't be suceptible to sun shining on our console making
     image matching very difficult for the Compass
-* Accelerate to 100 for <some> seconds, speed to 50, fuel scooping will start
+* Accelerate to 100 for "some #" of seconds, speed to 50, fuel scooping will start
 * if our fuel is below a threshold (hardcode, need to lookup) then put speed to 0
-* Wait for refule complete or 35 sec elapsed
+* If refuel required then wait for refuel complete or 35 sec elapsed
 * Accel back to 100, delay some seconds while we get away from Sun
 * Perform DSS on the System
 * if ELW Scanner enabled, go into FSS, do image matching in specific region looking for filled circle or frequency signal present.
   if so, log wether an Earth, Water or Ammonia world based on where the frequency signal is at in the image
 * Now do Nav align looking at the Compass on the console, perform roll and pitch based on Nav point in the compass
 * Then perform Target align (as the target should be pretty close in front of us) 
-* if reached destination system then determine, however if we still have a target to a Station, then auto-enable SC Assist
+* if reached destination system then terminate, however if we still have a target to a Station, then auto-enable SC Assist
   else have not reach destination, so issue FSD and loop 
  
 ## SC Assist Flow
@@ -114,7 +116,6 @@ Note: the autopilot.log file will capture any required keybindings that are not 
   * if docking rejected, put that info in the log
 * if docking accepted, we are at speed 0 so let Docking Computer take over
 * wait for up to 120 sec for dock complete... then done
-*
  
 # Enhancement ideas
 * A lot more error trapping needs to be put into the code
@@ -160,6 +161,9 @@ If you are going to run dist/EDAPGui.exe, you need to have the template director
    overshoot or undershoot.  The algorithm attempts to align the nav point on the Y axis (north or south, depending on which is closer)
  * Have seen a few cases where after doing refueling, depending on ship acceleration, we don't get away from Sun far enough before engaging FSD
    and can over heat
+ * Not much of a limitation, but if you in the core of the galaxy (high density stars), when pitching up for sun advoidance and the galaxy "edge" 
+   is right above the sun, the AP will continue to pitch up above that region due to "brightness" of the region.  So in that System there will be no
+   fuel scooping as would be too far away from Sun.  Luckily seems to only happen on occasionally and will fuel scoop in next system
                                                                
 ## Elite Dangerous, Role Play and Autopilot
 * I am a CMDR in the Elite Dangerous universe and I have a trusty Diamondback Explorer
@@ -167,7 +171,7 @@ If you are going to run dist/EDAPGui.exe, you need to have the template director
   up hours and hours manually performing Sun avoidance just to jump to the next system.  
 * In a nutshell, Lakon Spaceways lacks vision.  Heck, they provide Autopilot for docking, undocking, and Supercruise but can't provide
   a simple route AP?   Geezzz
-* Well, I have my trusty person computing device that has vision processing capability, has ability to inteface with my Diamondback Explorer Flight Computer 
+* Well, I have my trusty personal quantum-based computing device (roughly 10TeraHz CPU, 15 Petabyte RAM), which is the size of a credit-card, that has vision processing capability, has ability to inteface with my Diamondback Explorer Flight Computer 
   so I'm going to develop my own autopilot.   This falls under the "consumers right to enhance", signed into law in the year 3301 and ratified by all the Galatic powers
 * So CMDRs, lets enhance our ships so we can get some sleep and do real work as opposed to hours of maneuvering around Suns
 
