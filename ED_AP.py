@@ -210,9 +210,9 @@ class EDAutopilot:
         if self.cv_view:
             self.draw_match_rect(elw_image, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1) 
             self.draw_match_rect(elw_image, maxLoc1, (maxLoc1[0]+15,maxLoc1[1]+25), (255,255,55), 1)  
-            cv2.putText(elw_image, f'{maxVal:5.2f}> .60', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(elw_image, f'{maxVal:5.2f}> .60', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.2, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('fss', elw_image)
-            cv2.moveWindow('fss', self.cv_view_x,self.cv_view_y) 
+            cv2.moveWindow('fss', self.cv_view_x,self.cv_view_y+100) 
             cv2.waitKey(10)
 
         logger.info("in elw detector:{0:6.2f} ".format(maxVal)+ " sig:{0:6.2f}".format(maxVal1))
@@ -295,7 +295,7 @@ class EDAutopilot:
             self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
             cv2.putText(dis_image, f'{maxVal:5.2f} >.50', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('disengage', dis_image)
-            cv2.moveWindow('disengage', self.cv_view_x,self.cv_view_y+200)
+            cv2.moveWindow('disengage', self.cv_view_x,self.cv_view_y+220)
             cv2.waitKey(1)
 
         logger.debug("Disenage = "+str(maxVal))
@@ -642,7 +642,7 @@ class EDAutopilot:
             logger.debug('position=scanning')
             self.keys.send('SecondaryFire', state=1)
             
-        sleep(10)
+        sleep(15)
 
         # stop pressing the Scanner button
         if scan == 1:
