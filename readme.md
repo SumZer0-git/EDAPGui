@@ -26,6 +26,8 @@ Also Note: This repository is provided for educational purposes as a in depth pr
          see:  https://forums.frontier.co.uk/threads/supercruise-handling-of-ships.396845/
 * Route Star:  Good idea to restrict your route Stars to 'KGB FOAM' type stars for scooping 
 * Detailed Scanner must be mapped to firebutton 1 
+* The Left Panel (Navigation) must be on the Navigation tab as the script assumes so.  It will be reset after a FSD jump back to Nav,
+  but if in SC Assist, need to ensure it is configured there to support docking request
 * Must install needed packages:  pip install -r requirements.txt
 * "Advanced Autodocking" module must be outfitted on ship
 * The ELW Scanner may have issues for you, the screen region (defined in Screen_Region.py) isolates the region to where Earth, Water, and Ammonia
@@ -88,20 +90,20 @@ Note: the autopilot.log file will capture any required keybindings that are not 
 * Wait for refule complete or 35 sec elapsed
 * Accel back to 100, delay some seconds while we get away from Sun
 * Perform DSS on the System
-* if ELW Scanner enabled, go into FSS, do image matching in specific region looking for filled circle or frequence signal present
-  if so, log weather an Earth, Water or Ammonia world based on where the Signal is at in the image
+* if ELW Scanner enabled, go into FSS, do image matching in specific region looking for filled circle or frequency signal present.
+  if so, log wether an Earth, Water or Ammonia world based on where the frequency signal is at in the image
 * Now do Nav align looking at the Compass on the console, perform roll and pitch based on Nav point in the compass
 * Then perform Target align (as the target should be pretty close in front of us) 
-* if reached destination system then determine if we have a target to a Station, if so, enable SC Assist
-  else have not reach destination so perform frame shift... 
+* if reached destination system then determine, however if we still have a target to a Station, then auto-enable SC Assist
+  else have not reach destination, so issue FSD and loop 
  
 ## SC Assist Flow
 * Loop 
   * Do Target align, keeping is us a tight deadband on the target
-  * Do image match checking to see if SC Disengage pops up, if so, disengage
-* Accel for ~10sec... then put speed to 0
-* Do Left Menu... Left twice to get to Contact and the Right to request docking
-  * Do this up to 3 times
+  * Do image match checking to see if SC Disengage pops up, if so, break loop
+* Accel for ~10sec... then put speed to 0 (this put us < 7.5km)
+* Do Left Menu... Right twice to get to Contact and the Right to request docking
+  * Do this up to 3 times, if needed
   * if docking rejected, put that info in the log
 * if docking accepted, we are at speed 0 so let Docking Computer take over
 * wait for up to 120 sec for dock complete... then done
