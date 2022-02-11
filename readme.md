@@ -70,7 +70,10 @@ Note: the autopilot.log file will capture any required keybindings that are not 
     shows a signal in the region of Earth, Water or Ammonia type worlds, it will announce that discovery
     and log it into elw.txt file.  Note: it does not do the FSS scan, you would need to terminate FSD Assist
     and manually perform the detailed FSS scan to get credit.  Or come back later to the elw.txt file
-    and go to those systems to perform additional detailed scanning. 
+    and go to those systems to perform additional detailed scanning. The elw.txt file looks like:<br>
+      _Oochoss BL-M d8-3  %(dot,sig):   0.39,   0.79 Ammonia date: 2022-01-22 11:17:51.338134<br>
+       Slegi BG-E c28-2  %(dot,sig):   0.36,   0.75 Water date: 2022-01-22 11:55:30.714843<br>
+       Slegi TM-L c24-4  %(dot,sig):   0.31,   0.85 Earth date: 2022-01-22 12:04:47.527793<br>_
 * AFK Combat Assist: used with a AFK Combat ship in a Rez Zone.  It will detect if shields have
     dropped and if so, will boost away and go into supercruise for ~10sec... then drop, put pips to
     system and weapons and deploy fighter, then terminate.  While in the Rez Zone, if your fighter has
