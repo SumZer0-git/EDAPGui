@@ -149,6 +149,12 @@ instead of > pip install -r requirements.txt
 
 If you are going to run dist/EDAPGui.exe, you need to have the template directory so your path would be ./templates/<file>
 
+## Known Limitations
+ * As described in the constraints, if you jump into a system with 2 suns next to each other, will likely over heat and drop from Supercruis
+ * The target alignment goal is to perform 1 roll and 1 pitch action to align close to taget.  If you have wrong rates for your ship then you will
+   overshoot or undershoot.  The algorithm attempts to align the nav point on the Y axis (north or south, depending on which is closer)
+ * Have seen a few cases where after doing refueling, depending on ship acceleration, we don't get away from Sun far enough before engaging FSD
+   and can over heat
 
 ## WARNING:
 
