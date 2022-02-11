@@ -168,7 +168,7 @@ If you are going to run dist/EDAPGui.exe, you need to have the template director
   up hours and hours manually performing Sun avoidance just to jump to the next system.  
 * In a nutshell, Lakon Spaceways lacks vision.  Heck, they provide Autopilot for docking, undocking, and Supercruise but can't provide
   a simple route AP?   Geezzz
-* Well, I have my trusty person computing device that has vision processing capability, has ability to inteface with my Diamondback Explorer Flight Computer 
+* Well, I have my trusty personal quantum-based computing device (roughly 10TeraHz CPU, 15 Petabyte RAM), which is the size of a credit-card, that has vision processing capability, has ability to inteface with my Diamondback Explorer Flight Computer 
   so I'm going to develop my own autopilot.   This falls under the "consumers right to enhance", signed into law in the year 3301 and ratified by all the Galatic powers
 * So CMDRs, lets enhance our ships so we can get some sleep and do real work as opposed to hours of maneuvering around Suns
 
