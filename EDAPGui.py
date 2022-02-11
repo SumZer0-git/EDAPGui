@@ -133,18 +133,22 @@ class APGui():
     def start_fsd(self):
         self.ed_ap.set_fsd_assist(True)
         self.FSD_A_running = True
+        self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": Route Assist start" )   
 
     def stop_fsd(self):
         self.ed_ap.set_fsd_assist(False)
         self.FSD_A_running = False
+        self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": Route Assist terminate" )   
        
     def start_sc(self):
         self.ed_ap.set_sc_assist(True)
         self.SC_A_running = True
+        self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": SC Assist start" )   
 
     def stop_sc(self):
         self.ed_ap.set_sc_assist(False)
         self.SC_A_running = False
+        self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": SC Assist terminate" )   
    
     def about(self):
         messagebox.showinfo('Autopilot', 'Autopilot')
@@ -266,11 +270,13 @@ class APGui():
         if field == 'AFK Combat Assist':
             if self.checkboxvar['AFK Combat Assist'].get() == 1:
                 self.ed_ap.set_afk_combat_assist(True)
+                self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": AFK Combat Assist start" )  
                 self.lab_ck['FSD Route Assist'].config(state='disabled')
                 self.lab_ck['Supercruise Assist'].config(state='disabled')
                 
             elif self.checkboxvar['AFK Combat Assist'].get() == 0:
                 self.ed_ap.set_afk_combat_assist(False)
+                self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": AFK Combat Assist stop" )  
                 self.lab_ck['FSD Route Assist'].config(state='active')
                 self.lab_ck['Supercruise Assist'].config(state='active')
 
