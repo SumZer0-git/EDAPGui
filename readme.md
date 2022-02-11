@@ -178,7 +178,7 @@ If you are going to run dist/EDAPGui.exe, you need to have the template director
 ## WARNING:
 
 Use at your own risk.  Have performed over 2000 FSD jumps with this autopilot and have aborted the FSD Assist
-about 6 times due to jumping into a system that had 2 suns next to each out and pretty much the ship overheated
+about 6 times due to jumping into a system that had 2 suns next to each other and pretty much the ship overheated
 and dropped out of supercruise.   The ship did not get destroyed but had to use a heat sink to get out of the
 situation
 
