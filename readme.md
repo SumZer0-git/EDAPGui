@@ -157,6 +157,16 @@ If you are going to run dist/EDAPGui.exe, you need to have the template director
    overshoot or undershoot.  The algorithm attempts to align the nav point on the Y axis (north or south, depending on which is closer)
  * Have seen a few cases where after doing refueling, depending on ship acceleration, we don't get away from Sun far enough before engaging FSD
    and can over heat
+                                                               
+## Elite Dangerous, Role Play and Autoplit
+* I am a CMDR in the Elite Dangerous universe and I have a trusty Diamondback Explorer
+* In my travels out into the black I have become frustrated with my flight computers abilities.  I don't want to stay
+  up hours and hours manually performing Sun avoidance just to jump to the next system.  
+* In a nutshell, Lakon Spaceways lacks vision.  Heck, they provide Autopilot for docking, undocking, and Supercruise but can't provide
+  a simple route AP?   Geezzz
+* Well, I have my trusty person computing device that has vision processing capability, has ability to inteface with my Diamondback Explorer Flight Computer 
+  so I'm going to develop my own autopilot.   This falls under the "consumers right to enhance", signed into law in the year 3301 and ratified by all the Galatic powers
+* So CMDRs, lets enhance our ships so we can get some sleep and do real work as opposed to hours of maneuvering around Suns
 
 ## WARNING:
 
