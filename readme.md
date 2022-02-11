@@ -18,7 +18,9 @@ Also Note: This repository is provided for educational purposes as a in depth pr
         is grabbed and the scaling factor for scaling down from 3440x1440 is calculated for the
         template images.  Could not test on many resolutions (don't have these others), but if setting the game to these 
         I know it doesn't work (images get squashed).  I.e. monitor is 3440x1440 yet game resolution is different causing the
-        template image scaling to be wrong
+        template image scaling to be wrong making matching difficult
+  * Field of View (Graphics->Display) setting plays here.  I run about 10-15% on the slider scale.  If you have a large FOV then the 
+    template images will likely be too large
 * Focus: ED must have focus when running, so you can't do other things on other windows if AP is active.
            If you change focus, then keyboard events will be sent to the focused window, can mess with the 
            window
