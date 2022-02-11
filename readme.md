@@ -170,5 +170,7 @@ situation
 sumzer0@yahoo.com
 
 
-# Screen Shots
+# Screen Shot
 ![Alt text](screen/screen_cap.png?raw=true "Screen")
+                                                               
+Short video: https://www.youtube.com/watch?v=Ym90oVhwVzc
