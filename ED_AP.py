@@ -210,7 +210,7 @@ class EDAutopilot:
         if self.cv_view:
             self.draw_match_rect(elw_image, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1) 
             self.draw_match_rect(elw_image, maxLoc1, (maxLoc1[0]+15,maxLoc1[1]+25), (255,255,55), 1)  
-            cv2.putText(elw_image, f'{maxVal:5.2f}> .60', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.2, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(elw_image, f'{maxVal1:5.2f}> .60', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.2, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('fss', elw_image)
             cv2.moveWindow('fss', self.cv_view_x,self.cv_view_y+100) 
             cv2.waitKey(10)
