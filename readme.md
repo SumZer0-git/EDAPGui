@@ -94,16 +94,16 @@ Note: the autopilot.log file will capture any required keybindings that are not 
 * Rotate left 90 degree and perform sun aviodance by pitching up until sun just below us
   * this configuration puts the sun beneath us so we won't be suceptible to sun shining on our console making
     image matching very difficult for the Compass
-* Accelerate to 100 for <some> seconds, speed to 50, fuel scooping will start
+* Accelerate to 100 for "some #" of seconds, speed to 50, fuel scooping will start
 * if our fuel is below a threshold (hardcode, need to lookup) then put speed to 0
-* Wait for refule complete or 35 sec elapsed
+* If refuel required then wait for refuel complete or 35 sec elapsed
 * Accel back to 100, delay some seconds while we get away from Sun
 * Perform DSS on the System
 * if ELW Scanner enabled, go into FSS, do image matching in specific region looking for filled circle or frequency signal present.
   if so, log wether an Earth, Water or Ammonia world based on where the frequency signal is at in the image
 * Now do Nav align looking at the Compass on the console, perform roll and pitch based on Nav point in the compass
 * Then perform Target align (as the target should be pretty close in front of us) 
-* if reached destination system then determine, however if we still have a target to a Station, then auto-enable SC Assist
+* if reached destination system then terminate, however if we still have a target to a Station, then auto-enable SC Assist
   else have not reach destination, so issue FSD and loop 
  
 ## SC Assist Flow
@@ -116,7 +116,6 @@ Note: the autopilot.log file will capture any required keybindings that are not 
   * if docking rejected, put that info in the log
 * if docking accepted, we are at speed 0 so let Docking Computer take over
 * wait for up to 120 sec for dock complete... then done
-*
  
 # Enhancement ideas
 * A lot more error trapping needs to be put into the code
