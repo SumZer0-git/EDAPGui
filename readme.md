@@ -158,7 +158,7 @@ If you are going to run dist/EDAPGui.exe, you need to have the template director
  * Have seen a few cases where after doing refueling, depending on ship acceleration, we don't get away from Sun far enough before engaging FSD
    and can over heat
                                                                
-## Elite Dangerous, Role Play and Autoplit
+## Elite Dangerous, Role Play and Autopilot
 * I am a CMDR in the Elite Dangerous universe and I have a trusty Diamondback Explorer
 * In my travels out into the black I have become frustrated with my flight computers abilities.  I don't want to stay
   up hours and hours manually performing Sun avoidance just to jump to the next system.  
