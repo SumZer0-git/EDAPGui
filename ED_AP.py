@@ -642,6 +642,7 @@ class EDAutopilot:
             logger.debug('position=scanning')
             self.keys.send('SecondaryFire', state=1)
             
+        # need time to get away from the Sun so heat will disipate before we use FSD
         sleep(15)
 
         # stop pressing the Scanner button
@@ -652,8 +653,9 @@ class EDAutopilot:
             logger.debug('position=scanning complete')
             self.keys.send('SecondaryFire', state=0)
         
+        # since we were at 0 speed for refueling, lets give more time to get away from Sun
         if (did_refuel):
-            sleep(4)
+            sleep(5)
 
         # TODO: skip until figure out better way of defining the region
         if self.fss_scan_enabled == True:
