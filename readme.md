@@ -110,6 +110,12 @@ Note: the autopilot.log file will capture any required keybindings that are not 
 *
  
 # Enhancement ideas
+* A lot more error trapping needs to be put into the code
+  * since I do exception trapping for uncaught exception at the top, I can create a set of my own exceptions
+    and depending on what exception was raised could put the vehicle in appropriate safe condition
+* Saw forks on skai's repo, some good stuff.  I like the route planning (route plan in file and it parses it)
+  * explore other peoples updates.  Can't push this back to skai's repo because most of this is a re-write.
+    Need to put more config items in a config file to be read at startup
 * The Overlay.py is cool, would be nice to show the matched image on the actual ED screen
 * Handle ED in windowed mode
 * Handle other screen resolutions
