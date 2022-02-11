@@ -102,7 +102,9 @@ class APGui():
         elif key == 'sc_start':
             self.checkboxvar['Supercruise Assist'].set(1)
             self.check_cb('Supercruise Assist')
-            pass        
+        elif key == 'afk_stop':
+            self.checkboxvar['AFK Combat Assist'].set(0)
+            self.check_cb('AFK Combat Assist')       
         elif key == 'jumpcount':
             self.update_jumpcount(body)
         elif key == 'statusline':

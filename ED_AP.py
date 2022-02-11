@@ -916,7 +916,10 @@ class EDAutopilot:
         self.fss_scan_enabled = enable
         
     def set_afk_combat_assist(self, enable=True):
+        if enable == False and self.afk_combat_assist_enabled == True:
+            self.ctype_async_raise(self.ap_thread,EDAP_Interrupt)
         self.afk_combat_assist_enabled = enable
+
 
     def set_cv_view(self, enable=True, x=0, y=0):
         self.cv_view = enable
@@ -987,8 +990,12 @@ class EDAutopilot:
             elif self.afk_combat_assist_enabled == True:
                 #self.afk_combat_assist_enabled = False
                 #self.ap_ckb('<TOADD>')
-                self.afk_combat_loop()
-                pass
+                try:
+                    self.afk_combat_loop()
+                except EDAP_Interrupt:
+                    logger.debug("Stopping afk_combat")               
+                self.afk_combat_assist_enabled = False
+                self.ap_ckb('afk_stop')
 
             sleep(1)
 
