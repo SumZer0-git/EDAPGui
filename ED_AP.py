@@ -208,10 +208,11 @@ class EDAutopilot:
         #self.overlay.overlay_paint()           
      
         if self.cv_view:
-            self.draw_match_rect(elw_image, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1) 
-            self.draw_match_rect(elw_image, maxLoc1, (maxLoc1[0]+15,maxLoc1[1]+25), (255,255,55), 1)  
-            cv2.putText(elw_image, f'{maxVal1:5.2f}> .60', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.imshow('fss', elw_image)
+            elw_image_d = elw_image.copy()
+            self.draw_match_rect(elw_image_d, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1) 
+            self.draw_match_rect(elw_image_d, maxLoc1, (maxLoc1[0]+15,maxLoc1[1]+25), (255,255,55), 1)  
+            #cv2.putText(elw_image_d, f'{maxVal1:5.2f}> .60', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.imshow('fss', elw_image_d)
             cv2.moveWindow('fss', self.cv_view_x,self.cv_view_y+100) 
             cv2.waitKey(10)
 
@@ -643,7 +644,7 @@ class EDAutopilot:
             self.keys.send('SecondaryFire', state=1)
             
         # need time to get away from the Sun so heat will disipate before we use FSD
-        sleep(15)
+        sleep(10)
 
         # stop pressing the Scanner button
         if scan == 1:

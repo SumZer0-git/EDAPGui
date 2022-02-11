@@ -138,7 +138,7 @@ class APGui():
     def stop_fsd(self):
         self.ed_ap.set_fsd_assist(False)
         self.FSD_A_running = False
-        self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": Route Assist terminate" )   
+        self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": Route Assist stop" )   
        
     def start_sc(self):
         self.ed_ap.set_sc_assist(True)
@@ -148,7 +148,7 @@ class APGui():
     def stop_sc(self):
         self.ed_ap.set_sc_assist(False)
         self.SC_A_running = False
-        self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": SC Assist terminate" )   
+        self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": SC Assist stop" )   
    
     def about(self):
         messagebox.showinfo('Autopilot', 'Autopilot')
