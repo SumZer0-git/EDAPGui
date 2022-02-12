@@ -694,10 +694,10 @@ class EDAutopilot:
         sleep(10)
 
         # stop pressing the Scanner button
-        if scan == 1:
+        if self.config['DSSButton'] == 'Primary':
             logger.debug('position=scanning complete')
             self.keys.send('PrimaryFire', state=0)
-        elif scan == 2:
+        else: 
             logger.debug('position=scanning complete')
             self.keys.send('SecondaryFire', state=0)
         
@@ -814,7 +814,7 @@ class EDAutopilot:
                 sleep(1)
             logger.debug('refuel=complete')
             return True
-        elif self.jn.ship_state()['fuel_percent'] >= refuel_threshold:
+        elif self.jn.ship_state()['fuel_percent'] >= self.config['RefuelThreshold']:
             logger.debug('refuel= not needed')
             return False
         elif self.jn.ship_state()['star_class'] not in scoopable_stars:
