@@ -25,7 +25,7 @@ class Screen_Regions:
         self.reg = {}
         # TODO: Consider how to handle diff screen resolutions better
         # regions with associatzed filter and color ranges
-        self.reg['compass']   = {'rect': [0.33, 0.60, 0.46, 0.97], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
+        self.reg['compass']   = {'rect': [0.33, 0.65, 0.46, 0.97], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
         self.reg['target']    = {'rect': [0.33, 0.27, 0.66, 0.70], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.orange_2_color_range}   # also called destination
         self.reg['sun']       = {'rect': [0.33, 0.33, 0.66, 0.66], 'width': 1, 'height': 1, 'filterCB': self.filter_sun, 'filter': None}
         self.reg['disengage'] = {'rect': [0.42, 0.70, 0.58, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.blue_color_range}               

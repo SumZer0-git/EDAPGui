@@ -126,9 +126,9 @@ class APGui():
 
     # this routine is to stop any current autopilot activity 
     def stop_all_assists(self):
-        self.stop_fsd()
-        self.stop_sc()
-        #self.stop_afk()
+        self.callback('fsd_stop')
+        self.callback('sc_stop')  
+        self.callback('afk_stop')        
 
     def start_fsd(self):
         self.ed_ap.set_fsd_assist(True)

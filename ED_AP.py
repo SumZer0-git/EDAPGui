@@ -167,7 +167,7 @@ class EDAutopilot:
             #cv2.imshow('nav', navpt_image)
             cv2.moveWindow('compass', self.cv_view_x, self.cv_view_y) 
             #cv2.moveWindow('nav', self.cv_view_x, self.cv_view_y) 
-            cv2.waitKey(10)
+            cv2.waitKey(30)
 
         # must be > 0.80 to have solid hit, otherwise we are facing wrong way (empty circle)
         if n_maxVal < 0.80:
@@ -214,7 +214,7 @@ class EDAutopilot:
             #cv2.putText(elw_image_d, f'{maxVal1:5.2f}> .60', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('fss', elw_image_d)
             cv2.moveWindow('fss', self.cv_view_x,self.cv_view_y+100) 
-            cv2.waitKey(10)
+            cv2.waitKey(30)
 
         logger.info("in elw detector:{0:6.2f} ".format(maxVal)+ " sig:{0:6.2f}".format(maxVal1))
 
@@ -262,20 +262,20 @@ class EDAutopilot:
         if self.cv_view:
             try:
                 self.draw_match_rect(dst_image, pt, (pt[0] + width, pt[1] + height), (255,255,255), 2)
-                dim = (int(destination_width/3), int(destination_height/3))
+                dim = (int(destination_width/2), int(destination_height/2))
 
                 img = cv2.resize(dst_image, dim, interpolation =cv2.INTER_AREA)
-                cv2.putText(img, f'{maxVal:5.2f} >.55', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                cv2.putText(img, f'{maxVal:5.2f} >.54', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
                 cv2.imshow('target', img)
                 #cv2.imshow('tt', scr_reg.templates.template['target']['image'])
                 cv2.moveWindow('target', self.cv_view_x,self.cv_view_y+400)
             except Exception as e:
                 print("exception in getdest: "+str(e))
-            cv2.waitKey(10)
+            cv2.waitKey(30)
 
     #   print (maxVal)
         # must be > 0.55 to have solid hit, otherwise we are facing wrong way (empty circle)
-        if maxVal < 0.55:
+        if maxVal < 0.54:
             result = None    
         else:
             result = {'x':final_x, 'y':final_y}
