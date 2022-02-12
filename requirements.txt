@@ -9,4 +9,4 @@ Pillow==9.0.1
 PyAutoGUI==0.9.53
 pyttsx3==2.90
 pywin32==302
-win32gui==221.6
+win32gui
