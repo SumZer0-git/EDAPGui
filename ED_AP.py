@@ -973,8 +973,8 @@ class EDAutopilot:
                     self.ap_ckb("sc_start")
                     
                 # drop all out debug windows
-                cv2.destroyAllWindows()
-                cv2.waitKey(10)
+                #cv2.destroyAllWindows()
+                #cv2.waitKey(10)
 
             elif self.sc_assist_enabled == True:
                 logger.debug("Running sc_assist")
