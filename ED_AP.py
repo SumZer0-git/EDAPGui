@@ -46,6 +46,9 @@ class EDAutopilot:
             "RefuelThreshold": 65,
             "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
             "WaitForAutoDockTimer": 120,
+            "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
+            "HotKey_StartSC": "ins",       # to determine other keynames, make sure these are not used in ED
+            "HotKey_StopAllAssists": "end",
             "DiscordWebhook": False,       # discord not implemented yet
             "DiscordWebhookURL": "",
             "DiscordUserID": "",

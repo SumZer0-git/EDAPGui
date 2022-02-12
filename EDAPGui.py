@@ -57,7 +57,6 @@ class APGui():
         
         self.ed_ap = EDAutopilot(cb=self.callback)
      
-
         self.checkboxvar = {}
         self.entries = {}
         self.lab_ck = {}
@@ -81,9 +80,10 @@ class APGui():
 
         # global trap for these keys, the 'end' key will stop any current AP action
         # the 'home' key will start the FSD Assist.  May want another to start SC Assist
-        keyboard.add_hotkey('end',  self.stop_all_assists)
-        keyboard.add_hotkey('home', self.callback, args =('fsd_start', None))
-        keyboard.add_hotkey('ins',  self.callback, args =('sc_start',  None))
+
+        keyboard.add_hotkey(self.ed_ap.config['HotKey_StopAllAssists'],  self.stop_all_assists)
+        keyboard.add_hotkey(self.ed_ap.config['HotKey_StartFSD'], self.callback, args =('fsd_start', None))
+        keyboard.add_hotkey(self.ed_ap.config['HotKey_StartSC'],  self.callback, args =('sc_start',  None))
  
 
     # callback from the EDAP, to configure GUI items
