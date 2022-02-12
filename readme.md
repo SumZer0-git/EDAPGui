@@ -13,11 +13,11 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * Will only work with Windows (not Linux)
 * Borderless Elite Dangerous (ED) configuration required,  Windowed does not work due to how the screen is grabbed
 * Screen Resolution/scale X, Y:  The templates were captured on a 3440x1440 resolution/game configuration.  These need to be scaled
-  for different resolutions.  the _config-resolution.json_ file captures these resolutions with the ScaleX, Y values.  If a resolution is not defined
+  for different resolutions.  The _config-resolution.json_ file captures these resolutions with the corresponding ScaleX, Y values.  If a resolution is not defined
   for your monitor the code will attempt to divide /3440  and /1440 to get the scale factor (not likely to be correct)
   * You will know if the scale factor is correct by enabling CV View and enabling FSD Assist, in the popup Compass window the AP will attempt to 
-    match the compass. The match size (bounding box) should look like the picture at the bottom of this readme.   If smaller or larger the scale factors
-    need to be updated.  Note:  tested all but the 1080x1080 resolution as my monitor does not support.
+    match the compass. The match size (bounding box) should look like the picture at the bottom of this readme.  The box represents the template image size.
+    If smaller or larger then the scale factors need to be updated.  Note:  tested all resolutions except the 1080x1080 as my monitor does not support.
   * Field of View (Graphics->Display) setting plays here.  I run about 10-15% on the slider scale.  If you have a large FOV then the 
     template images will likely be too large
 * Focus: ED must have focus when running, so you can't do other things on other windows if AP is active.
