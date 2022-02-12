@@ -29,7 +29,10 @@ Also Note: This repository is provided for educational purposes as a in depth pr
          see:  https://forums.frontier.co.uk/threads/supercruise-handling-of-ships.396845/
 * Route Star Type:  Must use KGB FOAM type stars for routing.  Otherwise might end up in a System with a dull Sun which would circumvent this sun advoidance
     algorithm (expects a certain level of brightness)
-* Detailed Scanner must be mapped to firebutton 1 
+* Routing: If using Economical Route setting, then may run into problems in jumping.  With Economical, the Stars may not be on the "other-side" of the 
+  Sun as with Fastest routing.
+  As such, when rolling toward the Target, the Sun may fade the console making Compass matching difficult.  Need to think through this one more.  The Sun shining on the 
+  console kills the matching.  You can see that if you enable CV View
 * The Left Panel (Navigation) must be on the Navigation tab as the script assumes so.  It will be reset after a FSD jump back to Nav,
   but if in SC Assist, need to ensure it is configured there to support docking request
 * Must install needed packages:  pip install -r requirements.txt
