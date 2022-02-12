@@ -1,0 +1,15 @@
+{
+    "DSSButton": "Primary",
+    "JumpTries": 3,
+    "NavAlignTries": 3,
+    "RefuelThreshold": 65,
+    "FuelThreasholdAbortAP": 10,
+    "WaitForAutoDockTimer": 120,
+    "DiscordWebhook": false,
+    "DiscordWebhookURL": "",
+    "DiscordUserID": "",
+    "VoiceID": 0,
+    "LogDEBUG": false,
+    "LogINFO": true
+}
+
