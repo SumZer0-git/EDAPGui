@@ -82,7 +82,7 @@ class Screen:
         try:
             with open(fileName,"w") as fp:
                 json.dump(data,fp, indent=4)
-        except:
+        except Exception as e:
             logger.warning("Screen.py write_config error:"+str(e))
 
     def read_config(self, fileName='./config-resolution.json'):
