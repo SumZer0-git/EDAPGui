@@ -12,13 +12,12 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 # Constraints:
 * Will only work with Windows (not Linux)
 * Borderless Elite Dangerous (ED) configuration required,  Windowed does not work due to how the screen is grabbed
-* Screen Resolution that works:  3440x1440, 1920x1080, 2560x1080, resolutions that do not work: 1920x1200, 1920x1440, 2560x1440
-  * To use these none working resolutions you have to change the scaleX, scaleY in Screen.py 
-  * Reason: The Image Templates were generated via 3440x1440 screen, at startup the screen size
-        is grabbed and the scaling factor for scaling down from 3440x1440 is calculated for the
-        template images.  Could not test on many resolutions (don't have these others), but if setting the game to these 
-        I know it doesn't work (images get squashed).  I.e. monitor is 3440x1440 yet game resolution is different causing the
-        template image scaling to be wrong making matching difficult
+* Screen Resolution/scale X, Y:  The templates were captured on a 3440x1440 resolution/game configuration.  These need to be scaled
+  for different resolutions.  the _config-resolution.json_ file captures these resolutions with the ScaleX, Y values.  If a resolution is not defined
+  for your monitor the code will attempt to divide /3440  and /1440 to get the scale factor (not likely to be correct)
+  * You will know if the scale factor is correct by enabling CV View and enabling FSD Assist, in the popup Compass window the AP will attempt to 
+    match the compass. The match size (bounding box) should look like the picture at the bottom of this readme.   If smaller or larger the scale factors
+    need to be updated.  Note:  tested all but the 1080x1080 resolution as my monitor does not support.
   * Field of View (Graphics->Display) setting plays here.  I run about 10-15% on the slider scale.  If you have a large FOV then the 
     template images will likely be too large
 * Focus: ED must have focus when running, so you can't do other things on other windows if AP is active.
@@ -36,7 +35,7 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * Must install needed packages:  pip install -r requirements.txt
 * "Advanced Autodocking" module must be outfitted on ship
 * The ELW Scanner may have issues for you, the screen region (defined in Screen_Region.py) isolates the region to where Earth, Water, and Ammonia
-  signal would be present.  If using different resolution from 3440x1440 then this region will need to be adjust for your resolution for
+  signal would be present.  If using different resolution from 3440x1440 then this region will need to be adjusted for your resolution for
   proper detection
 * Must have required keybinding set for proper autopilot behavior.  See autopilot.log for any Warnings on missing key bindings
 * See https://github.com/skai2/EDAutopilot for other constraints that probably apply
@@ -127,7 +126,6 @@ Note: the autopilot.log file will capture any required keybindings that are not 
     Need to put more config items in a config file to be read at startup
 * The Overlay.py is cool, would be nice to show the matched image on the actual ED screen
 * Handle ED in windowed mode
-* Handle other screen resolutions
 * FSS/ELW screen region needs to be able to handle diff screen resolutions
 
 
