@@ -33,7 +33,6 @@ Also Note: This repository is provided for educational purposes as a in depth pr
   Sun as with Fastest routing.
   As such, when rolling toward the Target, the Sun may fade the console making Compass matching difficult.  Need to think through this one more.  The Sun shining on the 
   console kills the matching.  You can see that if you enable CV View
-* Detailed Scanner must be mapped to firebutton 1 
 * The Left Panel (Navigation) must be on the Navigation tab as the script assumes so.  It will be reset after a FSD jump back to Nav,
   but if in SC Assist, need to ensure it is configured there to support docking request
 * Must install needed packages:  pip install -r requirements.txt
