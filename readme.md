@@ -48,6 +48,10 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * Ins  - Start SC Assist
 * End  - Terminate any running assistants
 
+Hot keys are not configurable in the config-AP.json file.  You can find the key names here:
+https://pythonhosted.org/pynput/keyboard.html
+
+
 # How to run:
 * With Elite Dangerous (ED) running, start EDAPgui.py
   * python EDAPgui.py     
