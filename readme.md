@@ -48,7 +48,7 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * Ins  - Start SC Assist
 * End  - Terminate any running assistants
 
-Hot keys are not configurable in the config-AP.json file.  You can find the key names here:
+Hot keys are now configurable in the config-AP.json file.  You can find the key names here:
 https://pythonhosted.org/pynput/keyboard.html
 
 
