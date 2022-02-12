@@ -267,11 +267,11 @@ class Overlay:
             Overlay.overlay_set_font(hdc, fnt[0], fnt[1])
 
             for i, key in enumerate(lines):
-                print(lines[key])
+                #print(lines[key])
                 Overlay.overlay_draw_rect(hdc, lines[key][0], lines[key][1], win32con.PS_SOLID, lines[key][2], lines[key][3])
 
             for i, key in enumerate(text):
-                print(text[key])
+                #print(text[key])
                 Overlay.overlay_draw_text(hWnd, hdc, text[key][0], text[key][1], text[key][2], text[key][3])
 
             win32gui.EndPaint(hWnd, paintStruct)
@@ -287,7 +287,7 @@ class Overlay:
 
 
 def main():
-    ov = Overlay("afk",0)
+    ov = Overlay("",0)
 
     #       key    x,y       x,y end      color      thinkness
     rect = {'a': [(50,50), (500, 500), (120, 255, 0),2],

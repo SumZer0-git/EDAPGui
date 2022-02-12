@@ -230,9 +230,12 @@ class APGui():
 
     # new data was added to a field, re-read them all for simple logic
     def entry_update(self, event):
-        self.ed_ap.pitchrate = self.entries['PitchRate'].get()
-        self.ed_ap.rollrate = self.entries['RollRate'].get()
-        self.ed_ap.yawrate = self.entries['YawRate'].get()  
+        try:
+            self.ed_ap.pitchrate = float(self.entries['PitchRate'].get())
+            self.ed_ap.rollrate = float(self.entries['RollRate'].get())
+            self.ed_ap.yawrate = float(self.entries['YawRate'].get())  
+        except:
+            messagebox.showinfo("Exception", "Invalid float entered")
 
 
      # ckbox.state:(ACTIVE | DISABLED)

@@ -40,20 +40,23 @@ class EDAutopilot:
     def __init__(self, cb, doThread=True):
 
         self.config = {  
-            "DSSButton": "Primary",
-            "JumpTries": 3,
+            "DSSButton": "Primary",        # anything other than "Primary", it will use the Secondary
+            "JumpTries": 3,           
             "NavAlignTries": 3,
-            "RefuelThreshold": 65,
+            "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel
             "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
-            "WaitForAutoDockTimer": 120,
+            "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking
             "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
-            "HotKey_StartSC": "ins",       # to determine other keynames, make sure these are not used in ED
+            "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
             "HotKey_StopAllAssists": "end",
+            "OverlayTextEnable": False,    # 
+            "OverlayTextYOffset": 400,     # offset down the screen to place text
+            "OverlayGraphicEnable": False, # not implemented yet
             "DiscordWebhook": False,       # discord not implemented yet
             "DiscordWebhookURL": "",
             "DiscordUserID": "",
-            "VoiceID": 1,             # my Windows only have 3 defined (0-2)
-            "LogDEBUG": False,        # enable for debug messages
+            "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
+            "LogDEBUG": False,             # enable for debug messages
             "LogINFO": True
         }
 
@@ -76,8 +79,10 @@ class EDAutopilot:
         if self.config['LogDEBUG']:
             logger.setLevel(logging.DEBUG)  
 
-        self.overlay = Overlay("")
-        
+        self.overlay = Overlay("", elite=1)
+        self.overlay.overlay_setfont("Times New Roman", 16 )
+        self.overlay.overlay_set_pos(50, self.config['OverlayTextYOffset'])
+            
         self.fsd_assist_enabled = False
         self.sc_assist_enabled = False
         self.fss_scan_enabled = False
@@ -134,7 +139,15 @@ class EDAutopilot:
                 json.dump(data,fp, indent=4)
         except Exception as e:
             logger.warning("EDAPGui.py write_config error:"+str(e))
-  
+ 
+ 
+    def update_overlay(self):
+        if self.config['OverlayTextEnable']:
+            self.overlay.overlay_text('1', "Status: "+self.jn.ship_state()['status'], 1, 1,(0,255,0) )
+            self.overlay.overlay_text('2', "Current System: "+self.jn.ship_state()['location'], 2, 1,(0,255,0) ) 
+            self.overlay.overlay_paint()  
+        
+        
     def draw_match_rect(self, img, pt1, pt2, color, thick):
         wid = pt2[0] - pt1[0]
         hgt = pt2[1] - pt1[1]
@@ -282,7 +295,7 @@ class EDAutopilot:
             f = open("elw.txt", 'a')
             f.write(self.jn.ship_state()["location"]+", Type: "+sstr+", Probabilty: Cirle: {0:6.2f}, Signature: {1:6.2f} ".format(maxVal, maxVal1)+", date: "+str(datetime.now())+str("\n"))
             f.close
-            self.vce.say(sstr+ " like world discovered ")
+            self.vce.say(sstr+ " like world detected ")
             logger.info(sstr+" world at: "+str(self.jn.ship_state()["location"]))
 
         self.keys.send('SetSpeed50')  
@@ -738,6 +751,8 @@ class EDAutopilot:
             logger.debug('jump= start fsd')
             self.keys.send('HyperSuperCombination', hold=1)
             sleep(16)
+
+            self.update_overlay()  
             
             if self.jn.ship_state()['status'] != 'starting_hyperspace':
                 logger.debug('jump= misalign stop fsd')
@@ -843,6 +858,9 @@ class EDAutopilot:
         sleep(2)    # give time to set focus to ED
 
         while self.jn.ship_state()['target']:
+            
+            self.update_overlay()              
+            
             if self.jn.ship_state()['status'] == 'in_space' or self.jn.ship_state()['status'] == 'in_supercruise':
                 self.ap_ckb('statusline',"Align")
 
@@ -851,6 +869,7 @@ class EDAutopilot:
                 self.ap_ckb('statusline',"Jump")
 
                 self.jump(scr_reg)
+                self.update_overlay()                    
                 
                 avg_time_jump = (time.time() - starttime)/self.jump_cnt
                 self.ap_ckb('jumpcount',"j#"+str(self.jump_cnt)+" : r#:"+ str(self.refuel_cnt) +" : ""{:.0f}".format(avg_time_jump)+"s/j")
@@ -866,6 +885,7 @@ class EDAutopilot:
                     self.vce.say("AP Aborting, low fuel")
                     break
 
+        self.update_overlay()  
         sleep(2)  # wait until screen stablizes from possible last positioning
         if self.have_destination(scr_reg) == False:
             self.keys.send('SetSpeedZero')
@@ -895,6 +915,7 @@ class EDAutopilot:
         self.keys.send('SetSpeed50')
 
         while True:
+ 
             sleep(1)
             if self.jn.ship_state()['status'] == 'in_supercruise':
         #       nav_mnvr_to_target(scr_reg)
