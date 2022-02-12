@@ -1,11 +1,12 @@
 from pickletools import read_unicodestring1
 import traceback
 from math import atan, degrees
+import json
 
 import cv2
 from PIL import Image
 
-from EDlogger import logger
+from EDlogger import logger, logging
 import Image_Templates
 import Screen
 import Screen_Regions
@@ -38,12 +39,42 @@ class EDAutopilot:
 
     def __init__(self, cb, doThread=True):
 
+        self.config = {  
+            "DSSButton": "Primary",
+            "JumpTries": 3,
+            "NavAlignTries": 3,
+            "RefuelThreshold": 65,
+            "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
+            "WaitForAutoDockTimer": 120,
+            "DiscordWebhook": False,       # discord not implemented yet
+            "DiscordWebhookURL": "",
+            "DiscordUserID": "",
+            "VoiceID": 1,             # my Windows only have 3 defined (0-2)
+            "LogDEBUG": False,        # enable for debug messages
+            "LogINFO": True
+        }
+
+        # used this to write the self.config table to the json file
+        #self.write_config(self.config)
+              
+        cnf = self.read_config()     
+        # if we read it then point to it, otherwise use the default table above
+        if cnf is not None:
+            self.config = cnf
+            logger.debug("read AP json:"+str(cnf))   
+                      
         self.vce = Voice()
         self.vce.set_on()
+        self.vce.set_voice_id(self.config['VoiceID'])
         self.vce.say("Welcome to Autopilot")
 
-        self.overlay = Overlay("")
+        if self.config['LogINFO']:   
+            logger.setLevel(logging.INFO)    
+        if self.config['LogDEBUG']:
+            logger.setLevel(logging.DEBUG)  
 
+        self.overlay = Overlay("")
+        
         self.fsd_assist_enabled = False
         self.sc_assist_enabled = False
         self.fss_scan_enabled = False
@@ -82,6 +113,24 @@ class EDAutopilot:
         if doThread == True:
             self.ap_thread = kthread.KThread(target = self.engine_loop, name = "EDAutopilot")
             self.ap_thread.start()
+
+
+    def read_config(self, fileName='./config-AP.json'):
+        s = None
+        try:
+            with open(fileName,"r") as fp:
+                s = json.load(fp)
+        except  Exception as e:
+            logger.warning("EDAPGui.py read_config error :"+str(e))
+
+        return s
+
+    def write_config(self, data, fileName='./config-AP.json'):
+        try:
+            with open(fileName,"w") as fp:
+                json.dump(data,fp, indent=4)
+        except Exception as e:
+            logger.warning("EDAPGui.py write_config error:"+str(e))
   
     def draw_match_rect(self, img, pt1, pt2, color, thick):
         wid = pt2[0] - pt1[0]
@@ -379,8 +428,7 @@ class EDAutopilot:
             logger.warning('Did not get docking authorization, reason:'+str(self.jn.ship_state()['no_dock_reason']))
         else:     
             # allow auto dock to take over
-            wait = 120
-            for i in range(wait):
+            for i in range(self.config['WaitForAutoDockTimer']):
                 sleep(1)
                 if self.jn.ship_state()['status'] == "in_station":
                     # go to top item, select (which should be refuel)
@@ -441,7 +489,7 @@ class EDAutopilot:
 
         # try multiple times to get aligned.  If the sun is shining on console, this it will be hard to match
         # the vehicle should be positioned with the sun below us via the sun_align() routine after a jump
-        for ii in range(3):
+        for ii in range(self.config['NavAlignTries']):
             off = self.get_nav_offset(scr_reg)
           
             if off != None and abs(off['x']) < close and abs(off['y']) < close:
@@ -634,12 +682,11 @@ class EDAutopilot:
         
         self.keys.send('SetSpeed100')
 
-        # find which fire button to use to do system scan and press and hold the button
-        scan = 1
-        if scan == 1:
+
+        if self.config['DSSButton'] == 'Primary':
             logger.debug('position=scanning')
             self.keys.send('PrimaryFire', state=1)
-        elif scan == 2:
+        else:
             logger.debug('position=scanning')
             self.keys.send('SecondaryFire', state=1)
             
@@ -677,8 +724,8 @@ class EDAutopilot:
         logger.debug('jump')
 
         self.vce.say("Frameshift Jump")
-        tries = 3
-        for i in range(tries):
+
+        for i in range(self.config['JumpTries']):
             
             logger.debug('jump= try:'+str(i))
             if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
@@ -718,8 +765,7 @@ class EDAutopilot:
         self.keys.send('PitchDownButton', htime)
 
 
-    def refuel(self, scr_reg,refuel_threshold=65):
-        global refuel_cnt
+    def refuel(self, scr_reg):
 
         logger.debug('refuel')
         scoopable_stars = ['F', 'O', 'G', 'K', 'B', 'A', 'M']
@@ -738,20 +784,20 @@ class EDAutopilot:
         self.rotate90Left()
 
         sleep(0.5)   # give time for display to update
-
+        
         self.sun_align(scr_reg)
         
-        if self.jn.ship_state()['fuel_percent'] < refuel_threshold and self.jn.ship_state()['star_class'] in scoopable_stars:
+        if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and self.jn.ship_state()['star_class'] in scoopable_stars:
             logger.debug('refuel= start refuel')
             self.vce.say("Refueling")
+            self.ap_ckb('statusline',"Refueling")
             self.keys.send('SetSpeed100')
+            self.refuel_cnt += 1
     
             sleep(5)
             self.keys.send('SetSpeed50')
             sleep(1.7)
             self.keys.send('SetSpeedZero', repeat=3)
-
-            refuel_cnt = self.refuel_cnt + 1
 
             # The log will reflect a FuelScoop until first 5 tons filled, then every 5 tons until complete
             #if we don't scoop first 5 tons with 40 sec break, since not scooping or not fast enough or not at all, go to next star
@@ -806,16 +852,14 @@ class EDAutopilot:
                 avg_time_jump = (time.time() - starttime)/self.jump_cnt
                 self.ap_ckb('jumpcount',"j#"+str(self.jump_cnt)+" : r#:"+ str(self.refuel_cnt) +" : ""{:.0f}".format(avg_time_jump)+"s/j")
 
-                self.ap_ckb('statusline',"Refuel")
-
                 refueled = self.refuel(scr_reg)
 
                 self.ap_ckb('statusline',"Maneuvering")
 
                 self.position(scr_reg, refueled)
 
-                if (self.jn.ship_state()['fuel_percent'] < 35):
-                    self.ap_ckb('log'"AP Aborting, low fuel")
+                if (self.jn.ship_state()['fuel_percent'] < self.config['FuelThreasholdAbortAP']):
+                    self.ap_ckb('log', "AP Aborting, low fuel")
                     self.vce.say("AP Aborting, low fuel")
                     break
 

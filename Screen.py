@@ -50,6 +50,7 @@ class Screen:
         # if we read it then point to it, otherwise use the default table above
         if ss is not None:
             self.scales = ss
+            logger.debug("read json:"+str(ss))
             
         
         # scale is to adjust template images size which were generated with 3440/1440 screen

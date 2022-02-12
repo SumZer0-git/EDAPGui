@@ -38,7 +38,7 @@ class Image_Templates:
     #  return image and size info    
     def load_template(self, file_name, scaleX, scaleY):
         template = cv2.imread(self.resource_path(file_name), cv2.IMREAD_GRAYSCALE)
-        logger.debug("File:"+self.resource_path(file_name)+" template:"+str(template))
+        #logger.debug("File:"+self.resource_path(file_name)+" template:"+str(template))
         template = cv2.resize(template, (0, 0), fx=scaleX, fy=scaleY)
         width, height = template.shape[::-1]
         return {'image': template, 'width': width, 'height' : height}

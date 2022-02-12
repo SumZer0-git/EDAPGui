@@ -34,6 +34,7 @@ class Voice:
         self.v_quit = False
         self.t = kthread.KThread(target = self.voice_exec, name = "Voice")
         self.t.start()
+        self.v_id = 1
 
     def say(self, vSay):
         if (self.v_enabled == True):
@@ -44,15 +45,28 @@ class Voice:
 
     def set_on(self):
         self.v_enabled = True
+        
+    def set_voice_id(self, id):
+        self.v_id = id
 
     def quit(self):
         self.v_quit = True
 
     def voice_exec(self):
         engine = pyttsx3.init()
-        engine.setProperty('voice', 1)  # Hazel
+        voices = engine.getProperty('voices')
+        v_id_current = 0   # David
+        engine.setProperty('voice', voices[v_id_current].id)   
         engine.setProperty('rate', 160)
         while (self.v_quit == False):
+            # check if the voice ID changed
+            if self.v_id != v_id_current:
+                v_id_current = self.v_id
+                try:
+                    engine.setProperty('voice', voices[v_id_current].id) 
+                except:
+                    print("Voice ID out of range")
+                           
             try:
                 words = self.q.get(timeout=1)
                 self.q.task_done()
