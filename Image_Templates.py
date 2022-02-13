@@ -42,6 +42,15 @@ class Image_Templates:
         template = cv2.resize(template, (0, 0), fx=scaleX, fy=scaleY)
         width, height = template.shape[::-1]
         return {'image': template, 'width': width, 'height' : height}
+    
+    def reload_templates(self, scaleX, scaleY):
+        self.template['elw']       = self.load_template("templates/elw-template.png", scaleX, scaleY) 
+        self.template['elw_sig']   = self.load_template("templates/elw-sig-template.png", scaleX, scaleY) 
+        self.template['navpoint']  = self.load_template("templates/navpoint.png", scaleX, scaleY)
+        self.template['compass']   = self.load_template("templates/compass.png", scaleX, scaleY)         
+        self.template['target']    = self.load_template("templates/destination.png", scaleX, scaleY) 
+        self.template['disengage'] = self.load_template("templates/sc-disengage.png", scaleX, scaleY) 
+        
 
     def resource_path(self,relative_path):
         """ Get absolute path to resource, works for dev and for PyInstaller """

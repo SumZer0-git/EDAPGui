@@ -110,9 +110,13 @@ class APGui():
         elif key == 'statusline':
             self.update_statusline(body)
 
-    def test_callback(self):
-        sleep(2)
-        #dock()
+    def calibrate_callback(self):
+        ans = messagebox.askyesno('Calibration', 'Select OK to begin Cal')
+        if ans == False:
+            return
+
+        self.log_msg('Calibration starting')
+        self.ed_ap.calibrate()         
     
     def quit(self):
         self.close_window()
@@ -346,8 +350,8 @@ class APGui():
         blk1.pack(side=LEFT, anchor=N, padx=10, pady=3)
         blk2.pack(side=LEFT, padx=2, pady=3)
 
-     #   btn = Button(blk1, text=test_label, command=self.test_callback)
-     #   btn.pack(side=tk.LEFT)
+        btn = Button(blk1, text='Calibrate', command=self.calibrate_callback)
+        btn.pack(side=tk.LEFT)
 
         blk0.grid(row=0, column=0, padx=2, pady=2)
         

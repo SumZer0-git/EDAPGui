@@ -40,6 +40,7 @@ class Screen:
             '2560x1080':  [0.75, 0.75],  # tested
             '2560x1440':  [1.0, 1.0],    # tested
             '3440x1440':  [1.0, 1.0],    # tested
+            'Calibrated': [-1.0, -1.0]
         }
  
         # used this to write the self.scales table to the json file
@@ -67,19 +68,29 @@ class Screen:
         #     > 0.80 for matching, adjust scales to get close to .9.   Also look at the target window
         #     that too should have a match > 0.55  
 
-        scale_key = str(self.screen_width)+"x"+str(self.screen_height)
-        self.scaleX = self.scales[scale_key][0]
-        self.scaleY = self.scales[scale_key][1]
-        # if we don't have a definition for the resolution then use calculation
-        if self.scaleX == None or self.scaleY == None:
+        try:
+            scale_key = str(self.screen_width)+"x"+str(self.screen_height)
+            self.scaleX = self.scales[scale_key][0]
+            self.scaleY = self.scales[scale_key][1]
+        except:            
+            # if we don't have a definition for the resolution then use calculation
             self.scaleX = self.screen_width  / 3440.0
             self.scaleY = self.screen_height / 1440.0
+            print ("Rez divide")
+            
+        # if the calibration scale values are not -1, then use those regardless of above
+        if self.scales['Calibrated'][0] != -1.0:
+            self.scaleX = self.scales['Calibrated'][0]            
+        if self.scales['Calibrated'][1] != -1.0:
+            self.scaleY = self.scales['Calibrated'][1]
         
         logger.debug('screen size: '+str(self.screen_width)+" "+str(self.screen_height))
         logger.debug('Scale X, Y: '+str(self.scaleX)+", "+str(self.scaleY))
 
 
     def write_config(self, data, fileName='./config-resolution.json'):
+        if data is None:
+            data = self.scales
         try:
             with open(fileName,"w") as fp:
                 json.dump(data,fp, indent=4)

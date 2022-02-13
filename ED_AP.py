@@ -186,7 +186,68 @@ class EDAutopilot:
             # right tic
             cv2.line(img, (int(pt2[0]),    int(pt1[1]+half_hgt)), (int(pt2[0]+tic_len),   int(pt1[1]+half_hgt)), color, thick)
 
+    def calibrate_range(self, range_low, range_high, threshold):
+        #print("--- new range ---")
+        scale  = 0
+        max_pick = 0
+        for i in range(range_low,range_high):
+            self.scr.scaleX = float(i /100)
+            self.scr.scaleY = self.scr.scaleX
+            self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY)
+            compass_image, (minVal, maxVal, minLoc, maxLoc), match  = self.scrReg.match_template_in_region('compass', 'compass')
+            dst_image, (minVal1, maxVal1, minLoc1, maxLoc1), match  = self.scrReg.match_template_in_region('target', 'target')  
+                     
+            #print("Looping i:"+str(i)+ ' scale:'+str(self.scr.scaleX)+ " maxVal:"+str(maxVal)+" maxVal1:"+str(maxVal1))
+ 
+            # Show the bounding box           
+            self.get_nav_offset(self.scrReg)
+            self.get_destination_offset(self.scrReg)
+            
+            if maxVal > threshold and maxVal1 > threshold:
+               #print("met criteria:"+f'{self.scr.scaleX:5.2f} '+str(threshold))
+               if maxVal > max_pick:
+                   max_pick = maxVal
+                   scale = i
+                   self.ap_ckb('log', 'Cal: Found scale value:'+f'{self.scr.scaleX:5.2f}')        
+        
+        return scale, max_pick
 
+    def calibrate(self):
+        self.set_focus_elite_window()
+        range_low = 30
+        range_high = 100
+        match_level = 0.5
+        scale_max = 0
+        max_val = 0
+        
+        for i in range(50, 90, 5):
+            threshold = float(i/100)
+            scale, max_pick = self.calibrate_range(range_low, range_high, threshold)   # match from 50-> 100 by 5
+            #print("i:"+str(i)+" scale:"+str(scale)+ " threshold:"+str(threshold))
+            if scale != 0: 
+                scale_max = scale
+                max_val   = max_pick
+                range_low = scale - 2
+                range_high = scale + 2
+                if range_high > 100:
+                    range_high = 100
+            else:
+                break    # no match found with threshold
+        
+        if scale_max == 99:
+            scale_max = 100
+            
+        # if we found a scaling factor that meets our criteria, then save it to the config-resolution.json file
+        if max_val != 0:    
+            self.scr.scaleX = float(scale_max /100)
+            self.scr.scaleY = self.scr.scaleX  
+            self.ap_ckb('log', 'Cal: Max best match:'+ f'{max_val:5.2f}'+"% with scale:"+f'{self.scr.scaleX:5.2f}') 
+            self.scr.scales['Calibrated'] = [ self.scr.scaleX, self.scr.scaleY]
+            self.scr.write_config(data=None)   # None means the writer will use its own scales variable which we modified  
+        else:
+            self.ap_ckb('log', 'Cal: Insufficient matching to meet reliability, max % match:'+ str(max_val)) 
+             
+            
     # check to see if the compass is on the screen
     def have_destination(self, scr_reg):
         icompass_image, (minVal, maxVal, minLoc, maxLoc), match  = scr_reg.match_template_in_region('compass', 'compass')
@@ -226,8 +287,9 @@ class EDAutopilot:
 
             #   dim = (int(destination_width/3), int(destination_height/3))
 
-            #   img = cv2.resize(dst_image, dim, interpolation =cv2.INTER_AREA)   
-            cv2.putText(icompass_image, f'{n_maxVal:5.2f} >0.8', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            #   img = cv2.resize(dst_image, dim, interpolation =cv2.INTER_AREA) 
+            cv2.putText(icompass_image, f'C:{maxVal:5.2f} >0.6', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(icompass_image, f'N:{n_maxVal:5.2f} >0.8', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('compass', icompass_image)
             #cv2.imshow('nav', navpt_image)
             cv2.moveWindow('compass', self.cv_view_x, self.cv_view_y) 
