@@ -40,7 +40,7 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * The Left Panel (Navigation) must be on the Navigation tab as the script assumes so.  It will be reset after a FSD jump back to Nav,
   but if in SC Assist, need to ensure it is configured there to support docking request
 * Must install needed packages:  pip install -r requirements.txt
-* "Advanced Autodocking" module must be outfitted on ship
+* "Advanced Autodocking" module must be outfitted on ship to support autodock 
 * The ELW Scanner may have issues for you, the screen region (defined in Screen_Region.py) isolates the region to where Earth, Water, and Ammonia
   signal would be present.  If using different resolution from 3440x1440 then this region will need to be adjusted for your resolution for
   proper detection
@@ -57,7 +57,7 @@ https://pythonhosted.org/pynput/keyboard.html
 
 
 # How to run:
-* With Elite Dangerous (ED) running, start EDAPgui.py
+* With Elite Dangerous (ED) running, start EDAPGui.py
   * python EDAPgui.py     
   * Note: the default Roll, Pitch, and Yaw rates are for my Diamondback Explorer, you need to enter the values
     for your ship, which can be found in Outfitting. 
