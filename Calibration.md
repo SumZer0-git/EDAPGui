@@ -11,7 +11,7 @@ The calibration algorithm will try matching the template images to your ED scree
 * Set the ED configuration to be
     * In Supercruise (%0 thrust is ok)
     * Target system selected
-    * And align to the target, as show in this screenshot:<br>
+    * Align to the target, as show in this screenshot:<br>
 ![Alt text](screen/screen-cap-calibrate.png?raw=true "Calibrate ED Config")  
 
 # To run the calibration
