@@ -75,8 +75,10 @@ Note: the autopilot.log file will capture any required keybindings that are not 
     35 seconds it will abort and continue to next route point.  If fuel goes below 35%, the route assist
     will terminate
 * Supercruise Assist: will keep your ship pointed to target, you target can only be a station for
-    the autodocking to work.  If a settlement or target is obscured you will end up being kicked out of SC and
-    probably have some damage.   When the SC Disenage appears the SC Assist will drop you out of SC
+    the autodocking to work.  If a settlement or target is obscured you will end up being kicked out of SC 
+    via "Dropped Too Close" or "Dropping from Orbital Cruise" (however, not damage to ship), throttle will be set to
+    Zero and exit SC Assist.
+    Otherwise, when the SC Disenage appears the SC Assist will drop you out of SC
     and attempt request docking (after traveling closer to the Station), if docking granted it will
     put throttle to zero and the autodocking computer will take over
 * ELW Scanner: will perform FSS scans while FSD Assist is traveling between stars.  If the FSS
@@ -98,6 +100,30 @@ Note: the autopilot.log file will capture any required keybindings that are not 
   * Enable CV View: Turn on/off debug images showing the image matching as it happens.  The numbers displayed
     indicate the % matched with the criteria for matching. Example:  0.55 > 0.5  means 55% match and the criteria
     is that it has to be > 50%, so in this case the match is true
+    
+## Config File: config-AP.json
+        self.config = {  
+            "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS
+            "JumpTries": 3,                # 
+            "NavAlignTries": 3,            #
+            "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel
+            "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
+            "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking
+            "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
+            "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
+            "HotKey_StopAllAssists": "end",
+            "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
+            "OverlayTextEnable": False,    # Experimental at this stage
+            "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
+            "OverlayGraphicEnable": False, # not implemented yet
+            "DiscordWebhook": False,       # discord not implemented yet
+            "DiscordWebhookURL": "",
+            "DiscordUserID": "",
+            "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
+            "LogDEBUG": False,             # enable for debug messages
+            "LogINFO": True
+        }
+
     
 # Approach
 ## FSD Assist FLow
