@@ -1,7 +1,9 @@
 # EDAPGui Calibration
-This document explains how to perform calibration for the Elite Dangerous Autopilot (GUI) version.   For some user systems this calibration is needed to determine the proper scaling value for the images in the template directory.  These are dependant on screen/game resolution.   The template images were created on a 3440x1440 resolution monitor and require scaling for other target computers.
+This document explains how to perform calibration for the Elite Dangerous Autopilot (GUI) version.  You will need to perform this calibration step if the behavior of EDAPGui on your system is endless Pitching up when activating the FSD Assist.  For some user systems this calibration is needed to determine the proper scaling value for the images in the template directory.  These are dependant on screen/game resolution.   The template images were created on a 3440x1440 resolution monitor and require scaling for other target computers.
 
-A configuration file called _config-resolution.json_ contains Screen resolution and scaling values.  This calibration sequence will update that configuration files entry called 'Calibrated'.   If those values are not -1.0 then, at startup, the EDAPGui will use those values.  Otherwise it will look for another entry that matches the users screen resolution.
+A configuration file called _config-resolution.json_ contains Screen resolution and scaling values.  This calibration sequence will update that configuration files entry called 'Calibrated'.   If those values are not -1.0 then, at startup, the EDAPGui will use those values.  Otherwise it will look for another entry that matches the users screen resolution.  This calibration exercise should only need to be done once on your system.  
+
+``` Note: If you pull from the github repo again, the config-resolution.json will be overwritten and you will need to re-execute this calibration ```
 
 The calibration algorithm will try matching the template images to your ED screen by looping through scaling factors and picking the most optimal scale based on the match percentage.<br>
 ``` Note: No commands will be sent to ED during this calibration, it will simply be performing screen grabs. ```
