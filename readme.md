@@ -3,7 +3,7 @@ This Elite Dangerous (ED) Autopilot supports route assistance, supercruise assis
 executing route assistance it will perform detailed system scanning (honk) when jumping into a system and optionally perform FSS scanning
 to determine if Earth, Water, or Ammonia type world is present.   If Voice enabled, the autopilot will inform you of its actions.   
 
-This autopilot uses Computer Vision (grabs screens and does template matching) and issues keystrokes.  It does not perform any runtime modifications 
+This autopilot uses Computer Vision (grabs screens and performs template matching) and issues keystrokes.  It does not perform any runtime modifications 
 of Elite Dangerous, it is an external-ED construct (similar to us commanders) 
 
   ```
