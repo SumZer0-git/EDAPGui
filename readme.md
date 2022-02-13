@@ -226,4 +226,7 @@ sumzer0@yahoo.com
 # Screen Shot
 ![Alt text](screen/screen_cap.png?raw=true "Screen")
                                                                
-Short video: https://www.youtube.com/watch?v=Ym90oVhwVzc
+* Video of FSD Route Assist going between systems: https://www.youtube.com/watch?v=Ym90oVhwVzc
+  
+* Video where selected a Station as the target, then FSD Route Assist jumping into that System and auto-transitioning into SC Assist to the station. Perform target align with the Station (so it won't drift). Then detecting SC Disengage and doing the disengage SC, and requesting autodock.  Once docked, refuels and goes into the StarPort Services, then termiates SC Assist:
+https://youtu.be/PtBYxWYX0so
