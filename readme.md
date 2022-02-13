@@ -4,6 +4,10 @@ executing route assistance it will perform detailed system scanning (honk) when 
 to determine if Earth, Water, or Ammonia type world is present.   If enable Voice, the autopilot will inform you of the actions it is
 taking
 
+  ```
+  * See Calibration.md for details on how to calibrate EDAPGui for your system *
+  ```
+
 Note: much of the autopilot code was taking from https://github.com/skai2/EDAutopilot , many of the routines were turned into classes and tweaks were done on sequences
  and how image matching was performed.   Kudo's to skai2mail@gmail.com
  
@@ -15,9 +19,9 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * Screen Resolution/scale X, Y:  The templates were captured on a 3440x1440 resolution/game configuration.  These need to be scaled
   for different resolutions.  The _config-resolution.json_ file captures these resolutions with the corresponding ScaleX, Y values.  If a resolution is not defined
   for your monitor the code will attempt to divide /3440  and /1440 to get the scale factor (not likely to be correct)
-  * You will know if the scale factor is correct by enabling CV View and enabling FSD Assist, in the popup Compass window the AP will attempt to 
-    match the compass. The match size (bounding box) should look like the picture at the bottom of this readme.  The box represents the template image size.
-    If smaller or larger then the scale factors need to be updated.  Note:  tested all resolutions except the 1080x1080 as my monitor does not support.
+  ```
+  * See Calibration.md for details on how to calibrate EDAPGui for your system *
+  ```
   * Field of View (Graphics->Display) setting plays here.  I run about 10-15% on the slider scale.  If you have a large FOV then the 
     template images will likely be too large
 * Focus: ED must have focus when running, so you can't do other things on other windows if AP is active.
@@ -48,7 +52,7 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * Ins  - Start SC Assist
 * End  - Terminate any running assistants
 
-Hot keys are now configurable in the config-AP.json file.  You can find the key names here:
+Hot keys are now configurable in the config-AP.json file, so you can remap them. Be sure not to use any keys you have mapped in ED.  You can find the key names here:
 https://pythonhosted.org/pynput/keyboard.html
 
 
