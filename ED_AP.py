@@ -186,6 +186,7 @@ class EDAutopilot:
             # right tic
             cv2.line(img, (int(pt2[0]),    int(pt1[1]+half_hgt)), (int(pt2[0]+tic_len),   int(pt1[1]+half_hgt)), color, thick)
 
+    # find the best scale value in the given range of scales with the passed in threshold
     def calibrate_range(self, range_low, range_high, threshold):
         #print("--- new range ---")
         scale  = 0
@@ -193,7 +194,11 @@ class EDAutopilot:
         for i in range(range_low,range_high):
             self.scr.scaleX = float(i /100)
             self.scr.scaleY = self.scr.scaleX
+            
+            # must reload the templates with this scale value
             self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY)
+            
+            # do image matching on the compass and the 
             compass_image, (minVal, maxVal, minLoc, maxLoc), match  = self.scrReg.match_template_in_region('compass', 'compass')
             dst_image, (minVal1, maxVal1, minLoc1, maxLoc1), match  = self.scrReg.match_template_in_region('target', 'target')  
                      
@@ -212,6 +217,7 @@ class EDAutopilot:
         
         return scale, max_pick
 
+    # Routine to find the optimal scaling values for the tempalte images
     def calibrate(self):
         self.set_focus_elite_window()
         range_low = 30
