@@ -8,6 +8,7 @@
     "HotKey_StartFSD": "home",
     "HotKey_StartSC": "ins",
     "HotKey_StopAllAssists": "end",
+    "EnableRandomness": true,   
     "OverlayTextEnable": false,  
     "OverlayTextYOffset": 400,   
     "OverlayGraphicEnable": false, 

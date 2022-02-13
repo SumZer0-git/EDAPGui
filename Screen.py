@@ -54,20 +54,8 @@ class Screen:
             logger.debug("read json:"+str(ss))
             
         
-        # scale is to adjust template images size which were generated with 3440/1440 screen
-        # to determine correct scale for a resolution, with the correct screen and ED resolution
-        # 1. Add your screen resolution to the table above with a guess at the scale X, Y values
-        # 2. Run EDAPGui
-        # 3. Enable CV View under the File Menu
-        # 4. In ED select a target system from Navigation
-        # 5. Line up to target
-        # 6. Select 'Home' key or Enable FSD Assist
-        # 7 View the graphical image, the bounding box around the Compass must be the compass size
-        #   if it is smaller or larger, you need to adjust the scale factor
-        # 7a. Also the text in the graphic will tell you % match.  For the Compass we want it to be
-        #     > 0.80 for matching, adjust scales to get close to .9.   Also look at the target window
-        #     that too should have a match > 0.55  
-
+        # try to find the resolution/scale values in table
+        # if not, then take current screen size and divide it out by 3440 x1440
         try:
             scale_key = str(self.screen_width)+"x"+str(self.screen_height)
             self.scaleX = self.scales[scale_key][0]
@@ -76,7 +64,6 @@ class Screen:
             # if we don't have a definition for the resolution then use calculation
             self.scaleX = self.screen_width  / 3440.0
             self.scaleY = self.screen_height / 1440.0
-            print ("Rez divide")
             
         # if the calibration scale values are not -1, then use those regardless of above
         if self.scales['Calibrated'][0] != -1.0:
@@ -96,6 +83,7 @@ class Screen:
                 json.dump(data,fp, indent=4)
         except Exception as e:
             logger.warning("Screen.py write_config error:"+str(e))
+            
 
     def read_config(self, fileName='./config-resolution.json'):
         s = None

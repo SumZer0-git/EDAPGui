@@ -2,6 +2,7 @@ from pickletools import read_unicodestring1
 import traceback
 from math import atan, degrees
 import json
+import random
 
 import cv2
 from PIL import Image
@@ -40,17 +41,18 @@ class EDAutopilot:
     def __init__(self, cb, doThread=True):
 
         self.config = {  
-            "DSSButton": "Primary",        # anything other than "Primary", it will use the Secondary
-            "JumpTries": 3,           
-            "NavAlignTries": 3,
+            "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS
+            "JumpTries": 3,                # 
+            "NavAlignTries": 3,            #
             "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel
             "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
             "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking
             "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
             "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
             "HotKey_StopAllAssists": "end",
-            "OverlayTextEnable": False,    # 
-            "OverlayTextYOffset": 400,     # offset down the screen to place text
+            "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
+            "OverlayTextEnable": False,    # Experimental at this stage
+            "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
             "OverlayGraphicEnable": False, # not implemented yet
             "DiscordWebhook": False,       # discord not implemented yet
             "DiscordWebhookURL": "",
@@ -524,12 +526,16 @@ class EDAutopilot:
                     break
 
 
-    def sun_align(self, scr_reg):
+    def sun_dead_ahead(self, scr_reg):
+        return scr_reg.sun_percent(scr_reg.screen) > 5
+
+    def sun_avoid(self, scr_reg):
         logger.debug('align= avoid sun')
-        while scr_reg.sun_percent(scr_reg.screen) > 5:
+        # if sun in front of us, then keep pitching up until it is below us
+        while self.sun_dead_ahead(scr_reg):
             self.keys.send('PitchUpButton', state=1)
 
-        sleep(0.3)    # wait another 1/2sec to get more pitch away from Sun
+        sleep(0.3)    # wait a little longer to get more pitch away from Sun
         self.keys.send('PitchUpButton', state=0)
 
 
@@ -572,7 +578,7 @@ class EDAutopilot:
             return;
 
         # try multiple times to get aligned.  If the sun is shining on console, this it will be hard to match
-        # the vehicle should be positioned with the sun below us via the sun_align() routine after a jump
+        # the vehicle should be positioned with the sun below us via the sun_avoid() routine after a jump
         for ii in range(self.config['NavAlignTries']):
             off = self.get_nav_offset(scr_reg)
           
@@ -635,7 +641,8 @@ class EDAutopilot:
         logger.debug('align= fine align')
     
         close = 50
-    # TODO: was .200  change to .150 for asp
+ 
+        # TODO: should use Pitch Rates to calculate, but this seems to work fine with all ships
         hold_pitch = 0.150
         hold_yaw = 0.300
         for i in range(5):
@@ -695,13 +702,18 @@ class EDAutopilot:
             logger.error('align() not in sc or space')
             raise Exception('align() not in sc or space')
 
-        self.sun_align(scr_reg)
+        self.sun_avoid(scr_reg)
         self.nav_align(scr_reg)
         self.target_align(scr_reg)
         
+        
     # This function stays tight on the target, monitors for disengage
+    # TODO: as we approach target, it could suddenly show obscured (dashed target outline), need to
+    #       1. detect that
+    #       2. maneuver around, like doing in sc_assist for sun obscuring target, perhaps have a target_obscure_reposition() function
     def sc_target_align(self, scr_reg):    
         close = 6
+        off = None
 
         hold_pitch = 0.100
         hold_yaw = 0.100
@@ -712,6 +724,10 @@ class EDAutopilot:
                 break
             sleep(0.25)
 
+        # Could not be found, return
+        if off == None:
+            return
+        
         logger.debug("sc_target_align x: "+str(off['x'])+ " y:"+str(off['y']))
         
         while (abs(off['x']) > close) or \
@@ -755,7 +771,7 @@ class EDAutopilot:
 
         self.vce.say("Maneuvering")   
         
-        self.sun_align(scr_reg)
+        self.sun_avoid(scr_reg)
 
         # if we didn't refuel, lets to a on-the-fly refueling going past the Sun 
         if (not did_refuel):
@@ -773,9 +789,12 @@ class EDAutopilot:
         else:
             logger.debug('position=scanning')
             self.keys.send('SecondaryFire', state=1)
-            
+ 
+        pause_time = 10           
+        if self.config["EnableRandomness"] == True:
+            pause_time = pause_time + random.randint(0,3)
         # need time to get away from the Sun so heat will disipate before we use FSD
-        sleep(10)
+        sleep(pause_time)
 
         # stop pressing the Scanner button
         if self.config['DSSButton'] == 'Primary':
@@ -789,8 +808,9 @@ class EDAutopilot:
         if (did_refuel):
             sleep(5)
 
-        # TODO: skip until figure out better way of defining the region
-        if self.fss_scan_enabled == True:
+        if self.fss_scan_enabled == True:     
+            if self.config["EnableRandomness"] == True:
+                sleep(random.randint(0,3))
             self.fss_detect_elw(scr_reg)
 
         # only pitch down if the target isn't in front of us
@@ -804,6 +824,8 @@ class EDAutopilot:
 
 
     # jump() happens after we are aligned to Target
+    # TODO: nees to check for Thargoid interdiction and their wave that would shut us down,
+    #       if thargoid, then we wait until reboot and continue on.. go back into FSD and align
     def jump(self, scr_reg):
         logger.debug('jump')
 
@@ -850,7 +872,10 @@ class EDAutopilot:
         htime = 90/self.pitchrate
         self.keys.send('PitchDownButton', htime)
 
-
+    def pitch90Up(self):
+        htime = 90/self.pitchrate
+        self.keys.send('PitchDownButton', htime)
+        
     def refuel(self, scr_reg):
 
         logger.debug('refuel')
@@ -860,7 +885,7 @@ class EDAutopilot:
             return False
             raise Exception('not ready to refuel')
 
-        self.vce.say("Sun avoidance")
+
         # if we are under our refuel threshold then we will:
         #  - Set Speed to 100 for 4 seconds to get a little closer to the Sun
         #  - Put Speed to 0, we should be scooping now
@@ -870,8 +895,9 @@ class EDAutopilot:
         self.rotate90Left()
 
         sleep(0.5)   # give time for display to update
-        
-        self.sun_align(scr_reg)
+
+        self.vce.say("Sun avoidance")        
+        self.sun_avoid(scr_reg)
         
         if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and self.jn.ship_state()['star_class'] in scoopable_stars:
             logger.debug('refuel= start refuel')
@@ -913,6 +939,7 @@ class EDAutopilot:
         handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")   
         if handle != 0:
             win32gui.SetForegroundWindow(handle)  # give focus to ED
+            
 
     def fsd_assist(self, scr_reg):
         logger.debug('self.jn.ship_state='+str(self.jn.ship_state()))
@@ -922,8 +949,6 @@ class EDAutopilot:
 
         starttime = time.time()
         starttime -= 20   # to account for first instance not doing positioning
-
-        sleep(2)    # give time to set focus to ED
 
         while self.jn.ship_state()['target']:
             
@@ -962,40 +987,62 @@ class EDAutopilot:
         else:
             self.keys.send('SetSpeed100')  
             self.vce.say("System Reached, preparing for supercruise") 
-            sleep(10)         
+            sleep(1)         
             return False
 
    
-
+    # Main loop to travel to target in system and perform autodock
+    # TODO: Handle Settlement landing, handle Land Landing?  hhhmm
     def sc_assist(self, scr_reg):
+        align_failed = False
         # see if we have a compass up, if so then we have a target
         if self.have_destination(scr_reg) == False:
             return
 
-        # Need unit target_Align,   do  nav_Align out side of loop,
-        # sc_target_Align will look to see if out of whack and then adjust
-        #
-        #while self.jn.ship_state()['target']:
-        sleep(2)
-
+        # Ensure we are 50%, don't want the loop of shame
+        # Align Nav to target
         self.keys.send('SetSpeed50')
         self.nav_align(scr_reg)
         self.keys.send('SetSpeed50')
+        
+        # check if our target is behind the sun, if so, pitch down 90, sleep, pitch up 90, sleep, check again
+        while self.sun_dead_ahead(scr_reg):
+            self.vce.say("Target obscured by sun, repositioning")           
+            self.pitch90Down()
+            self.keys.send('SetSpeed100')
+            sleep(15)
+            self.pitch90Up()
+            sleep(5)
 
+        # go back 50%             
+        self.keys.send('SetSpeed50')            
+
+        # Loop forever keeping tight align to target, until we get SC Disengage popup
         while True:
- 
             sleep(1)
             if self.jn.ship_state()['status'] == 'in_supercruise':
-        #       nav_mnvr_to_target(scr_reg)
                 self.sc_target_align(scr_reg)
-            # check if Drop of SC
+            else:
+                # TODO: if we dropped from SC, then interdicted or user dropped us or we rammed into planet, what to do?
+                #       perhap check for interdiction and have interdiction aviodance routine
+                align_false = True  
+            
+            # check for SC Disengage
             if (self.sc_disengage(scr_reg) == True):
                 self.keys.send('HyperSuperCombination', hold=0.001)
                 break
-
-        sleep(4)   #wait for the journal to catch up
-        self.dock()
+ 
+        # if no error, we must have gotten disengage
+        if align_failed == False:
+            sleep(4)       # wait for the journal to catch up
+            self.dock()    # go into docking sequence
+        else:
+            self.vce.say("Exiting Supercruise, setting throttle to zero")  
+            self.keys.send('SetSpeedZero')  # make sure we don't continue to land   
+ 
+        self.vce.say("SC Assist complete")                     
         self.ap_ckb('sc_stop')
+        
  
     def afk_combat_loop(self):
         while True:
@@ -1127,8 +1174,6 @@ class EDAutopilot:
                 self.ap_ckb('sc_stop')
                 
             elif self.afk_combat_assist_enabled == True:
-                #self.afk_combat_assist_enabled = False
-                #self.ap_ckb('<TOADD>')
                 try:
                     self.afk_combat_loop()
                 except EDAP_Interrupt:
