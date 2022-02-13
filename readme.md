@@ -31,7 +31,7 @@ Also Note: This repository is provided for educational purposes as a in depth pr
         you probably want to save the config.  Each ship is different.  The rates shown in Outfitting
         are for normal space, in supercriuse they will be a little slower.
          see:  https://forums.frontier.co.uk/threads/supercruise-handling-of-ships.396845/
-* Route Star Type:  Must use KGB FOAM type stars for routing.  Otherwise might end up in a System with a dull Sun which would circumvent this sun advoidance
+* Route Star Type:  Must use KGB FOAM type stars for routing.  Otherwise might end up in a System with a dull Sun which would circumvent this sun avoidance
     algorithm (expects a certain level of brightness)
 * Routing: If using Economical Route setting, then may run into problems in jumping.  With Economical, the Stars may not be on the "other-side" of the 
   Sun as with Fastest routing.
@@ -171,7 +171,7 @@ If you are going to run dist/EDAPGui.exe, you need to have the template director
    overshoot or undershoot.  The algorithm attempts to align the nav point on the Y axis (north or south, depending on which is closer)
  * Have seen a few cases where after doing refueling, depending on ship acceleration, we don't get away from Sun far enough before engaging FSD
    and can over heat
- * Not much of a limitation, but if you in the core of the galaxy (high density stars), when pitching up for sun advoidance and the galaxy "edge" 
+ * Not much of a limitation, but if you in the core of the galaxy (high density stars), when pitching up for sun avoidance and the galaxy "edge" 
    is right above the sun, the AP will continue to pitch up above that region due to "brightness" of the region.  So in that System there will be no
    fuel scooping as would be too far away from Sun.  Luckily seems to only happen on occasionally and will fuel scoop in next system
                                                                
