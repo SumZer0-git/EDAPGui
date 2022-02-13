@@ -24,3 +24,4 @@ The calibration algorithm will try matching the template images to your ED scree
   * The GUI Window will show the results 
     * Also you can open config-resolution.json to see the selected scaling values for the 'Calibrated' key
 
+# Restart EDAPGui after this process to ensure picking up the correct scaling values
