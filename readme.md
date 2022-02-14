@@ -1,13 +1,15 @@
 # ED Autopilot - Gui
-This Elite Dangerous (ED) Autopilot supports route assistance, supercruise assistance, and AFK Combat escape assistance.  Furthermore while
+This Elite Dangerous (ED) Autopilot supports FSD route assistance, supercruise assistance, and AFK Combat escape assistance.  For the FSD route assist, you select
+your destination in the GalaxyMap and then enable this assistant and it will perform all the jumps to get you to your destination, AFK.  Furthermore while
 executing route assistance it will perform detailed system scanning (honk) when jumping into a system and optionally perform FSS scanning
-to determine if Earth, Water, or Ammonia type world is present.   If Voice enabled, the autopilot will inform you of its actions.   
+to determine if Earth, Water, or Ammonia type world is present.  The supercruise assistant will keep you on target and when PRESS [J] DISENGAGED is announced will
+autodrop out of SC and perform autodocking with the targetted Station.  If Voice enabled, the autopilot will inform you of its actions.   
 
 This autopilot uses Computer Vision (grabs screens and performs template matching) and issues keystrokes.  It does not perform any runtime modifications 
 of Elite Dangerous, it is an external-ED construct (similar to us commanders) 
 
   ```
-  * See Calibration.md for details on how to calibrate EDAPGui for your system *
+  * See Calibration.md for details on how to calibrate EDAPGui for your system if required *
   ```
 
 Note: much of the autopilot code was taking from https://github.com/skai2/EDAutopilot , many of the routines were turned into classes and tweaks were done on sequences
@@ -72,19 +74,16 @@ https://pythonhosted.org/pynput/keyboard.html
 Note: the autopilot.log file will capture any required keybindings that are not set
    
 # Autopilot Options:
-* FSD Route Assist: will execute your route.  It is possible to jump into a system that has two stars
-    next to each other.  You can overheat in this case and be dropped out of Assist.  At each jump the 
-    sequence will perform some fuel scooping, however, if fuel level goes down below a hardcoded threshold
-    the sequence will stop at the star until refueling is complete.  If refueling doesn't complete after
-    35 seconds it will abort and continue to next route point.  If fuel goes below 35%, the route assist
-    will terminate
+* FSD Route Assist: will execute your route.  At each jump the sequence will perform some fuel scooping, however, if 
+    fuel level goes down below a threshold  the sequence will stop at the Star until refueling is complete.  
+    If refueling doesn't complete after 35 seconds it will abort and continue to next route point.  If fuel goes below 
+    10% (configurable), the route assist will terminate
 * Supercruise Assist: will keep your ship pointed to target, you target can only be a station for
-    the autodocking to work.  If a settlement or target is obscured you will end up being kicked out of SC 
-    via "Dropped Too Close" or "Dropping from Orbital Cruise" (however, not damage to ship), throttle will be set to
-    Zero and exit SC Assist.
-    Otherwise, when the SC Disenage appears the SC Assist will drop you out of SC
+    the autodocking to work.  If a settlement is targetted or target is obscured you will end up being kicked out of SC 
+    via "Dropped Too Close" or "Dropping from Orbital Cruise" (however, no damage to ship), throttle will be set to
+    Zero and exit SC Assist.  Otherwise, when the 'PRESS [J] DISENGAGE' appears the SC Assist will drop you out of SC
     and attempt request docking (after traveling closer to the Station), if docking granted it will
-    put throttle to zero and the autodocking computer will take over
+    put throttle to zero and the autodocking computer will take over. Once docked it will auto-refuel and go into StarPort Services
 * ELW Scanner: will perform FSS scans while FSD Assist is traveling between stars.  If the FSS
     shows a signal in the region of Earth, Water or Ammonia type worlds, it will announce that discovery
     and log it into elw.txt file.  Note: it does not do the FSS scan, you would need to terminate FSD Assist
@@ -196,7 +195,7 @@ instead of > pip install -r requirements.txt
 If you are going to run dist/EDAPGui.exe, you need to have the template directory so your path would be ./templates/<file>
 
 ## Known Limitations
- * As described in the constraints, if you jump into a system with 2 suns next to each other, will likely over heat and drop from Supercruis
+ * If you jump into a system with 2 suns next to each other, will likely over heat and drop from Supercruise.
  * The target alignment goal is to perform 1 roll and 1 pitch action to align close to taget.  If you have wrong rates for your ship then you will
    overshoot or undershoot.  The algorithm attempts to align the nav point on the Y axis (north or south, depending on which is closer)
  * Have seen a few cases where after doing refueling, depending on ship acceleration, we don't get away from Sun far enough before engaging FSD
