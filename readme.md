@@ -35,6 +35,8 @@ Also Note: This repository is provided for educational purposes as a in depth pr
          see:  https://forums.frontier.co.uk/threads/supercruise-handling-of-ships.396845/
 * Route Star Type:  Must use KGB FOAM type stars for routing.  Otherwise might end up in a System with a dull Sun which would circumvent this sun avoidance
     algorithm (expects a certain level of brightness)
+* Autodocking: For the AP to recongize the "PRESS [J] TO DISENGAGE"  you should map "J" key for disengage so that that image matching will work. Or at minimum have
+  it mapped to a single Key and not a set of keys such as "PRESS [CTR+ALT+5] TO DISENGAGE", as that is unlikely to meet the matching threshold of the image
 * Routing: If using Economical Route setting, then may run into problems in jumping.  With Economical, the Stars may not be on the "other-side" of the 
   Sun as with Fastest routing.
   As such, when rolling toward the Target, the Sun may fade the console making Compass matching difficult.  Need to think through this one more.  The Sun shining on the 
