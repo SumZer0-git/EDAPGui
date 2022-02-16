@@ -2,8 +2,9 @@
 This Elite Dangerous (ED) Autopilot supports FSD route assistance, supercruise assistance, and AFK Combat escape assistance.  For the FSD route assist, you select
 your destination in the GalaxyMap and then enable this assistant and it will perform all the jumps to get you to your destination, AFK.  Furthermore while
 executing route assistance it will perform detailed system scanning (honk) when jumping into a system and optionally perform FSS scanning
-to determine if Earth, Water, or Ammonia type world is present.  The supercruise assistant will keep you on target and when PRESS [J] DISENGAGED is announced will
-autodrop out of SC and perform autodocking with the targetted Station.  If Voice enabled, the autopilot will inform you of its actions.   
+to determine if Earth, Water, or Ammonia type world is present.  The supercruise assistant (and not using ED's SC Assist which takes up a slot, for a piece of software?) 
+will keep you on target and when PRESS [J] DISENGAGED is presented will autodrop out of SC and perform autodocking with the targetted Station.  If Voice enabled, the 
+autopilot will inform you of its actions.   
 
 This autopilot uses Computer Vision (grabs screens and performs template matching) and issues keystrokes.  It does not perform any runtime modifications 
 of Elite Dangerous, it is an external-ED construct (similar to us commanders) 
