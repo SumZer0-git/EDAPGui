@@ -1,19 +1,23 @@
 # ED Autopilot - Gui
-This Elite Dangerous (ED) Autopilot supports FSD route assistance, supercruise assistance, and AFK Combat escape assistance.  For the FSD route assist, you select
+This Elite Dangerous (ED) Autopilot supports FSD route assistance, supercruise assistance, Waypoint Assist and AFK Combat escape assistance.  For the FSD route assist, you select
 your destination in the GalaxyMap and then enable this assistant and it will perform all the jumps to get you to your destination, AFK.  Furthermore while
 executing route assistance it will perform detailed system scanning (honk) when jumping into a system and optionally perform FSS scanning
 to determine if Earth, Water, or Ammonia type world is present.  The supercruise assistant (and not using ED's SC Assist which takes up a slot, for a piece of software?) 
-will keep you on target and when PRESS [J] DISENGAGED is presented will autodrop out of SC and perform autodocking with the targetted Station.  If Voice enabled, the 
-autopilot will inform you of its actions.   
+will keep you on target and when PRESS [J] DISENGAGED is presented will autodrop out of SC and perform autodocking with the targetted Station.  With Waypoint Assist you 
+define the route in a file and this assistance will jump to those waypoints.  If a Station is defined to dock at, the assistant will transition to SC Assist and
+dock with the station.  The Alpha version of a trading capability is also included.  If Voice enabled, the autopilot will inform you of its actions.   
 
 This autopilot uses Computer Vision (grabs screens and performs template matching) and issues keystrokes.  It does not perform any runtime modifications 
 of Elite Dangerous, it is an external-ED construct (similar to us commanders) 
 
   ```
-  * See Calibration.md for details on how to calibrate EDAPGui for your system if required *
+  * See HOWTO-Calibration.md for details on how to calibrate EDAPGui for your system if required 
+  * See HOWTO-Waypoint.md for details on how to generate a waypoint file 
+  * See HOWTO-Rates.md for details on the Pitch, Roll, Yaw values 
+
   ```
 
-Note: much of the autopilot code was taking from https://github.com/skai2/EDAutopilot , many of the routines were turned into classes and tweaks were done on sequences
+Note: this autopilot is based on https://github.com/skai2/EDAutopilot , some of the routines were used and turned into classes and tweaks were done on sequences
  and how image matching was performed.   Kudo's to skai2mail@gmail.com
  
 Also Note: This repository is provided for educational purposes as a in depth programming example of interacting with file based data, computer vision processing, user feedback via voice, win32 integration using python, threading interaction, and python classes.  
@@ -34,12 +38,20 @@ Also Note: This repository is provided for educational purposes as a in depth pr
            window
 * Control Rates: Must provide the roll, pitch, yaw rates as defined in Outfitting for your ship, 
         you probably want to save the config.  Each ship is different.  The rates shown in Outfitting
-        are for normal space, in supercriuse they will be a little slower.
+        are for normal space, in supercriuse they will be a little slower.  The values in outfitting are too high as Supercruise has lower performance.
+        With higher rates, you will note multiple steps in the roll and pitch.  You can try to reduce roll by 10-15 and pitch by 5-10.  If the control algorithm
+        overshoots then you need to increase the approprate number
          see:  https://forums.frontier.co.uk/threads/supercruise-handling-of-ships.396845/
 * Route Star Type:  Must use KGB FOAM type stars for routing.  Otherwise might end up in a System with a dull Sun which would circumvent this sun avoidance
     algorithm (expects a certain level of brightness)
 * Autodocking: For the AP to recongize the "PRESS [J] TO DISENGAGE"  you should map "J" key for disengage so that that image matching will work. Or at minimum have
-  it mapped to a single Key and not a set of keys such as "PRESS [CTR+ALT+5] TO DISENGAGE", as that is unlikely to meet the matching threshold of the image
+  it mapped to a single Key and not a set of keys such as "PRESS [CTR+ALT+5] TO DISENGAGE", as that is unlikely to meet the matching threshold of the image.  The following should be the keybing to ensure this works
+
+    <HyperSuperCombination>
+      <Primary Device="Keyboard" Key="Key_J" />
+      <Secondary Device="{NoDevice}" Key="" />		
+    </HyperSuperCombination>
+
 * Routing: If using Economical Route setting, then may run into problems in jumping.  With Economical, the Stars may not be on the "other-side" of the 
   Sun as with Fastest routing.
   As such, when rolling toward the Target, the Sun may fade the console making Compass matching difficult.  Need to think through this one more.  The Sun shining on the 
@@ -83,8 +95,15 @@ Note: the autopilot.log file will capture any required keybindings that are not 
     the autodocking to work.  If a settlement is targetted or target is obscured you will end up being kicked out of SC 
     via "Dropped Too Close" or "Dropping from Orbital Cruise" (however, no damage to ship), throttle will be set to
     Zero and exit SC Assist.  Otherwise, when the 'PRESS [J] DISENGAGE' appears the SC Assist will drop you out of SC
-    and attempt request docking (after traveling closer to the Station), if docking granted it will
-    put throttle to zero and the autodocking computer will take over. Once docked it will auto-refuel and go into StarPort Services
+    and attempt request docking (after traveling closer to the Station), if docking granted it will.    
+    put throttle to zero and the autodocking computer will take over. Once docked it will auto-refuel and go into StarPort Services.
+    Note: while in SC, a interdictor response is included.   Also, as approaching the station, if it shows the Station is occluded
+    this assistant will navigate around the planet and proceed with docking
+* Waypoint Assist: When selected, will prompt for the waypoint file.  The waypoint file contains System names that will be 
+    entered into Galaxy Map and route plotted.  If the last entry in the waypoint file is "REPEAT", it will start from the beginning.
+    If the waypoint file entry has an associated Station/StationCoord entry, the assistant will route a course to that station
+    upon entering that system.  The assistant will then autodock, refuel and repair.  If a trading sequence is define, it will then
+    execute that trade.  See HOWTO-Waypoint.md
 * ELW Scanner: will perform FSS scans while FSD Assist is traveling between stars.  If the FSS
     shows a signal in the region of Earth, Water or Ammonia type worlds, it will announce that discovery
     and log it into elw.txt file.  Note: it does not do the FSS scan, you would need to terminate FSD Assist
@@ -97,6 +116,9 @@ Note: the autopilot.log file will capture any required keybindings that are not 
     dropped and if so, will boost away and go into supercruise for ~10sec... then drop, put pips to
     system and weapons and deploy fighter, then terminate.  While in the Rez Zone, if your fighter has
     been destroyed it will deploy another figher (assumes you have two bays)
+* Calibrate: will iterate through a set of scaling values getting the best match for your system.  See HOWTO-Calibrate.md
+* Cap Mouse X, Y:  this will provide the StationCoord value of the Station in the SystemMap.  Selecting this button
+    and then clicking on the Station in the SystemMap will return the x,y value that can be pasted in the waypoints file
 * Menu
   * Open : read in a file with roll, pitch, yaw values for ship
   * Save : save the roll,pitch,yaw values to a files
@@ -113,12 +135,14 @@ Note: the autopilot.log file will capture any required keybindings that are not 
             "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel
             "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
             "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking
+            "FuelScoopTimeOut": 35,       # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
             "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
             "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
             "HotKey_StopAllAssists": "end",
             "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
             "OverlayTextEnable": False,    # Experimental at this stage
             "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
+            "OverlayTextFontSize": 16, 
             "OverlayGraphicEnable": False, # not implemented yet
             "DiscordWebhook": False,       # discord not implemented yet
             "DiscordWebhookURL": "",
@@ -132,41 +156,37 @@ Note: the autopilot.log file will capture any required keybindings that are not 
 # Approach
 ## FSD Assist FLow
 * When entering a new System, Speed to 0
-* Rotate left 90 degree and perform sun aviodance by pitching up until sun just below us
-  * this configuration puts the sun beneath us so we won't be suceptible to sun shining on our console making
-    image matching very difficult for the Compass
+* Pitch up until sun is out of field of view
 * Accelerate to 100 for "some #" of seconds, speed to 50, fuel scooping will start
-* if our fuel is below a threshold (hardcode, need to lookup) then put speed to 0
-* If refuel required then wait for refuel complete or 35 sec elapsed
+* If our fuel is below a threshold (hardcode, need to lookup) then put speed to 0
+* If refuel required then wait for refuel complete or <#> sec elapsed
 * Accel back to 100, delay some seconds while we get away from Sun
 * Perform DSS on the System
-* if ELW Scanner enabled, go into FSS, do image matching in specific region looking for filled circle or frequency signal present.
-  if so, log wether an Earth, Water or Ammonia world based on where the frequency signal is at in the image
-* Now do Nav align looking at the Compass on the console, perform roll and pitch based on Nav point in the compass
-* Then perform Target align (as the target should be pretty close in front of us) 
-* if reached destination system then terminate, however if we still have a target to a Station, then auto-enable SC Assist
+* If ELW Scanner enabled, go into FSS, do image matching in specific region looking for filled circle or frequency signal present.
+  If so, log wether an Earth, Water or Ammonia world based on where the frequency signal is at in the image
+* Perform Nav align looking at the Compass on the console, perform roll and pitch based on Nav point in the compass
+* Perform Target align (as the target should be pretty close in front of us) 
+* If reached destination system then terminate, however if we still have a target to a Station, then auto-enable SC Assist
   else have not reach destination, so issue FSD and loop 
  
 ## SC Assist Flow
 * Loop 
   * Do Target align, keeping is us a tight deadband on the target
   * Do image match checking to see if SC Disengage pops up, if so, break loop
+  * Check for interdiction, if so execut response 
+  * Check for Station occluded by the Planet, if so maneauver around planet
 * Accel for ~10sec... then put speed to 0 (this put us < 7.5km)
 * Do Left Menu... Right twice to get to Contact and the Right to request docking
   * Do this up to 3 times, if needed
   * if docking rejected, put that info in the log
-* if docking accepted, we are at speed 0 so let Docking Computer take over
-* wait for up to 120 sec for dock complete... then done
+* If docking accepted, we are at speed 0 so let Docking Computer take over
+* wait for up to 120 sec for dock complete... select refuel and repair
+* If a trade is defined, execute the trade
  
 # Enhancement ideas
 * A lot more error trapping needs to be put into the code
   * since I do exception trapping for uncaught exception at the top, I can create a set of my own exceptions
     and depending on what exception was raised could put the vehicle in appropriate safe condition
-* Saw forks on skai's repo, some good stuff.  I like the route planning (route plan in file and it parses it)
-  * explore other peoples updates.  Can't push this back to skai's repo because most of this is a re-write.
-    Need to put more config items in a config file to be read at startup
-* The Overlay.py is cool, would be nice to show the matched image on the actual ED screen
-* Handle ED in windowed mode
 * FSS/ELW screen region needs to be able to handle diff screen resolutions
 
 
