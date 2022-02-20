@@ -8,6 +8,8 @@ A configuration file called _config-resolution.json_ contains Screen resolution 
 The calibration algorithm will try matching the template images to your ED screen by looping through scaling factors and picking the most optimal scale based on the match percentage.<br>
 ``` Note: No commands will be sent to ED during this calibration, it will simply be performing screen grabs. ```
 
+Also see:  HOWTO-RollPitchYaw.md on how to adjust your autopilot performance while maneuvering to target.
+
 # Setup
 * Start Elite Dangerous (ED)
 * Set the ED configuration to be

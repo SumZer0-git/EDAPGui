@@ -1,11 +1,11 @@
 # ED Autopilot - Gui
-This Elite Dangerous (ED) Autopilot supports FSD route assistance, supercruise assistance, Waypoint Assist and AFK Combat escape assistance.  For the FSD route assist, you select
+This Elite Dangerous (ED) Autopilot supports FSD Route assistance, Supercruise Assistance, Waypoint Assist and AFK Combat escape assistance.  For the FSD Route Assist, you select
 your destination in the GalaxyMap and then enable this assistant and it will perform all the jumps to get you to your destination, AFK.  Furthermore while
 executing route assistance it will perform detailed system scanning (honk) when jumping into a system and optionally perform FSS scanning
-to determine if Earth, Water, or Ammonia type world is present.  The supercruise assistant (and not using ED's SC Assist which takes up a slot, for a piece of software?) 
+to determine if Earth, Water, or Ammonia type world is present.  The supercruise (SC) assistant (and not using ED's SC Assist which takes up a slot, for a piece of software?) 
 will keep you on target and when PRESS [J] DISENGAGED is presented will autodrop out of SC and perform autodocking with the targetted Station.  With Waypoint Assist you 
 define the route in a file and this assistance will jump to those waypoints.  If a Station is defined to dock at, the assistant will transition to SC Assist and
-dock with the station.  The Alpha version of a trading capability is also included.  If Voice enabled, the autopilot will inform you of its actions.   
+dock with the station.  A early version of a trading capability is also included.  If Voice enabled, the autopilot will inform you of its actions.   
 
 This autopilot uses Computer Vision (grabs screens and performs template matching) and issues keystrokes.  It does not perform any runtime modifications 
 of Elite Dangerous, it is an external-ED construct (similar to us commanders) 
@@ -13,8 +13,7 @@ of Elite Dangerous, it is an external-ED construct (similar to us commanders)
   ```
   * See HOWTO-Calibration.md for details on how to calibrate EDAPGui for your system if required 
   * See HOWTO-Waypoint.md for details on how to generate a waypoint file 
-  * See HOWTO-Rates.md for details on the Pitch, Roll, Yaw values 
-
+  * See HOWTO-RollPitchYaw.md for details on how to tune the Pitch, Roll, Yaw values 
   ```
 
 Note: this autopilot is based on https://github.com/skai2/EDAutopilot , some of the routines were used and turned into classes and tweaks were done on sequences
@@ -24,6 +23,7 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 
 # Constraints:
 * Will only work with Windows (not Linux)
+* Default HUD Values must be used, if you changed those colors, this autopilot will not work
 * Borderless Elite Dangerous (ED) configuration required,  Windowed does not work due to how the screen is grabbed
 * Screen Resolution/scale X, Y:  The templates were captured on a 3440x1440 resolution/game configuration.  These need to be scaled
   for different resolutions.  The _config-resolution.json_ file captures these resolutions with the corresponding ScaleX, Y values.  If a resolution is not defined
@@ -36,14 +36,7 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * Focus: ED must have focus when running, so you can't do other things on other windows if AP is active.
            If you change focus, then keyboard events will be sent to the focused window, can mess with the 
            window
-* Control Rates: Must provide the roll, pitch, yaw rates as defined in Outfitting for your ship, 
-        you probably want to save the config.  Each ship is different.  The rates shown in Outfitting
-        are for normal space, in supercriuse they will be a little slower.  The values in outfitting are too high as Supercruise has lower performance.
-        With higher rates, you will note multiple steps in the roll and pitch.  You can try to reduce roll by 10-15 and pitch by 5-10.  If the control algorithm
-        overshoots then you need to increase the approprate number
-         see:  https://forums.frontier.co.uk/threads/supercruise-handling-of-ships.396845/
-* Route Star Type:  Must use KGB FOAM type stars for routing.  Otherwise might end up in a System with a dull Sun which would circumvent this sun avoidance
-    algorithm (expects a certain level of brightness)
+* Control Rates: Must provide the roll, pitch, yaw rates for your ship. See HOWTO-RollPitchYaw.md, start with values from Outfitting for your ship 
 * Autodocking: For the AP to recongize the "PRESS [J] TO DISENGAGE"  you should map "J" key for disengage so that that image matching will work. Or at minimum have
   it mapped to a single Key and not a set of keys such as "PRESS [CTR+ALT+5] TO DISENGAGE", as that is unlikely to meet the matching threshold of the image.  The following should be the keybing to ensure this works
 
@@ -66,15 +59,6 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * Must have required keybinding set for proper autopilot behavior.  See autopilot.log for any Warnings on missing key bindings
 * See https://github.com/skai2/EDAutopilot for other constraints that probably apply
 
-# Hot Keys:
-* Home - Start FSD Assist
-* Ins  - Start SC Assist
-* End  - Terminate any running assistants
-
-Hot keys are now configurable in the config-AP.json file, so you can remap them. Be sure not to use any keys you have mapped in ED.  You can find the key names here:
-https://pythonhosted.org/pynput/keyboard.html
-
-
 # How to run:
 * With Elite Dangerous (ED) running, start EDAPGui.py
   * python EDAPgui.py     
@@ -85,7 +69,7 @@ https://pythonhosted.org/pynput/keyboard.html
 * In the autopilot enable FSD Assist or hit the 'Home' key.  When a assist starts it will set focus
       to the Elite Dangerous window.  
 Note: the autopilot.log file will capture any required keybindings that are not set
-   
+  
 # Autopilot Options:
 * FSD Route Assist: will execute your route.  At each jump the sequence will perform some fuel scooping, however, if 
     fuel level goes down below a threshold  the sequence will stop at the Star until refueling is complete.  
@@ -119,15 +103,26 @@ Note: the autopilot.log file will capture any required keybindings that are not 
 * Calibrate: will iterate through a set of scaling values getting the best match for your system.  See HOWTO-Calibrate.md
 * Cap Mouse X, Y:  this will provide the StationCoord value of the Station in the SystemMap.  Selecting this button
     and then clicking on the Station in the SystemMap will return the x,y value that can be pasted in the waypoints file
+* SunPitchUp+Time field are for ship that tend to overheat. Providing 1-2 more seconds of Pitch up when avoiding the Sun
+    will overcome this problem.  This will be Ship unique and this value will be saved along with the Roll, Pitch, Yaw values 
 * Menu
   * Open : read in a file with roll, pitch, yaw values for ship
-  * Save : save the roll,pitch,yaw values to a files
+  * Save : save the roll,pitch,yaw, and sunpitchup time values to a files
   * Enable Voice : Turns on/off voice
   * Enable CV View: Turn on/off debug images showing the image matching as it happens.  The numbers displayed
     indicate the % matched with the criteria for matching. Example:  0.55 > 0.5  means 55% match and the criteria
     is that it has to be > 50%, so in this case the match is true
     
+## Hot Keys:
+* Home - Start FSD Assist
+* Ins  - Start SC Assist
+* End  - Terminate any running assistants
+
+Hot keys are now configurable in the config-AP.json file, so you can remap them. Be sure not to use any keys you have mapped in ED.  You can find the key names here:
+https://pythonhosted.org/pynput/keyboard.html
+
 ## Config File: config-AP.json
+  Note: the below is from the code, the real .json file will have the True/False values as lower case, as in true/false
         self.config = {  
             "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS
             "JumpTries": 3,                # 
@@ -152,44 +147,6 @@ Note: the autopilot.log file will capture any required keybindings that are not 
             "LogINFO": True
         }
 
-    
-# Approach
-## FSD Assist FLow
-* When entering a new System, Speed to 0
-* Pitch up until sun is out of field of view
-* Accelerate to 100 for "some #" of seconds, speed to 50, fuel scooping will start
-* If our fuel is below a threshold (hardcode, need to lookup) then put speed to 0
-* If refuel required then wait for refuel complete or <#> sec elapsed
-* Accel back to 100, delay some seconds while we get away from Sun
-* Perform DSS on the System
-* If ELW Scanner enabled, go into FSS, do image matching in specific region looking for filled circle or frequency signal present.
-  If so, log wether an Earth, Water or Ammonia world based on where the frequency signal is at in the image
-* Perform Nav align looking at the Compass on the console, perform roll and pitch based on Nav point in the compass
-* Perform Target align (as the target should be pretty close in front of us) 
-* If reached destination system then terminate, however if we still have a target to a Station, then auto-enable SC Assist
-  else have not reach destination, so issue FSD and loop 
- 
-## SC Assist Flow
-* Loop 
-  * Do Target align, keeping is us a tight deadband on the target
-  * Do image match checking to see if SC Disengage pops up, if so, break loop
-  * Check for interdiction, if so execut response 
-  * Check for Station occluded by the Planet, if so maneauver around planet
-* Accel for ~10sec... then put speed to 0 (this put us < 7.5km)
-* Do Left Menu... Right twice to get to Contact and the Right to request docking
-  * Do this up to 3 times, if needed
-  * if docking rejected, put that info in the log
-* If docking accepted, we are at speed 0 so let Docking Computer take over
-* wait for up to 120 sec for dock complete... select refuel and repair
-* If a trade is defined, execute the trade
- 
-# Enhancement ideas
-* A lot more error trapping needs to be put into the code
-  * since I do exception trapping for uncaught exception at the top, I can create a set of my own exceptions
-    and depending on what exception was raised could put the vehicle in appropriate safe condition
-* FSS/ELW screen region needs to be able to handle diff screen resolutions
-
-
 ## Setup:
 _Requires **python 3** and **git**_
 1. Clone this repository
@@ -213,17 +170,11 @@ If you encounter any issues during pip install, try running:
 > python -m pip install -r requirements.txt
 instead of > pip install -r requirements.txt
 
-If you are going to run dist/EDAPGui.exe, you need to have the template directory so your path would be ./templates/<file>
 
 ## Known Limitations
  * If you jump into a system with 2 suns next to each other, will likely over heat and drop from Supercruise.
- * The target alignment goal is to perform 1 roll and 1 pitch action to align close to taget.  If you have wrong rates for your ship then you will
-   overshoot or undershoot.  The algorithm attempts to align the nav point on the Y axis (north or south, depending on which is closer)
  * Have seen a few cases where after doing refueling, depending on ship acceleration, we don't get away from Sun far enough before engaging FSD
    and can over heat
- * Not much of a limitation, but if you in the core of the galaxy (high density stars), when pitching up for sun avoidance and the galaxy "edge" 
-   is right above the sun, the AP will continue to pitch up above that region due to "brightness" of the region.  So in that System there will be no
-   fuel scooping as would be too far away from Sun.  Luckily seems to only happen on occasionally and will fuel scoop in next system
                                                                
 ## Elite Dangerous, Role Play and Autopilot
 * I am a CMDR in the Elite Dangerous universe and I have a trusty Diamondback Explorer

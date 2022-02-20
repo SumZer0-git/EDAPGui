@@ -1,5 +1,10 @@
 
 2/20/2022 
+HOWTO's added:
+  - HOWTO-Calibration.md
+  - HOWTO-RollPitchYaw.md
+  - HOWTO-Waypoint.md
+
 Configurable Settings
   config-AP.json
     - Aded EnableRandomness flag to adjust sleep times
@@ -36,6 +41,8 @@ Autopilot
   - Added journal catch to check if game odyssey, capture distance jumped, jumps remaining
   - Added Galaxy and System Map Open for key binding lookup
   - Added total light years traveled for FSD Route Assist and Waypoint Assit
+  - Ship configurations provided that contain the values Roll, Pitch, and Yaw for various type ships
+    (Only DBX, APSX, Cutter, and Sidewinder tested)
 
 Update requirements.txt file
   - One new packages is required to be installed, pynput==1.7.6, to support mouse click
