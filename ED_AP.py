@@ -1058,7 +1058,7 @@ class EDAutopilot:
         if self.jn.ship_state()['star_class'] not in scoopable_stars and self.jn.ship_state()['star_class'] != "TTS" :
             self.pitchUp(130)
             self.keys.send('SetSpeed100')
-            print("Not scoopable star, pitching more:", +self.jn.ship_state()['star_class'])
+            print("Not scoopable star, pitching more:")
             return False
         
         if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and self.jn.ship_state()['star_class'] in scoopable_stars:
