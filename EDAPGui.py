@@ -9,13 +9,16 @@ import json
 from pathlib import Path
 import keyboard
 
+
 from PIL import Image, ImageGrab, ImageTk
 import tkinter as tk
+from tkinter import ttk
 from tkinter import messagebox
 from tkinter import *
 from tkinter import filedialog as fd
 
 from Voice import *
+from  MousePt import MousePoint
 
 from Image_Templates import *
 from Screen import * 
@@ -34,8 +37,7 @@ Description:
 User interface for controlling the ED Autopilot
 
 Note:
-A lot of the code in this package was taken from:
- https://github.com/skai2/EDAutopilot
+Ideas taken from:  https://github.com/skai2/EDAutopilot
  
  HotKeys:
     Home - Start FSD Assist
@@ -63,6 +65,7 @@ class APGui():
        
         self.FSD_A_running = False
         self.SC_A_running = False
+        self.WP_A_running = False
 
         self.cv_view = False
 
@@ -76,7 +79,9 @@ class APGui():
         self.entries['YawRate'].delete(0,END)  
         self.entries['PitchRate'].insert(0,float(self.ed_ap.pitchrate))
         self.entries['RollRate'].insert(0, float(self.ed_ap.rollrate)) 
-        self.entries['YawRate'].insert(0,float(self.ed_ap.yawrate))   
+        self.entries['YawRate'].insert(0,float(self.ed_ap.yawrate)) 
+        self.entries['SunPitchUp+Time'].insert(0,float(self.ed_ap.sunpitchuptime)) 
+        
 
         # global trap for these keys, the 'end' key will stop any current AP action
         # the 'home' key will start the FSD Assist.  May want another to start SC Assist
@@ -84,7 +89,10 @@ class APGui():
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StopAllAssists'],  self.stop_all_assists)
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartFSD'], self.callback, args =('fsd_start', None))
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartSC'],  self.callback, args =('sc_start',  None))
+        #keyboard.add_hotkey('del',  self.cba)
  
+    #def cba(self):
+    #    self.ed_ap.jn.ship_state()['interdicted'] = True
 
     # callback from the EDAP, to configure GUI items
     def callback(self, key, body=None):
@@ -102,6 +110,9 @@ class APGui():
         elif key == 'sc_start':
             self.checkboxvar['Supercruise Assist'].set(1)
             self.check_cb('Supercruise Assist')
+        elif key == 'waypoint_stop':
+            self.checkboxvar['Waypoint Assist'].set(0)
+            self.check_cb('Waypoint Assist')
         elif key == 'afk_stop':
             self.checkboxvar['AFK Combat Assist'].set(0)
             self.check_cb('AFK Combat Assist')       
@@ -118,6 +129,20 @@ class APGui():
         self.log_msg('Calibration starting')
         self.ed_ap.calibrate()         
     
+       
+    def mouse_coord_callback(self):
+        ans = messagebox.askyesno('Mouse XY', 'Select OK\nYour next Mouse click should be on the Station')
+
+        x, y = self.mouse.get_location()
+        
+        # can we auto paste into clipboard?  
+        xy_str = '[' +  str(x) + ',' + str(y) + ']'
+        self.root.clipboard_clear()
+        self.root.clipboard_append(xy_str)
+        self.root.update()  # it stays on the clipboard 
+        messagebox.showinfo('Mouse XY', 'Values: '+xy_str+'\n has been place in your clipboard')
+            
+          
     def quit(self):
         self.close_window()
        
@@ -132,33 +157,53 @@ class APGui():
     def stop_all_assists(self):
         self.callback('fsd_stop')
         self.callback('sc_stop')  
-        self.callback('afk_stop')        
+        self.callback('afk_stop') 
+        self.callback('waypoint_stop')            
 
     def start_fsd(self):
         self.ed_ap.set_fsd_assist(True)
         self.FSD_A_running = True
-        self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": Route Assist start" )   
+        self.log_msg("FSD Route Assist start" )   
 
     def stop_fsd(self):
         self.ed_ap.set_fsd_assist(False)
         self.FSD_A_running = False
-        self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": Route Assist stop" )   
+        self.log_msg("FSD Route Assist stop" )   
        
     def start_sc(self):
         self.ed_ap.set_sc_assist(True)
         self.SC_A_running = True
-        self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": SC Assist start" )   
+        self.log_msg("SC Assist start" )   
 
     def stop_sc(self):
         self.ed_ap.set_sc_assist(False)
         self.SC_A_running = False
-        self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": SC Assist stop" )   
-   
+        self.log_msg("SC Assist stop" )  
+        
+    def start_waypoint(self):
+        filetypes = (
+            ('json files', '*.json'),
+            ('All files', '*.*')
+        )
+        filename = fd.askopenfilename(title="Waypoint File", initialdir='./', filetypes=filetypes)
+        if filename != "":
+            self.ed_ap.waypoint.load_waypoint_file(filename)
+            sleep(2)
+            
+        self.ed_ap.set_waypoint_assist(True)
+        self.WP_A_running = True
+        self.log_msg("Waypoint Assist start" ) 
+
+    def stop_waypoint(self):
+        self.ed_ap.set_waypoint_assist(False)
+        self.WP_A_running = False
+        self.log_msg("Waypoint Assist stop" )  
+                
     def about(self):
         messagebox.showinfo('Autopilot', 'Autopilot')
 
     def log_msg(self, msg):
-        self.msgList.insert(END, msg)
+        self.msgList.insert(END, datetime.now().strftime("%H:%M:%S: ")+ msg)
         self.msgList.yview(END)
 
     def set_statusbar(self, txt):
@@ -172,7 +217,7 @@ class APGui():
 
     def open_file(self):
         filetypes = (
-            ('text files', '*.txt'),
+            ('Ship files', 'ship*.json'),
             ('All files', '*.*')
         )
 
@@ -190,37 +235,42 @@ class APGui():
         # load up the display with what we read, the pass it along to AP
         self.entries['PitchRate'].delete(0,END)
         self.entries['RollRate'].delete(0,END) 
-        self.entries['YawRate'].delete(0,END)    
+        self.entries['YawRate'].delete(0,END)   
+        self.entries['SunPitchUp+Time'].delete(0,END) 
 
         self.entries['PitchRate'].insert(0,f_details['pitchrate'])
         self.entries['RollRate'].insert(0, f_details['rollrate']) 
-        self.entries['YawRate'].insert(0,f_details['yawrate'])       
+        self.entries['YawRate'].insert(0,f_details['yawrate'])     
+        self.entries['SunPitchUp+Time'].insert(0,f_details['SunPitchUp+Time'])  
 
         self.ed_ap.rollrate = float(f_details['rollrate'])
         self.ed_ap.pitchrate = float(f_details['pitchrate'])
         self.ed_ap.yawrate = float(f_details['yawrate'])
-        
+        self.ed_ap.sunpitchuptime = float(f_details['SunPitchUp+Time'])
+     
         self.filelabel.set("Config: "+ Path(filename).name)
 
 
     def save_file(self):
         filetypes = (
-            ('text files', '*.txt'),
+            ('json files', '*.json'),
             ('All files', '*.*')
         )
 
-        self.ed_ap.pitchrate = self.entries['PitchRate'].get()
-        self.ed_ap.rollrate = self.entries['RollRate'].get()
-        self.ed_ap.yawrate = self.entries['YawRate'].get()  
+        self.ed_ap.pitchrate = float(self.entries['PitchRate'].get())
+        self.ed_ap.rollrate = float(self.entries['RollRate'].get())
+        self.ed_ap.yawrate = float(self.entries['YawRate'].get())  
+        self.ed_ap.sunpitchuptime = float(self.entries['SunPitchUp+Time'].get())
 
         f_details = {
                 'rollrate': self.ed_ap.rollrate,
                 'pitchrate': self.ed_ap.pitchrate,
-                'yawrate': self.ed_ap.yawrate
+                'yawrate': self.ed_ap.yawrate, 
+                'SunPitchUp+Time': self.ed_ap.sunpitchuptime
             }
         filename = fd.asksaveasfilename(
             title='Save a file',
-            initialdir='.',
+            initialdir='.', initialfile = "ship-",
             filetypes=filetypes)
 
         if not filename:
@@ -238,6 +288,7 @@ class APGui():
             self.ed_ap.pitchrate = float(self.entries['PitchRate'].get())
             self.ed_ap.rollrate = float(self.entries['RollRate'].get())
             self.ed_ap.yawrate = float(self.entries['YawRate'].get())  
+            self.ed_ap.sunpitchuptime = float(self.entries['SunPitchUp+Time'].get())
         except:
             messagebox.showinfo("Exception", "Invalid float entered")
 
@@ -268,6 +319,19 @@ class APGui():
                 self.stop_sc()
                 self.lab_ck['FSD Route Assist'].config(state='active')
                 self.lab_ck['AFK Combat Assist'].config(state='active')
+                
+                
+        if field == 'Waypoint Assist':
+            if (self.checkboxvar['Waypoint Assist'].get() == 1 and self.WP_A_running == False):
+                self.lab_ck['FSD Route Assist'].config(state='disabled')
+                self.lab_ck['Supercruise Assist'].config(state='disabled')
+                self.start_waypoint()
+
+            elif (self.checkboxvar['Waypoint Assist'].get() == 0 and self.WP_A_running == True):
+                self.stop_waypoint()
+                self.lab_ck['FSD Route Assist'].config(state='active')
+                self.lab_ck['Supercruise Assist'].config(state='active')        
+        
     
         if self.checkboxvar['ELW Scanner'].get() == 1:
             self.ed_ap.set_fss_scan(True)
@@ -277,13 +341,13 @@ class APGui():
         if field == 'AFK Combat Assist':
             if self.checkboxvar['AFK Combat Assist'].get() == 1:
                 self.ed_ap.set_afk_combat_assist(True)
-                self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": AFK Combat Assist start" )  
+                self.log_msg("AFK Combat Assist start" )  
                 self.lab_ck['FSD Route Assist'].config(state='disabled')
                 self.lab_ck['Supercruise Assist'].config(state='disabled')
                 
             elif self.checkboxvar['AFK Combat Assist'].get() == 0:
                 self.ed_ap.set_afk_combat_assist(False)
-                self.log_msg(datetime.now().strftime("%H:%M:%S")+ ": AFK Combat Assist stop" )  
+                self.log_msg("AFK Combat Assist stop" )  
                 self.lab_ck['FSD Route Assist'].config(state='active')
                 self.lab_ck['Supercruise Assist'].config(state='active')
 
@@ -331,8 +395,8 @@ class APGui():
 
     def gui_gen(self, win):
 
-        check_fields = ('FSD Route Assist', 'Supercruise Assist', "ELW Scanner", "AFK Combat Assist") 
-        entry_fields = ('RollRate', 'PitchRate', 'YawRate' )  # , 'ScoopAccelTime')
+        check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'ELW Scanner', 'AFK Combat Assist') 
+        entry_fields = ('RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time' )  
 
         blk0 = tk.Frame(win, relief=tk.RAISED, borderwidth=1) 
 
@@ -349,9 +413,18 @@ class APGui():
         
         blk1.pack(side=LEFT, anchor=N, padx=10, pady=3)
         blk2.pack(side=LEFT, padx=2, pady=3)
+        
+        sep = ttk.Separator(blk2, orient='horizontal')
+        sep.pack(fill='x', pady=5)
 
-        btn = Button(blk1, text='Calibrate', command=self.calibrate_callback)
-        btn.pack(side=tk.LEFT)
+
+        btn = Button(blk2, text='Calibrate', command=self.calibrate_callback)
+        btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        btn = Button(blk2, text='Cap Mouse X,Y', command=self.mouse_coord_callback)
+        btn.pack(side=tk.LEFT, padx=15,pady=5)
+
+
 
         blk0.grid(row=0, column=0, padx=2, pady=2)
         
@@ -393,8 +466,8 @@ class APGui():
         #statusbar.pack(side="bottom", fill="x", expand=False)
         statusbar.grid(row=2, column=0)
 
-        self.status    = tk.Label(win, text="Status: ", bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=45 )
-        self.jumpcount = tk.Label(statusbar, text="Jump: ",   bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=15)
+        self.status    = tk.Label(win, text="Status: ", bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=20 )
+        self.jumpcount = tk.Label(statusbar, text="<info> ",   bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=40)
         self.status.pack(in_=statusbar, side=LEFT, fill=BOTH, expand=True)
         self.jumpcount.pack(in_=statusbar, side=RIGHT, fill=Y, expand=False)
 

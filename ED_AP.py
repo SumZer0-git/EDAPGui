@@ -6,11 +6,13 @@ import random
 
 import cv2
 from PIL import Image
+from pathlib import Path
 
 from EDlogger import logger, logging
 import Image_Templates
 import Screen
 import Screen_Regions
+from EDWayPoint import *
 from EDJournal import *
 from EDKeys import *
 from EDafk_combat import AFK_Combat
@@ -24,8 +26,7 @@ File:EDAP.py    EDAutopilot
 Description:
 
 Note:
-Much of this taken from EDAutopilot on github, turned into a class and enhanced
-see: https://github.com/skai2/EDAutopilot
+Ideas taken from: https://github.com/skai2/EDAutopilot
 
 Author: sumzer0@yahoo.com
 """
@@ -47,12 +48,14 @@ class EDAutopilot:
             "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel
             "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
             "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking
+            "FuelScoopTimeOut": 35,       # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
             "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
             "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
             "HotKey_StopAllAssists": "end",
             "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
             "OverlayTextEnable": False,    # Experimental at this stage
             "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
+            "OverlayTextFontSize": 16, 
             "OverlayGraphicEnable": False, # not implemented yet
             "DiscordWebhook": False,       # discord not implemented yet
             "DiscordWebhookURL": "",
@@ -70,32 +73,41 @@ class EDAutopilot:
         if cnf is not None:
             self.config = cnf
             logger.debug("read AP json:"+str(cnf))   
-                      
+ 
+        # config the voice interface                     
         self.vce = Voice()
         self.vce.set_on()
         self.vce.set_voice_id(self.config['VoiceID'])
         self.vce.say("Welcome to Autopilot")
 
+        # set log level based on config input
         if self.config['LogINFO']:   
             logger.setLevel(logging.INFO)    
         if self.config['LogDEBUG']:
             logger.setLevel(logging.DEBUG)  
-
-        self.overlay = Overlay("", elite=1)
-        self.overlay.overlay_setfont("Times New Roman", 16 )
-        self.overlay.overlay_set_pos(50, self.config['OverlayTextYOffset'])
             
+        # initialize all to false
         self.fsd_assist_enabled = False
         self.sc_assist_enabled = False
         self.fss_scan_enabled = False
         self.afk_combat_assist_enabled = False
-
+        self.waypoint_assist_enabled = False
+        
+        # Create instance of each of the needed Classes
         self.scr    = Screen.Screen()
         self.templ  = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY)
         self.scrReg = Screen_Regions.Screen_Regions(self.scr, self.templ)
         self.jn     = EDJournal()
         self.keys   = EDKeys()
         self.afk_combat = AFK_Combat(self.keys, self.jn, self.vce)
+        self.waypoint  = EDWayPoint(self.jn.ship_state()['odyssey'])
+        
+        # Initialize the Overlay class
+        self.overlay = Overlay("", elite=1)
+        self.overlay.overlay_setfont("Times New Roman", self.config['OverlayTextFontSize'] )
+        self.overlay.overlay_set_pos(50, self.config['OverlayTextYOffset'])
+        # must be called after we initialized the objects above
+        self.update_overlay()
 
         # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
         # has worse performance for these rates
@@ -107,8 +119,12 @@ class EDAutopilot:
         self.yawrate   = 8.0 
         self.rollrate  = 80.0  
         self.pitchrate = 33.0 
+        self.sunpitchuptime = 0.0
 
+        self.optimize_jumps = True
         self.jump_cnt   = 0
+        self.total_dist_jumped = 0
+        self.total_jumps = 0
         self.refuel_cnt = 0
 
         self.ap_ckb = cb
@@ -119,12 +135,14 @@ class EDAutopilot:
         self.cv_view_y = 10
 
         #start the engine thread
-        self.terminate = False
+        self.terminate = False   # terminate used by the thread to exit its loop
         if doThread == True:
             self.ap_thread = kthread.KThread(target = self.engine_loop, name = "EDAutopilot")
             self.ap_thread.start()
 
 
+    # Loads the configuration file
+    #
     def read_config(self, fileName='./config-AP.json'):
         s = None
         try:
@@ -143,13 +161,36 @@ class EDAutopilot:
             logger.warning("EDAPGui.py write_config error:"+str(e))
  
  
+    # draw the overlay data on the ED Window
+    #
     def update_overlay(self):
         if self.config['OverlayTextEnable']:
-            self.overlay.overlay_text('1', "Status: "+self.jn.ship_state()['status'], 1, 1,(0,255,0) )
-            self.overlay.overlay_text('2', "Current System: "+self.jn.ship_state()['location'], 2, 1,(0,255,0) ) 
+            state = "Idle"
+            if self.fsd_assist_enabled == True:
+                state = "FSD Route Assist"
+            elif self.sc_assist_enabled == True:
+                state = "SC Assist"
+            elif self.afk_combat_assist_enabled == True:
+                state = "AFK Combat Assist"
+            else:
+                state = self.jn.ship_state()['status']
+                if state == None:
+                    state = '<init>'
+                    
+            sclass = self.jn.ship_state()['star_class']
+            if sclass == None:
+                sclass = "<init>" 
+                                
+            location = self.jn.ship_state()['location']  
+            if location == None:
+                location = "<init>" 
+            self.overlay.overlay_text('1', "AP Status: "+state, 1, 1,(136,53,0) )
+            self.overlay.overlay_text('2', "Current System: "+location+", "+sclass, 2, 1, (136,53,0) ) 
             self.overlay.overlay_paint()  
+     
         
-        
+    # draws the matching rectangle within the image     
+    #  
     def draw_match_rect(self, img, pt1, pt2, color, thick):
         wid = pt2[0] - pt1[0]
         hgt = pt2[1] - pt1[1]
@@ -187,8 +228,10 @@ class EDAutopilot:
             cv2.line(img, (int(pt2[0]),  int(pt1[1]+(4*len_hgt))), (int(pt2[0]),  int(pt2[1])),            color, thick)
             # right tic
             cv2.line(img, (int(pt2[0]),    int(pt1[1]+half_hgt)), (int(pt2[0]+tic_len),   int(pt1[1]+half_hgt)), color, thick)
+            
 
     # find the best scale value in the given range of scales with the passed in threshold
+    #
     def calibrate_range(self, range_low, range_high, threshold):
         #print("--- new range ---")
         scale  = 0
@@ -218,6 +261,7 @@ class EDAutopilot:
                    self.ap_ckb('log', 'Cal: Found scale value:'+f'{self.scr.scaleX:5.2f}')        
         
         return scale, max_pick
+    
 
     # Routine to find the optimal scaling values for the tempalte images
     def calibrate(self):
@@ -227,7 +271,10 @@ class EDAutopilot:
         match_level = 0.5
         scale_max = 0
         max_val = 0
-        
+
+        # loop through thresholds from 50 to 90% in 5% increments.  Find out which scale factor
+        # meets the highest threshold value
+        #        
         for i in range(50, 90, 5):
             threshold = float(i/100)
             scale, max_pick = self.calibrate_range(range_low, range_high, threshold)   # match from 50-> 100 by 5
@@ -255,8 +302,69 @@ class EDAutopilot:
         else:
             self.ap_ckb('log', 'Cal: Insufficient matching to meet reliability, max % match:'+ str(max_val)) 
              
-            
+ 
+    # Go into FSS, check to see if we have a signal waveform in the Earth, Water or Ammonia zone
+    #  if so, announce finding and log the type of world found
+    #
+    def fss_detect_elw(self, scr_reg):
+
+        #open fss
+        self.keys.send('SetSpeedZero')
+        sleep(0.1)
+        self.keys.send('ExplorationFSSEnter')
+        sleep(2.5)
+        
+        # look for a circle or signal in this region
+        elw_image, (minVal, maxVal, minLoc, maxLoc), match  = scr_reg.match_template_in_region('fss', 'elw')
+        elw_sig_image, (minVal1, maxVal1, minLoc1, maxLoc1), match  = scr_reg.match_template_in_image(elw_image, 'elw_sig')
+        
+        # dvide the region in thirds.  Earth, then Water, then Ammonio
+        wid_div3 = scr_reg.reg['fss']['width'] / 3
+
+        # Exit out of FSS, we got the images we need to process 
+        self.keys.send('ExplorationFSSQuit')
+
+        # Uncomment this to show on the ED Window where the region is define.  Must run this file as an App, so uncomment out 
+        # the main at the bottom of file
+        #self.overlay.overlay_rect('fss', (scr_reg.reg['fss']['rect'][0], scr_reg.reg['fss']['rect'][1]),
+        #                (scr_reg.reg['fss']['rect'][2],  scr_reg.reg['fss']['rect'][3]), (120, 255, 0),2)    
+        #self.overlay.overlay_paint()           
+     
+        if self.cv_view:
+            elw_image_d = elw_image.copy()
+            #self.draw_match_rect(elw_image_d, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1) 
+            self.draw_match_rect(elw_image_d, maxLoc1, (maxLoc1[0]+15,maxLoc1[1]+25), (255,255,55), 1)  
+            #cv2.putText(elw_image_d, f'{maxVal1:5.2f}> .60', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.imshow('fss', elw_image_d)
+            cv2.moveWindow('fss', self.cv_view_x,self.cv_view_y+100) 
+            cv2.waitKey(30)
+
+        logger.info("elw detected:{0:6.2f} ".format(maxVal)+ " sig:{0:6.2f}".format(maxVal1))
+
+        # check if the circle or the signal meets probability number, if so, determine which type by its region
+        #if (maxVal > 0.65 or (maxVal1 > 0.60 and maxLoc1[1] < 30) ):
+        # only check for singal
+        if (maxVal1 > 0.60 and maxLoc1[1] < 30):
+            if maxLoc1[0] < wid_div3:
+                sstr = "Earth"
+            elif maxLoc1[0] > (wid_div3*2):
+                sstr = "Water"
+            else:
+                sstr = "Ammonia"
+            # log the entry into the elw.txt file
+            f = open("elw.txt", 'a')
+            f.write(self.jn.ship_state()["location"]+", Type: "+sstr+", Probabilty: Cirle: {0:6.2f}, Signature: {1:6.2f} ".format(maxVal, maxVal1)+", date: "+str(datetime.now())+str("\n"))
+            f.close
+            self.vce.say(sstr+ " like world detected ")
+            logger.info(sstr+" world at: "+str(self.jn.ship_state()["location"]))
+
+        self.keys.send('SetSpeed100')  
+ 
+        return
+
+           
     # check to see if the compass is on the screen
+    #
     def have_destination(self, scr_reg):
         icompass_image, (minVal, maxVal, minLoc, maxLoc), match  = scr_reg.match_template_in_region('compass', 'compass')
         
@@ -269,6 +377,7 @@ class EDAutopilot:
             return True
 
     # determine the x,y offset from center of the compass of the nav point
+    #
     def get_nav_offset(self, scr_reg):
 
         icompass_image, (minVal, maxVal, minLoc, maxLoc), match  = scr_reg.match_template_in_region('compass', 'compass')
@@ -316,66 +425,43 @@ class EDAutopilot:
         return result
 
 
-    # Go into FSS, check to see if we have a signal waveform in the Earth, Water or Ammonia zone
-    #  if so, announce finding and log the type of world found
-    def fss_detect_elw(self, scr_reg):
-
-        #open fss
-        self.keys.send('SetSpeedZero')
-        sleep(0.1)
-        self.keys.send('ExplorationFSSEnter')
-        sleep(2.5)
+    # Looks to see if the 'dashed' line of the target is present indicating the target is occluded by the planet
+    #  return True if meets threshold 
+    #
+    def is_destination_occluded(self, scr_reg) -> bool:
+        threshold = 0.75
+        dst_image, (minVal, maxVal, minLoc, maxLoc), match  = scr_reg.match_template_in_region('target_occluded', 'target_occluded')
         
-        # look for a circle or signal in this region
-        elw_image, (minVal, maxVal, minLoc, maxLoc), match  = scr_reg.match_template_in_region('fss', 'elw')
-        elw_sig_image, (minVal1, maxVal1, minLoc1, maxLoc1), match  = scr_reg.match_template_in_image(elw_image, 'elw_sig')
-        
-        # dvide the region in thirds.  Earth, then Water, then Ammonio
-        wid_div3 = scr_reg.reg['fss']['width'] / 3
-
-        # Exit out of FSS 
-        self.keys.send('ExplorationFSSQuit')
-
-        # Uncomment this to show on the ED Window where the region is define.  Must run this file as an App, so uncomment out 
-        # the main at the bottom of file
-        #self.overlay.overlay_rect('fss', (scr_reg.reg['fss']['rect'][0], scr_reg.reg['fss']['rect'][1]),
-        #                (scr_reg.reg['fss']['rect'][2],  scr_reg.reg['fss']['rect'][3]), (120, 255, 0),2)    
-        #self.overlay.overlay_paint()           
-     
+        pt = maxLoc
+                       
         if self.cv_view:
-            elw_image_d = elw_image.copy()
-            self.draw_match_rect(elw_image_d, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1) 
-            self.draw_match_rect(elw_image_d, maxLoc1, (maxLoc1[0]+15,maxLoc1[1]+25), (255,255,55), 1)  
-            #cv2.putText(elw_image_d, f'{maxVal1:5.2f}> .60', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.imshow('fss', elw_image_d)
-            cv2.moveWindow('fss', self.cv_view_x,self.cv_view_y+100) 
+            destination_width  = scr_reg.reg['target']['width']
+            destination_height = scr_reg.reg['target']['height']
+            
+            width  = scr_reg.templates.template['target_occluded']['width']
+            height = scr_reg.templates.template['target_occluded']['height']
+            try:
+                self.draw_match_rect(dst_image, pt, (pt[0] + width, pt[1] + height), (255,255,255), 2)
+                dim = (int(destination_width/2), int(destination_height/2))
+
+                img = cv2.resize(dst_image, dim, interpolation =cv2.INTER_AREA)
+                cv2.putText(img, f'{maxVal:5.2f} >.54', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                cv2.imshow('target1', img)
+                cv2.moveWindow('target1', self.cv_view_x,self.cv_view_y+650)
+            except Exception as e:
+                print("exception in getdest: "+str(e))
             cv2.waitKey(30)
-
-        logger.info("in elw detector:{0:6.2f} ".format(maxVal)+ " sig:{0:6.2f}".format(maxVal1))
-
-        # check if the circle or the signal meets probability number, if so, determine which type by its region
-        if (maxVal > 0.65 or (maxVal1 > 0.60 and maxLoc1[1] < 30) ):
-            if maxLoc1[0] < wid_div3:
-                sstr = "Earth"
-            elif maxLoc1[0] > (wid_div3*2):
-                sstr = "Water"
-            else:
-                sstr = "Ammonia"
-            # log the entry into the elw.txt file
-            f = open("elw.txt", 'a')
-            f.write(self.jn.ship_state()["location"]+", Type: "+sstr+", Probabilty: Cirle: {0:6.2f}, Signature: {1:6.2f} ".format(maxVal, maxVal1)+", date: "+str(datetime.now())+str("\n"))
-            f.close
-            self.vce.say(sstr+ " like world detected ")
-            logger.info(sstr+" world at: "+str(self.jn.ship_state()["location"]))
-
-        self.keys.send('SetSpeed50')  
-        sleep(1)
-
-        return
-
+          
+        if maxVal > threshold:
+            return True
+        else:
+            return False
+                       
 
     # Determine how far off we are from the destination being in the middle of the screen (in this case the specified region
+    #
     def get_destination_offset(self, scr_reg):
+        threshold = 0.54
         dst_image, (minVal, maxVal, minLoc, maxLoc), match  = scr_reg.match_template_in_region('target', 'target')
     
         pt = maxLoc
@@ -387,8 +473,8 @@ class EDAutopilot:
         height = scr_reg.templates.template['target']['height']
 
         # need some fug numbers since our template is not symetric to determine center
-        final_x = ((pt[0] + ((1/2)*width)) - ((1/2)*destination_width)) - 5
-        final_y = (((1/2)*destination_height) - (pt[1] + ((1/2)*height))) + 19
+        final_x = ((pt[0] + ((1/2)*width)) - ((1/2)*destination_width))   - 7
+        final_y = (((1/2)*destination_height) - (pt[1] + ((1/2)*height))) + 22
         
     #  print("get dest, final:" + str(final_x)+ " "+str(final_y))
     #  print(destination_width, destination_height, width, height)
@@ -410,7 +496,7 @@ class EDAutopilot:
 
     #   print (maxVal)
         # must be > 0.55 to have solid hit, otherwise we are facing wrong way (empty circle)
-        if maxVal < 0.54:
+        if maxVal < threshold:
             result = None    
         else:
             result = {'x':final_x, 'y':final_y}
@@ -418,7 +504,8 @@ class EDAutopilot:
         return result
 
 
-    # look for the "PRESS [XX] TO DISENGAGE", if in this region then return true
+    # look for the "PRESS [J] TO DISENGAGE", if in this region then return true
+    #
     def sc_disengage(self, scr_reg) -> bool:
         dis_image, (minVal, maxVal, minLoc, maxLoc), match  = scr_reg.match_template_in_region('disengage', 'disengage')
 
@@ -426,24 +513,39 @@ class EDAutopilot:
 
         width  = scr_reg.templates.template['disengage']['width']
         height = scr_reg.templates.template['disengage']['height']
-
+        """
         if self.cv_view:
             self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
             cv2.putText(dis_image, f'{maxVal:5.2f} >.50', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('disengage', dis_image)
             cv2.moveWindow('disengage', self.cv_view_x,self.cv_view_y+220)
             cv2.waitKey(1)
-
+        """
         logger.debug("Disenage = "+str(maxVal))
 
         if (maxVal > 0.50):
-            self.vce.say("Disengaging Frameshift")
+            self.vce.say("Disengaging Supercruise")
             return True
         else:
             return False
+        
+    # Performs menu action to undock from Station
+    #  
+    def undock(self):
+        # Assume we are in Star Port Services                              
+        # Now we are on initial menu, we go up to top (which is Refuel)
+        self.keys.send('UI_Up', hold=3)
 
+        # down to Auto Undock and Select it...
+        self.keys.send('UI_Down')
+        self.keys.send('UI_Down')
+        self.keys.send('UI_Select')
+        self.keys.send('SetSpeedZero', repeat=2)     
+        
 
-
+    # Performs left menu ops to request docking
+    # Required that the left menu is on the "NAVIGATION" tab otherwise this doesn't work
+    #
     def request_docking(self, toCONTACT):
         self.keys.send('UI_Back', repeat=10)
         self.keys.send('HeadLookReset')
@@ -454,13 +556,13 @@ class EDAutopilot:
         
         # we start with the Left Panel having "NAVIGATION" highlighted, we then need to right
         # right twice to "CONTACTS".  Notice of a FSD run, the LEFT panel is reset to "NAVIGATION"
-        # otherwise it is on the last tab you selected.  Thus must start AP with "NAVIGATION" selkected
+        # otherwise it is on the last tab you selected.  Thus must start AP with "NAVIGATION" selected
         if (toCONTACT == 1):
             self.keys.send('CycleNextPanel', hold=0.2 )
             sleep(0.2)
             self.keys.send('CycleNextPanel', hold=0.2 )
 
-        # On the CONTACT TAB, go to top selection, do this 4 times to ensure at top
+        # On the CONTACT TAB, go to top selection, do this 4 seconds to ensure at top
         # then go right, which will be "REQUEST DOCKING" and select it
         self.keys.send('UI_Up', hold=4)
         self.keys.send('UI_Right')
@@ -469,7 +571,11 @@ class EDAutopilot:
         sleep(0.3)
         self.keys.send('UI_Back')
         self.keys.send('HeadLookReset')
-
+        
+    # Docking sequence.  Assumes in normal space, will get closer to the Station
+    # then zero the velocity and execute menu commands to request docking, when granted
+    # will wait a configurable time for dock.  Perform Refueling and Repair
+    #
     def dock(self): 
         # if not in normal space, give a few more sections as at times it will take a little bit
         if self.jn.ship_state()['status'] != "in_space":
@@ -520,22 +626,34 @@ class EDAutopilot:
                     # go to top item, select (which should be refuel)
                     self.keys.send('UI_Up', hold=3)
                     self.keys.send('UI_Select')
+                    sleep(0.5)
+                    self.keys.send('UI_Right')  # Repair
+                    self.keys.send('UI_Select')                    
                     # down to station services
-                    self.keys.send('UI_Down')
-                    self.keys.send('UI_Select')
+                    #self.keys.send('UI_Down')
+                    #self.keys.send('UI_Select')
                     break
 
 
-    def sun_dead_ahead(self, scr_reg):
+    def is_sun_dead_ahead(self, scr_reg):
         return scr_reg.sun_percent(scr_reg.screen) > 5
-
+    
+    # use to orient the ship to not be pointing right at the Sun
+    # Checks brightness in the region in front of us, if brightness exceeds a threshold
+    # then will pitch up until below threshold. 
+    #
     def sun_avoid(self, scr_reg):
         logger.debug('align= avoid sun')
+        
         # if sun in front of us, then keep pitching up until it is below us
-        while self.sun_dead_ahead(scr_reg):
+        while self.is_sun_dead_ahead(scr_reg):
             self.keys.send('PitchUpButton', state=1)
+            
+        if self.optimize_jumps == True:
+            self.keys.send('SetSpeed50')
 
         sleep(0.3)    # wait a little longer to get more pitch away from Sun
+        sleep(self.sunpitchuptime)  # some ships heat up too much and need pitch up a little further
         self.keys.send('PitchUpButton', state=0)
 
 
@@ -550,14 +668,17 @@ class EDAutopilot:
         
         return 90-result
         
-            
+   
+    # nav_align will use the compass to find the nav point position.  Will then perform rotation and pitching
+    # to put the nav point in the middle, i.e. target right in front of us
+    #         
     def nav_align(self, scr_reg):
         close = 2
         if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
            logger.error('align=err1')
            raise Exception('nav_align not in super or space') 
 
-        self.keys.send('SetSpeed100')
+        self.keys.send('SetSpeed50')
         self.vce.say("Navigation Align")
 
         # get the x,y offset from center, or none, which means our point is behind us
@@ -565,17 +686,18 @@ class EDAutopilot:
   
         # check to see if we are already converged, if so return    
         if off != None and abs(off['x']) < close and abs(off['y']) < close:
+            self.keys.send('SetSpeed100')
             return
          
         # nav point must be behind us, pitch up until somewhat in front of us
         while not off:
-            self.keys.send('PitchUpButton', state=1)   
+            self.pitchDown(90)    
             off = self.get_nav_offset(scr_reg)            
-        self.keys.send('PitchUpButton', state=0)
 
         # check if converged, unlikely at this point
         if abs(off['x']) < close and abs(off['y']) < close:
-            return;
+            self.keys.send('SetSpeed100')
+            return
 
         # try multiple times to get aligned.  If the sun is shining on console, this it will be hard to match
         # the vehicle should be positioned with the sun below us via the sun_avoid() routine after a jump
@@ -583,6 +705,7 @@ class EDAutopilot:
             off = self.get_nav_offset(scr_reg)
           
             if off != None and abs(off['x']) < close and abs(off['y']) < close:
+                self.keys.send('SetSpeed100')
                 break
               
             while not off:
@@ -632,9 +755,12 @@ class EDAutopilot:
                 pass
             sleep(.1)
             logger.debug("final x:"+str(off['x'])+" y:"+str(off['y']))
+            
+        self.keys.send('SetSpeed100')
 
 
-
+    # routine to coarse align to target to support FSD Jumping
+    #
     def target_align(self, scr_reg):
         self.vce.say("Target Align")
 
@@ -655,6 +781,7 @@ class EDAutopilot:
         # try one more time to align
         if (new == None):
             self.nav_align(scr_reg)
+            self.keys.send('SetSpeed50')
             new = self.get_destination_offset(scr_reg)
             if new:
                 off = new
@@ -695,7 +822,6 @@ class EDAutopilot:
         logger.debug('align=complete')
 
 
-
     def mnvr_to_target(self, scr_reg):
         logger.debug('align')
         if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
@@ -704,14 +830,19 @@ class EDAutopilot:
 
         self.sun_avoid(scr_reg)
         self.nav_align(scr_reg)
+        self.keys.send('SetSpeed100')
+        
+        # Start FSD Earlier
+        if self.optimize_jumps == True:
+            self.keys.send('HyperSuperCombination', hold=0.1)
+            
         self.target_align(scr_reg)
         
         
-    # This function stays tight on the target, monitors for disengage
-    # TODO: as we approach target, it could suddenly show obscured (dashed target outline), need to
-    #       1. detect that
-    #       2. maneuver around, like doing in sc_assist for sun obscuring target, perhaps have a target_obscure_reposition() function
-    def sc_target_align(self, scr_reg):    
+        
+    # Stays tight on the target, monitors for disengage and obscured
+    #
+    def sc_target_align(self, scr_reg) -> bool:    
         close = 6
         off = None
 
@@ -722,11 +853,14 @@ class EDAutopilot:
             if new:
                 off = new
                 break
+            if self.is_destination_occluded(scr_reg) == True:
+                self.reposition(scr_reg)
             sleep(0.25)
 
         # Could not be found, return
         if off == None:
-            return
+            print("sc_target_align not finding")
+            return False
         
         logger.debug("sc_target_align x: "+str(off['x'])+ " y:"+str(off['y']))
         
@@ -755,34 +889,55 @@ class EDAutopilot:
                 self.keys.send('PitchDownButton', hold=hold_pitch)
             
             sleep(.1)  # time for image to catch up
+            
+            # this checks if suddenly the target show up behind the planete
+            if self.is_destination_occluded(scr_reg) == True:
+                self.reposition(scr_reg)
 
             new = self.get_destination_offset(scr_reg)
             if new:
                 off = new
+        return True
+                
+    # Reposition is use when the target is obscured by a world
+    #   We pitch 90 up for a bit, then down 90, this should make the target underneath us
+    #   this is important because when we do nav_align() if it does not see the Nav Point
+    #   in the compass (because it is a hollow circle), then it will pitch down, this will 
+    #   bring the target into view quickly
+    #
+    def reposition(self, scr_reg):
+        self.vce.say("Target obscured, repositioning")           
+        self.pitchUp(90)                          
+        self.keys.send('SetSpeed100')
+        sleep(15)
+        self.pitchDown(90)
+        sleep(5)
+        self.nav_align(scr_reg)
+        self.keys.send('SetSpeed50')
 
 
-    # Position() happens afer a refuel and performs
+    # position() happens afer a refuel and performs
     #   - accelerate past sun
     #   - perform Discovery scan
     #   - perform fss (if enabled) 
-    #   = pitch down 90 degree if target not in front of us
     def position(self, scr_reg, did_refuel=True):
         logger.debug('position')
+        add_time = 5
 
         self.vce.say("Maneuvering")   
         
-        self.sun_avoid(scr_reg)
+        #self.sun_avoid(scr_reg)  TODO: optimize_jumps  removed
+        self.keys.send('SetSpeed100')
 
         # if we didn't refuel, lets to a on-the-fly refueling going past the Sun 
         if (not did_refuel):
-            self.keys.send('SetSpeed100')
-            sleep(4)
-            self.keys.send('SetSpeed50')
-            sleep(8)
-        
-        self.keys.send('SetSpeed100')
+            # Provides opportunity per jump to do some scooping
+            if self.optimize_jumps == False:
+                sleep(4)
+                self.keys.send('SetSpeed50')
+                add_time = 8
 
-
+        # Do the Discovery Scan (Honk)
         if self.config['DSSButton'] == 'Primary':
             logger.debug('position=scanning')
             self.keys.send('PrimaryFire', state=1)
@@ -790,11 +945,7 @@ class EDAutopilot:
             logger.debug('position=scanning')
             self.keys.send('SecondaryFire', state=1)
  
-        pause_time = 10           
-        if self.config["EnableRandomness"] == True:
-            pause_time = pause_time + random.randint(0,3)
-        # need time to get away from the Sun so heat will disipate before we use FSD
-        sleep(pause_time)
+        sleep(7) # roughly 6 seconds for DSS
 
         # stop pressing the Scanner button
         if self.config['DSSButton'] == 'Primary':
@@ -803,10 +954,18 @@ class EDAutopilot:
         else: 
             logger.debug('position=scanning complete')
             self.keys.send('SecondaryFire', state=0)
+            
+        # Need time to move past Sun, account for slowed ship if refuled
+        pause_time = add_time        
+        if self.config["EnableRandomness"] == True:
+            pause_time = pause_time + random.randint(0,3)
+        # need time to get away from the Sun so heat will disipate before we use FSD
+        sleep(pause_time)
         
         # since we were at 0 speed for refueling, lets give more time to get away from Sun
-        if (did_refuel):
-            sleep(5)
+        if self.optimize_jumps == False:
+            if (did_refuel):
+                sleep(5)
 
         if self.fss_scan_enabled == True:     
             if self.config["EnableRandomness"] == True:
@@ -814,9 +973,10 @@ class EDAutopilot:
             self.fss_detect_elw(scr_reg)
 
         # only pitch down if the target isn't in front of us
-        if  (self.get_nav_offset(scr_reg) == None):
-            self.vce.say("Positioning")   
-            self.pitch90Down()
+        if self.optimize_jumps == False:
+            if  (self.get_nav_offset(scr_reg) == None):
+                self.vce.say("Positioning")   
+                self.pitchDown(90)
 
         logger.debug('position=complete')
         return True
@@ -839,11 +999,10 @@ class EDAutopilot:
                 raise Exception('not ready to jump')
             sleep(0.5)
             logger.debug('jump= start fsd')
-            self.keys.send('HyperSuperCombination', hold=1)
+            if self.optimize_jumps == False:
+                self.keys.send('HyperSuperCombination', hold=1)
             sleep(16)
-
-            self.update_overlay()  
-            
+          
             if self.jn.ship_state()['status'] != 'starting_hyperspace':
                 logger.debug('jump= misalign stop fsd')
                 self.keys.send('HyperSuperCombination', hold=1)
@@ -863,19 +1022,22 @@ class EDAutopilot:
         logger.error('jump=err2')
         raise Exception("jump failure")    
 
-
-    def rotate90Left(self):
-        htime = 90/self.rollrate
+    # a set of convience routes to pitch, rotate by specified degress
+    #
+    def rotateLeft(self, deg):
+        htime = deg/self.rollrate
         self.keys.send('RollLeftButton', hold=htime)
-
-    def pitch90Down(self):
-        htime = 90/self.pitchrate
-        self.keys.send('PitchDownButton', htime)
-
-    def pitch90Up(self):
-        htime = 90/self.pitchrate
+        
+    def pitchDown(self, deg):
+        htime = deg/self.pitchrate
         self.keys.send('PitchDownButton', htime)
         
+    def pitchUp(self, deg):
+        htime = deg/self.pitchrate
+        self.keys.send('PitchUpButton', htime)
+
+    # check if refueling needed, ensure correct start type
+    #       
     def refuel(self, scr_reg):
 
         logger.debug('refuel')
@@ -885,19 +1047,19 @@ class EDAutopilot:
             return False
             raise Exception('not ready to refuel')
 
-
-        # if we are under our refuel threshold then we will:
-        #  - Set Speed to 100 for 4 seconds to get a little closer to the Sun
-        #  - Put Speed to 0, we should be scooping now
-        #  - wait until fuel is full
-        # Return true if we refueled, faulse otherwise
-
-        self.rotate90Left()
-
-        sleep(0.5)   # give time for display to update
-
+        if self.optimize_jumps == False:
+            self.rotateLeft(90)   
+    
+        # Lets avoid the sun, shall we        
         self.vce.say("Sun avoidance")        
-        self.sun_avoid(scr_reg)
+        self.sun_avoid(scr_reg)        
+               
+        # not scoopable, pitch up 90 and get out of here
+        if self.jn.ship_state()['star_class'] not in scoopable_stars and self.jn.ship_state()['star_class'] != "TTS" :
+            self.pitchUp(130)
+            self.keys.send('SetSpeed100')
+            print("Not scoopable star, pitching more:", +self.jn.ship_state()['star_class'])
+            return False
         
         if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and self.jn.ship_state()['star_class'] in scoopable_stars:
             logger.debug('refuel= start refuel')
@@ -913,11 +1075,11 @@ class EDAutopilot:
 
             # The log will reflect a FuelScoop until first 5 tons filled, then every 5 tons until complete
             #if we don't scoop first 5 tons with 40 sec break, since not scooping or not fast enough or not at all, go to next star
-            startime = time.time();
+            startime = time.time()
             while not self.jn.ship_state()['is_scooping'] and not self.jn.ship_state()['fuel_percent'] == 100:
-                if ((time.time()-startime) > 40):
+                if ((time.time()-startime) > int(self.config['FuelScoopTimeOut'])): 
                     self.vce.say("Refueling abort, insufficient scooping")
-                    return True;
+                    return True
             sleep(1)
 
             logger.debug('refuel= wait for refuel')
@@ -933,19 +1095,90 @@ class EDAutopilot:
             logger.debug('refuel= needed, unsuitable star')
             return False
         else:
+            self.pitchUp(15)   # if not refueling pitch up somemore so we won't heat up 
             return False
  
+    # set focus to the ED window, if ED does not have focus then the key strokes will go to the window
+    # that does have focus
     def set_focus_elite_window(self):
         handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")   
         if handle != 0:
             win32gui.SetForegroundWindow(handle)  # give focus to ED
+          
             
+    # processes the waypoints, performing jumps and sc assist if going to a station
+    # also can then perform trades if specific in the waypoints file
+    #
+    def waypoint_assist(self, scr_reg):      
+        self.waypoint.step = 0   #start at first waypoint
+        
+        self.ap_ckb('log',"Waypoint file: "+str(Path(self.waypoint.filename).name))
+              
+        self.jn.ship_state()['target'] = None    # clear last target 
+        
+        # Set the Route for the waypoint
+        dest = self.waypoint.waypoint_next(self, self.jn.ship_state) 
+        
+        while dest != "":
+            self.ap_ckb('log',"Waypoint: "+dest)
+            # Route sent...  FSD Assist to that destination
+            reached_dest = self.fsd_assist(scr_reg)
+            
+            # If waypoint file has a Station Name associated then attempt targeting it
+            if self.waypoint.is_station_targeted(dest) != None: 
+                
+                self.ap_ckb('statusline',"Targeting Station")
+                self.waypoint.set_station_target(self, dest)
+                
+                # Successful targeting of Station, lets go to it
+                if self.have_destination(scr_reg) == True:
+                    self.ap_ckb('log'," - Station: "+self.waypoint.waypoints[dest]['DockWithStation'])
+                    self.ap_ckb('statusline',"SC to Station")
+                    self.sc_assist(scr_reg)
 
+                    #
+                    # Successful dock, let do trade, if a seq exists
+                    if self.jn.ship_state()['status'] == 'in_station':
+                        self.waypoint.execute_trade(self, dest)
+
+                        self.ap_ckb('statusline',"Executing Undocking")                         
+                        self.undock()
+                        # need to wait until undock complete, that is when we are back in_space
+                        while self.jn.ship_state()['status'] != 'in_space':
+                            sleep(1)
+
+                        self.ap_ckb('statusline',"Undock Complete, going Supercruise")
+                        # move away from station
+                        self.keys.send('SetSpeed100')
+                        sleep(1)
+                        self.keys.send('UseBoostJuice')
+                        sleep(10) # get away from Station
+                        # Go into Supercruise
+                        self.keys.send('HyperSuperCombination', hold=0.001)
+                        sleep(20)  # have to wait to get into SC
+                        #
+                    else:
+                        logger.warning("Waypont: Did not dock with station in limbo")
+                else:
+                    self.ap_ckb('log'," - Could not target station: "+self.waypoint.waypoints[dest]['DockWithStation'] )               
+                  
+            # Mark this waypoint as complated
+            self.waypoint.mark_waypoint_complete(dest)
+            
+            self.ap_ckb('statusline',"Setting route to next waypoint")  
+            self.jn.ship_state()['target'] = None    # clear last target         
+                  
+            # set target to next waypoint and loop)
+            dest = self.waypoint.waypoint_next(self, self.jn.ship_state) 
+            
+        self.ap_ckb('log',"Waypoint Route Complete, total distance jumped: "+str(self.total_dist_jumped)+"LY")
+        self.ap_ckb('statusline'," ")   
+        
+            
+    # FSD Route assist
+    #
     def fsd_assist(self, scr_reg):
         logger.debug('self.jn.ship_state='+str(self.jn.ship_state()))
-
-        self.jump_cnt = 0
-        self.refuel_cnt = 0
 
         starttime = time.time()
         starttime -= 20   # to account for first instance not doing positioning
@@ -962,10 +1195,16 @@ class EDAutopilot:
                 self.ap_ckb('statusline',"Jump")
 
                 self.jump(scr_reg)
+                
+                self.total_dist_jumped += self.jn.ship_state()['dist_jumped']
+                self.total_jumps = self.jump_cnt + self.jn.ship_state()['jumps_remains']
+
                 self.update_overlay()                    
                 
                 avg_time_jump = (time.time() - starttime)/self.jump_cnt
-                self.ap_ckb('jumpcount',"j#"+str(self.jump_cnt)+" : r#:"+ str(self.refuel_cnt) +" : ""{:.0f}".format(avg_time_jump)+"s/j")
+                self.ap_ckb('jumpcount',  "Dist: {:,.1f}".format(self.total_dist_jumped)+"ly"+
+                            "  Jumps: {}of{}".format(self.jump_cnt, self.total_jumps)   + "  @{}s/j".format(int(avg_time_jump))+
+                            "  Fu#: "+ str(self.refuel_cnt) )
 
                 refueled = self.refuel(scr_reg)
 
@@ -978,12 +1217,14 @@ class EDAutopilot:
                     self.vce.say("AP Aborting, low fuel")
                     break
 
-        self.update_overlay()  
         sleep(2)  # wait until screen stablizes from possible last positioning
+        
+        # if there is not destination definedw we are done
         if self.have_destination(scr_reg) == False:
             self.keys.send('SetSpeedZero')
-            self.vce.say("Destination Reached") 
+            self.vce.say("Destination Reached, distance jumped:"+str(self.total_dist_jumped)+" lightyears") 
             return True
+        # else there is a destination in System, so let jump over to SC Assist
         else:
             self.keys.send('SetSpeed100')  
             self.vce.say("System Reached, preparing for supercruise") 
@@ -991,8 +1232,8 @@ class EDAutopilot:
             return False
 
    
-    # Main loop to travel to target in system and perform autodock
-    # TODO: Handle Settlement landing, handle Land Landing?  hhhmm
+    # Supercruise Assist loop to travel to target in system and perform autodock
+    #
     def sc_assist(self, scr_reg):
         align_failed = False
         # see if we have a compass up, if so then we have a target
@@ -1004,28 +1245,35 @@ class EDAutopilot:
         self.keys.send('SetSpeed50')
         self.nav_align(scr_reg)
         self.keys.send('SetSpeed50')
-        
-        # check if our target is behind the sun, if so, pitch down 90, sleep, pitch up 90, sleep, check again
-        while self.sun_dead_ahead(scr_reg):
-            self.vce.say("Target obscured by sun, repositioning")           
-            self.pitch90Down()
-            self.keys.send('SetSpeed100')
-            sleep(15)
-            self.pitch90Up()
-            sleep(5)
-
-        # go back 50%             
-        self.keys.send('SetSpeed50')            
+             
+        self.jn.ship_state()['interdicted'] = False
 
         # Loop forever keeping tight align to target, until we get SC Disengage popup
         while True:
-            sleep(1)
+            self.keys.send('SetSpeed50') 
+            sleep(0.5)
             if self.jn.ship_state()['status'] == 'in_supercruise':
-                self.sc_target_align(scr_reg)
+                if self.sc_target_align(scr_reg) == False:
+                    self.nav_align(scr_reg)
             else:
-                # TODO: if we dropped from SC, then interdicted or user dropped us or we rammed into planet, what to do?
-                #       perhap check for interdiction and have interdiction aviodance routine
+                # if we dropped from SC, then we rammed into planet
                 align_false = True  
+                
+            # check if we are being interdicted, means we got the Received message, not sure if this means interdiction started
+            if self.jn.ship_state()['interdicted'] == True:
+
+                self.jn.ship_state()['interdicted'] = False  # reset for next time
+                self.keys.send('SetSpeedZero')      # submit
+                sleep(3)               # wait to come out of interdiction screen)
+                self.keys.send('SetSpeed100')  
+
+                while self.jn.ship_state()['status'] == 'in_space': 
+                    self.keys.send('UseBoostJuice')
+                    self.keys.send('HyperSuperCombination', hold=0.001)   
+                    sleep(8)
+
+                self.nav_align(scr_reg)    # realign with station
+                self.keys.send('SetSpeed50') 
             
             # check for SC Disengage
             if (self.sc_disengage(scr_reg) == True):
@@ -1036,14 +1284,19 @@ class EDAutopilot:
         if align_failed == False:
             sleep(4)       # wait for the journal to catch up
             self.dock()    # go into docking sequence
+            self.vce.say("Docking complete, Refueled")  
+            self.ap_ckb('statusline',"Docking Complete")        
         else:
             self.vce.say("Exiting Supercruise, setting throttle to zero")  
             self.keys.send('SetSpeedZero')  # make sure we don't continue to land   
+            self.ap_ckb('log', "Supercruise dropped, terminating SC Assist")
  
-        self.vce.say("SC Assist complete")                     
+        self.vce.say("Spercruise Assist complete")                     
         self.ap_ckb('sc_stop')
         
- 
+
+    # Simply monitor for Shields done so we can boost away or our fighter got destroyed
+    # and thus redeploy another one
     def afk_combat_loop(self):
         while True:
             if self.afk_combat.check_shields_up() == False:
@@ -1060,8 +1313,10 @@ class EDAutopilot:
                 self.afk_combat.launch_fighter()  # assuming two fighter bays
                 
         self.vce.say("Terminating AFK Combat Assist")
+        
 
-
+    # raising an exception to the engine loop thread, so we can terminate its execution
+    #  if thread was in a sleep, the exception seems to not be delivered
     def ctype_async_raise(self, thread_obj, exception):
         found = False
         target_tid = 0
@@ -1087,7 +1342,9 @@ class EDAutopilot:
             raise SystemError("PyThreadState_SetAsyncExc failed")
 
     
-  
+    #
+    # Setter routines for state variables
+    #
     def set_fsd_assist(self, enable=True):
         if enable == False and self.fsd_assist_enabled == True:
             self.ctype_async_raise(self.ap_thread,EDAP_Interrupt)
@@ -1098,6 +1355,11 @@ class EDAutopilot:
             self.ctype_async_raise(self.ap_thread,EDAP_Interrupt)
         self.sc_assist_enabled = enable
         
+    def set_waypoint_assist(self, enable=True):
+        if enable == False and self.waypoint_assist_enabled == True:
+            self.ctype_async_raise(self.ap_thread,EDAP_Interrupt)
+        self.waypoint_assist_enabled = enable        
+        
     def set_fss_scan(self, enable=True):
         self.fss_scan_enabled = enable
         
@@ -1105,7 +1367,6 @@ class EDAutopilot:
         if enable == False and self.afk_combat_assist_enabled == True:
             self.ctype_async_raise(self.ap_thread,EDAP_Interrupt)
         self.afk_combat_assist_enabled = enable
-
 
     def set_cv_view(self, enable=True, x=0, y=0):
         self.cv_view = enable
@@ -1122,6 +1383,8 @@ class EDAutopilot:
         else:
             self.vce.set_off()
 
+    # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
+    # have then then kill python exec
     def quit(self):
         if self.vce != None:
             self.vce.quit()
@@ -1129,12 +1392,20 @@ class EDAutopilot:
             self.overlay.overlay_quit()
         self.terminate = True
         
-    # this could be a thread, then we command it via msgQue
+    #
+    # This function will execute in its own thread and will loop forever until
+    # the self.terminate flag is set
+    #
     def engine_loop(self):
         while not self.terminate:
             if self.fsd_assist_enabled == True:
                 logger.debug("Running fsd_assist")
                 self.set_focus_elite_window()
+                self.update_overlay()
+                self.jump_cnt = 0
+                self.refuel_cnt = 0
+                self.total_dist_jumped = 0
+                self.total_jumps = 0
                 fin = True
                 # could be deep in call tree when user disables FSD, so need to trap that exception
                 try:
@@ -1147,6 +1418,7 @@ class EDAutopilot:
                     
                 self.fsd_assist_enabled = False
                 self.ap_ckb('fsd_stop')
+                self.update_overlay()
                 
                 # if fsd_assist returned false then we are not finished, meaning we have an in system target
                 # defined.  So lets enable Supercruise assist to get us there
@@ -1162,6 +1434,7 @@ class EDAutopilot:
             elif self.sc_assist_enabled == True:
                 logger.debug("Running sc_assist")
                 self.set_focus_elite_window()
+                self.update_overlay()
                 try:
                     self.sc_assist(self.scrReg)
                 except EDAP_Interrupt:
@@ -1172,21 +1445,50 @@ class EDAutopilot:
                     
                 self.sc_assist_enabled = False
                 self.ap_ckb('sc_stop')
+                self.update_overlay()
+
+
+            elif self.waypoint_assist_enabled == True:
+                logger.debug("Running waypoint_assist")
+
+                self.set_focus_elite_window()
+                self.update_overlay()
+                self.jump_cnt = 0
+                self.refuel_cnt = 0
+                self.total_dist_jumped = 0
+                self.total_jumps = 0
+                try:
+                    self.waypoint_assist(self.scrReg)
+                except EDAP_Interrupt:
+                    logger.debug("Caught stop exception")
+                except Exception as e:
+                    print("Trapped generic:"+str(e))
+                    traceback.print_exc()
+                    
+                self.waypoint_assist_enabled = False
+                self.ap_ckb('waypoint_stop')
+                self.update_overlay()
                 
             elif self.afk_combat_assist_enabled == True:
+                self.update_overlay()
                 try:
                     self.afk_combat_loop()
                 except EDAP_Interrupt:
                     logger.debug("Stopping afk_combat")               
                 self.afk_combat_assist_enabled = False
                 self.ap_ckb('afk_stop')
-
+                self.update_overlay()
+                
+            self.update_overlay()
+            cv2.waitKey(10)
             sleep(1)
 
 
 
 
-
+#
+# This main is for testing purposes.
+#
 def main():
 
     #handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")   

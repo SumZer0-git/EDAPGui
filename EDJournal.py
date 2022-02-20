@@ -9,7 +9,7 @@ from EDlogger import logger
 
 
 """
-File EDJournal.py  (most was taken from EDAutopilot on github, turned into a 
+File EDJournal.py  (leveraged the EDAutopilot on github, turned into a 
                    class and enhanced, see https://github.com/skai2/EDAutopilot
 
 Description: This file perform journal file processing.  It opens the latest updated Journal* 
@@ -32,22 +32,7 @@ Design:
 Author: sumzer0@yahoo.com
 """
 
-"""
-TODO:  thoughts taken from EDScout, good way of loading the entries
-        nav_events = {
-            'NavRoute': None,
-            'FSDTarget': None,
-            'Location': None,
-            'FSDJump': None,
-            
-            journal_entry = JournalChangeProcessor.entry_from_journal_line(journal_entry_str)
-            event_type = journal_entry['event']
-            if event_type in nav_events.keys():
-                needs_storing = (nav_events[event_type] is None) or \
-                                (nav_events[event_type]['timestamp'] < journal_entry['timestamp']) 
-                if needs_storing:
-                    nav_events[event_type] = journal_entry                                
-     
+"""                             
 TODO: thinking self.ship()[name]  uses the same names as in the journal, so can lookup same construct     
 """
 
@@ -61,6 +46,7 @@ class EDJournal:
         
         self.ship = {
             'time': (datetime.now() - datetime.fromtimestamp(getmtime(self.current_log))).seconds,
+            'odyssey': True,
             'status': 'in_space',
             'type': None,
             'location': None,
@@ -70,6 +56,9 @@ class EDJournal:
             'shieldsup': True,
             'under_attack': None,
             'no_dock_reason': None,
+            'dist_jumped': 0, 
+            'jumps_remains': 0,
+            'interdicted': False,
             'fuel_capacity': None,
             'fuel_level': None,
             'fuel_percent': None,
@@ -112,12 +101,18 @@ class EDJournal:
         try:
             # parse ship status
             log_event = log['event']
+           
+            # If fileheader, pull whether running Odyssey or Horizons
+            if log_event == 'Fileheader':
+                self.ship['odyssey'] = log['Odyssey'] 
+                return   # No need to do further processing on this record, should use elif: all the way down
 
             if log_event == 'ShieldState':
                 if log['ShieldsUp'] == True:
                     self.ship['shieldsup'] = True
                 else:
                     self.ship['shieldsup'] = False
+                return   # No need to do further processing on this record
 
             if  log_event == 'UnderAttack':
                 self.ship['under_attack'] = True
@@ -141,14 +136,13 @@ class EDJournal:
                 self.ship['no_dock_reason'] = log['Reason']
 
             elif log_event == 'SupercruiseExit' or log_event == 'DockingCancelled':    
-#  TODO \
 #TODO                 or (log_event == 'Music' and self.ship['status'] == 'in_undocking') \
 #                 or (log_event == 'Location' and log['Docked'] == False):
                 self.ship['status'] = 'in_space'
                 
             elif log_event == 'Undocked':
-#                     self.ship['status'] = 'starting_undocking'
-                self.ship['status'] = 'in_space'
+                self.ship['status'] = 'starting_undocking'
+                #self.ship['status'] = 'in_space'
                 
             elif log_event == 'DockingRequested':
                 self.ship['status'] = 'starting_docking'
@@ -158,9 +152,16 @@ class EDJournal:
                     self.ship['status'] = 'in_undocking'
                 elif self.ship['status'] == 'starting_docking':
                     self.ship['status'] = 'in_docking'
+                    
+            elif log_event == "Music" and log['MusicTrack'] == "NoTrack" and self.ship['status'] == 'in_undocking':
+                self.ship['status'] = 'in_space'
             
             elif log_event == 'Docked':
                 self.ship['status'] = 'in_station'
+                
+            # check for interdiction
+            elif log_event == 'ReceiveText' and 'StartInterdiction' in log['Message']: 
+                self.ship['interdicted'] = True
                 
             # parse ship type
             if log_event == 'LoadGame' or log_event == 'Loadout':
@@ -199,12 +200,23 @@ class EDJournal:
             if log_event == 'FSDTarget':
                 if log['Name'] == self.ship['location']:
                     self.ship['target'] = None
+                    self.ship['jumps_remains'] = 0
                 else:
                     self.ship['target'] = log['Name']
+                    try:
+                            self.ship['jumps_remains'] = log['RemainingJumpsInRoute']
+                    except:
+                        pass
+                            #
+                            #    'Log did not have jumps remaining. This happens most if you have less than .' +
+                            #    '3 jumps remaining. Jumps remaining will be inaccurate for this jump.')                    
+                                  
+                    
             elif log_event == 'FSDJump':
                 if self.ship['location'] == self.ship['target']:
                     self.ship['target'] = None
-            
+                self.ship['dist_jumped'] = log["JumpDist"] 
+                  
                 
         # exceptions
         except Exception as e:

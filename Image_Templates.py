@@ -46,6 +46,7 @@ class Image_Templates:
         self.template['navpoint']  = self.load_template("templates/navpoint.png", scaleX, scaleY)
         self.template['compass']   = self.load_template("templates/compass.png", scaleX, scaleY)         
         self.template['target']    = self.load_template("templates/destination.png", scaleX, scaleY) 
+        self.template['target_occluded']    = self.load_template("templates/target_occluded.png", scaleX, scaleY) 
         self.template['disengage'] = self.load_template("templates/sc-disengage.png", scaleX, scaleY) 
         
 

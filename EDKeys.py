@@ -55,6 +55,8 @@ class EDKeys:
                 'IncreaseEnginesPower',
                 'IncreaseWeaponsPower',
                 'IncreaseSystemsPower',
+                'GalaxyMapOpen', 
+                'SystemMapOpen',
                 'UseBoostJuice',
                 'Supercruise'
             ]
@@ -125,7 +127,7 @@ class EDKeys:
                     direct_input_keys[item.tag] = binding
     #             else:
     #                 logger.warning("get_bindings_<"+item.tag+">= does not have a valid keyboard keybind.")
-
+    
         if len(list(direct_input_keys.keys())) < 1:
             return None
         else:
@@ -138,7 +140,7 @@ class EDKeys:
     def get_latest_keybinds(self, path_bindings=None):
         if not path_bindings:
             path_bindings = environ['LOCALAPPDATA'] + "\Frontier Developments\Elite Dangerous\Options\Bindings"
-    #TODO: Only deal with .binds files
+
         list_of_bindings = [join(path_bindings, f) for f in listdir(path_bindings) if isfile(join(path_bindings, f)) and f.endswith('.binds')]
 
         if not list_of_bindings:
@@ -146,6 +148,12 @@ class EDKeys:
         latest_bindings = max(list_of_bindings, key=getmtime)
         return latest_bindings
 
+    def send_key(self, type, key):
+        if type == 'Up':
+            ReleaseKey(key)
+        else:
+            PressKey(key)
+                    
 
     def send(self, key_name, hold=None, repeat=1, repeat_delay=None, state=None):
         key = self.keys[key_name]

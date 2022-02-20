@@ -1,1 +1,0 @@
-{"rollrate": "90.0", "pitchrate": "30.0", "yawrate": "8.0"}

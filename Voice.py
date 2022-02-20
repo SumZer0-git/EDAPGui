@@ -51,7 +51,7 @@ class Voice:
 
     def quit(self):
         self.v_quit = True
-
+        
     def voice_exec(self):
         engine = pyttsx3.init()
         voices = engine.getProperty('voices')
