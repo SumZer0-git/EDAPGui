@@ -38,12 +38,12 @@ Also Note: This repository is provided for educational purposes as a in depth pr
            window
 * Control Rates: Must provide the roll, pitch, yaw rates for your ship. See HOWTO-RollPitchYaw.md, start with values from Outfitting for your ship 
 * Autodocking: For the AP to recongize the "PRESS [J] TO DISENGAGE"  you should map "J" key for disengage so that that image matching will work. Or at minimum have
-  it mapped to a single Key and not a set of keys such as "PRESS [CTR+ALT+5] TO DISENGAGE", as that is unlikely to meet the matching threshold of the image.  The following should be the keybing to ensure this works
-
-    <HyperSuperCombination>
-      <Primary Device="Keyboard" Key="Key_J" />
-      <Secondary Device="{NoDevice}" Key="" />		
-    </HyperSuperCombination>
+  it mapped to a single Key and not a set of keys such as "PRESS [CTR+ALT+5] TO DISENGAGE", as that is unlikely to meet the matching threshold of the image.  The following should be the keybing to ensure this works<br>
+(remove "<>" for display purposes)<br>
+    HyperSuperCombination<br>
+      Primary Device="Keyboard" Key="Key_J" <br>
+      Secondary Device="{NoDevice}" Key="" 		<br>
+    HyperSuperCombination<br>
 
 * Routing: If using Economical Route setting, then may run into problems in jumping.  With Economical, the Stars may not be on the "other-side" of the 
   Sun as with Fastest routing.
@@ -122,30 +122,30 @@ Hot keys are now configurable in the config-AP.json file, so you can remap them.
 https://pythonhosted.org/pynput/keyboard.html
 
 ## Config File: config-AP.json
-  Note: the below is from the code, the real .json file will have the True/False values as lower case, as in true/false
-        self.config = {  
-            "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS
-            "JumpTries": 3,                # 
-            "NavAlignTries": 3,            #
-            "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel
-            "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
-            "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking
-            "FuelScoopTimeOut": 35,       # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
-            "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
-            "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
-            "HotKey_StopAllAssists": "end",
-            "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
-            "OverlayTextEnable": False,    # Experimental at this stage
-            "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
-            "OverlayTextFontSize": 16, 
-            "OverlayGraphicEnable": False, # not implemented yet
-            "DiscordWebhook": False,       # discord not implemented yet
-            "DiscordWebhookURL": "",
-            "DiscordUserID": "",
-            "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
-            "LogDEBUG": False,             # enable for debug messages
-            "LogINFO": True
-        }
+  Note: the below is from the code, the real .json file will have the True/False values as lower case, as in true/false<br>
+        self.config = {  <br>
+            "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS<br>
+            "JumpTries": 3,                # <br>
+            "NavAlignTries": 3,            #<br>
+            "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel<br>
+            "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well<br>
+            "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking<br>
+            "FuelScoopTimeOut": 35,       # number of second to wait for full tank, might mean we are not scooping well or got a small scooper<br>
+            "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package<br>
+            "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings<br>
+            "HotKey_StopAllAssists": "end",<br>
+            "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)<br>
+            "OverlayTextEnable": False,    # Experimental at this stage<br>
+            "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text<br>
+            "OverlayTextFontSize": 16, <br>
+            "OverlayGraphicEnable": False, # not implemented yet<br>
+            "DiscordWebhook": False,       # discord not implemented yet<br>
+            "DiscordWebhookURL": "",<br>
+            "DiscordUserID": "",<br>
+            "VoiceID": 1,                  # my Windows only have 3 defined (0-2)<br>
+            "LogDEBUG": False,             # enable for debug messages<br>
+            "LogINFO": True<br>
+        }<br>
 
 ## Setup:
 _Requires **python 3** and **git**_
