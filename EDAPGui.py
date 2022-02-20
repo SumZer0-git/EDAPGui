@@ -58,6 +58,8 @@ class APGui():
         root.resizable(False, False)
         
         self.ed_ap = EDAutopilot(cb=self.callback)
+        
+        self.mouse = MousePoint()
      
         self.checkboxvar = {}
         self.entries = {}
