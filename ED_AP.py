@@ -649,8 +649,8 @@ class EDAutopilot:
         while self.is_sun_dead_ahead(scr_reg):
             self.keys.send('PitchUpButton', state=1)
             
-        if self.optimize_jumps == True:
-            self.keys.send('SetSpeed50')
+        #if self.optimize_jumps == True:
+        #    self.keys.send('SetSpeed50')
 
         sleep(0.3)    # wait a little longer to get more pitch away from Sun
         sleep(self.sunpitchuptime)  # some ships heat up too much and need pitch up a little further

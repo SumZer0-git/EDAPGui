@@ -184,7 +184,7 @@ class APGui():
         
     def start_waypoint(self):
         filetypes = (
-            ('json files', '*.json'),
+            ('json files', 'way*.json'),
             ('All files', '*.*')
         )
         filename = fd.askopenfilename(title="Waypoint File", initialdir='./', filetypes=filetypes)
