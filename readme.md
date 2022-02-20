@@ -10,7 +10,10 @@ This autopilot uses Computer Vision (grabs screens and performs template matchin
 of Elite Dangerous, it is an external-ED construct (similar to us commanders) 
 
   ```
-  * See Calibration.md for details on how to calibrate EDAPGui for your system if required *
+  * See Calibration.md for details on how to calibrate EDAPGui for your system if required 
+  * Also note: The values for Pitch and Yaw are critical for proper AP behavior.  Take the values from Outfitting 
+    for your ship and reduce the Roll by 10 to 15 and Pitch by 5 to 10.  The values in outfitting are for when 
+    your ship is not in supercruise, the performance is worse in supercruise.
   ```
 
 Note: much of the autopilot code was taking from https://github.com/skai2/EDAutopilot , many of the routines were turned into classes and tweaks were done on sequences
