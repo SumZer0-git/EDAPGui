@@ -652,7 +652,7 @@ class EDAutopilot:
         #if self.optimize_jumps == True:
         #    self.keys.send('SetSpeed50')
 
-        sleep(0.3)    # wait a little longer to get more pitch away from Sun
+        sleep(0.5)    # wait a little longer to get more pitch away from Sun
         sleep(self.sunpitchuptime)  # some ships heat up too much and need pitch up a little further
         self.keys.send('PitchUpButton', state=0)
 
@@ -971,6 +971,8 @@ class EDAutopilot:
             if self.config["EnableRandomness"] == True:
                 sleep(random.randint(0,3))
             self.fss_detect_elw(scr_reg)
+        else:
+            sleep(2)  # since not doing FSS, need to give a little more time to get away from Sun, for heat
 
         # only pitch down if the target isn't in front of us
         if self.optimize_jumps == False:

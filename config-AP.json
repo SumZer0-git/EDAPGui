@@ -18,7 +18,7 @@
     "DiscordWebhookURL": "",
     "DiscordUserID": "",
     "VoiceID": 0,
-    "LogDEBUG": true,
+    "LogDEBUG": false,
     "LogINFO": true
 }
 
