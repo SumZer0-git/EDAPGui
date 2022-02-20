@@ -1,11 +1,11 @@
 
-2/20/2022 
-HOWTO's added:
+# 2/20/2022 Update
+## HOWTO's added:
   - HOWTO-Calibration.md
   - HOWTO-RollPitchYaw.md
   - HOWTO-Waypoint.md
 
-Configurable Settings
+## Configurable Settings
   config-AP.json
     - Aded EnableRandomness flag to adjust sleep times
     - OverlayTextEnable flag to show overlay on ED, prototype
@@ -14,7 +14,7 @@ Configurable Settings
     - FuelScoopTimeOut how long to wait in fuel scooping before aborting
     - and others
 
-Autopilot
+## Autopilot
   - Added Waypoint Assist  (works both in Odyssey and Horisons)
     - Jumps to Systems defined in waypoints.json (or user selected) file
       - Can dock with a station that is defined in the file also (requires X, Y of mouse to select the 
@@ -44,7 +44,7 @@ Autopilot
   - Ship configurations provided that contain the values Roll, Pitch, and Yaw for various type ships
     (Only DBX, APSX, Cutter, and Sidewinder tested)
 
-Update requirements.txt file
+## Update requirements.txt file
   - One new packages is required to be installed, pynput==1.7.6, to support mouse click
 
 
