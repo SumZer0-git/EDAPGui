@@ -45,7 +45,7 @@ capability cannot be used for that Station.  The Station must be visible when br
 }<br>
 
 ## Trading
-The SellNumDown and BuyNummDown fields are associated with auto-trading.  If either of those number are *not* -1, the 
+The SellNumDown and BuyNumDown fields are associated with auto-trading.  If either of those number are *not* -1, the 
 trade executor kicks in, brings up Commodities and will perform the Sell (if not -1) and then the Buy (if not -1).
 The *NumDown value (an integer) represents the number of rows down the commodity of interest is from the top.  Note:  Each Station's 
 Commondity list is unique so you need to know for the specific Station your ship is docked at what row number your commodity is 
