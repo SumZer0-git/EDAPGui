@@ -31,7 +31,9 @@ Station.  Upon arriving at the station, the SC Assist (which is acting on behalf
 out of Supercruise and attempt docking.  Once docked, the fuel and repair will automatically be commanded.  The StationCoord can be 
 determine by bringing up the SystemMap (and not moving it or adjusting it), going to the EDAPGui interface and selecting 
 "Get Mouse X, Y", in the popup select Yes and your next Mouse click needs to be on the Station on the SystemMap.  The [X,Y]
-Mouse coordinates will be copied to the Windows clipboard so it can be pasted into your waypoints file.  NOTE: When bringing up SystemMap
+Mouse coordinates will be copied to the Windows clipboard so it can be pasted into your waypoints file.  The X, Y values are
+monitor resolution dependent.  So you may not be able to share with others unless they use the same resolution.
+NOTE: When bringing up SystemMap
 it will show the System the same way and if your Station is not visible (i.e. you have to zoom or move the map) then this
 capability cannot be used for that Station.  The Station must be visible when bringing up SystemMap.
 <br>
