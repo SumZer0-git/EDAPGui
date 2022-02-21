@@ -446,8 +446,8 @@ class EDAutopilot:
 
                 img = cv2.resize(dst_image, dim, interpolation =cv2.INTER_AREA)
                 cv2.putText(img, f'{maxVal:5.2f} >.54', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
-                cv2.imshow('target1', img)
-                cv2.moveWindow('target1', self.cv_view_x,self.cv_view_y+650)
+                cv2.imshow('occluded', img)
+                cv2.moveWindow('occluded', self.cv_view_x,self.cv_view_y+650)
             except Exception as e:
                 print("exception in getdest: "+str(e))
             cv2.waitKey(30)
@@ -513,17 +513,17 @@ class EDAutopilot:
 
         width  = scr_reg.templates.template['disengage']['width']
         height = scr_reg.templates.template['disengage']['height']
-        """
+
         if self.cv_view:
             self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
-            cv2.putText(dis_image, f'{maxVal:5.2f} >.50', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(dis_image, f'{maxVal:5.2f} >.45', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('disengage', dis_image)
-            cv2.moveWindow('disengage', self.cv_view_x,self.cv_view_y+220)
+            cv2.moveWindow('disengage', self.cv_view_x-460,self.cv_view_y+460)
             cv2.waitKey(1)
-        """
+
         logger.debug("Disenage = "+str(maxVal))
 
-        if (maxVal > 0.50):
+        if (maxVal > 0.45):
             self.vce.say("Disengaging Supercruise")
             return True
         else:
