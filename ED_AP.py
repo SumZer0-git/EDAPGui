@@ -791,7 +791,6 @@ class EDAutopilot:
         # try one more time to align
         if (new == None):
             self.nav_align(scr_reg)
-            self.keys.send('SetSpeed50')
             new = self.get_destination_offset(scr_reg)
             if new:
                 off = new
