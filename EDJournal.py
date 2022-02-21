@@ -58,7 +58,6 @@ class EDJournal:
             'no_dock_reason': None,
             'dist_jumped': 0, 
             'jumps_remains': 0,
-            'interdicted': False,
             'fuel_capacity': None,
             'fuel_level': None,
             'fuel_percent': None,
@@ -158,11 +157,7 @@ class EDJournal:
             
             elif log_event == 'Docked':
                 self.ship['status'] = 'in_station'
-                
-            # check for interdiction
-            elif log_event == 'ReceiveText' and 'StartInterdiction' in log['Message']: 
-                self.ship['interdicted'] = True
-                
+                               
             # parse ship type
             if log_event == 'LoadGame' or log_event == 'Loadout':
                 self.ship['type'] = log['Ship']

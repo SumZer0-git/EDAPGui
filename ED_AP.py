@@ -365,7 +365,7 @@ class EDAutopilot:
            
     # check to see if the compass is on the screen
     #
-    def have_destination(self, scr_reg):
+    def have_destination(self, scr_reg) -> bool:
         icompass_image, (minVal, maxVal, minLoc, maxLoc), match  = scr_reg.match_template_in_region('compass', 'compass')
         
         logger.debug("has_destination:"+str(maxVal))
@@ -375,6 +375,16 @@ class EDAutopilot:
             return False
         else:
             return True
+        
+        
+    def being_interdicted(self, scr_reg) -> bool:
+        interdict_image, (minVal, maxVal, minLoc, maxLoc), match  = scr_reg.match_template_in_region('interdicted', 'interdicted')
+        
+        # need > 50% in the match to say we do have a interdiction
+        if maxVal < 0.50:
+            return False
+        else:
+            return True        
 
     # determine the x,y offset from center of the compass of the nav point
     #
@@ -738,7 +748,10 @@ class EDAutopilot:
             while not off:
                 self.keys.send('PitchUpButton', hold=0.35)   
                 off = self.get_nav_offset(scr_reg)
- 
+
+            # calc pitch time based on nav point location
+            # this is assuming 40 offset is max displacement on the Y axis.  So get percentage we are offset
+            #
             utime = (abs(off['y']) / 40.) * (90./self.pitchrate)
             logger.debug("ptichtime:"+str(utime)+" x:"+str(off['x'])+" y:"+str(off['y']))
 
@@ -1251,8 +1264,6 @@ class EDAutopilot:
         self.nav_align(scr_reg)
         self.keys.send('SetSpeed50')
              
-        self.jn.ship_state()['interdicted'] = False
-
         # Loop forever keeping tight align to target, until we get SC Disengage popup
         while True:
             self.keys.send('SetSpeed50') 
@@ -1265,11 +1276,10 @@ class EDAutopilot:
                 align_false = True  
                 
             # check if we are being interdicted, means we got the Received message, not sure if this means interdiction started
-            if self.jn.ship_state()['interdicted'] == True:
+            if self.being_interdicted(scr_reg) == True:
 
-                self.jn.ship_state()['interdicted'] = False  # reset for next time
                 self.keys.send('SetSpeedZero')      # submit
-                sleep(3)               # wait to come out of interdiction screen)
+                sleep(3)               # wait to come out of interdiction screen
                 self.keys.send('SetSpeed100')  
 
                 while self.jn.ship_state()['status'] == 'in_space': 
