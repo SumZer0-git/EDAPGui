@@ -649,9 +649,6 @@ class EDAutopilot:
         while self.is_sun_dead_ahead(scr_reg):
             self.keys.send('PitchUpButton', state=1)
             
-        #if self.optimize_jumps == True:
-        #    self.keys.send('SetSpeed50')
-
         sleep(0.5)    # wait a little longer to get more pitch away from Sun
         sleep(self.sunpitchuptime)  # some ships heat up too much and need pitch up a little further
         self.keys.send('PitchUpButton', state=0)
@@ -828,6 +825,7 @@ class EDAutopilot:
             logger.error('align() not in sc or space')
             raise Exception('align() not in sc or space')
 
+  
         self.sun_avoid(scr_reg)
         self.nav_align(scr_reg)
         self.keys.send('SetSpeed100')
@@ -1057,10 +1055,10 @@ class EDAutopilot:
         self.sun_avoid(scr_reg)        
                
         # not scoopable, pitch up 90 and get out of here
-        if self.jn.ship_state()['star_class'] not in scoopable_stars and self.jn.ship_state()['star_class'] != "TTS" :
+        if self.jn.ship_state()['star_class'] not in scoopable_stars:
             self.pitchUp(130)
             self.keys.send('SetSpeed100')
-            print("Not scoopable star, pitching more:")
+            print("Not scoopable star, pitching up")
             return False
         
         if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and self.jn.ship_state()['star_class'] in scoopable_stars:
@@ -1113,6 +1111,7 @@ class EDAutopilot:
     #
     def waypoint_assist(self, scr_reg):      
         self.waypoint.step = 0   #start at first waypoint
+        docked_at_station = False
         
         self.ap_ckb('log',"Waypoint file: "+str(Path(self.waypoint.filename).name))
               
@@ -1123,6 +1122,7 @@ class EDAutopilot:
         
         while dest != "":
             self.ap_ckb('log',"Waypoint: "+dest)
+            docked_at_station = False
             # Route sent...  FSD Assist to that destination
             reached_dest = self.fsd_assist(scr_reg)
             
@@ -1142,25 +1142,9 @@ class EDAutopilot:
                     # Successful dock, let do trade, if a seq exists
                     if self.jn.ship_state()['status'] == 'in_station':
                         self.waypoint.execute_trade(self, dest)
-
-                        self.ap_ckb('statusline',"Executing Undocking")                         
-                        self.undock()
-                        # need to wait until undock complete, that is when we are back in_space
-                        while self.jn.ship_state()['status'] != 'in_space':
-                            sleep(1)
-
-                        self.ap_ckb('statusline',"Undock Complete, going Supercruise")
-                        # move away from station
-                        self.keys.send('SetSpeed100')
-                        sleep(1)
-                        self.keys.send('UseBoostJuice')
-                        sleep(10) # get away from Station
-                        # Go into Supercruise
-                        self.keys.send('HyperSuperCombination', hold=0.001)
-                        sleep(20)  # have to wait to get into SC
-                        #
+                        docked_at_station = True
                     else:
-                        logger.warning("Waypont: Did not dock with station in limbo")
+                        logger.warning("Waypoint: Did not dock with station in limbo")
                 else:
                     self.ap_ckb('log'," - Could not target station: "+self.waypoint.waypoints[dest]['DockWithStation'] )               
                   
@@ -1173,6 +1157,25 @@ class EDAutopilot:
             # set target to next waypoint and loop)
             dest = self.waypoint.waypoint_next(self, self.jn.ship_state) 
             
+            # if we have another waypoint and we're docked, then undock first before moving on
+            if dest != "" and docked_at_station:
+                    self.ap_ckb('statusline',"Executing Undocking")                         
+                    self.undock()
+                    # need to wait until undock complete, that is when we are back in_space
+                    while self.jn.ship_state()['status'] != 'in_space':
+                        sleep(1)
+
+                    self.ap_ckb('statusline',"Undock Complete, going Supercruise")
+                    # move away from station
+                    self.keys.send('SetSpeed100')
+                    sleep(1)
+                    self.keys.send('UseBoostJuice')
+                    sleep(10) # get away from Station
+                    # Go into Supercruise
+                    self.keys.send('HyperSuperCombination', hold=0.001)
+                    sleep(20)  # have to wait to get into SC                
+            
+        # Done with waypoints
         self.ap_ckb('log',"Waypoint Route Complete, total distance jumped: "+str(self.total_dist_jumped)+"LY")
         self.ap_ckb('statusline'," ")   
         
@@ -1224,7 +1227,7 @@ class EDAutopilot:
         # if there is not destination definedw we are done
         if self.have_destination(scr_reg) == False:
             self.keys.send('SetSpeedZero')
-            self.vce.say("Destination Reached, distance jumped:"+str(self.total_dist_jumped)+" lightyears") 
+            self.vce.say("Destination Reached, distance jumped:"+str(int(self.total_dist_jumped))+" lightyears") 
             return True
         # else there is a destination in System, so let jump over to SC Assist
         else:
