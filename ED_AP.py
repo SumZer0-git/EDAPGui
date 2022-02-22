@@ -380,15 +380,14 @@ class EDAutopilot:
     def being_interdicted(self, scr_reg) -> bool:
         interdict_image, (minVal, maxVal, minLoc, maxLoc), match  = scr_reg.match_template_in_region('interdicted', 'interdicted')
 
-
+        """
         if self.cv_view:
             #self.draw_match_rect(interdict_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
-            cv2.putText(interdict_image, f'{maxVal:5.2f} >.50', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(interdict_image, f'{maxVal:5.2f} >.40', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('interdict', interdict_image)
             cv2.moveWindow('interdict', self.cv_view_x-460,self.cv_view_y+560)
             cv2.waitKey(1)
-
-
+        """
         
         # need > 50% in the match to say we do have a interdiction
         if maxVal < 0.40:
@@ -1147,7 +1146,9 @@ class EDAutopilot:
         sleep(10) # get away from Station
         # Go into Supercruise
         self.keys.send('Supercruise', hold=0.001)
-        sleep(20)  # have to wait to get into SC  
+        sleep(10)  # have to wait to get into SC 
+        self.keys.send('SetSpeed50')
+        
             
     # processes the waypoints, performing jumps and sc assist if going to a station
     # also can then perform trades if specific in the waypoints file
@@ -1163,10 +1164,18 @@ class EDAutopilot:
         # Set the Route for the waypoint
         dest = self.waypoint.waypoint_next(self, self.jn.ship_state) 
         
-        # if we are starting the waypoint docked, we need to undock first
+        # if we are starting the waypoint docked at a station, we need to undock first
         if dest != "" and self.jn.ship_state()['status'] == 'in_station':
-            self.waypoint_undock_seq()   
-        
+            self.waypoint_undock_seq()  
+            
+        # if we are in space but not in supercruise, get into supercruise
+        if self.jn.ship_state()['status'] != 'in_supercruise':
+            self.keys.send('SetSpeed100')
+            self.keys.send('Supercruise', hold=0.001)
+            sleep(12)
+            self.keys.send('SetSpeed50')
+            
+        # keep looping while we have a destination defined
         while dest != "":
             self.ap_ckb('log',"Waypoint: "+dest)
             docked_at_station = False
@@ -1277,6 +1286,12 @@ class EDAutopilot:
         # see if we have a compass up, if so then we have a target
         if self.have_destination(scr_reg) == False:
             return
+        
+        # if we are in space but not in supercruise, get into supercruise
+        if self.jn.ship_state()['status'] != 'in_supercruise':
+            self.keys.send('SetSpeed100')
+            self.keys.send('Supercruise', hold=0.001)
+            sleep(12)
 
         # Ensure we are 50%, don't want the loop of shame
         # Align Nav to target
@@ -1284,6 +1299,8 @@ class EDAutopilot:
         self.nav_align(scr_reg)
         self.keys.send('SetSpeed50')
              
+        self.jn.ship_state()['interdicted'] = False
+        
         # Loop forever keeping tight align to target, until we get SC Disengage popup
         while True:
             self.keys.send('SetSpeed50') 
@@ -1295,20 +1312,22 @@ class EDAutopilot:
                 # if we dropped from SC, then we rammed into planet
                 align_false = True  
                 
-            # check if we are being interdicted, means we got the Received message, not sure if this means interdiction started
-            if self.being_interdicted(scr_reg) == True:
+            # check if we are being interdicted, means we saw it on scrren or we already got interdicted
+            if self.being_interdicted(scr_reg) == True or self.jn.ship_state()['interdicted'] == True:
 
                 self.keys.send('SetSpeedZero')      # submit
-                sleep(3)               # wait to come out of interdiction screen
+                sleep(2)               # wait to come out of interdiction screen
                 self.keys.send('SetSpeed100')  
 
                 while self.jn.ship_state()['status'] == 'in_space': 
                     self.keys.send('UseBoostJuice')
                     self.keys.send('HyperSuperCombination', hold=0.001)   
-                    sleep(8)
+                    sleep(5)
 
                 self.nav_align(scr_reg)    # realign with station
                 self.keys.send('SetSpeed50') 
+                self.jn.ship_state()['interdicted'] = False  # reset flag
+                
             
             # check for SC Disengage
             if (self.sc_disengage(scr_reg) == True):

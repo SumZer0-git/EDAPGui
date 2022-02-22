@@ -55,6 +55,7 @@ class EDJournal:
             'fighter_destroyed': False,
             'shieldsup': True,
             'under_attack': None,
+            'interdicted': False,
             'no_dock_reason': None,
             'dist_jumped': 0, 
             'jumps_remains': 0,
@@ -157,6 +158,9 @@ class EDJournal:
             
             elif log_event == 'Docked':
                 self.ship['status'] = 'in_station'
+                
+            elif log_event == 'Interdicted':
+                self.ship['interdicted'] = True
                                
             # parse ship type
             if log_event == 'LoadGame' or log_event == 'Loadout':
