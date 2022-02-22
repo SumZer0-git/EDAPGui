@@ -21,7 +21,9 @@ class Image_Templates:
                           'navpoint'  : {'image': None, 'width': 1, 'height': 1}, 
                           'compass'   : {'image': None, 'width': 1, 'height': 1},
                           'target'    : {'image': None, 'width': 1, 'height': 1},
-                          'disengage' : {'image': None, 'width': 1, 'height': 1} 
+                          'target_occluded' : {'image': None, 'width': 1, 'height': 1},
+                          'disengage' : {'image': None, 'width': 1, 'height': 1},
+                          'interdicted' : {'image': None, 'width': 1, 'height': 1} 
                         }
  
         # load the templates and scale them.  Default templates assumed 3440x1440 screen resolution

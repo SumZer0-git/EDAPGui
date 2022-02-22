@@ -379,9 +379,19 @@ class EDAutopilot:
         
     def being_interdicted(self, scr_reg) -> bool:
         interdict_image, (minVal, maxVal, minLoc, maxLoc), match  = scr_reg.match_template_in_region('interdicted', 'interdicted')
+
+
+        if self.cv_view:
+            #self.draw_match_rect(interdict_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
+            cv2.putText(interdict_image, f'{maxVal:5.2f} >.50', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.imshow('interdict', interdict_image)
+            cv2.moveWindow('interdict', self.cv_view_x-460,self.cv_view_y+560)
+            cv2.waitKey(1)
+
+
         
         # need > 50% in the match to say we do have a interdiction
-        if maxVal < 0.50:
+        if maxVal < 0.40:
             return False
         else:
             return True        
@@ -524,13 +534,14 @@ class EDAutopilot:
         width  = scr_reg.templates.template['disengage']['width']
         height = scr_reg.templates.template['disengage']['height']
 
+        """
         if self.cv_view:
             self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
             cv2.putText(dis_image, f'{maxVal:5.2f} >.45', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('disengage', dis_image)
             cv2.moveWindow('disengage', self.cv_view_x-460,self.cv_view_y+460)
             cv2.waitKey(1)
-
+        """
         logger.debug("Disenage = "+str(maxVal))
 
         if (maxVal > 0.45):
@@ -716,7 +727,7 @@ class EDAutopilot:
                 break
               
             while not off:
-                self.keys.send('PitchUpButton', hold=0.35)   
+                self.pitchDown(45)    
                 off = self.get_nav_offset(scr_reg)
 
             # determine the angle and the hold time to keep the button pressed to roll that number of degrees
@@ -746,7 +757,7 @@ class EDAutopilot:
             sleep(0.15)    # wait for image to stablize
             off = self.get_nav_offset(scr_reg)
             while not off:
-                self.keys.send('PitchUpButton', hold=0.35)   
+                self.pitchDown(45) 
                 off = self.get_nav_offset(scr_reg)
 
             # calc pitch time based on nav point location
@@ -1047,6 +1058,10 @@ class EDAutopilot:
     def pitchUp(self, deg):
         htime = deg/self.pitchrate
         self.keys.send('PitchUpButton', htime)
+        
+    def yawLeft(self, deg):
+        htime = deg/self.yawrate
+        self.keys.send('YawLeftButton', hold=htime)    
 
     # check if refueling needed, ensure correct start type
     #       
@@ -1117,6 +1132,22 @@ class EDAutopilot:
         if handle != 0:
             win32gui.SetForegroundWindow(handle)  # give focus to ED
           
+    def waypoint_undock_seq(self):
+        self.ap_ckb('statusline',"Executing Undocking")                         
+        self.undock()
+        # need to wait until undock complete, that is when we are back in_space
+        while self.jn.ship_state()['status'] != 'in_space':
+            sleep(1)
+
+        self.ap_ckb('statusline',"Undock Complete, going Supercruise")
+        # move away from station
+        self.keys.send('SetSpeed100')
+        sleep(1)
+        self.keys.send('UseBoostJuice')
+        sleep(10) # get away from Station
+        # Go into Supercruise
+        self.keys.send('Supercruise', hold=0.001)
+        sleep(20)  # have to wait to get into SC  
             
     # processes the waypoints, performing jumps and sc assist if going to a station
     # also can then perform trades if specific in the waypoints file
@@ -1131,6 +1162,10 @@ class EDAutopilot:
         
         # Set the Route for the waypoint
         dest = self.waypoint.waypoint_next(self, self.jn.ship_state) 
+        
+        # if we are starting the waypoint docked, we need to undock first
+        if dest != "" and self.jn.ship_state()['status'] == 'in_station':
+            self.waypoint_undock_seq()   
         
         while dest != "":
             self.ap_ckb('log',"Waypoint: "+dest)
@@ -1171,21 +1206,7 @@ class EDAutopilot:
             
             # if we have another waypoint and we're docked, then undock first before moving on
             if dest != "" and docked_at_station:
-                    self.ap_ckb('statusline',"Executing Undocking")                         
-                    self.undock()
-                    # need to wait until undock complete, that is when we are back in_space
-                    while self.jn.ship_state()['status'] != 'in_space':
-                        sleep(1)
-
-                    self.ap_ckb('statusline',"Undock Complete, going Supercruise")
-                    # move away from station
-                    self.keys.send('SetSpeed100')
-                    sleep(1)
-                    self.keys.send('UseBoostJuice')
-                    sleep(10) # get away from Station
-                    # Go into Supercruise
-                    self.keys.send('HyperSuperCombination', hold=0.001)
-                    sleep(20)  # have to wait to get into SC                
+                self.waypoint_undock_seq()                
             
         # Done with waypoints
         self.ap_ckb('log',"Waypoint Route Complete, total distance jumped: "+str(self.total_dist_jumped)+"LY")
@@ -1306,7 +1327,6 @@ class EDAutopilot:
             self.ap_ckb('log', "Supercruise dropped, terminating SC Assist")
  
         self.vce.say("Spercruise Assist complete")                     
-        self.ap_ckb('sc_stop')
         
 
     # Simply monitor for Shields done so we can boost away or our fighter got destroyed

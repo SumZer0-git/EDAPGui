@@ -1,7 +1,7 @@
 {
     "DSSButton": "Primary",
     "JumpTries": 3,
-    "NavAlignTries": 3,
+    "NavAlignTries": 4,
     "RefuelThreshold": 65,
     "FuelThreasholdAbortAP": 15,
     "WaitForAutoDockTimer": 120,
