@@ -116,13 +116,17 @@ class EDKeys:
                     mod = mod[4:]
                 # Prepare final binding
                 binding = None
-                if key is not None:
-                    binding = {}
-                    binding['pre_key'] = 'DIK_'+key.upper()
-                    binding['key'] = SCANCODE[binding['pre_key']]
-                    if mod is not None:
-                        binding['pre_mod'] = 'DIK_'+mod.upper()
-                        binding['mod'] = SCANCODE[binding['pre_mod']]
+                try:
+                    if key is not None:
+                        binding = {}
+                        binding['pre_key'] = 'DIK_'+key.upper()
+                        binding['key'] = SCANCODE[binding['pre_key']]
+                        if mod is not None:
+                            binding['pre_mod'] = 'DIK_'+mod.upper()
+                            binding['mod'] = SCANCODE[binding['pre_mod']]
+                except KeyError:
+                    print("Unrecognised key '"+binding['pre_key']+"' for bind '"+item.tag+"'")
+                    exit(1)
                 if binding is not None:
                     direct_input_keys[item.tag] = binding
     #             else:
