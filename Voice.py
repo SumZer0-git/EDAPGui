@@ -32,7 +32,7 @@ class Voice:
         self.q =queue.Queue(5)
         self.v_enabled = False
         self.v_quit = False
-        self.t = kthread.KThread(target = self.voice_exec, name = "Voice")
+        self.t = kthread.KThread(target=self.voice_exec, name="Voice", daemon=True)
         self.t.start()
         self.v_id = 1
 
