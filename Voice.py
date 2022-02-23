@@ -6,11 +6,11 @@ import queue
 import pyttsx3
 from time import sleep
 
-    #rate = voiceEngine.getProperty('rate')
-    #volume = voiceEngine.getProperty('volume')
-    #voice = voiceEngine.getProperty('voice')
-    #voiceEngine.setProperty('rate', newVoiceRate)
-    #voiceEngine.setProperty('voice', voice.id)   id = 0, 1, ...
+#rate = voiceEngine.getProperty('rate')
+#volume = voiceEngine.getProperty('volume')
+#voice = voiceEngine.getProperty('voice')
+#voiceEngine.setProperty('rate', newVoiceRate)
+#voiceEngine.setProperty('voice', voice.id)   id = 0, 1, ...
 
 """
 File:Voice.py    
@@ -29,15 +29,15 @@ Author: sumzer0@yahoo.com
 class Voice:
 
     def __init__(self): 
-        self.q =queue.Queue(5)
+        self.q = queue.Queue(5)
         self.v_enabled = False
         self.v_quit = False
-        self.t = kthread.KThread(target = self.voice_exec, name = "Voice")
+        self.t = kthread.KThread(target=self.voice_exec, name="Voice", daemon=True)
         self.t.start()
         self.v_id = 1
 
     def say(self, vSay):
-        if (self.v_enabled == True):
+        if self.v_enabled:
             self.q.put(vSay)
 
     def set_off(self):
@@ -58,7 +58,7 @@ class Voice:
         v_id_current = 0   # David
         engine.setProperty('voice', voices[v_id_current].id)   
         engine.setProperty('rate', 160)
-        while (self.v_quit == False):
+        while not self.v_quit:
             # check if the voice ID changed
             if self.v_id != v_id_current:
                 v_id_current = self.v_id
@@ -70,7 +70,7 @@ class Voice:
             try:
                 words = self.q.get(timeout=1)
                 self.q.task_done()
-                if (words is not None):
+                if words is not None:
                     engine.say(words)
                     engine.runAndWait()
             except:

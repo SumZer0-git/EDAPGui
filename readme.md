@@ -3,7 +3,7 @@ This Elite Dangerous (ED) Autopilot supports FSD Route assistance, Supercruise A
 your destination in the GalaxyMap and then enable this assistant and it will perform all the jumps to get you to your destination, AFK.  Furthermore while
 executing route assistance it will perform detailed system scanning (honk) when jumping into a system and optionally perform FSS scanning
 to determine if Earth, Water, or Ammonia type world is present.  The supercruise (SC) assistant (and not using ED's SC Assist which takes up a slot, for a piece of software?) 
-will keep you on target and when PRESS [J] DISENGAGED is presented will autodrop out of SC and perform autodocking with the targetted Station.  With Waypoint Assist you 
+will keep you on target and when "TO DISENGAGED" is presented will autodrop out of SC and perform autodocking with the targetted Station.  With Waypoint Assist you 
 define the route in a file and this assistance will jump to those waypoints.  If a Station is defined to dock at, the assistant will transition to SC Assist and
 dock with the station.  A early version of a trading capability is also included.  If Voice enabled, the autopilot will inform you of its actions.   
 
@@ -37,14 +37,7 @@ Also Note: This repository is provided for educational purposes as a in depth pr
            If you change focus, then keyboard events will be sent to the focused window, can mess with the 
            window
 * Control Rates: Must provide the roll, pitch, yaw rates for your ship. See HOWTO-RollPitchYaw.md, start with values from Outfitting for your ship 
-* Autodocking: For the AP to recongize the "PRESS [J] TO DISENGAGE"  you should map "J" key for disengage so that that image matching will work. Or at minimum have
-  it mapped to a single Key and not a set of keys such as "PRESS [CTR+ALT+5] TO DISENGAGE", as that is unlikely to meet the matching threshold of the image.  The following should be the keybing to ensure this works<br>
-(remove "<>" for display purposes)<br>
-    HyperSuperCombination<br>
-      Primary Device="Keyboard" Key="Key_J" <br>
-      Secondary Device="{NoDevice}" Key="" 		<br>
-    HyperSuperCombination<br>
-
+* Autodocking: For the AP to recongize the "TO DISENGAGE"  so it will not matter what key you have this mapped to. 
 * Routing: If using Economical Route setting, then may run into problems in jumping.  With Economical, the Stars may not be on the "other-side" of the 
   Sun as with Fastest routing.
   As such, when rolling toward the Target, the Sun may fade the console making Compass matching difficult.  Need to think through this one more.  The Sun shining on the 
@@ -78,7 +71,7 @@ Note: the autopilot.log file will capture any required keybindings that are not 
 * Supercruise Assist: will keep your ship pointed to target, you target can only be a station for
     the autodocking to work.  If a settlement is targetted or target is obscured you will end up being kicked out of SC 
     via "Dropped Too Close" or "Dropping from Orbital Cruise" (however, no damage to ship), throttle will be set to
-    Zero and exit SC Assist.  Otherwise, when the 'PRESS [J] DISENGAGE' appears the SC Assist will drop you out of SC
+    Zero and exit SC Assist.  Otherwise, when the 'TO DISENGAGE' appears the SC Assist will drop you out of SC
     and attempt request docking (after traveling closer to the Station), if docking granted it will.    
     put throttle to zero and the autodocking computer will take over. Once docked it will auto-refuel and go into StarPort Services.
     Note: while in SC, a interdictor response is included.   Also, as approaching the station, if it shows the Station is occluded

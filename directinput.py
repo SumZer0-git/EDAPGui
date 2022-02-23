@@ -8,8 +8,6 @@ import time
 
 SendInput = ctypes.windll.user32.SendInput
 
-
-
 # Listed are keyboard scan code constants, taken from dinput.h
 SCANCODE = {
     'DIK_ESCAPE'          : 0x01,
@@ -95,6 +93,7 @@ SCANCODE = {
     'DIK_NUMPAD_3'        : 0x51,
     'DIK_NUMPAD_0'        : 0x52,
     'DIK_DECIMAL'         : 0x53,    # . on numeric keypad */
+    'DIK_NUMPAD_DECIMAL'  : 0x53,    # apparently also . on numeric keypad */
     'DIK_F11'             : 0x57,
     'DIK_F12'             : 0x58,
     'DIK_F13'             : 0x64,    #                     (NEC PC98) */
@@ -183,19 +182,18 @@ class Input(ctypes.Structure):
                 ("ii", Input_I)]
 
 
-
-# Actuals Functions
+# Actual Functions
 
 def PressKey(hexKeyCode):
     extra = ctypes.c_ulong(0)
     ii_ = Input_I()
-    ii_.ki = KeyBdInput( 0, hexKeyCode, 0x0008, 0, ctypes.pointer(extra) )
-    x = Input( ctypes.c_ulong(1), ii_ )
+    ii_.ki = KeyBdInput(0, hexKeyCode, 0x0008, 0, ctypes.pointer(extra))
+    x = Input(ctypes.c_ulong(1), ii_)
     ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
 
 def ReleaseKey(hexKeyCode):
     extra = ctypes.c_ulong(0)
     ii_ = Input_I()
-    ii_.ki = KeyBdInput( 0, hexKeyCode, 0x0008 | 0x0002, 0, ctypes.pointer(extra) )
-    x = Input( ctypes.c_ulong(1), ii_ )
+    ii_.ki = KeyBdInput(0, hexKeyCode, 0x0008 | 0x0002, 0, ctypes.pointer(extra))
+    x = Input(ctypes.c_ulong(1), ii_)
     ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
