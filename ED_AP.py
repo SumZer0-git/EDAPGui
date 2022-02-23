@@ -267,7 +267,7 @@ class EDAutopilot:
     def calibrate(self):
         self.set_focus_elite_window()
         range_low = 30
-        range_high = 100
+        range_high = 200
         match_level = 0.5
         scale_max = 0
         max_val = 0
