@@ -95,6 +95,7 @@ SCANCODE = {
     'DIK_NUMPAD_3'        : 0x51,
     'DIK_NUMPAD_0'        : 0x52,
     'DIK_DECIMAL'         : 0x53,    # . on numeric keypad */
+    'DIK_NUMPAD_DECIMAL'  : 0x53,    # apparently also . on numeric keypad */
     'DIK_F11'             : 0x57,
     'DIK_F12'             : 0x58,
     'DIK_F13'             : 0x64,    #                     (NEC PC98) */
