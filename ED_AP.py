@@ -139,7 +139,7 @@ class EDAutopilot:
 
     # Loads the configuration file
     #
-    def read_config(self, fileName='./config-AP.json'):
+    def read_config(self, fileName='./configs/AP.json'):
         s = None
         try:
             with open(fileName, "r") as fp:
@@ -149,7 +149,7 @@ class EDAutopilot:
 
         return s
 
-    def write_config(self, data, fileName='./config-AP.json'):
+    def write_config(self, data, fileName='./configs/AP.json'):
         try:
             with open(fileName, "w") as fp:
                 json.dump(data, fp, indent=4)
@@ -285,7 +285,7 @@ class EDAutopilot:
         if scale_max == 99:
             scale_max = 100
 
-        # if we found a scaling factor that meets our criteria, then save it to the config-resolution.json file
+        # if we found a scaling factor that meets our criteria, then save it to the resolution.json file
         if max_val != 0:
             self.scr.scaleX = float(scale_max/100)
             self.scr.scaleY = self.scr.scaleX
