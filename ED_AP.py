@@ -332,9 +332,10 @@ class EDAutopilot:
      
         if self.cv_view:
             elw_image_d = elw_image.copy()
+            elw_image_d = cv2.cvtColor(elw_image_d, cv2.COLOR_GRAY2RGB)
             #self.draw_match_rect(elw_image_d, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1) 
-            self.draw_match_rect(elw_image_d, maxLoc1, (maxLoc1[0]+15,maxLoc1[1]+25), (255,255,55), 1)  
-            #cv2.putText(elw_image_d, f'{maxVal1:5.2f}> .60', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            self.draw_match_rect(elw_image_d, maxLoc1, (maxLoc1[0]+15, maxLoc1[1]+25), (0, 0, 255), 1)
+            #cv2.putText(elw_image_d, f'{maxVal1:5.2f}> .60', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1, cv2.LINE_AA)
             cv2.imshow('fss', elw_image_d)
             cv2.moveWindow('fss', self.cv_view_x,self.cv_view_y+100) 
             cv2.waitKey(30)
@@ -383,7 +384,7 @@ class EDAutopilot:
         """
         if self.cv_view:
             #self.draw_match_rect(interdict_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
-            cv2.putText(interdict_image, f'{maxVal:5.2f} >.40', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(interdict_image, f'{maxVal:5.2f} >.40', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
             cv2.imshow('interdict', interdict_image)
             cv2.moveWindow('interdict', self.cv_view_x-460,self.cv_view_y+560)
             cv2.waitKey(1)
@@ -417,16 +418,20 @@ class EDAutopilot:
         n_pt = n_maxLoc
 
         if self.cv_view:
-            self.draw_match_rect(icompass_image, pt, (pt[0] + c_wid, pt[1] + c_hgt), (255,255,255), 2)                                   
+            icompass_image_d = cv2.cvtColor(icompass_image, cv2.COLOR_GRAY2RGB)
+            self.draw_match_rect(icompass_image_d, pt, (pt[0]+c_wid, pt[1]+c_hgt), (0, 0, 255), 2)
+            #cv2.rectangle(icompass_image_display, pt, (pt[0]+c_wid, pt[1]+c_hgt), (0, 0, 255), 2)
             #self.draw_match_rect(compass_image, n_pt, (n_pt[0] + wid, n_pt[1] + hgt), (255,255,255), 2)   
-            self.draw_match_rect(icompass_image, (pt[0]+n_pt[0]-pad, pt[1]+n_pt[1]-pad), (pt[0]+n_pt[0] + wid-pad, pt[1]+n_pt[1] + hgt-pad), (255,255,255), 1)   
+            self.draw_match_rect(icompass_image_d, (pt[0]+n_pt[0]-pad, pt[1]+n_pt[1]-pad), (pt[0]+n_pt[0]+wid-pad, pt[1]+n_pt[1]+hgt-pad), (0, 255, 0), 1)
+            #cv2.rectangle(icompass_image_display, (pt[0]+n_pt[0]-pad, pt[1]+n_pt[1]-pad), (pt[0]+n_pt[0] + wid-pad, pt[1]+n_pt[1] + hgt-pad), (0, 0, 255), 2)
 
             #   dim = (int(destination_width/3), int(destination_height/3))
 
             #   img = cv2.resize(dst_image, dim, interpolation =cv2.INTER_AREA) 
-            cv2.putText(icompass_image, f'C:{maxVal:5.2f} >0.6', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.putText(icompass_image, f'N:{n_maxVal:5.2f} >0.8', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.imshow('compass', icompass_image)
+            cv2.putText(icompass_image_d, f'C:{maxVal:5.2f} >0.6', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(icompass_image_d, f'N:{n_maxVal:5.2f} >0.8', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            #cv2.circle(icompass_image_display, (pt[0]+n_pt[0], pt[1]+n_pt[1]), 5, (0, 255, 0), 3)
+            cv2.imshow('compass', icompass_image_d)
             #cv2.imshow('nav', navpt_image)
             cv2.moveWindow('compass', self.cv_view_x, self.cv_view_y) 
             #cv2.moveWindow('nav', self.cv_view_x, self.cv_view_y) 
@@ -454,16 +459,17 @@ class EDAutopilot:
         pt = maxLoc
                        
         if self.cv_view:
-            destination_width  = scr_reg.reg['target']['width']
+            dst_image_d = cv2.cvtColor(dst_image, cv2.COLOR_GRAY2RGB)
+            destination_width = scr_reg.reg['target']['width']
             destination_height = scr_reg.reg['target']['height']
             
             width  = scr_reg.templates.template['target_occluded']['width']
             height = scr_reg.templates.template['target_occluded']['height']
             try:
-                self.draw_match_rect(dst_image, pt, (pt[0] + width, pt[1] + height), (255,255,255), 2)
+                self.draw_match_rect(dst_image_d, pt, (pt[0]+width, pt[1]+height), (0, 0, 255), 2)
                 dim = (int(destination_width/2), int(destination_height/2))
 
-                img = cv2.resize(dst_image, dim, interpolation =cv2.INTER_AREA)
+                img = cv2.resize(dst_image_d, dim, interpolation=cv2.INTER_AREA)
                 cv2.putText(img, f'{maxVal:5.2f} >.54', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
                 cv2.imshow('occluded', img)
                 cv2.moveWindow('occluded', self.cv_view_x,self.cv_view_y+650)
@@ -500,15 +506,16 @@ class EDAutopilot:
     #  print(maxLoc)
     
         if self.cv_view:
+            dst_image_d = cv2.cvtColor(dst_image, cv2.COLOR_GRAY2RGB)
             try:
-                self.draw_match_rect(dst_image, pt, (pt[0] + width, pt[1] + height), (255,255,255), 2)
+                self.draw_match_rect(dst_image_d, pt, (pt[0]+width, pt[1]+height), (0, 0, 255), 2)
                 dim = (int(destination_width/2), int(destination_height/2))
 
-                img = cv2.resize(dst_image, dim, interpolation =cv2.INTER_AREA)
+                img = cv2.resize(dst_image_d, dim, interpolation=cv2.INTER_AREA)
                 cv2.putText(img, f'{maxVal:5.2f} >.54', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
                 cv2.imshow('target', img)
                 #cv2.imshow('tt', scr_reg.templates.template['target']['image'])
-                cv2.moveWindow('target', self.cv_view_x,self.cv_view_y+400)
+                cv2.moveWindow('target', self.cv_view_x+500, self.cv_view_y)
             except Exception as e:
                 print("exception in getdest: "+str(e))
             cv2.waitKey(30)
@@ -535,7 +542,7 @@ class EDAutopilot:
 
         if self.cv_view:
             self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
-            cv2.putText(dis_image, f'{maxVal:5.2f} >.45', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(dis_image, f'{maxVal:5.2f} >.45', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
             cv2.imshow('disengage', dis_image)
             cv2.moveWindow('disengage', self.cv_view_x-460,self.cv_view_y+460)
             cv2.waitKey(1)
