@@ -4,9 +4,8 @@ from json import loads
 from time import sleep, time
 from datetime import datetime
 
-
 from EDlogger import logger
-
+from WindowsKnownPaths import *
 
 """
 File EDJournal.py  (leveraged the EDAutopilot on github, turned into a 
@@ -37,13 +36,12 @@ TODO: thinking self.ship()[name]  uses the same names as in the journal, so can 
 """
 
 
-
 class EDJournal:
     def __init__(self):
         self.log_file = None
         self.current_log = self.get_latest_log()
         self.open_journal(self.current_log)
-        
+
         self.ship = {
             'time': (datetime.now() - datetime.fromtimestamp(getmtime(self.current_log))).seconds,
             'odyssey': True,
@@ -57,7 +55,7 @@ class EDJournal:
             'under_attack': None,
             'interdicted': False,
             'no_dock_reason': None,
-            'dist_jumped': 0, 
+            'dist_jumped': 0,
             'jumps_remains': 0,
             'fuel_capacity': None,
             'fuel_level': None,
@@ -66,45 +64,42 @@ class EDJournal:
         }
         self.ship_state()    # load up from file
         self.reset_items()
-    
-    # this items do not have respective log entries to clear them.  After initial reading of log file, clear these items
+
+    # these items do not have respective log entries to clear them.  After initial reading of log file, clear these items
     # also the App will need to reset these to False after detecting they were True    
     def reset_items(self):
         self.ship['under_attack'] = False
         self.ship['fighter_destroyed'] = False
-    
-    def get_latest_log(self,path_logs=None):
+
+    def get_latest_log(self, path_logs=None):
         """Returns the full path of the latest (most recent) elite log file (journal) from specified path"""
         if not path_logs:
-            path_logs = environ['USERPROFILE'] + "\Saved Games\Frontier Developments\Elite Dangerous"
+            path_logs = get_path(FOLDERID.SavedGames, UserHandle.current) + "\Frontier Developments\Elite Dangerous"
         list_of_logs = [join(path_logs, f) for f in listdir(path_logs) if isfile(join(path_logs, f)) and f.startswith('Journal.')]
         if not list_of_logs:
             return None
         latest_log = max(list_of_logs, key=getmtime)
         return latest_log
-        
 
-    def open_journal(self,log_name):
-
+    def open_journal(self, log_name):
         # if journal file is open then close it
-        if self.log_file != None:
+        if self.log_file is not None:
             self.log_file.close()
 
         logger.info("Opening new Journal: "+log_name)
 
         # open the latest journal
         self.log_file = open(log_name, encoding="utf-8")
-        
 
     def parse_line(self, log):
         # parse data
         try:
             # parse ship status
             log_event = log['event']
-           
+
             # If fileheader, pull whether running Odyssey or Horizons
             if log_event == 'Fileheader':
-                self.ship['odyssey'] = log['Odyssey'] 
+                self.ship['odyssey'] = log['Odyssey']
                 return   # No need to do further processing on this record, should use elif: all the way down
 
             if log_event == 'ShieldState':
@@ -119,53 +114,53 @@ class EDJournal:
 
             if  log_event == 'FighterDestroyed':
                 self.ship['fighter_destroyed'] = True
-            
+
             if log_event == 'StartJump':
                 self.ship['status'] = str('starting_'+log['JumpType']).lower()
                 if log['JumpType'] == 'Hyperspace':
                     self.ship['star_class'] = log['StarClass']
-                
+
             elif log_event == 'SupercruiseEntry' or log_event == 'FSDJump':
                 self.ship['status'] = 'in_supercruise'
-                
+
             elif log_event == "DockingGranted":
                 self.ship['status'] = 'dockinggranted'
-                
+
             elif log_event == "DockingDenied":
                 self.ship['status'] = 'dockingdenied'
                 self.ship['no_dock_reason'] = log['Reason']
 
-            elif log_event == 'SupercruiseExit' or log_event == 'DockingCancelled':    
+            elif log_event == 'SupercruiseExit' or log_event == 'DockingCancelled':
 #TODO                 or (log_event == 'Music' and self.ship['status'] == 'in_undocking') \
 #                 or (log_event == 'Location' and log['Docked'] == False):
                 self.ship['status'] = 'in_space'
-                
+
             elif log_event == 'Undocked':
                 self.ship['status'] = 'starting_undocking'
                 #self.ship['status'] = 'in_space'
-                
+
             elif log_event == 'DockingRequested':
                 self.ship['status'] = 'starting_docking'
-                
+
             elif log_event == "Music" and log['MusicTrack'] == "DockingComputer":
                 if self.ship['status'] == 'starting_undocking':
                     self.ship['status'] = 'in_undocking'
                 elif self.ship['status'] == 'starting_docking':
                     self.ship['status'] = 'in_docking'
-                    
+
             elif log_event == "Music" and log['MusicTrack'] == "NoTrack" and self.ship['status'] == 'in_undocking':
                 self.ship['status'] = 'in_space'
-            
+
             elif log_event == 'Docked':
                 self.ship['status'] = 'in_station'
-                
+
             elif log_event == 'Interdicted':
                 self.ship['interdicted'] = True
-                               
+
             # parse ship type
             if log_event == 'LoadGame' or log_event == 'Loadout':
                 self.ship['type'] = log['Ship']
-                
+
             # parse fuel
             if 'FuelLevel' in log and self.ship['type'] != 'TestBuggy':
                 self.ship['fuel_level'] = log['FuelLevel']
@@ -180,7 +175,7 @@ class EDJournal:
                 self.ship['fuel_percent'] = round((self.ship['fuel_level'] / self.ship['fuel_capacity'])*100)
             else:
                 self.ship['fuel_percent'] = 10
-                
+
             # parse scoop
             # 
             if log_event == 'FuelScoop' and self.ship['time'] < 10 and self.ship['fuel_percent'] < 100:
@@ -188,13 +183,13 @@ class EDJournal:
             else:
                 self.ship['is_scooping'] = False
 
-                
+
             # parse location
             if (log_event == 'Location' or log_event == 'FSDJump') and 'StarSystem' in log:
                 self.ship['location'] = log['StarSystem']
 #TODO                if 'StarClass' in log:
 #TODO                    self.ship['star_class'] = log['StarClass']
-                
+
             # parse target
             if log_event == 'FSDTarget':
                 if log['Name'] == self.ship['location']:
@@ -208,15 +203,15 @@ class EDJournal:
                         pass
                             #
                             #    'Log did not have jumps remaining. This happens most if you have less than .' +
-                            #    '3 jumps remaining. Jumps remaining will be inaccurate for this jump.')                    
-                                  
-                    
+                            #    '3 jumps remaining. Jumps remaining will be inaccurate for this jump.')
+
+
             elif log_event == 'FSDJump':
                 if self.ship['location'] == self.ship['target']:
                     self.ship['target'] = None
-                self.ship['dist_jumped'] = log["JumpDist"] 
-                  
-                
+                self.ship['dist_jumped'] = log["JumpDist"]
+
+
         # exceptions
         except Exception as e:
             #logger.exception("Exception occurred")
@@ -240,7 +235,7 @@ class EDJournal:
                 break
             else:
                 log = loads(line)
-                cnt = cnt + 1   
+                cnt = cnt + 1
                 self.parse_line(log)
 
         logger.debug('read:  '+str(cnt)+' ship: '+str(self.ship))

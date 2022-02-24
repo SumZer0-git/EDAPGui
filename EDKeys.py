@@ -1,4 +1,3 @@
-
 from os import environ, listdir
 from os.path import abspath, getmtime, isfile, join
 from time import sleep, time
@@ -27,41 +26,41 @@ class EDKeys:
         self.key_default_delay = 0.200
         self.key_repeat_delay = 0.100
         self.keys_to_obtain = [
-                'YawLeftButton',
-                'YawRightButton',
-                'RollLeftButton',
-                'RollRightButton',
-                'PitchUpButton',
-                'PitchDownButton',
-                'SetSpeedZero',
-                'SetSpeed50',
-                'SetSpeed100',
-                'HyperSuperCombination',
-                'UIFocus',
-                'UI_Up',
-                'UI_Down',
-                'UI_Left',
-                'UI_Right',
-                'UI_Select',
-                'UI_Back',
-                'CycleNextPanel',
-                'HeadLookReset',
-                'PrimaryFire',
-                'SecondaryFire',
-                'ExplorationFSSEnter',
-                'ExplorationFSSQuit',
-                'MouseReset',
-                'DeployHardpointToggle',
-                'IncreaseEnginesPower',
-                'IncreaseWeaponsPower',
-                'IncreaseSystemsPower',
-                'GalaxyMapOpen', 
-                'SystemMapOpen',
-                'UseBoostJuice',
-                'Supercruise'
-            ]
+            'YawLeftButton',
+            'YawRightButton',
+            'RollLeftButton',
+            'RollRightButton',
+            'PitchUpButton',
+            'PitchDownButton',
+            'SetSpeedZero',
+            'SetSpeed50',
+            'SetSpeed100',
+            'HyperSuperCombination',
+            'UIFocus',
+            'UI_Up',
+            'UI_Down',
+            'UI_Left',
+            'UI_Right',
+            'UI_Select',
+            'UI_Back',
+            'CycleNextPanel',
+            'HeadLookReset',
+            'PrimaryFire',
+            'SecondaryFire',
+            'ExplorationFSSEnter',
+            'ExplorationFSSQuit',
+            'MouseReset',
+            'DeployHardpointToggle',
+            'IncreaseEnginesPower',
+            'IncreaseWeaponsPower',
+            'IncreaseSystemsPower',
+            'GalaxyMapOpen',
+            'SystemMapOpen',
+            'UseBoostJuice',
+            'Supercruise'
+        ]
         self.keys = self.get_bindings(self.keys_to_obtain)
-        
+
         # dump config to log
         for key in self.keys_to_obtain:
             try:
@@ -69,31 +68,28 @@ class EDKeys:
             except Exception as e:
                 logger.warning(str("get_bindings_<"+key+">= does not have a valid keyboard keybind.").upper())
 
-
-
-
     def get_bindings(self, keys_to_obtain):
         """Returns a dict struct with the direct input equivalent of the necessary elite keybindings"""
         direct_input_keys = {}
         convert_to_direct_keys = {
-            'Key_LeftShift':'LShift',
-            'Key_RightShift':'RShift',
-            'Key_LeftAlt':'LAlt',
-            'Key_RightAlt':'RAlt',
-            'Key_LeftControl':'LControl',
-            'Key_RightControl':'RControl',
-            'Key_LeftBracket':'LBracket',
-            'Key_RightBracket':'RBracket'
+            'Key_LeftShift': 'LShift',
+            'Key_RightShift': 'RShift',
+            'Key_LeftAlt': 'LAlt',
+            'Key_RightAlt': 'RAlt',
+            'Key_LeftControl': 'LControl',
+            'Key_RightControl': 'RControl',
+            'Key_LeftBracket': 'LBracket',
+            'Key_RightBracket': 'RBracket'
         }
-        
+
         latest_bindings = self.get_latest_keybinds()
         bindings_tree = parse(latest_bindings)
         bindings_root = bindings_tree.getroot()
-        
+
         for item in bindings_root:
             if item.tag in self.keys_to_obtain:
                 key = None
-                mod = None      
+                mod = None
                 # Check primary
                 if item[0].attrib['Device'].strip() == "Keyboard":
                     key = item[0].attrib['Key']
@@ -116,30 +112,31 @@ class EDKeys:
                     mod = mod[4:]
                 # Prepare final binding
                 binding = None
-                if key is not None:
-                    binding = {}
-                    binding['pre_key'] = 'DIK_'+key.upper()
-                    binding['key'] = SCANCODE[binding['pre_key']]
-                    if mod is not None:
-                        binding['pre_mod'] = 'DIK_'+mod.upper()
-                        binding['mod'] = SCANCODE[binding['pre_mod']]
+                try:
+                    if key is not None:
+                        binding = {}
+                        binding['pre_key'] = 'DIK_'+key.upper()
+                        binding['key'] = SCANCODE[binding['pre_key']]
+                        if mod is not None:
+                            binding['pre_mod'] = 'DIK_'+mod.upper()
+                            binding['mod'] = SCANCODE[binding['pre_mod']]
+                except KeyError:
+                    print("Unrecognised key '"+binding['pre_key']+"' for bind '"+item.tag+"'")
+                    exit(1)
                 if binding is not None:
                     direct_input_keys[item.tag] = binding
-    #             else:
-    #                 logger.warning("get_bindings_<"+item.tag+">= does not have a valid keyboard keybind.")
-    
+                #     else:
+                #         logger.warning("get_bindings_<"+item.tag+">= does not have a valid keyboard keybind.")
+
         if len(list(direct_input_keys.keys())) < 1:
             return None
         else:
             return direct_input_keys
 
-
-    # -
-
     # Note:  this routine will grab the *.binds file which is the latest modified
     def get_latest_keybinds(self, path_bindings=None):
         if not path_bindings:
-            path_bindings = environ['LOCALAPPDATA'] + "\Frontier Developments\Elite Dangerous\Options\Bindings"
+            path_bindings = environ['LOCALAPPDATA']+"\Frontier Developments\Elite Dangerous\Options\Bindings"
 
         list_of_bindings = [join(path_bindings, f) for f in listdir(path_bindings) if isfile(join(path_bindings, f)) and f.endswith('.binds')]
 
@@ -153,17 +150,16 @@ class EDKeys:
             ReleaseKey(key)
         else:
             PressKey(key)
-                    
 
     def send(self, key_name, hold=None, repeat=1, repeat_delay=None, state=None):
         key = self.keys[key_name]
         if key is None:
             logger.warning('SEND=NONE !!!!!!!!')
             return
-        
+
         logger.debug('send=key:'+str(key)+',hold:'+str(hold)+',repeat:'+str(repeat)+',repeat_delay:'+str(repeat_delay)+',state:'+str(state))
         for i in range(repeat):
-            
+
             if state is None or state == 1:
                 if 'mod' in key:
                     PressKey(key['mod'])
@@ -183,19 +179,16 @@ class EDKeys:
                 if 'mod' in key:
                     sleep(self.key_mod_delay)
                     ReleaseKey(key['mod'])
-            
+
             if repeat_delay:
                 sleep(repeat_delay)
             else:
                 sleep(self.key_repeat_delay)
 
-
-
-
 def main():
     k = EDKeys()
- #   logger.info("get_latest_keybinds="+str(k.get_latest_keybinds()))
- #   k.send(k.keys['ExplorationFSSEnter'], hold=3)
+    #logger.info("get_latest_keybinds="+str(k.get_latest_keybinds()))
+    #k.send(k.keys['ExplorationFSSEnter'], hold=3)
 
 
 if __name__ == "__main__":
