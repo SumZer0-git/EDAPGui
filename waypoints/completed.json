@@ -1,0 +1,22 @@
+{
+    "Ninabin": {
+        "DockWithStation": null,
+        "StationCoord": [
+            0,
+            0
+        ],
+        "SellNumDown": -1,
+        "BuyNumDown": -1,
+        "Completed": true
+    },
+    "Wailaroju": {
+        "DockWithStation": null,
+        "StationCoord": [
+            0,
+            0
+        ],
+        "SellNumDown": -1,
+        "BuyNumDown": -1,
+        "Completed": true
+    }
+}
