@@ -5,7 +5,7 @@
   Must perform:  pip install mss
 - The disengage popup "PRESS [J] TO DISENGAGE" image now only looks for "TO DISENGAGE" so user can have any key binding
   they want for that function
-- Fix issue when Saved Gams has been moved out of C:
+- Fix issue when Saved Games has been moved out of C:
 - Add more useful error for unrecognised key
 - Add colour to debug images
 - Allow for calibrating of larger screens
