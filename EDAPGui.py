@@ -181,10 +181,10 @@ class APGui():
 
     def start_waypoint(self):
         filetypes = (
-            ('json files', 'way*.json'),
+            ('json files', '*.json'),
             ('All files', '*.*')
         )
-        filename = fd.askopenfilename(title="Waypoint File", initialdir='./', filetypes=filetypes)
+        filename = fd.askopenfilename(title="Waypoint File", initialdir='./waypoints/', filetypes=filetypes)
         if filename != "":
             self.ed_ap.waypoint.load_waypoint_file(filename)
             sleep(2)
@@ -216,13 +216,13 @@ class APGui():
 
     def open_file(self):
         filetypes = (
-            ('Ship files', 'ship*.json'),
+            ('json files', '*.json'),
             ('All files', '*.*')
         )
 
         filename = fd.askopenfilename(
             title='Open a file',
-            initialdir='.',
+            initialdir='./ships/',
             filetypes=filetypes)
 
         if not filename:
