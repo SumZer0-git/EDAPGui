@@ -1,4 +1,18 @@
 
+# 2/23/2022 Update
+- Fixed sun avoidance for dark red/non-scoopable stars, will pitch up properly
+- Use different screen grab package (mss) which is about 10x faster than ImageGrab.  New requirements.txt file.
+  Must perform:  pip install mss
+- The disengage popup "PRESS [J] TO DISENGAGE" image now only looks for "TO DISENGAGE" so user can have any key binding
+  they want for that function
+- Fix issue when Saved Games has been moved out of C:
+- Add more useful error for unrecognised key
+- Add colour to debug images
+- Allow for calibrating of larger screens
+- Added Journal trap for interdiction, as well image matching from screen
+- Waypoint, fixed undocking from Station
+
+
 # 2/20/2022 Update
 ## HOWTO's added:
   - HOWTO-Calibration.md
