@@ -96,7 +96,8 @@ class Screen_Regions:
     # need to compare filter_sun with filter_bright
     def filter_sun(self, image=None, noOp=None):
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        (thresh, blackAndWhiteImage) = cv2.threshold(hsv, 127, 255, cv2.THRESH_BINARY)
+        # 65 low to pick up the dull red stars
+        (thresh, blackAndWhiteImage) = cv2.threshold(hsv, 65, 255, cv2.THRESH_BINARY)
 
         return blackAndWhiteImage
 
