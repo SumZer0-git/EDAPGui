@@ -116,30 +116,31 @@ https://pythonhosted.org/pynput/keyboard.html
 
 ## Config File: config-AP.json
   Note: the below is from the code, the real .json file will have the True/False values as lower case, as in true/false<br>
-        self.config = {  <br>
-            "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS<br>
-            "JumpTries": 3,                # <br>
-            "NavAlignTries": 3,            #<br>
-            "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel<br>
-            "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well<br>
-            "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking<br>
-            "FuelScoopTimeOut": 35,       # number of second to wait for full tank, might mean we are not scooping well or got a small scooper<br>
-            "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package<br>
-            "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings<br>
-            "HotKey_StopAllAssists": "end",<br>
-            "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)<br>
-            "OverlayTextEnable": False,    # Experimental at this stage<br>
-            "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text<br>
-            "OverlayTextFontSize": 16, <br>
-            "OverlayGraphicEnable": False, # not implemented yet<br>
-            "DiscordWebhook": False,       # discord not implemented yet<br>
-            "DiscordWebhookURL": "",<br>
-            "DiscordUserID": "",<br>
-            "VoiceID": 1,                  # my Windows only have 3 defined (0-2)<br>
-            "LogDEBUG": False,             # enable for debug messages<br>
-            "LogINFO": True<br>
-        }<br>
-
+  ```py
+        self.config = {  
+            "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS
+            "JumpTries": 3,                # 
+            "NavAlignTries": 3,            #
+            "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel
+            "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
+            "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking
+            "FuelScoopTimeOut": 35,        # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
+            "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
+            "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
+            "HotKey_StopAllAssists": "end",
+            "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
+            "OverlayTextEnable": False,    # Experimental at this stage
+            "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
+            "OverlayTextFontSize": 16, 
+            "OverlayGraphicEnable": False, # not implemented yet
+            "DiscordWebhook": False,       # discord not implemented yet
+            "DiscordWebhookURL": "",
+            "DiscordUserID": "",
+            "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
+            "LogDEBUG": False,             # enable for debug messages
+            "LogINFO": True
+        }
+```
 ## Setup:
 _Requires **python 3** and **git**_
 1. Clone this repository
