@@ -57,7 +57,7 @@ class EDWayPoint:
             logger.debug("EDWayPoint: read json:"+str(ss))            
         
          
-    def read_waypoints(self, fileName='./waypoints.json'):
+    def read_waypoints(self, fileName='./waypoints/waypoints.json'):
         s = None
         try:
             with open(fileName,"r") as fp:
@@ -68,7 +68,7 @@ class EDWayPoint:
         return s    
        
 
-    def write_waypoints(self, data, fileName='./waypoints.json'):
+    def write_waypoints(self, data, fileName='./waypoints/waypoints.json'):
         if data is None:
             data = self.waypoints
         try:
@@ -80,7 +80,7 @@ class EDWayPoint:
  
     def mark_waypoint_complete(self, key):
         self.waypoints[key]['Completed'] = True
-        self.write_waypoints(data=None, fileName='./waypoints-completed.json')  
+        self.write_waypoints(data=None, fileName='./waypoints/waypoints-completed.json')  
 
 
     def waypoint_next(self, ap, target_select_cb=None) -> str:

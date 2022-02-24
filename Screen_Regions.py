@@ -96,8 +96,9 @@ class Screen_Regions:
     # need to compare filter_sun with filter_bright
     def filter_sun(self, image=None, noOp=None):
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        # 65 low to pick up the dull red stars
-        (thresh, blackAndWhiteImage) = cv2.threshold(hsv, 65, 255, cv2.THRESH_BINARY)
+        
+        # set low end of filter to 25 to pick up the dull red Class L stars
+        (thresh, blackAndWhiteImage) = cv2.threshold(hsv, 25, 255, cv2.THRESH_BINARY)
 
         return blackAndWhiteImage
 
@@ -107,7 +108,7 @@ class Screen_Regions:
  
         wht = sum(blackAndWhiteImage == 255)     
         blk = sum(blackAndWhiteImage != 255)
-        #    dsp_image(2, blackAndWhiteImage, "blk wht")
+
         result = int((wht / (wht+blk))*100)
 
         return result

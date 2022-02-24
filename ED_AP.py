@@ -663,7 +663,7 @@ class EDAutopilot:
         while self.is_sun_dead_ahead(scr_reg):
             self.keys.send('PitchUpButton', state=1)
 
-        sleep(0.25)  # wait a little longer to get more pitch away from Sun
+        #sleep(0.25)  
         sleep(self.sunpitchuptime)  # some ships heat up too much and need pitch up a little further
         self.keys.send('PitchUpButton', state=0)
 
@@ -961,7 +961,7 @@ class EDAutopilot:
                 sleep(random.randint(0, 3))
             self.fss_detect_elw(scr_reg)
         else:
-            sleep(2)  # since not doing FSS, need to give a little more time to get away from Sun, for heat
+            sleep(5)  # since not doing FSS, need to give a little more time to get away from Sun, for heat
 
         logger.debug('position=complete')
         return True
@@ -1039,6 +1039,7 @@ class EDAutopilot:
         # Lets avoid the sun, shall we
         self.vce.say("Sun avoidance")
         self.sun_avoid(scr_reg)
+                
 
         if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and self.jn.ship_state()['star_class'] in scoopable_stars:
             logger.debug('refuel= start refuel')
@@ -1068,11 +1069,12 @@ class EDAutopilot:
                 sleep(1)
             logger.debug('refuel=complete')
             return True
-        elif self.jn.ship_state()['fuel_percent'] >= self.config['RefuelThreshold']:
-            logger.debug('refuel= not needed')
-            return False
         elif self.jn.ship_state()['star_class'] not in scoopable_stars:
             logger.debug('refuel= needed, unsuitable star')
+            self.pitchUp(20)
+            return False
+        elif self.jn.ship_state()['fuel_percent'] >= self.config['RefuelThreshold']:
+            logger.debug('refuel= not needed')
             return False
         else:
             self.pitchUp(15)  # if not refueling pitch up somemore so we won't heat up
