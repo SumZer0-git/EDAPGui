@@ -1,6 +1,7 @@
 import cv2
 from numpy import array, sum, where
 from PIL import Image, ImageGrab
+import mss
 from pyautogui import size
 import json
 
@@ -43,6 +44,8 @@ class Screen:
             'Calibrated': [-1.0, -1.0]
         }
  
+        self.mss = mss.mss()
+        
         # used this to write the self.scales table to the json file
         # self.write_config(self.scales)
         
@@ -96,14 +99,14 @@ class Screen:
         return s
 
     # reg defines a box as a percentage of screen width and height
-    def get_screen_region(self, reg):
-        image = array(ImageGrab.grab(bbox=(int(reg[0]), int(reg[1]), 
-                                            int(reg[2]), int(reg[3]) )))
+    def get_screen_region(self, reg):      
+        image = array(self.mss.grab((int(reg[0]), int(reg[1]), 
+                                        int(reg[2]), int(reg[3]) )))
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         return image
     
     def get_screen(self, x_left, y_top, x_right, y_bot):    #  if absolute need to scale??
-        image = array(ImageGrab.grab(bbox=(x_left, y_top, x_right, y_bot)))
+        image = array(self.mss.grab((x_left, y_top, x_right, y_bot)))
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         return image
         

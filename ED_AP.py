@@ -862,7 +862,7 @@ class EDAutopilot:
                 break
             if self.is_destination_occluded(scr_reg) == True:
                 self.reposition(scr_reg)
-            sleep(0.25)
+            sleep(0.1)
 
         # Could not be found, return
         if off == None:
@@ -895,7 +895,7 @@ class EDAutopilot:
             if off['y'] < -close:
                 self.keys.send('PitchDownButton', hold=hold_pitch)
 
-            sleep(.1)  # time for image to catch up
+            sleep(.02)  # time for image to catch up
 
             # this checks if suddenly the target show up behind the planete
             if self.is_destination_occluded(scr_reg) == True:
@@ -1283,7 +1283,8 @@ class EDAutopilot:
         # Loop forever keeping tight align to target, until we get SC Disengage popup
         while True:
             self.keys.send('SetSpeed50')
-            sleep(0.5)
+            sleep(0.05)
+
             if self.jn.ship_state()['status'] == 'in_supercruise':
                 if self.sc_target_align(scr_reg) == False:
                     self.nav_align(scr_reg)

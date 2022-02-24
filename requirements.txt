@@ -3,6 +3,7 @@ colorlog==6.5.0
 keyboard==0.13.5
 kthread==0.2.2
 logger==1.4
+mss==6.1.0
 numpy==1.21.2
 opencv_python==4.5.5.62
 Pillow==9.0.1
