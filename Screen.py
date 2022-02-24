@@ -28,7 +28,7 @@ class Screen:
         self.screen_width, self.screen_height = size()
 
         # Add new screen resolutions here with tested scale factors
-        # this table will be default, overwriten when loading config-resolution.json file
+        # this table will be default, overwriten when loading resolution.json file
         self.scales = {  #scaleX, scaleY
             '1024x768':   [0.39, 0.39],  # tested, but not has high match % 
             '1080x1080':  [0.5, 0.5],    # fix, not tested
@@ -78,7 +78,7 @@ class Screen:
         logger.debug('Scale X, Y: '+str(self.scaleX)+", "+str(self.scaleY))
 
 
-    def write_config(self, data, fileName='./config-resolution.json'):
+    def write_config(self, data, fileName='./configs/resolution.json'):
         if data is None:
             data = self.scales
         try:
@@ -88,7 +88,7 @@ class Screen:
             logger.warning("Screen.py write_config error:"+str(e))
             
 
-    def read_config(self, fileName='./config-resolution.json'):
+    def read_config(self, fileName='./configs/resolution.json'):
         s = None
         try:
             with open(fileName,"r") as fp:
