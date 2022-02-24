@@ -657,11 +657,14 @@ class EDAutopilot:
     def sun_avoid(self, scr_reg):
         logger.debug('align= avoid sun')
 
+        # Ensure speed is at 0 so we dont accel into star while avoiding
+        self.keys.send('SetSpeedZero')
+        
         # if sun in front of us, then keep pitching up until it is below us
         while self.is_sun_dead_ahead(scr_reg):
             self.keys.send('PitchUpButton', state=1)
 
-        sleep(0.5)  # wait a little longer to get more pitch away from Sun
+        sleep(0.2)  # wait a little longer to get more pitch away from Sun
         sleep(self.sunpitchuptime)  # some ships heat up too much and need pitch up a little further
         self.keys.send('PitchUpButton', state=0)
 
@@ -1063,25 +1066,20 @@ class EDAutopilot:
         self.vce.say("Sun avoidance")
         self.sun_avoid(scr_reg)
 
-        # not scoopable, pitch up 90 and get out of here
-        if self.jn.ship_state()['star_class'] not in scoopable_stars:
-            self.pitchUp(130)
-            self.keys.send('SetSpeed100')
-            print("Not scoopable star, pitching up")
-            return False
-
         if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and self.jn.ship_state()['star_class'] in scoopable_stars:
             logger.debug('refuel= start refuel')
             self.vce.say("Refueling")
             self.ap_ckb('statusline', "Refueling")
+            
+            # mnvr into position
             self.keys.send('SetSpeed100')
-            self.refuel_cnt += 1
-
             sleep(5)
             self.keys.send('SetSpeed50')
             sleep(1.7)
             self.keys.send('SetSpeedZero', repeat=3)
-
+            
+            self.refuel_cnt += 1
+            
             # The log will reflect a FuelScoop until first 5 tons filled, then every 5 tons until complete
             #if we don't scoop first 5 tons with 40 sec break, since not scooping or not fast enough or not at all, go to next star
             startime = time.time()
@@ -1089,7 +1087,6 @@ class EDAutopilot:
                 if ((time.time()-startime) > int(self.config['FuelScoopTimeOut'])):
                     self.vce.say("Refueling abort, insufficient scooping")
                     return True
-            sleep(1)
 
             logger.debug('refuel= wait for refuel')
 
@@ -1106,6 +1103,7 @@ class EDAutopilot:
         else:
             self.pitchUp(15)  # if not refueling pitch up somemore so we won't heat up
             return False
+
 
     # set focus to the ED window, if ED does not have focus then the key strokes will go to the window
     # that does have focus
