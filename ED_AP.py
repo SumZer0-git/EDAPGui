@@ -118,7 +118,6 @@ class EDAutopilot:
         self.pitchrate = 33.0
         self.sunpitchuptime = 0.0
 
-        self.optimize_jumps = True
         self.jump_cnt = 0
         self.total_dist_jumped = 0
         self.total_jumps = 0
@@ -664,7 +663,7 @@ class EDAutopilot:
         while self.is_sun_dead_ahead(scr_reg):
             self.keys.send('PitchUpButton', state=1)
 
-        sleep(0.2)  # wait a little longer to get more pitch away from Sun
+        sleep(0.25)  # wait a little longer to get more pitch away from Sun
         sleep(self.sunpitchuptime)  # some ships heat up too much and need pitch up a little further
         self.keys.send('PitchUpButton', state=0)
 
@@ -841,11 +840,8 @@ class EDAutopilot:
         self.nav_align(scr_reg)
         self.keys.send('SetSpeed100')
 
-        # Start FSD Earlier
-        if self.optimize_jumps == True:
-            self.keys.send('HyperSuperCombination', hold=0.1)
-
         self.target_align(scr_reg)
+        
 
     # Stays tight on the target, monitors for disengage and obscured
     #
@@ -935,14 +931,6 @@ class EDAutopilot:
         #self.sun_avoid(scr_reg)  TODO: optimize_jumps  removed
         self.keys.send('SetSpeed100')
 
-        # if we didn't refuel, lets to a on-the-fly refueling going past the Sun 
-        if (not did_refuel):
-            # Provides opportunity per jump to do some scooping
-            if self.optimize_jumps == False:
-                sleep(4)
-                self.keys.send('SetSpeed50')
-                add_time = 8
-
         # Do the Discovery Scan (Honk)
         if self.config['DSSButton'] == 'Primary':
             logger.debug('position=scanning')
@@ -968,23 +956,12 @@ class EDAutopilot:
         # need time to get away from the Sun so heat will disipate before we use FSD
         sleep(pause_time)
 
-        # since we were at 0 speed for refueling, lets give more time to get away from Sun
-        if self.optimize_jumps == False:
-            if (did_refuel):
-                sleep(5)
-
         if self.fss_scan_enabled == True:
             if self.config["EnableRandomness"] == True:
                 sleep(random.randint(0, 3))
             self.fss_detect_elw(scr_reg)
         else:
             sleep(2)  # since not doing FSS, need to give a little more time to get away from Sun, for heat
-
-        # only pitch down if the target isn't in front of us
-        if self.optimize_jumps == False:
-            if (self.get_nav_offset(scr_reg) == None):
-                self.vce.say("Positioning")
-                self.pitchDown(90)
 
         logger.debug('position=complete')
         return True
@@ -1005,8 +982,8 @@ class EDAutopilot:
                 raise Exception('not ready to jump')
             sleep(0.5)
             logger.debug('jump= start fsd')
-            if self.optimize_jumps == False:
-                self.keys.send('HyperSuperCombination', hold=1)
+            
+            self.keys.send('HyperSuperCombination', hold=1)
             sleep(16)
 
             if self.jn.ship_state()['status'] != 'starting_hyperspace':
@@ -1059,10 +1036,7 @@ class EDAutopilot:
             return False
             raise Exception('not ready to refuel')
 
-        if self.optimize_jumps == False:
-            self.rotateLeft(90)
-
-            # Lets avoid the sun, shall we
+        # Lets avoid the sun, shall we
         self.vce.say("Sun avoidance")
         self.sun_avoid(scr_reg)
 
