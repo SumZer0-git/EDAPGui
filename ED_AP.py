@@ -658,7 +658,6 @@ class EDAutopilot:
 
         # Ensure speed is at 0 so we dont accel into star while avoiding
         self.keys.send('SetSpeedZero')
-        sleep(0.5)  # pause allow display to settle before checking for Sun
  
         # close to core the 'sky' is very bright with close stars, if we are pitch due to a non-scoopable star
         #  which is dull red, the star field is 'brighter' than the sun, so our sun avoidance could pitch up
@@ -1059,7 +1058,7 @@ class EDAutopilot:
         if is_star_scoopable == False:
             scr_reg.set_sun_threshold(25)
         else:
-            scr_reg.set_sun_threshold(195)
+            scr_reg.set_sun_threshold(185)
                     
         # Lets avoid the sun, shall we
         self.vce.say("Sun avoidance")
