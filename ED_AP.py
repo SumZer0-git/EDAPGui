@@ -658,14 +658,28 @@ class EDAutopilot:
 
         # Ensure speed is at 0 so we dont accel into star while avoiding
         self.keys.send('SetSpeedZero')
+        sleep(0.5)  # pause allow display to settle before checking for Sun
+ 
+        # close to core the 'sky' is very bright with close stars, if we are pitch due to a non-scoopable star
+        #  which is dull red, the star field is 'brighter' than the sun, so our sun avoidance could pitch up
+        #  endlessly. So we will have a fail_safe_timeout to kick us out of pitch up if we've pitch past 110 degrees, but
+        #  we'll add 3 more second for pad in case the user has a higher pitch rate than the vehicle can do   
+        fail_safe_timeout = (120/self.pitchrate)+3
+        starttime = time.time()  
         
         # if sun in front of us, then keep pitching up until it is below us
         while self.is_sun_dead_ahead(scr_reg):
             self.keys.send('PitchUpButton', state=1)
-
-        #sleep(0.25)  
+            # if we are pitching more than N seconds break, may be in high density area star area (close to core)
+            if ((time.time()-starttime) > fail_safe_timeout):
+                logger.debug('sun avoid failsafe timeout')
+                print("sun avoid failsafe timeout")
+                break
+                
+        sleep(0.35)                 # up slightly so not to overheat when scooping
         sleep(self.sunpitchuptime)  # some ships heat up too much and need pitch up a little further
         self.keys.send('PitchUpButton', state=0)
+        
 
     # we know x, y offset of the nav point from center, use arc tan to determine the angle, convert to degrees
     # we want the angle to the 90 (up) and 180 (down) axis 
@@ -928,7 +942,6 @@ class EDAutopilot:
 
         self.vce.say("Maneuvering")
 
-        #self.sun_avoid(scr_reg)  TODO: optimize_jumps  removed
         self.keys.send('SetSpeed100')
 
         # Do the Discovery Scan (Honk)
@@ -1031,17 +1044,29 @@ class EDAutopilot:
 
         logger.debug('refuel')
         scoopable_stars = ['F', 'O', 'G', 'K', 'B', 'A', 'M']
+        
         if self.jn.ship_state()['status'] != 'in_supercruise':
             logger.error('refuel=err1')
             return False
             raise Exception('not ready to refuel')
+        
+        is_star_scoopable = self.jn.ship_state()['star_class'] in scoopable_stars
 
+        # if the sun is not scoopable, then set a low low threshold so we can pick up the dull red
+        # sun types.  Since we won't scoop it doesn't matter how much we pitch up
+        # if scoopable we know white/yellow stars are bright, so set higher threshold, this will allow us to 
+        #  mast out the galaxy edge (which is bright) and not pitch up too much and avoid scooping
+        if is_star_scoopable == False:
+            scr_reg.set_sun_threshold(25)
+        else:
+            scr_reg.set_sun_threshold(195)
+                    
         # Lets avoid the sun, shall we
         self.vce.say("Sun avoidance")
         self.sun_avoid(scr_reg)
                 
 
-        if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and self.jn.ship_state()['star_class'] in scoopable_stars:
+        if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and is_star_scoopable:
             logger.debug('refuel= start refuel')
             self.vce.say("Refueling")
             self.ap_ckb('statusline', "Refueling")
@@ -1055,8 +1080,8 @@ class EDAutopilot:
             
             self.refuel_cnt += 1
             
-            # The log will reflect a FuelScoop until first 5 tons filled, then every 5 tons until complete
-            #if we don't scoop first 5 tons with 40 sec break, since not scooping or not fast enough or not at all, go to next star
+            # The log will not reflect a FuelScoop until first 5 tons filled, then every 5 tons until complete
+            #if we don't scoop first 5 tons with 40 sec break, since not scooping or not fast enough or not at all, then abort
             startime = time.time()
             while not self.jn.ship_state()['is_scooping'] and not self.jn.ship_state()['fuel_percent'] == 100:
                 if ((time.time()-startime) > int(self.config['FuelScoopTimeOut'])):
@@ -1064,18 +1089,27 @@ class EDAutopilot:
                     return True
 
             logger.debug('refuel= wait for refuel')
-
+            
+            # We started fueling, so lets give it another timeout period to fuel up
+            startime = time.time()
             while not self.jn.ship_state()['fuel_percent'] == 100:
-                sleep(1)
+                if ((time.time()-startime) > int(self.config['FuelScoopTimeOut'])):
+                    self.vce.say("Refueling abort, insufficient scooping")
+                    return True
+                sleep(1)              
+                
             logger.debug('refuel=complete')
             return True
-        elif self.jn.ship_state()['star_class'] not in scoopable_stars:
+        
+        elif is_star_scoopable == False:
             logger.debug('refuel= needed, unsuitable star')
             self.pitchUp(20)
             return False
+        
         elif self.jn.ship_state()['fuel_percent'] >= self.config['RefuelThreshold']:
             logger.debug('refuel= not needed')
             return False
+        
         else:
             self.pitchUp(15)  # if not refueling pitch up somemore so we won't heat up
             return False
