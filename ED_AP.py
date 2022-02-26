@@ -1232,8 +1232,12 @@ class EDAutopilot:
 
                 self.jump(scr_reg)
 
+                # update jump counters
                 self.total_dist_jumped += self.jn.ship_state()['dist_jumped']
                 self.total_jumps = self.jump_cnt+self.jn.ship_state()['jumps_remains']
+                
+                # reset, upon next Jump the Journal will be updated again, unless last jump, so we need to clear this out
+                self.jn.ship_state()['jumps_remains'] = 0
 
                 self.update_overlay()
 
