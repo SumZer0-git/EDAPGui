@@ -1,7 +1,7 @@
 # 2/24/2022 Update
-- Update to Sun avoidance.  The Sun avoidance look for brightness at the center of the display to go below 5% to know have pitched
+- Update to Sun avoidance.  The Sun avoidance looks for brightness at the center of the display to go below 5% to know have pitched
   up sufficiently to go over the Sun.  If close to the core of the galaxy, the star density is high and thus the overall brightness
-  of the center of the screen is high so the ship may continue to pitch future up. Adjusted the brightness criteria to account for this.
+  of the center of the screen is higher so the ship may continue to pitch further up. Adjusted the brightness criteria to account for this.
   Also, if jumping into a non scoopable star, adjusted the brightness threshold to ensure pitching up/over the Sun works.
 
 # 2/23/2022 Update
