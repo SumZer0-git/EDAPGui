@@ -16,6 +16,8 @@ class Screen_Regions:
     def __init__(self, screen, templ):
         self.screen = screen
         self.templates = templ
+        self.sun_threshold = 195
+        
         # array is in HSV order which represents color ranges for filtering
         self.orange_color_range   = [array([0, 130, 123]),  array([25, 235, 220])]
         self.orange_2_color_range = [array([16, 165, 220]), array([98, 255, 255])]
@@ -92,13 +94,16 @@ class Screen_Regions:
         filtered  = cv2.inRange(equalized, array([0, 0, 215]), array([0, 0, 255]))  #only high value
 
         return filtered
+    
+    def set_sun_threshold(self, thresh):
+        self.sun_threshold = thresh
 
     # need to compare filter_sun with filter_bright
     def filter_sun(self, image=None, noOp=None):
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         
         # set low end of filter to 25 to pick up the dull red Class L stars
-        (thresh, blackAndWhiteImage) = cv2.threshold(hsv, 25, 255, cv2.THRESH_BINARY)
+        (thresh, blackAndWhiteImage) = cv2.threshold(hsv, self.sun_threshold, 255, cv2.THRESH_BINARY)
 
         return blackAndWhiteImage
 
