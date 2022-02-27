@@ -1,3 +1,9 @@
+# 2/26/2022 Update
+- Modified Sun low limit threshold to account for star density when close to core of galaxy
+- Enlarged region that looks for Sun in support of sun avoidance
+- Fixed jump count total on last jump
+- Timing tweaks to account for accasional heating around Sun
+
 # 2/24/2022 Update
 - Update to Sun avoidance.  The Sun avoidance looks for brightness at the center of the display to go below 5% to know have pitched
   up sufficiently to go over the Sun.  If close to the core of the galaxy, the star density is high and thus the overall brightness
