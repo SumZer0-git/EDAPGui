@@ -11,9 +11,10 @@ This autopilot uses Computer Vision (grabs screens and performs template matchin
 of Elite Dangerous, it is an external-ED construct (similar to us commanders) 
 
   ```
-  * See HOWTO-Calibration.md for details on how to calibrate EDAPGui for your system if required 
-  * See HOWTO-Waypoint.md for details on how to generate a waypoint file 
-  * See HOWTO-RollPitchYaw.md for details on how to tune the Pitch, Roll, Yaw values 
+  ./docs
+  * See Calibration.md for details on how to calibrate EDAPGui for your system if required 
+  * See Waypoint.md for details on how to generate a waypoint file 
+  * See RollPitchYaw.md for details on how to tune the Pitch, Roll, Yaw values 
   ```
 
 Note: this autopilot is based on https://github.com/skai2/EDAutopilot , some of the routines were used and turned into classes and tweaks were done on sequences
