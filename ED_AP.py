@@ -327,7 +327,7 @@ class EDAutopilot:
             elw_image_d = cv2.cvtColor(elw_image_d, cv2.COLOR_GRAY2RGB)
             #self.draw_match_rect(elw_image_d, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1) 
             self.draw_match_rect(elw_image_d, maxLoc1, (maxLoc1[0]+15, maxLoc1[1]+25), (0, 0, 255), 1)
-            #cv2.putText(elw_image_d, f'{maxVal1:5.2f}> .60', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1, cv2.LINE_AA)
+            cv2.putText(elw_image_d, f'{maxVal1:5.2f}> .60', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.30, (0, 0, 255), 1, cv2.LINE_AA)
             cv2.imshow('fss', elw_image_d)
             cv2.moveWindow('fss', self.cv_view_x, self.cv_view_y+100)
             cv2.waitKey(30)
@@ -346,7 +346,9 @@ class EDAutopilot:
                 sstr = "Ammonia"
             # log the entry into the elw.txt file
             f = open("elw.txt", 'a')
-            f.write(self.jn.ship_state()["location"]+", Type: "+sstr+", Probabilty: Cirle: {0:6.2f}, Signature: {1:6.2f} ".format(maxVal, maxVal1)+", date: "+str(datetime.now())+str("\n"))
+            f.write(self.jn.ship_state()["location"]+", Type: "+sstr+
+                    ", Probabilty: {0:3.0f}% ".format((maxVal1*100))+
+                    ", Date: "+str(datetime.now())+str("\n"))
             f.close
             self.vce.say(sstr+" like world detected ")
             logger.info(sstr+" world at: "+str(self.jn.ship_state()["location"]))
@@ -655,10 +657,9 @@ class EDAutopilot:
     #
     def sun_avoid(self, scr_reg):
         logger.debug('align= avoid sun')
+        
+        sleep(0.5)
 
-        # Ensure speed is at 0 so we dont accel into star while avoiding
-        self.keys.send('SetSpeedZero')
- 
         # close to core the 'sky' is very bright with close stars, if we are pitch due to a non-scoopable star
         #  which is dull red, the star field is 'brighter' than the sun, so our sun avoidance could pitch up
         #  endlessly. So we will have a fail_safe_timeout to kick us out of pitch up if we've pitch past 110 degrees, but
@@ -969,9 +970,10 @@ class EDAutopilot:
         sleep(pause_time)
 
         if self.fss_scan_enabled == True:
+            self.fss_detect_elw(scr_reg)
             if self.config["EnableRandomness"] == True:
                 sleep(random.randint(0, 3))
-            self.fss_detect_elw(scr_reg)
+            sleep(3)
         else:
             sleep(5)  # since not doing FSS, need to give a little more time to get away from Sun, for heat
 
@@ -1085,7 +1087,7 @@ class EDAutopilot:
             while not self.jn.ship_state()['is_scooping'] and not self.jn.ship_state()['fuel_percent'] == 100:
                 if ((time.time()-startime) > int(self.config['FuelScoopTimeOut'])):
                     self.vce.say("Refueling abort, insufficient scooping")
-                    return True
+                    return False
 
             logger.debug('refuel= wait for refuel')
             
