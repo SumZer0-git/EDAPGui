@@ -45,6 +45,7 @@ class EDAutopilot:
             "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel
             "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
             "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking
+            "SunBrightThreshold": 125,     # The low level for brightness detection, range 0-255, want to mask out darker items
             "FuelScoopTimeOut": 35,        # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
             "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
             "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
@@ -70,6 +71,9 @@ class EDAutopilot:
         if cnf is not None:
             self.config = cnf
             logger.debug("read AP json:"+str(cnf))
+            # Specific test since new entry
+            if 'SunBrightThreshold' not in self.config:
+                self.config['SunBrightThreshold'] = 125
 
         # config the voice interface
         self.vce = Voice()
@@ -327,7 +331,7 @@ class EDAutopilot:
             elw_image_d = cv2.cvtColor(elw_image_d, cv2.COLOR_GRAY2RGB)
             #self.draw_match_rect(elw_image_d, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1) 
             self.draw_match_rect(elw_image_d, maxLoc1, (maxLoc1[0]+15, maxLoc1[1]+25), (0, 0, 255), 1)
-            cv2.putText(elw_image_d, f'{maxVal1:5.2f}> .60', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.30, (0, 0, 255), 1, cv2.LINE_AA)
+            cv2.putText(elw_image_d, f'{maxVal1:5.2f}> .70', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.30, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('fss', elw_image_d)
             cv2.moveWindow('fss', self.cv_view_x, self.cv_view_y+100)
             cv2.waitKey(30)
@@ -337,7 +341,7 @@ class EDAutopilot:
         # check if the circle or the signal meets probability number, if so, determine which type by its region
         #if (maxVal > 0.65 or (maxVal1 > 0.60 and maxLoc1[1] < 30) ):
         # only check for singal
-        if (maxVal1 > 0.60 and maxLoc1[1] < 30):
+        if (maxVal1 > 0.70 and maxLoc1[1] < 30):
             if maxLoc1[0] < wid_div3:
                 sstr = "Earth"
             elif maxLoc1[0] > (wid_div3*2):
@@ -1060,7 +1064,7 @@ class EDAutopilot:
         if is_star_scoopable == False:
             scr_reg.set_sun_threshold(25)
         else:
-            scr_reg.set_sun_threshold(185)
+            scr_reg.set_sun_threshold(self.config['SunBrightThreshold'])
                     
         # Lets avoid the sun, shall we
         self.vce.say("Sun avoidance")
