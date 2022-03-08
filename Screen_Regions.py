@@ -16,7 +16,7 @@ class Screen_Regions:
     def __init__(self, screen, templ):
         self.screen = screen
         self.templates = templ
-        self.sun_threshold = 185
+        self.sun_threshold = 125
         
         # array is in HSV order which represents color ranges for filtering
         self.orange_color_range   = [array([0, 130, 123]),  array([25, 235, 220])]

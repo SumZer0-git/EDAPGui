@@ -5,6 +5,7 @@
     "RefuelThreshold": 65,
     "FuelThreasholdAbortAP": 15,
     "WaitForAutoDockTimer": 120,
+    "SunBrightThreshold": 125,  
     "FuelScoopTimeOut": 40,    
     "HotKey_StartFSD": "home",
     "HotKey_StartSC": "ins",
