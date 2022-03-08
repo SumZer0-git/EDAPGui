@@ -1,3 +1,8 @@
+# 03/07/2022 Update
+- Minor update to the ELW image template to help with accuracy of detection
+- Updated the AP.json file and added SunBrightThreshold (set to 125) use to detect Sun in front of ship when jumping into a system
+- Updated the code to use the SunBrightThreshold configuration item
+
 # 2/26/2022 Update
 - Modified Sun low limit threshold to account for star density when close to core of galaxy
 - Enlarged region that looks for Sun in support of sun avoidance
