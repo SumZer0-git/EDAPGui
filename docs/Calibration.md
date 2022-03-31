@@ -16,13 +16,13 @@ Also see:  HOWTO-RollPitchYaw.md on how to adjust your autopilot performance whi
     * In Supercruise (%0 thrust is ok)
     * Target system selected
     * Align to the target, as show in this screenshot:<br>
-![Alt text](screen/screen-cap-calibrate.png?raw=true "Calibrate ED Config")  
+![Alt text](../screen/screen-cap-calibrate.png?raw=true "Calibrate ED Config")  
 
 # To run the calibration
 * Start EDAPGui   > python EDAPGui.py
 * Under File, enable _CV View_ , this will allow you to see the calibration in progress, but this is not required
 * Select the Calibrate button on the GUI circled in this screenshot"<br>
-![Alt text](screen/EDAPGui-calibrate.png?raw=true "Calibrate ED Config") 
+![Alt text](../screen/EDAPGui-calibrate.png?raw=true "Calibrate ED Config") 
 * Select OK from the popup
   * The calibration will likely take less than 1 minute
   * The GUI Window will show the results 
