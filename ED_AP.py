@@ -53,6 +53,8 @@ class EDAutopilot:
             "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
             "OverlayTextEnable": False,    # Experimental at this stage
             "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
+            "OverlayTextXOffset": 50,      # offset left the screen to start place overlay text
+            "OverlayTextFont": "Eurostyle", 
             "OverlayTextFontSize": 16, 
             "OverlayGraphicEnable": False, # not implemented yet
             "DiscordWebhook": False,       # discord not implemented yet
@@ -103,13 +105,6 @@ class EDAutopilot:
         self.afk_combat = AFK_Combat(self.keys, self.jn, self.vce)
         self.waypoint = EDWayPoint(self.jn.ship_state()['odyssey'])
 
-        # Initialize the Overlay class
-        self.overlay = Overlay("", elite=1)
-        self.overlay.overlay_setfont("Times New Roman", self.config['OverlayTextFontSize'])
-        self.overlay.overlay_set_pos(50, self.config['OverlayTextYOffset'])
-        # must be called after we initialized the objects above
-        self.update_overlay()
-
         # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
         # has worse performance for these rates
         # see:  https://forums.frontier.co.uk/threads/supercruise-handling-of-ships.396845/
@@ -128,6 +123,17 @@ class EDAutopilot:
         self.refuel_cnt = 0
 
         self.ap_ckb = cb
+
+        # Overlay vars
+        self.ap_state = "Idle"
+        self.fss_detected = "nothing found"
+
+        # Initialize the Overlay class
+        self.overlay = Overlay("", elite=1)
+        self.overlay.overlay_setfont(self.config['OverlayTextFont'], self.config['OverlayTextFontSize'])
+        self.overlay.overlay_set_pos(self.config['OverlayTextXOffset'], self.config['OverlayTextYOffset'])
+        # must be called after we initialized the objects above
+        self.update_overlay()
 
         # debug window
         self.cv_view = False
@@ -163,17 +169,17 @@ class EDAutopilot:
     #
     def update_overlay(self):
         if self.config['OverlayTextEnable']:
-            state = "Idle"
+            ap_mode = "Offline"
             if self.fsd_assist_enabled == True:
-                state = "FSD Route Assist"
+                ap_mode = "FSD Route Assist"
             elif self.sc_assist_enabled == True:
-                state = "SC Assist"
+                ap_mode = "SC Assist"
             elif self.afk_combat_assist_enabled == True:
-                state = "AFK Combat Assist"
-            else:
-                state = self.jn.ship_state()['status']
-                if state == None:
-                    state = '<init>'
+                ap_mode = "AFK Combat Assist"
+
+            ship_state = self.jn.ship_state()['status']
+            if ship_state == None:
+                ship_state = '<init>'
 
             sclass = self.jn.ship_state()['star_class']
             if sclass == None:
@@ -182,12 +188,21 @@ class EDAutopilot:
             location = self.jn.ship_state()['location']
             if location == None:
                 location = "<init>"
-            self.overlay.overlay_text('1', "AP Status: "+state, 1, 1, (136, 53, 0))
-            self.overlay.overlay_text('2', "Current System: "+location+", "+sclass, 2, 1, (136, 53, 0))
+            self.overlay.overlay_text('1', "AP MODE: "+ap_mode, 1, 1, (136, 53, 0))
+            self.overlay.overlay_text('2', "AP STATUS: "+self.ap_state, 2, 1, (136, 53, 0))
+            self.overlay.overlay_text('3', "SHIP STATUS: "+ship_state, 3, 1, (136, 53, 0))
+            self.overlay.overlay_text('4', "CURRENT SYSTEM: "+location+", "+sclass, 4, 1, (136, 53, 0))
+            if self.fss_scan_enabled == True:
+                self.overlay.overlay_text('5', "ELW SCANNER: "+self.fss_detected, 5, 1, (136, 53, 0))
             self.overlay.overlay_paint()
 
-            # draws the matching rectangle within the image
+    def update_ap_status(self, txt):
+        self.ap_state = txt
+        self.update_overlay()
+        self.ap_ckb('statusline', txt)
 
+
+    # draws the matching rectangle within the image
     #
     def draw_match_rect(self, img, pt1, pt2, color, thick):
         wid = pt2[0]-pt1[0]
@@ -355,7 +370,10 @@ class EDAutopilot:
                     ", Date: "+str(datetime.now())+str("\n"))
             f.close
             self.vce.say(sstr+" like world detected ")
+            self.fss_detected = sstr+" like world detected "
             logger.info(sstr+" world at: "+str(self.jn.ship_state()["location"]))
+        else:
+            self.fss_detected = "nothing found"
 
         self.keys.send('SetSpeed100')
 
@@ -1074,7 +1092,7 @@ class EDAutopilot:
         if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and is_star_scoopable:
             logger.debug('refuel= start refuel')
             self.vce.say("Refueling")
-            self.ap_ckb('statusline', "Refueling")
+            self.update_ap_status("Refueling")
             
             # mnvr into position
             self.keys.send('SetSpeed100')
@@ -1128,13 +1146,13 @@ class EDAutopilot:
             win32gui.SetForegroundWindow(handle)  # give focus to ED
 
     def waypoint_undock_seq(self):
-        self.ap_ckb('statusline', "Executing Undocking")
+        self.update_ap_status("Executing Undocking")
         self.undock()
         # need to wait until undock complete, that is when we are back in_space
         while self.jn.ship_state()['status'] != 'in_space':
             sleep(1)
 
-        self.ap_ckb('statusline', "Undock Complete, going Supercruise")
+        self.update_ap_status("Undock Complete, going Supercruise")
         # move away from station
         self.keys.send('SetSpeed100')
         sleep(1)
@@ -1180,13 +1198,13 @@ class EDAutopilot:
             # If waypoint file has a Station Name associated then attempt targeting it
             if self.waypoint.is_station_targeted(dest) != None:
 
-                self.ap_ckb('statusline', "Targeting Station")
+                self.update_ap_status("Targeting Station")
                 self.waypoint.set_station_target(self, dest)
 
                 # Successful targeting of Station, lets go to it
                 if self.have_destination(scr_reg) == True:
                     self.ap_ckb('log', " - Station: "+self.waypoint.waypoints[dest]['DockWithStation'])
-                    self.ap_ckb('statusline', "SC to Station")
+                    self.update_ap_status("SC to Station")
                     self.sc_assist(scr_reg)
 
                     #
@@ -1202,7 +1220,7 @@ class EDAutopilot:
                     # Mark this waypoint as complated
             self.waypoint.mark_waypoint_complete(dest)
 
-            self.ap_ckb('statusline', "Setting route to next waypoint")
+            self.update_ap_status("Setting route to next waypoint")
             self.jn.ship_state()['target'] = None  # clear last target
 
             # set target to next waypoint and loop)
@@ -1214,7 +1232,7 @@ class EDAutopilot:
 
                 # Done with waypoints
         self.ap_ckb('log', "Waypoint Route Complete, total distance jumped: "+str(self.total_dist_jumped)+"LY")
-        self.ap_ckb('statusline', " ")
+        self.update_ap_status("Idle")
 
         # FSD Route assist
 
@@ -1230,11 +1248,11 @@ class EDAutopilot:
             self.update_overlay()
 
             if self.jn.ship_state()['status'] == 'in_space' or self.jn.ship_state()['status'] == 'in_supercruise':
-                self.ap_ckb('statusline', "Align")
+                self.update_ap_status("Align")
 
                 self.mnvr_to_target(scr_reg)
 
-                self.ap_ckb('statusline', "Jump")
+                self.update_ap_status("Jump")
 
                 self.jump(scr_reg)
 
@@ -1254,7 +1272,7 @@ class EDAutopilot:
 
                 refueled = self.refuel(scr_reg)
 
-                self.ap_ckb('statusline', "Maneuvering")
+                self.update_ap_status("Maneuvering")
 
                 self.position(scr_reg, refueled)
 
@@ -1337,7 +1355,7 @@ class EDAutopilot:
             sleep(4)  # wait for the journal to catch up
             self.dock()  # go into docking sequence
             self.vce.say("Docking complete, Refueled")
-            self.ap_ckb('statusline', "Docking Complete")
+            self.update_ap_status("Docking Complete")
         else:
             self.vce.say("Exiting Supercruise, setting throttle to zero")
             self.keys.send('SetSpeedZero')  # make sure we don't continue to land   
