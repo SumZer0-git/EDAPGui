@@ -1,3 +1,14 @@
+# 04/28/2022 Update
+The goal is to show in the overlay all the info that is needed without having to see the gui or have tts enabled.
+The following things have been adjusted:
+-	ap mode shows the mode in which the ap is currently running
+-	ap status shows the same info as the statusline in the gui (align, maneuver, jump etc.)
+-	ship status shows continuously the ship status (before partly in ap mode if no ap mode was active)
+-	elw scanner shows if an elw was found
+
+Also, the overlay was sometimes very hard to read, so the default font was changed and the option to change the font itself was added in the config.
+
+
 # 03/07/2022 Update
 - Minor update to the ELW image template to help with accuracy of detection
 - Updated the AP.json file and added SunBrightThreshold (set to 125) use to detect Sun in front of ship when jumping into a system
