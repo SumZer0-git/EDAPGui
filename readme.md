@@ -125,7 +125,7 @@ https://pythonhosted.org/pynput/keyboard.html
             "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel
             "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
             "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking
-            "SunBrightThreshold": 125,     # The low threshold value for brightness detection, range 0-255, want to mask out darker items
+            "SunBrightThreshold": 125,     # The low level for brightness detection, range 0-255, want to mask out darker items
             "FuelScoopTimeOut": 35,        # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
             "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
             "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
@@ -133,6 +133,8 @@ https://pythonhosted.org/pynput/keyboard.html
             "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
             "OverlayTextEnable": False,    # Experimental at this stage
             "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
+            "OverlayTextXOffset": 50,      # offset left the screen to start place overlay text
+            "OverlayTextFont": "Eurostyle", 
             "OverlayTextFontSize": 16, 
             "OverlayGraphicEnable": False, # not implemented yet
             "DiscordWebhook": False,       # discord not implemented yet
