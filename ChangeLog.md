@@ -1,3 +1,7 @@
+# 05/02/2022 Update - thanks CMDRs for providing these updates
+- Fix EDkeys.py to null key modifier if using Secondary binding used (see issue #2)
+- Fix AP state to account for undocking from Outposts as opposed to Stations
+
 # 04/28/2022 Update
 The goal is to show in the overlay all the info that is needed without having to see the gui or have tts enabled.
 The following things have been adjusted:
