@@ -150,6 +150,10 @@ class EDJournal:
 
             elif log_event == "Music" and log['MusicTrack'] == "NoTrack" and self.ship['status'] == 'in_undocking':
                 self.ship['status'] = 'in_space'
+                
+                # for unodck from outpost
+            elif log_event == "Music" and log['MusicTrack'] == "Exploration" and self.ship['status'] == 'in_undocking':
+                self.ship['status'] = 'in_space'
 
             elif log_event == 'Docked':
                 self.ship['status'] = 'in_station'
