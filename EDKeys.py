@@ -98,6 +98,7 @@ class EDKeys:
                 # Check secondary (and prefer secondary)
                 if item[1].attrib['Device'].strip() == "Keyboard":
                     key = item[1].attrib['Key']
+                    mod = None
                     if len(item[1]) > 0:
                         mod = item[1][0].attrib['Key']
                 # Adequate key to SCANCODE dict standard
