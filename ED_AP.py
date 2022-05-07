@@ -183,6 +183,8 @@ class EDAutopilot:
                 ap_mode = "FSD Route Assist"
             elif self.sc_assist_enabled == True:
                 ap_mode = "SC Assist"
+            elif self.waypoint_assist_enabled == True:
+                ap_mode = "Waypoint Assist"
             elif self.afk_combat_assist_enabled == True:
                 ap_mode = "AFK Combat Assist"
 
