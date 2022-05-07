@@ -201,8 +201,9 @@ class EDAutopilot:
             self.overlay.overlay_text('2', "AP STATUS: "+self.ap_state, 2, 1, (136, 53, 0))
             self.overlay.overlay_text('3', "SHIP STATUS: "+ship_state, 3, 1, (136, 53, 0))
             self.overlay.overlay_text('4', "CURRENT SYSTEM: "+location+", "+sclass, 4, 1, (136, 53, 0))
+            self.overlay.overlay_text('5', "JUMPS: {} of {}".format(self.jump_cnt, self.total_jumps), 5, 1, (136, 53, 0))
             if self.fss_scan_enabled == True:
-                self.overlay.overlay_text('5', "ELW SCANNER: "+self.fss_detected, 5, 1, (136, 53, 0))
+                self.overlay.overlay_text('6', "ELW SCANNER: "+self.fss_detected, 6, 1, (136, 53, 0))
             self.overlay.overlay_paint()
 
     def update_ap_status(self, txt):
