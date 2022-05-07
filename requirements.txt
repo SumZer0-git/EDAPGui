@@ -12,3 +12,4 @@ pynput==1.7.6
 pyttsx3==2.90
 pywin32==302
 win32gui
+requests
