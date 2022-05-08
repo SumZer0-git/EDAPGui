@@ -126,14 +126,33 @@ class EDWayPoint:
     
     def set_station_target(self, ap, dest):
         (x, y) = self.waypoints[dest]['StationCoord']
+
+        # check if StationBookmark exists to get the transition compatibility with old waypoint lists
+        if "StationBookmark" in self.waypoints[dest]:
+            bookmark = self.waypoints[dest]['StationBookmark']
+        else:
+            bookmark = -1
                
         ap.keys.send('SystemMapOpen')
         sleep(3.5)
-        self.mouse.do_click(x, y)
+        if self.is_odyssey and bookmark != -1:
+            ap.keys.send('UI_Left')
+            sleep(1)
+            ap.keys.send('UI_Select')
+            sleep(.5)
+            ap.keys.send('UI_Down', repeat=2)
+            sleep(.5)
+            ap.keys.send('UI_Right')
+            sleep(.5)
+            ap.keys.send('UI_Down', repeat=bookmark)
+            sleep(.5)
+            ap.keys.send('UI_Select', hold=4.0)
+        else:
+            self.mouse.do_click(x, y)
 
-        # for horizons we need to select it
-        if self.is_odyssey == False:
-            ap.keys.send('UI_Select')            
+            # for horizons we need to select it
+            if self.is_odyssey == False:
+                ap.keys.send('UI_Select')            
         
         ap.keys.send('SystemMapOpen')
         sleep(0.5)

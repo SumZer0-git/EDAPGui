@@ -1,3 +1,11 @@
+# 05/07/2022 Update (nice work DopeEx)
+- Major Gui usability improvements
+- Add bookmark as station destination option for waypoints
+- Fix missing waypoint assist in ap modes
+- Add a new version check and discord and changelog links
+
+# 05/06/2022 Update - Baselined codebase V1.0
+
 # 05/02/2022 Update - thanks CMDRs for providing these updates
 - Fix EDkeys.py to null key modifier if using Secondary binding used (see issue #2)
 - Fix AP state to account for undocking from Outposts as opposed to Stations

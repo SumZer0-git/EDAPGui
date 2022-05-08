@@ -61,22 +61,28 @@ class EDAutopilot:
             "DiscordWebhook": False,       # discord not implemented yet
             "DiscordWebhookURL": "",
             "DiscordUserID": "",
+            "VoiceEnable": True,
             "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
             "LogDEBUG": False,             # enable for debug messages
             "LogINFO": True
         }
 
         # used this to write the self.config table to the json file
-        #self.write_config(self.config)
+        # self.write_config(self.config)
 
         cnf = self.read_config()
         # if we read it then point to it, otherwise use the default table above
         if cnf is not None:
-            self.config = cnf
-            logger.debug("read AP json:"+str(cnf))
-            # Specific test since new entry
-            if 'SunBrightThreshold' not in self.config:
-                self.config['SunBrightThreshold'] = 125
+            if len(cnf) != len(self.config):
+                self.write_config(self.config)
+            else:
+                self.config = cnf
+                logger.debug("read AP json:"+str(cnf))
+                # Specific test since new entry
+                if 'SunBrightThreshold' not in self.config:
+                    self.config['SunBrightThreshold'] = 125
+        else:
+            self.write_config(self.config)
 
         # config the voice interface
         self.vce = Voice()
@@ -159,6 +165,9 @@ class EDAutopilot:
 
         return s
 
+    def update_config(self):
+        self.write_config(self.config)
+
     def write_config(self, data, fileName='./configs/AP.json'):
         try:
             with open(fileName, "w") as fp:
@@ -175,6 +184,8 @@ class EDAutopilot:
                 ap_mode = "FSD Route Assist"
             elif self.sc_assist_enabled == True:
                 ap_mode = "SC Assist"
+            elif self.waypoint_assist_enabled == True:
+                ap_mode = "Waypoint Assist"
             elif self.afk_combat_assist_enabled == True:
                 ap_mode = "AFK Combat Assist"
 
@@ -193,8 +204,9 @@ class EDAutopilot:
             self.overlay.overlay_text('2', "AP STATUS: "+self.ap_state, 2, 1, (136, 53, 0))
             self.overlay.overlay_text('3', "SHIP STATUS: "+ship_state, 3, 1, (136, 53, 0))
             self.overlay.overlay_text('4', "CURRENT SYSTEM: "+location+", "+sclass, 4, 1, (136, 53, 0))
+            self.overlay.overlay_text('5', "JUMPS: {} of {}".format(self.jump_cnt, self.total_jumps), 5, 1, (136, 53, 0))
             if self.fss_scan_enabled == True:
-                self.overlay.overlay_text('5', "ELW SCANNER: "+self.fss_detected, 5, 1, (136, 53, 0))
+                self.overlay.overlay_text('6', "ELW SCANNER: "+self.fss_detected, 6, 1, (136, 53, 0))
             self.overlay.overlay_paint()
 
     def update_ap_status(self, txt):
@@ -1447,7 +1459,17 @@ class EDAutopilot:
             cv2.destroyAllWindows()
             cv2.waitKey(50)
 
-    def set_voice(self, enable=True):
+    def set_randomness(self, enable=False):
+        self.config["EnableRandomness"] = enable
+
+    def set_overlay(self, enable=False):
+        # TODO: apply the change without restarting the program
+        if enable == True:
+            self.config["OverlayTextEnable"] = True
+        else:
+            self.config["OverlayTextEnable"] = False
+
+    def set_voice(self, enable=False):
         if enable == True:
             self.vce.set_on()
         else:

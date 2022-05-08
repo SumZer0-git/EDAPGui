@@ -8,6 +8,8 @@ import cv2
 import json
 from pathlib import Path
 import keyboard
+import webbrowser
+import requests
 
 
 from PIL import Image, ImageGrab, ImageTk
@@ -16,6 +18,7 @@ from tkinter import *
 from tkinter import filedialog as fd
 from tkinter import messagebox
 from tkinter import ttk
+from idlelib.tooltip import Hovertip
 
 from Voice import *
 from MousePt import MousePoint
@@ -47,21 +50,61 @@ Ideas taken from:  https://github.com/skai2/EDAutopilot
 Author: sumzer0@yahoo.com
 """
 
+# ---------------------------------------------------------------------------
+# must be updated with a new release so that the update check works properly!
+# contains the names of the release.
+EDAP_VERSION = "V1.0 Initial Baseline"
+# depending on how release versions are best marked you could also change it to the release tag, see function check_update.
+# ---------------------------------------------------------------------------
+
+FORM_TYPE_CHECKBOX = 0
+FORM_TYPE_SPINBOX = 1
+FORM_TYPE_ENTRY = 2
+
 class APGui():
     def __init__(self, root):
         self.root = root
-        root.title("EDAutopilot")
+        root.title("EDAutopilot " + EDAP_VERSION)
         #root.overrideredirect(True)
         #root.geometry("400x550")
         #root.configure(bg="blue")
         root.protocol("WM_DELETE_WINDOW", self.close_window)
         root.resizable(False, False)
 
+        self.tooltips = {
+            'FSD Route Assist': "Will execute your route. \nAt each jump the sequence will perform some fuel scooping.",
+            'Supercruise Assist': "Will keep your ship pointed to target, \nyou target can only be a station for the autodocking to work.", 
+            'Waypoint Assist': "When selected, will prompt for the waypoint file. \nThe waypoint file contains System names that \nwill be entered into Galaxy Map and route plotted.", 
+            'ELW Scanner': "Will perform FSS scans while FSD Assist is traveling between stars. \nIf the FSS shows a signal in the region of Earth, \nWater or Ammonia type worlds, it will announce that discovery.", 
+            'AFK Combat Assist': "Used with a AFK Combat ship in a Rez Zone.",
+            'RollRate': "Roll rate your ship has.", 
+            'PitchRate': "Pitch rate your ship has.", 
+            'YawRate': "Yaw rate your ship has.", 
+            'SunPitchUp+Time': "This field are for ship that tend to overheat. \nProviding 1-2 more seconds of Pitch up when avoiding the Sun \nwill overcome this problem.",
+            'Sun Bright Threshold': "The low level for brightness detection, \nrange 0-255, want to mask out darker items", 
+            'Nav Align Tries': "How many attempts the ap should make at alignment.", 
+            'Jump Tries': "How many attempts the ap should make to jump.", 
+            'Wait For Autodock': "After docking granted, \nwait this amount of time for us to get docked with autodocking",
+            'Start FSD': "Button to start FSD route assist.", 
+            'Start SC': "Button to start Supercruise assist.", 
+            'Stop All': "Button to stop all assists.",
+            'Refuel Threshold': "If fuel level get below this level, \nit will attempt refuel.", 
+            'Scoop Timeout': "Number of second to wait for full tank, \nmight mean we are not scooping well or got a small scooper", 
+            'Fuel Threshold Abort': "Level at which AP will terminate, \nbecause we are not scooping well.",
+            'X Offset': "Offset left the screen to start place overlay text.", 
+            'Y Offset': "Offset down the screen to start place overlay text.", 
+            'Font Size': "Font size of the overlay.",
+            'Ship Config Button': "Read in a file with roll, pitch, yaw values for a ship.",
+            'Calibrate': "Will iterate through a set of scaling values \ngetting the best match for your system. \nSee HOWTO-Calibrate.md",
+            'Cap Mouse XY': "This will provide the StationCoord value of the Station in the SystemMap. \nSelecting this button and then clicking on the Station in the SystemMap \nwill return the x,y value that can be pasted in the waypoints file"
+        }
+
         self.ed_ap = EDAutopilot(cb=self.callback)
 
         self.mouse = MousePoint()
 
         self.checkboxvar = {}
+        self.radiobuttonvar = {}
         self.entries = {}
         self.lab_ck = {}
 
@@ -73,16 +116,53 @@ class APGui():
 
         self.msgList = self.gui_gen(root)
 
-        self.checkboxvar['Enable Voice'].set(1)
+        self.checkboxvar['Enable Randomness'].set(self.ed_ap.config['EnableRandomness'])
+        self.checkboxvar['Enable Overlay'].set(self.ed_ap.config['OverlayTextEnable'])
+        self.checkboxvar['Enable Voice'].set(self.ed_ap.config['VoiceEnable'])
 
-        # load the rates we have hardcoded
-        self.entries['PitchRate'].delete(0, END)
-        self.entries['RollRate'].delete(0, END)
-        self.entries['YawRate'].delete(0, END)
-        self.entries['PitchRate'].insert(0, float(self.ed_ap.pitchrate))
-        self.entries['RollRate'].insert(0, float(self.ed_ap.rollrate))
-        self.entries['YawRate'].insert(0, float(self.ed_ap.yawrate))
-        self.entries['SunPitchUp+Time'].insert(0, float(self.ed_ap.sunpitchuptime))
+        self.radiobuttonvar['dss_button'].set(self.ed_ap.config['DSSButton'])
+
+        self.entries['ship']['PitchRate'].delete(0, END)
+        self.entries['ship']['RollRate'].delete(0, END)
+        self.entries['ship']['YawRate'].delete(0, END)
+        self.entries['ship']['SunPitchUp+Time'].delete(0, END)
+
+        self.entries['autopilot']['Sun Bright Threshold'].delete(0, END)
+        self.entries['autopilot']['Nav Align Tries'].delete(0, END)
+        self.entries['autopilot']['Jump Tries'].delete(0, END)
+        self.entries['autopilot']['Wait For Autodock'].delete(0, END)
+
+        self.entries['refuel']['Refuel Threshold'].delete(0, END)
+        self.entries['refuel']['Scoop Timeout'].delete(0, END)
+        self.entries['refuel']['Fuel Threshold Abort'].delete(0, END)
+
+        self.entries['overlay']['X Offset'].delete(0, END)
+        self.entries['overlay']['Y Offset'].delete(0, END)
+        self.entries['overlay']['Font Size'].delete(0, END)
+
+        self.entries['buttons']['Start FSD'].delete(0, END)
+        self.entries['buttons']['Start SC'].delete(0, END)
+        self.entries['buttons']['Stop All'].delete(0, END)
+
+        self.entries['ship']['PitchRate'].insert(0, float(self.ed_ap.pitchrate))
+        self.entries['ship']['RollRate'].insert(0, float(self.ed_ap.rollrate))
+        self.entries['ship']['YawRate'].insert(0, float(self.ed_ap.yawrate))
+        self.entries['ship']['SunPitchUp+Time'].insert(0, float(self.ed_ap.sunpitchuptime))
+
+        self.entries['autopilot']['Sun Bright Threshold'].insert(0, int(self.ed_ap.config['SunBrightThreshold']))
+        self.entries['autopilot']['Nav Align Tries'].insert(0, int(self.ed_ap.config['NavAlignTries']))
+        self.entries['autopilot']['Jump Tries'].insert(0, int(self.ed_ap.config['JumpTries']))
+        self.entries['autopilot']['Wait For Autodock'].insert(0, int(self.ed_ap.config['WaitForAutoDockTimer']))
+        self.entries['refuel']['Refuel Threshold'].insert(0, int(self.ed_ap.config['RefuelThreshold']))
+        self.entries['refuel']['Scoop Timeout'].insert(0, int(self.ed_ap.config['FuelScoopTimeOut']))
+        self.entries['refuel']['Fuel Threshold Abort'].insert(0, int(self.ed_ap.config['FuelThreasholdAbortAP']))
+        self.entries['overlay']['X Offset'].insert(0, int(self.ed_ap.config['OverlayTextXOffset']))
+        self.entries['overlay']['Y Offset'].insert(0, int(self.ed_ap.config['OverlayTextYOffset']))
+        self.entries['overlay']['Font Size'].insert(0, int(self.ed_ap.config['OverlayTextFontSize']))
+
+        self.entries['buttons']['Start FSD'].insert(0, str(self.ed_ap.config['HotKey_StartFSD']))
+        self.entries['buttons']['Start SC'].insert(0, str(self.ed_ap.config['HotKey_StartSC']))
+        self.entries['buttons']['Stop All'].insert(0, str(self.ed_ap.config['HotKey_StopAllAssists']))
 
         # global trap for these keys, the 'end' key will stop any current AP action
         # the 'home' key will start the FSD Assist.  May want another to start SC Assist
@@ -91,6 +171,9 @@ class APGui():
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartFSD'], self.callback, args=('fsd_start', None))
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartSC'],  self.callback, args=('sc_start',  None))
         # keyboard.add_hotkey('del',  self.cba)
+
+        # check for updates
+        self.check_updates()
 
     # def cba(self):
     #    self.ed_ap.jn.ship_state()['interdicted'] = True
@@ -199,7 +282,20 @@ class APGui():
         self.log_msg("Waypoint Assist stop")
 
     def about(self):
-        messagebox.showinfo('Autopilot', 'Autopilot')
+        webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui")
+
+    def check_updates(self):
+        response = requests.get("https://api.github.com/repos/SumZer0-git/EDAPGui/releases/latest")
+        if EDAP_VERSION != response.json()["name"]:
+            mb = messagebox.askokcancel("Update Check", "A new release version is available. Download now?")
+            if mb == True:
+                webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui/releases/latest")
+
+    def open_changelog(self):
+        webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui/blob/main/ChangeLog.md")
+
+    def open_discord(self):
+        webbrowser.open_new("https://discord.gg/HCgkfSc")
 
     def log_msg(self, msg):
         self.msgList.insert(END, datetime.now().strftime("%H:%M:%S: ")+msg)
@@ -232,15 +328,15 @@ class APGui():
             f_details = json.load(json_file)
 
         # load up the display with what we read, the pass it along to AP
-        self.entries['PitchRate'].delete(0, END)
-        self.entries['RollRate'].delete(0, END)
-        self.entries['YawRate'].delete(0, END)
-        self.entries['SunPitchUp+Time'].delete(0, END)
+        self.entries['ship']['PitchRate'].delete(0, END)
+        self.entries['ship']['RollRate'].delete(0, END)
+        self.entries['ship']['YawRate'].delete(0, END)
+        self.entries['ship']['SunPitchUp+Time'].delete(0, END)
 
-        self.entries['PitchRate'].insert(0, f_details['pitchrate'])
-        self.entries['RollRate'].insert(0, f_details['rollrate'])
-        self.entries['YawRate'].insert(0, f_details['yawrate'])
-        self.entries['SunPitchUp+Time'].insert(0, f_details['SunPitchUp+Time'])
+        self.entries['ship']['PitchRate'].insert(0, f_details['pitchrate'])
+        self.entries['ship']['RollRate'].insert(0, f_details['rollrate'])
+        self.entries['ship']['YawRate'].insert(0, f_details['yawrate'])
+        self.entries['ship']['SunPitchUp+Time'].insert(0, f_details['SunPitchUp+Time'])
 
         self.ed_ap.rollrate = float(f_details['rollrate'])
         self.ed_ap.pitchrate = float(f_details['pitchrate'])
@@ -255,10 +351,10 @@ class APGui():
             ('All files', '*.*')
         )
 
-        self.ed_ap.pitchrate = float(self.entries['PitchRate'].get())
-        self.ed_ap.rollrate = float(self.entries['RollRate'].get())
-        self.ed_ap.yawrate = float(self.entries['YawRate'].get())
-        self.ed_ap.sunpitchuptime = float(self.entries['SunPitchUp+Time'].get())
+        self.ed_ap.pitchrate = float(self.entries['ship']['PitchRate'].get())
+        self.ed_ap.rollrate = float(self.entries['ship']['RollRate'].get())
+        self.ed_ap.yawrate = float(self.entries['ship']['YawRate'].get())
+        self.ed_ap.sunpitchuptime = float(self.entries['ship']['SunPitchUp+Time'].get())
 
         f_details = {
             'rollrate': self.ed_ap.rollrate,
@@ -279,13 +375,33 @@ class APGui():
 
         self.filelabel.set("Config: "+Path(filename).name)
 
+    def save_settings(self):
+        self.entry_update()
+        self.ed_ap.update_config()
+
+
     # new data was added to a field, re-read them all for simple logic
-    def entry_update(self, event):
+    def entry_update(self, event = ''):
         try:
-            self.ed_ap.pitchrate = float(self.entries['PitchRate'].get())
-            self.ed_ap.rollrate = float(self.entries['RollRate'].get())
-            self.ed_ap.yawrate = float(self.entries['YawRate'].get())
-            self.ed_ap.sunpitchuptime = float(self.entries['SunPitchUp+Time'].get())
+            self.ed_ap.pitchrate = float(self.entries['ship']['PitchRate'].get())
+            self.ed_ap.rollrate = float(self.entries['ship']['RollRate'].get())
+            self.ed_ap.yawrate = float(self.entries['ship']['YawRate'].get())
+            self.ed_ap.sunpitchuptime = float(self.entries['ship']['SunPitchUp+Time'].get())
+
+            self.ed_ap.config['SunBrightThreshold'] = int(self.entries['autopilot']['Sun Bright Threshold'].get())
+            self.ed_ap.config['NavAlignTries'] = int(self.entries['autopilot']['Nav Align Tries'].get())
+            self.ed_ap.config['JumpTries'] = int(self.entries['autopilot']['Jump Tries'].get())
+            self.ed_ap.config['WaitForAutoDockTimer'] = int(self.entries['autopilot']['Wait For Autodock'].get())
+            self.ed_ap.config['RefuelThreshold'] = int(self.entries['refuel']['Refuel Threshold'].get())
+            self.ed_ap.config['FuelScoopTimeOut'] = int(self.entries['refuel']['Scoop Timeout'].get())
+            self.ed_ap.config['FuelThreasholdAbortAP'] = int(self.entries['refuel']['Fuel Threshold Abort'].get())
+            self.ed_ap.config['OverlayTextXOffset'] = int(self.entries['overlay']['X Offset'].get())
+            self.ed_ap.config['OverlayTextYOffset'] = int(self.entries['overlay']['Y Offset'].get())
+            self.ed_ap.config['OverlayTextFontSize'] = int(self.entries['overlay']['Font Size'].get())
+            self.ed_ap.config['HotKey_StartFSD'] = str(self.entries['buttons']['Start FSD'].get())
+            self.ed_ap.config['HotKey_StartSC'] = str(self.entries['buttons']['Start SC'].get())
+            self.ed_ap.config['HotKey_StopAllAssists'] = str(self.entries['buttons']['Stop All'].get())
+            self.ed_ap.config['VoiceEnable'] = self.checkboxvar['Enable Voice'].get()
         except:
             messagebox.showinfo("Exception", "Invalid float entered")
 
@@ -345,7 +461,17 @@ class APGui():
                 self.lab_ck['FSD Route Assist'].config(state='active')
                 self.lab_ck['Supercruise Assist'].config(state='active')
 
-        if self.checkboxvar['Enable Voice'].get() == 1:
+        if self.checkboxvar['Enable Randomness'].get():
+            self.ed_ap.set_randomness(True)
+        else:
+            self.ed_ap.set_randomness(False)
+
+        if self.checkboxvar['Enable Overlay'].get():
+            self.ed_ap.set_overlay(True)
+        else:
+            self.ed_ap.set_overlay(False)
+
+        if self.checkboxvar['Enable Voice'].get():
             self.ed_ap.set_voice(True)
         else:
             self.ed_ap.set_voice(False)
@@ -358,109 +484,206 @@ class APGui():
         else:
             self.cv_view = False
             self.ed_ap.set_cv_view(False)
+        self.ed_ap.config['DSSButton'] = self.radiobuttonvar['dss_button'].get()
 
-    def makeform(self, win, ftype, fields):
+    def makeform(self, win, ftype, fields, r = 0, inc = 1, rfrom = 0, rto = 1000):
         entries = {}
 
         for field in fields:
             row = tk.Frame(win)
-            if ftype == 0:
+            row.grid(row=r ,column=0, padx=2, pady=2, sticky=(N, S, E, W))
+            r += 1
+
+            if ftype == FORM_TYPE_CHECKBOX:
                 self.checkboxvar[field] = IntVar()
-                lab = Checkbutton(row, text=field, anchor='w', justify=LEFT, variable=self.checkboxvar[field], command=(lambda field=field: self.check_cb(field)))
+                lab = Checkbutton(row, text=field, anchor='w', width=27, justify=LEFT, variable=self.checkboxvar[field], command=(lambda field=field: self.check_cb(field)))
                 self.lab_ck[field] = lab
             else:
-                ent = tk.Entry(row, width=10)
+                lab = tk.Label(row, anchor='w', width=20, pady=3, text=field+": ")
+                if ftype == FORM_TYPE_SPINBOX:
+                    ent = tk.Spinbox(row, width=10, from_=rfrom, to=rto, increment=inc)
+                else:
+                    ent = tk.Entry(row, width=10)
                 ent.bind('<FocusOut>', self.entry_update)
-                lab = tk.Label(row, width=15, text=field+": ", anchor='w')
                 ent.insert(0, "0")
 
-            row.pack(side=tk.TOP, fill=tk.X, padx=5, pady=1)  # 
+            lab.grid(row=0, column=0)
+            lab = Hovertip(row, self.tooltips[field], hover_delay=1000) 
 
-            lab.pack(side=tk.LEFT)
-
-            if ftype == 1:
-                ent.pack(side=tk.LEFT)  # , expand=tk.YES)  # , fill=tk.X) 
+            if ftype != FORM_TYPE_CHECKBOX:
+                ent.grid(row=0, column=1) 
                 entries[field] = ent
+
         return entries
 
     def gui_gen(self, win):
 
-        check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'ELW Scanner', 'AFK Combat Assist')
-        entry_fields = ('RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time')
-
-        blk0 = tk.Frame(win, relief=tk.RAISED, borderwidth=1)
-
-        blk1 = tk.Frame(blk0, relief=tk.RAISED, borderwidth=1, width=25)
-        cEnt = self.makeform(blk1, 0, check_fields)
-
-        self.filelabel = StringVar()
-        self.filelabel.set("<no config loaded>")
-        lab = Label(blk0, textvariable=self.filelabel)
-        lab.pack(side=BOTTOM, anchor=S)
-
-        blk2 = tk.Frame(blk0, relief=tk.RAISED, borderwidth=1, width=40)
-        self.entries = self.makeform(blk2, 1, entry_fields)
-
-        blk1.pack(side=LEFT, anchor=N, padx=10, pady=3)
-        blk2.pack(side=LEFT, padx=2, pady=3)
-
-        sep = ttk.Separator(blk2, orient='horizontal')
-        sep.pack(fill='x', pady=5)
-
-        btn = Button(blk2, text='Calibrate', command=self.calibrate_callback)
-        btn.pack(side=tk.LEFT, padx=5, pady=5)
-
-        btn = Button(blk2, text='Cap Mouse X,Y', command=self.mouse_coord_callback)
-        btn.pack(side=tk.LEFT, padx=15, pady=5)
-
-        blk0.grid(row=0, column=0, padx=2, pady=2)
-
-        row = tk.Frame(win, relief=tk.RAISED, borderwidth=1, width=200)
-        scrollbar = Scrollbar(row)
-        scrollbar.pack(side=RIGHT, fill=Y)
-
-        # Label(win, text="Runtime Messages")   # .grid(row=4, sticky=W)
-        mylist = Listbox(row, width=60, height=10, yscrollcommand=scrollbar.set)
-
-        mylist.pack(side=LEFT, expand=True, fill=X)
-        scrollbar.config(command=mylist.yview)
-
-        row.grid(row=1, column=0, padx=2, pady=2)
+        modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'ELW Scanner', 'AFK Combat Assist')
+        ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time')
+        autopilot_entry_fields = ('Sun Bright Threshold', 'Nav Align Tries', 'Jump Tries', 'Wait For Autodock')
+        buttons_entry_fields = ('Start FSD', 'Start SC', 'Stop All')
+        refuel_entry_fields = ('Refuel Threshold', 'Scoop Timeout', 'Fuel Threshold Abort')
+        overlay_entry_fields = ('X Offset', 'Y Offset', 'Font Size')
 
         #
         # Define all the menus
         #
         menubar = Menu(win, background='#ff8000', foreground='black', activebackground='white', activeforeground='black')
-        file = Menu(menubar, tearoff=1, background='#ffcc99', foreground='black')
+        file = Menu(menubar, tearoff=0)
         file.add_command(label="Open", command=self.open_file)
         file.add_command(label="Save as", command=self.save_file)
         file.add_separator()
-        self.checkboxvar['Enable Voice'] = IntVar()
-        file.add_checkbutton(label='Enable Voice', onvalue=1, offvalue=0, variable=self.checkboxvar['Enable Voice'], command=(lambda field='Enable Voice': self.check_cb(field)))
         self.checkboxvar['Enable CV View'] = IntVar()
         file.add_checkbutton(label='Enable CV View', onvalue=1, offvalue=0, variable=self.checkboxvar['Enable CV View'], command=(lambda field='Enable CV View': self.check_cb(field)))
         file.add_separator()
+        file.add_command(label="Restart", command=self.restart_program)
         file.add_command(label="Exit", command=self.close_window)  # win.quit)
         menubar.add_cascade(label="File", menu=file)
 
         help = Menu(menubar, tearoff=0)
+        help.add_command(label="Check for Updates", command=self.check_updates)
+        help.add_command(label="View Changelog", command=self.open_changelog)
+        help.add_separator()
+        help.add_command(label="Join Discord", command=self.open_discord)
         help.add_command(label="About", command=self.about)
         menubar.add_cascade(label="Help", menu=help)
 
         win.config(menu=menubar)
 
-        statusbar = Frame(win)
-        # statusbar.pack(side="bottom", fill="x", expand=False)
-        statusbar.grid(row=2, column=0)
+        # notebook pages
+        nb = ttk.Notebook(win)
+        nb.grid()
+        page0 = Frame(nb)
+        page1 = Frame(nb)
+        nb.add(page0, text="Main") # main page
+        nb.add(page1, text="Settings") # options page
 
+        # main options block
+        blk_main = tk.Frame(page0)
+        blk_main.grid(row=0, column=0, padx=10, pady=5, sticky=(E, W))
+        blk_main.columnconfigure([0, 1], weight=1, minsize=100)
+        blk_main.rowconfigure(0, weight=1, minsize=50)
+
+        # ap mode checkboxes block
+        blk_modes = LabelFrame(blk_main, text="MODE")
+        blk_modes.grid(row=0, column=0, padx=2, pady=2, sticky=(N, S, E, W))
+        self.makeform(blk_modes, FORM_TYPE_CHECKBOX, modes_check_fields)
+
+        # ship values block
+        blk_ship = LabelFrame(blk_main, text="SHIP")
+        blk_ship.grid(row=0, column=1, padx=2, pady=2, sticky=(N, S, E, W))
+        self.entries['ship'] = self.makeform(blk_ship, FORM_TYPE_SPINBOX, ship_entry_fields, 0, 0.5)
+
+        # profile load / info button in ship values block
+        self.filelabel = StringVar()
+        self.filelabel.set("<no config loaded>")
+        btn_file = Button(blk_ship, textvariable=self.filelabel, command=self.open_file)
+        btn_file.grid(row=4, column=0, padx=2, pady=2, sticky=(N,E,W))
+        tip_file = Hovertip(btn_file, self.tooltips['Ship Config Button'], hover_delay=1000)
+
+        # button block
+        blk_buttons = tk.Frame(page0)
+        blk_buttons.grid(row=1, column=0, padx=10, pady=5, sticky=(N, S, E, W))
+        blk_buttons.columnconfigure([0, 1], weight=1, minsize=100)
+
+        btn_calibrate = Button(blk_buttons, text='Calibrate', command=self.calibrate_callback)
+        btn_calibrate.grid(row=0, column=0, padx=2, pady=2, columnspan=1, sticky=(N,E,W,S))
+        tip_calibrate = Hovertip(btn_calibrate, self.tooltips['Calibrate'], hover_delay=1000)
+
+        btn_coord = Button(blk_buttons, text='Cap Mouse X,Y', command=self.mouse_coord_callback)
+        btn_coord.grid(row=0, column=1, padx=2, pady=2, columnspan=1, sticky=(N,E,W,S))
+        tip_coord = Hovertip(btn_coord, self.tooltips['Cap Mouse XY'], hover_delay=1000)
+
+        # log window
+        log = LabelFrame(page0, text="LOG")
+        log.grid(row=2, column=0, padx=12, pady=5, sticky=(N, S, E, W))
+        scrollbar = Scrollbar(log)
+        scrollbar.grid(row=0, column=1, sticky=(N,S))
+        mylist = Listbox(log, width=72, height=10, yscrollcommand=scrollbar.set)
+        mylist.grid(row=0, column=0)
+        scrollbar.config(command=mylist.yview)
+
+        # settings block
+        blk_settings = tk.Frame(page1)
+        blk_settings.grid(row=0, column=0, padx=10, pady=5, sticky=(E, W))
+
+        # autopilot settings block
+        blk_ap = LabelFrame(blk_settings, text="AUTOPILOT")
+        blk_ap.grid(row=0, column=0, padx=2, pady=2, sticky=(N, S, E, W))
+        self.entries['autopilot'] = self.makeform(blk_ap, FORM_TYPE_SPINBOX, autopilot_entry_fields)
+        self.checkboxvar['Enable Randomness'] = BooleanVar()
+        cb_random = Checkbutton(blk_ap, text='Enable Randomness', anchor='w', pady=3, justify=LEFT, onvalue=1, offvalue=0, variable=self.checkboxvar['Enable Randomness'], command=(lambda field='Enable Randomness': self.check_cb(field)))
+        cb_random.grid(row=4, column=0, columnspan=2, sticky=(W))
+
+        # buttons settings block
+        blk_buttons = LabelFrame(blk_settings, text="BUTTONS")
+        blk_buttons.grid(row=0, column=1, padx=2, pady=2, sticky=(N, S, E, W))
+        blk_dss = Frame(blk_buttons)
+        blk_dss.grid(row=0, column=0, columnspan=2, padx=0, pady=0, sticky=(N, S, E, W))
+        lb_dss = Label(blk_dss, width=18, anchor='w', pady=3, text="DSS Button: ")
+        lb_dss.grid(row=0, column=0, sticky=(W)) 
+        self.radiobuttonvar['dss_button'] = StringVar()
+        rb_dss_primary = Radiobutton(blk_dss, pady=3, text="Primary", variable=self.radiobuttonvar['dss_button'], value="Primary", command=(lambda field='dss_button': self.check_cb(field)))
+        rb_dss_primary.grid(row=0, column=1, sticky=(W))
+        rb_dss_secandary = Radiobutton(blk_dss, pady=3, text="Secondary", variable=self.radiobuttonvar['dss_button'], value="Secondary", command=(lambda field='dss_button': self.check_cb(field)))
+        rb_dss_secandary.grid(row=1, column=1, sticky=(W))
+        self.entries['buttons'] = self.makeform(blk_buttons, FORM_TYPE_ENTRY, buttons_entry_fields, 2)
+
+        # refuel settings block
+        blk_fuel = LabelFrame(blk_settings, text="FUEL")
+        blk_fuel.grid(row=1, column=0, padx=2, pady=2, sticky=(N, S, E, W))
+        self.entries['refuel'] = self.makeform(blk_fuel, FORM_TYPE_SPINBOX, refuel_entry_fields)
+
+        # overlay settings block
+        blk_overlay = LabelFrame(blk_settings, text="OVERLAY")
+        blk_overlay.grid(row=1, column=1, padx=2, pady=2, sticky=(N, S, E, W))
+        self.checkboxvar['Enable Overlay'] = BooleanVar()
+        cb_enable = Checkbutton(blk_overlay, text='Enable (requires restart)', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['Enable Overlay'], command=(lambda field='Enable Overlay': self.check_cb(field)))
+        cb_enable.grid(row=0, column=0, columnspan=2, sticky=(W)) 
+        self.entries['overlay'] = self.makeform(blk_overlay, FORM_TYPE_SPINBOX, overlay_entry_fields, 1, 1.0, 0.0, 3000.0)
+
+        # tts / voice settings block
+        blk_voice = LabelFrame(blk_settings, text="VOICE")
+        blk_voice.grid(row=2, column=0, padx=2, pady=2, sticky=(N, S, E, W))
+        self.checkboxvar['Enable Voice'] = BooleanVar()
+        cb_enable = Checkbutton(blk_voice, text='Enable', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['Enable Voice'], command=(lambda field='Enable Voice': self.check_cb(field)))
+        cb_enable.grid(row=0, column=0, columnspan=2, sticky=(W)) 
+
+        # settings button block
+        blk_settings_buttons = tk.Frame(page1)
+        blk_settings_buttons.grid(row=3, column=0, padx=10, pady=5, sticky=(N, S, E, W))
+        blk_settings_buttons.columnconfigure([0, 1], weight=1, minsize=100)
+        btn_save = Button(blk_settings_buttons, text='Save Settings', command=self.save_settings)
+        btn_save.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N,E,W,S))
+
+        # Statusbar
+        statusbar = Frame(win)
+        statusbar.grid(row=3, column=0)
         self.status = tk.Label(win, text="Status: ", bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=20)
-        self.jumpcount = tk.Label(statusbar, text="<info> ", bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=40)
+        self.jumpcount = tk.Label(statusbar, text="<info> ", bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=49)
         self.status.pack(in_=statusbar, side=LEFT, fill=BOTH, expand=True)
         self.jumpcount.pack(in_=statusbar, side=RIGHT, fill=Y, expand=False)
 
-        # status.configure(text="Text Updated")
-
         return mylist
+
+    def restart_program(self):
+        print("restart now")
+        # while 1:
+        #     os.system("python EDAPGui.py")
+        #     print("Restarting...")
+        #     exit()
+        self.stop_fsd()
+        self.stop_sc()
+        self.ed_ap.quit()
+        sleep(0.1)
+
+        import sys
+        print("argv was",sys.argv)
+        print("sys.executable was", sys.executable)
+        print("restart now")
+
+        import os
+        os.execv(sys.executable, ['python'] + sys.argv)
 
 def main():
     #   handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
