@@ -1,6 +1,7 @@
 # 05/07/2022 Update (nice work DopeEx)
 - Major Gui usability improvements
 - Add bookmark as station destination option for waypoints
+- If not close enough to the station during the first dock attempt, then another short throttle and reattempt docking request
 - Fix missing waypoint assist in ap modes
 - Add a new version check and discord and changelog links
 
