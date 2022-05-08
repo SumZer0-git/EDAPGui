@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import keyboard
 import webbrowser
+import requests
 
 
 from PIL import Image, ImageGrab, ImageTk
@@ -49,6 +50,13 @@ Ideas taken from:  https://github.com/skai2/EDAutopilot
 Author: sumzer0@yahoo.com
 """
 
+# ---------------------------------------------------------------------------
+# must be updated with a new release so that the update check works properly!
+# contains the names of the release.
+EDAP_VERSION = "V1.0 Initial Baseline"
+# depending on how release versions are best marked you could also change it to the release tag, see function check_update.
+# ---------------------------------------------------------------------------
+
 FORM_TYPE_CHECKBOX = 0
 FORM_TYPE_SPINBOX = 1
 FORM_TYPE_ENTRY = 2
@@ -56,7 +64,7 @@ FORM_TYPE_ENTRY = 2
 class APGui():
     def __init__(self, root):
         self.root = root
-        root.title("EDAutopilot")
+        root.title("EDAutopilot " + EDAP_VERSION)
         #root.overrideredirect(True)
         #root.geometry("400x550")
         #root.configure(bg="blue")
@@ -163,6 +171,9 @@ class APGui():
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartFSD'], self.callback, args=('fsd_start', None))
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartSC'],  self.callback, args=('sc_start',  None))
         # keyboard.add_hotkey('del',  self.cba)
+
+        # check for updates
+        self.check_updates()
 
     # def cba(self):
     #    self.ed_ap.jn.ship_state()['interdicted'] = True
@@ -272,6 +283,19 @@ class APGui():
 
     def about(self):
         webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui")
+
+    def check_updates(self):
+        response = requests.get("https://api.github.com/repos/SumZer0-git/EDAPGui/releases/latest")
+        if EDAP_VERSION != response.json()["name"]:
+            mb = messagebox.askokcancel("Update Check", "A new release version is available. Download now?")
+            if mb == True:
+                webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui/releases/latest")
+
+    def open_changelog(self):
+        webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui/blob/main/ChangeLog.md")
+
+    def open_discord(self):
+        webbrowser.open_new("https://discord.gg/HCgkfSc")
 
     def log_msg(self, msg):
         self.msgList.insert(END, datetime.now().strftime("%H:%M:%S: ")+msg)
@@ -517,6 +541,10 @@ class APGui():
         menubar.add_cascade(label="File", menu=file)
 
         help = Menu(menubar, tearoff=0)
+        help.add_command(label="Check for Updates", command=self.check_updates)
+        help.add_command(label="View Changelog", command=self.open_changelog)
+        help.add_separator()
+        help.add_command(label="Join Discord", command=self.open_discord)
         help.add_command(label="About", command=self.about)
         menubar.add_cascade(label="Help", menu=help)
 
