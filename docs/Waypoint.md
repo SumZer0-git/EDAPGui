@@ -2,10 +2,10 @@
 Waypoints are Systems that are captured in a waypoints.json file and read and processed by this Autopilot.  An example waypoint file is below:
 <br>
 { <br>
-"Mylaifai EP-G c27-631": {"DockWithStation": null, "StationCoord": [0,0], "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, <br>
-"Striechooe QR-S b37-0": {"DockWithStation": null, "StationCoord": [0,0], "SellNumDown": -1, "BuyNumDown": -1, "Completed": false} ,<br>
-"Ploxao JV-E b31-1":     {"DockWithStation": null, "StationCoord": [0,0], "SellNumDown": -1, "BuyNumDown": -1, "Completed": false} ,<br>
-"Beagle Point":          {"DockWithStation": null, "StationCoord": [0,0], "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}   <br>
+"Mylaifai EP-G c27-631": {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, <br>
+"Striechooe QR-S b37-0": {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false} ,<br>
+"Ploxao JV-E b31-1":     {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false} ,<br>
+"Beagle Point":          {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}   <br>
 }<br>
 
 With this waypoint file this Autopilot will take you to Beagle Point without your intervention.  The Autopilot will read and process each
@@ -19,15 +19,18 @@ A set of waypoints can endless be repeated by using a special row at the end of 
 Assist will start from the top jumping through the defined Systems until the user ends the Waypoint Assist.
 <br>
 { <br>
-"Ninabin":   {"DockWithStation": null, "StationCoord": [0,0], "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, <br>
-"Wailaroju": {"DockWithStation": null, "StationCoord": [0,0], "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, <br>
-"REPEAT":    {"DockWithStation": null, "StationCoord": [0,0], "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}  <br>
+"Ninabin":   {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, <br>
+"Wailaroju": {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, <br>
+"REPEAT":    {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}  <br>
 }<br>
 
 ## Docking with a Station
 When entering a System via Waypoint Assist, if the DockWithStation is not null and StationCoord are not [0,0], the Waypoint Assist
 will go into SystemMap and select the Station at the StationCoord X, Y location (i.e. mouse click) to select and plot route to that 
-Station.  Upon arriving at the station, the SC Assist (which is acting on behalf of the Waypoint Assist), will drop your ship
+Station. Alternatively and with Odysey you can set a bookmark for the desired station instead of the x,y coordinates and then enter 
+the position of the bookmark in the station list of the galaxy map from top to bottom and starting at 0 in StationBookmark. 
+-1 means bookmark is disabled. 
+Upon arriving at the station, the SC Assist (which is acting on behalf of the Waypoint Assist), will drop your ship
 out of Supercruise and attempt docking.  Once docked, the fuel and repair will automatically be commanded.  The StationCoord can be 
 determine by bringing up the SystemMap (and not moving it or adjusting it), going to the EDAPGui interface and selecting 
 "Get Mouse X, Y", in the popup select Yes and your next Mouse click needs to be on the Station on the SystemMap.  The [X,Y]
@@ -38,10 +41,10 @@ it will show the System the same way and if your Station is not visible (i.e. yo
 capability cannot be used for that Station.  The Station must be visible when bringing up SystemMap.
 <br>
 { <br>
-    "Ninabin":   {"DockWithStation": null, "StationCoord": [0,0], "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, <br>
-    "Wailaroju": {"DockWithStation": null, "StationCoord": [0,0], "SellNumDown": -1, "BuyNumDown": -1, "Completed": false},<br>
-    "Enayex":    {"DockWithStation": "Watt Port", "StationCoord": [1977,509], "SellNumDown": 12, "BuyNumDown": 5, "Completed": false}, <br>
-    "Eurybia":   {"DockWithStation": null, "StationCoord": [0,0], "SellNumDown": -1, "BuyNumDown": -1, "Completed": false} <br>
+    "Ninabin":   {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, <br>
+    "Wailaroju": {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false},<br>
+    "Enayex":    {"DockWithStation": "Watt Port", "StationCoord": [1977,509], "StationBookmark": -1, "SellNumDown": 12, "BuyNumDown": 5, "Completed": false}, <br>
+    "Eurybia":   {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false} <br>
 }<br>
 
 ## Trading
