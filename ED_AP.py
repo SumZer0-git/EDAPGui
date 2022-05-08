@@ -654,6 +654,10 @@ class EDAutopilot:
             granted = True
         else:
             for i in range(tries):
+                if self.jn.ship_state()['no_dock_reason'] == "Distance":
+                    self.keys.send('SetSpeed50')
+                    sleep(5)
+                    self.keys.send('SetSpeedZero', repeat=2)
                 self.request_docking(0)
                 self.keys.send('SetSpeedZero', repeat=2)
                 sleep(1.5)
