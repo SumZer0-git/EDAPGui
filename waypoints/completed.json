@@ -5,6 +5,7 @@
             0,
             0
         ],
+        "StationBookmark": -1,
         "SellNumDown": -1,
         "BuyNumDown": -1,
         "Completed": true
@@ -15,6 +16,7 @@
             0,
             0
         ],
+        "StationBookmark": -1,
         "SellNumDown": -1,
         "BuyNumDown": -1,
         "Completed": true

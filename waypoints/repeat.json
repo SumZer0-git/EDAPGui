@@ -1,5 +1,5 @@
 { 
-"Ninabin":   {"DockWithStation": null, "StationCoord": [0,0], "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, 
-"Wailaroju": {"DockWithStation": null, "StationCoord": [0,0], "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, 
-"REPEAT":    {"DockWithStation": null, "StationCoord": [0,0], "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}  
+"Ninabin":   {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, 
+"Wailaroju": {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, 
+"REPEAT":    {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}  
 }
