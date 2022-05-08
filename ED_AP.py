@@ -47,6 +47,7 @@ class EDAutopilot:
             "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking
             "SunBrightThreshold": 125,     # The low level for brightness detection, range 0-255, want to mask out darker items
             "FuelScoopTimeOut": 35,        # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
+            "DockingRetries": 30,          # number of time to attempt docking
             "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
             "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
             "HotKey_StopAllAssists": "end",
@@ -636,7 +637,7 @@ class EDAutopilot:
         self.request_docking(1)
         sleep(1)
 
-        tries = 2
+        tries = self.config['DockingRetries']
         granted = False
         if self.jn.ship_state()['status'] == "dockinggranted":
             granted = True
@@ -1154,10 +1155,11 @@ class EDAutopilot:
 
         self.update_ap_status("Undock Complete, going Supercruise")
         # move away from station
+        sleep(1.5)
         self.keys.send('SetSpeed100')
         sleep(1)
         self.keys.send('UseBoostJuice')
-        sleep(10)  # get away from Station
+        sleep(13)  # get away from Station
         # Go into Supercruise
         self.keys.send('Supercruise', hold=0.001)
         sleep(10)  # have to wait to get into SC 
@@ -1297,7 +1299,7 @@ class EDAutopilot:
 
     # Supercruise Assist loop to travel to target in system and perform autodock
     #
-    def sc_assist(self, scr_reg):
+    def sc_assist(self, scr_reg, do_docking=True):
         align_failed = False
         # see if we have a compass up, if so then we have a target
         if self.have_destination(scr_reg) == False:
@@ -1327,7 +1329,8 @@ class EDAutopilot:
                     self.nav_align(scr_reg)
             else:
                 # if we dropped from SC, then we rammed into planet
-                align_false = True
+                align_failed = True
+                break
 
                 # check if we are being interdicted, means we saw it on scrren or we already got interdicted
             if self.being_interdicted(scr_reg) == True or self.jn.ship_state()['interdicted'] == True:
@@ -1347,11 +1350,12 @@ class EDAutopilot:
 
             # check for SC Disengage
             if (self.sc_disengage(scr_reg) == True):
+                sleep(1)  # wait another sec
                 self.keys.send('HyperSuperCombination', hold=0.001)
                 break
 
         # if no error, we must have gotten disengage
-        if align_failed == False:
+        if align_failed == False and do_docking == True:
             sleep(4)  # wait for the journal to catch up
             self.dock()  # go into docking sequence
             self.vce.say("Docking complete, Refueled")
@@ -1363,8 +1367,7 @@ class EDAutopilot:
 
         self.vce.say("Spercruise Assist complete")
 
-        # Simply monitor for Shields done so we can boost away or our fighter got destroyed
-
+    # Simply monitor for Shields down so we can boost away or our fighter got destroyed
     # and thus redeploy another one
     def afk_combat_loop(self):
         while True:

@@ -36,6 +36,8 @@ class EDKeys:
             'SetSpeed50',
             'SetSpeed100',
             'HyperSuperCombination',
+            'SelectTarget',
+            'DeployHeatSink',
             'UIFocus',
             'UI_Up',
             'UI_Down',
