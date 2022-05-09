@@ -34,19 +34,12 @@ Author: sumzer0@yahoo.com
 """
 
 # TODO:  
-#  - Mission accepting does not pick up all missions, as missions are selected the
-#    list gets updated and we end up in a slot that is below the Missions we want
-#  - Undock:  Still not there yet, sometimes destination on opposite side of ring
+
 #  - Robigo Mines SC:  Some times Robigo mines are other side of the ring
-#  - Scanning: trigger testing to activate heatsink, if using Scanned from event in Journal
-#    it is too late as they attack at the same time.  The ReceiveText with 'prepared to be 
-#    scanned seems to happen 10sec before attacking 
 #  - to fix this for Horizon, would have to write new routines for get_missions() and complete_missions
 #     then similar to Waypoints use the         if is_odyssey != True:   to call the right routine
 #
 # ensure Nav Menu filter is set to: Stations and POI only
-# must do a run first to discover the Siruis Atmos marker so when going back there the 
-#  Sirius Atmos is on the Nav Panel
 #
 # Set AP.json to change refuelthreshold to like 25 since python does not have scoop
 # Hardset your ships pitch/yaw/roll rates in main below
