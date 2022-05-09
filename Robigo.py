@@ -41,7 +41,6 @@ Author: sumzer0@yahoo.com
 #  - Scanning: trigger testing to activate heatsink, if using Scanned from event in Journal
 #    it is too late as they attack at the same time.  The ReceiveText with 'prepared to be 
 #    scanned seems to happen 10sec before attacking 
-#  - The sothis_A5 image template currently not used
 #  - to fix this for Horizon, would have to write new routines for get_missions() and complete_missions
 #     then similar to Waypoints use the         if is_odyssey != True:   to call the right routine
 #
@@ -58,7 +57,6 @@ Author: sumzer0@yahoo.com
 class Robigo:
     def __init__(self, ed_ap):
         self.ap = ed_ap   # TODO: Need clean up, put some initializer in here
-        self.num_missions = 0
       
     # 
     # This function will look to see if the passed in template is in the region of the screen specified  
@@ -80,6 +78,11 @@ class Robigo:
 
     def complete_missions(self, ap):
 
+        loop_missions = ap.jn.ship_state()['mission_redirected']
+        if loop_missions == 0:
+            loop_missions = 8
+        ap.jn.ship_state()['mission_completed'] = 0
+        
         # Asssume in passenger Lounge
         ap.keys.send("UI_Right", repeat=2)  # go to Complete Mission
         ap.keys.send("UI_Select")
@@ -97,16 +100,15 @@ class Robigo:
         ap.keys.send("UI_Up", repeat=2)  # goto the top
         ap.keys.send("UI_Down")  # down one to select first mission
         sleep(0.5)
-        for i in range(8):  # Up to 8 missions to hand in
+        for i in range(loop_missions):  
             ap.keys.send("UI_Select")  # select mission
             sleep(0.1)
             ap.keys.send("UI_Up")  # Up to Credit
             sleep(0.1)
             ap.keys.send("UI_Select")  # Select it
-            sleep(9)   # wait until the "skip" button changes to "back" button
+            sleep(10)   # wait until the "skip" button changes to "back" button
             ap.keys.send("UI_Select")  # Select the Back key which will be highlighted
             sleep(1.5)
-            self.num_missions += 1
 
         ap.keys.send("UI_Back")  # seem to be going back to Mission menu
         
@@ -178,7 +180,7 @@ class Robigo:
                 # missions 
                 if had_selected:
                     ap.keys.send("UI_Up", hold=2)  # go back to very top
-                    ap.keys.send("UI_Down")  # down to missions, when we loop we'll go down 1 more time
+                    sleep(0.5)
                     cnt = 1  # reset counter  
                     had_selected = False               
 
@@ -242,6 +244,8 @@ class Robigo:
         scr = ap.scr
         scr_reg = ap.scrReg
         loop_cnt = 0
+        mission_redirect = 0
+        mission_complete = 0
         
         starttime = time.time()
 
@@ -260,7 +264,6 @@ class Robigo:
             self.goto_passenger_lounge(ap)
             sleep(2.5)  # wait for new menu comes up
             self.complete_missions(ap)
-            print("Num Missions Completed: "+str(self.num_missions))
 
             print("Getting missions")
             # Select and fill up on Sirius missions   
@@ -290,7 +293,7 @@ class Robigo:
     
             # [In Sothis]
             # select Siruis Atmos
-            found = self.lock_target(ap, 'sirius_atmos')  # TODO: if not find atmos, then jump back to sothis_A5
+            found = self.lock_target(ap, 'sirius_atmos')  
             
             if found == False:
                 print("Unable to lock on Sirius Atmos in Nav Panel")
@@ -305,11 +308,14 @@ class Robigo:
 
             # give a few more seconds
             sleep(2)
-            ap.keys.send("SelectTarget")    # target the marker so missions will complet
-            ap.jn.ship_state()['to_be_scanned'] = False  # reset to false
-            
-            sleep(4)
-            
+            ap.jn.ship_state()['mission_redirected'] = 0 
+            ap.keys.send("SelectTarget")    # target the marker so missions will complete
+            sleep(15)
+            if ap.jn.ship_state()['mission_redirected'] == 0:
+                print("Didnt make it to sirius atmos, should SC again")     
+ 
+            mission_redirected = ap.jn.ship_state()['mission_redirected']
+                      
             # any way to check that met mission objectives?
             
             # Set Route back to Robigo
@@ -336,6 +342,19 @@ class Robigo:
 
             # SC Assist to Robigo Mines and dock
             ap.sc_assist(scr_reg)
+            #
+            # if didn't make it to Robigo Mines (at the ring), need to retry
+            #"timestamp":"2022-05-08T23:49:43Z", "event":"SupercruiseExit", "Taxi":false, "Multicrew":false, "StarSystem":"Robigo", "SystemAddress":9463020987689, "Body":"Robigo 1 A Ring", "BodyID":12, "BodyType":"PlanetaryRing" }
+
+            #This entry shows we made it to the Robigo Mines
+            #{ "timestamp":"2022-05-08T23:51:43Z", "event":"SupercruiseExit", "Taxi":false, "Multicrew":false, "StarSystem":"Robigo", "SystemAddress":9463020987689, "Body":"Robigo Mines", "BodyID":64, "BodyType":"Station" }
+            
+            # if we get these then we got mission complete and made it to Sirius Atmos, if not we are short
+            #  "event":"MissionRedirected", "NewDestinationStation":"Robigo Mines", "NewDestinationSystem":"Robigo", "OldDestinationStation":"", "OldDestinationSystem":"Sothis" }
+
+            # if didn't make it to Sirius Atmos, go back into SC
+            #{ "timestamp":"2022-05-08T22:01:27Z", "event":"SupercruiseExit", "Taxi":false, "Multicrew":false, "StarSystem":"Sothis", "SystemAddress":3137146456387, "Body":"Sothis A 5", "BodyID":14, "BodyType":"Planet" }
+            
             # the sc_assist and docks does refueling and repair, need to go back Left to Fuel to be highlighted
             ap.keys.send("UI_Left")    #               
 
