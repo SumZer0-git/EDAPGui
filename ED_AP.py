@@ -56,13 +56,14 @@ class EDAutopilot:
             "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
             "OverlayTextXOffset": 50,      # offset left the screen to start place overlay text
             "OverlayTextFont": "Eurostyle", 
-            "OverlayTextFontSize": 16, 
+            "OverlayTextFontSize": 14, 
             "OverlayGraphicEnable": False, # not implemented yet
             "DiscordWebhook": False,       # discord not implemented yet
             "DiscordWebhookURL": "",
             "DiscordUserID": "",
             "VoiceEnable": True,
             "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
+            "ElwScannerEnable": False,
             "LogDEBUG": False,             # enable for debug messages
             "LogINFO": True
         }
@@ -99,7 +100,6 @@ class EDAutopilot:
         # initialize all to false
         self.fsd_assist_enabled = False
         self.sc_assist_enabled = False
-        self.fss_scan_enabled = False
         self.afk_combat_assist_enabled = False
         self.waypoint_assist_enabled = False
 
@@ -205,7 +205,7 @@ class EDAutopilot:
             self.overlay.overlay_text('3', "SHIP STATUS: "+ship_state, 3, 1, (136, 53, 0))
             self.overlay.overlay_text('4', "CURRENT SYSTEM: "+location+", "+sclass, 4, 1, (136, 53, 0))
             self.overlay.overlay_text('5', "JUMPS: {} of {}".format(self.jump_cnt, self.total_jumps), 5, 1, (136, 53, 0))
-            if self.fss_scan_enabled == True:
+            if self.config["ElwScannerEnable"] == True:
                 self.overlay.overlay_text('6', "ELW SCANNER: "+self.fss_detected, 6, 1, (136, 53, 0))
             self.overlay.overlay_paint()
 
@@ -1008,7 +1008,7 @@ class EDAutopilot:
         # need time to get away from the Sun so heat will disipate before we use FSD
         sleep(pause_time)
 
-        if self.fss_scan_enabled == True:
+        if self.config["ElwScannerEnable"] == True:
             self.fss_detect_elw(scr_reg)
             if self.config["EnableRandomness"] == True:
                 sleep(random.randint(0, 3))
@@ -1446,9 +1446,6 @@ class EDAutopilot:
             self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.waypoint_assist_enabled = enable
 
-    def set_fss_scan(self, enable=True):
-        self.fss_scan_enabled = enable
-
     def set_afk_combat_assist(self, enable=True):
         if enable == False and self.afk_combat_assist_enabled == True:
             self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
@@ -1468,16 +1465,16 @@ class EDAutopilot:
 
     def set_overlay(self, enable=False):
         # TODO: apply the change without restarting the program
-        if enable == True:
-            self.config["OverlayTextEnable"] = True
-        else:
-            self.config["OverlayTextEnable"] = False
+        self.config["OverlayTextEnable"] = enable
 
     def set_voice(self, enable=False):
         if enable == True:
             self.vce.set_on()
         else:
             self.vce.set_off()
+
+    def set_fss_scan(self, enable=False):
+        self.config["ElwScannerEnable"] = enable
 
     # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
     # have then then kill python exec

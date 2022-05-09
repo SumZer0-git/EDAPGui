@@ -443,10 +443,6 @@ class APGui():
                 self.lab_ck['FSD Route Assist'].config(state='active')
                 self.lab_ck['Supercruise Assist'].config(state='active')
 
-        if self.checkboxvar['ELW Scanner'].get() == 1:
-            self.ed_ap.set_fss_scan(True)
-        if self.checkboxvar['ELW Scanner'].get() == 0:
-            self.ed_ap.set_fss_scan(False)
 
         if field == 'AFK Combat Assist':
             if self.checkboxvar['AFK Combat Assist'].get() == 1:
@@ -475,6 +471,11 @@ class APGui():
             self.ed_ap.set_voice(True)
         else:
             self.ed_ap.set_voice(False)
+
+        if self.checkboxvar['ELW Scanner'].get():
+            self.ed_ap.set_fss_scan(True)
+        else:
+            self.ed_ap.set_fss_scan(False)
 
         if self.checkboxvar['Enable CV View'].get() == 1:
             self.cv_view = True
@@ -518,7 +519,7 @@ class APGui():
 
     def gui_gen(self, win):
 
-        modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'ELW Scanner', 'AFK Combat Assist')
+        modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'AFK Combat Assist')
         ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time')
         autopilot_entry_fields = ('Sun Bright Threshold', 'Nav Align Tries', 'Jump Tries', 'Wait For Autodock')
         buttons_entry_fields = ('Start FSD', 'Start SC', 'Stop All')
@@ -648,6 +649,13 @@ class APGui():
         self.checkboxvar['Enable Voice'] = BooleanVar()
         cb_enable = Checkbutton(blk_voice, text='Enable', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['Enable Voice'], command=(lambda field='Enable Voice': self.check_cb(field)))
         cb_enable.grid(row=0, column=0, columnspan=2, sticky=(W)) 
+
+        # Scanner settings block
+        blk_voice = LabelFrame(blk_settings, text="ELW SCANNER")
+        blk_voice.grid(row=2, column=1, padx=2, pady=2, sticky=(N, S, E, W))
+        self.checkboxvar['ELW Scanner'] = BooleanVar()
+        cb_enable = Checkbutton(blk_voice, text='Enable', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['ELW Scanner'], command=(lambda field='ELW Scanner': self.check_cb(field)))
+        cb_enable.grid(row=0, column=0, columnspan=2, sticky=(W))
 
         # settings button block
         blk_settings_buttons = tk.Frame(page1)
