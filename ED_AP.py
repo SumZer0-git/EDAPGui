@@ -1039,9 +1039,6 @@ class EDAutopilot:
             sleep(16)
 
             if self.jn.ship_state()['status'] != 'starting_hyperspace':
-                logger.debug('jump= misalign stop fsd')
-                self.keys.send('HyperSuperCombination', hold=1)
-                sleep(2)
                 self.mnvr_to_target(scr_reg)  # attempt realign to target
             else:
                 logger.debug('jump= in jump')
