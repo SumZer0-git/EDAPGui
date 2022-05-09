@@ -102,6 +102,7 @@ class EDAutopilot:
         self.sc_assist_enabled = False
         self.afk_combat_assist_enabled = False
         self.waypoint_assist_enabled = False
+        self.robigo_assist_enabled = False
 
         # Create instance of each of the needed Classes
         self.scr = Screen.Screen()
@@ -1383,6 +1384,9 @@ class EDAutopilot:
 
         self.vce.say("Spercruise Assist complete")
 
+    def robigo_assist(self, scr_reg):
+        print("hello I am robigo assist in the ed_ap.py ca. in the line 1388")
+
     # Simply monitor for Shields down so we can boost away or our fighter got destroyed
     # and thus redeploy another one
     def afk_combat_loop(self):
@@ -1445,6 +1449,11 @@ class EDAutopilot:
         if enable == False and self.waypoint_assist_enabled == True:
             self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.waypoint_assist_enabled = enable
+
+    def set_robigo_assist(self, enable=True):
+        if enable == False and self.robigo_assist_enabled == True:
+            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+        self.robigo_assist_enabled = enable
 
     def set_afk_combat_assist(self, enable=True):
         if enable == False and self.afk_combat_assist_enabled == True:
@@ -1560,6 +1569,22 @@ class EDAutopilot:
 
                 self.waypoint_assist_enabled = False
                 self.ap_ckb('waypoint_stop')
+                self.update_overlay()
+
+            elif self.robigo_assist_enabled == True:
+                logger.debug("Running robigo_assist")
+                self.set_focus_elite_window()
+                self.update_overlay()
+                try:
+                    self.robigo_assist(self.scrReg)
+                except EDAP_Interrupt:
+                    logger.debug("Caught stop exception")
+                except Exception as e:
+                    print("Trapped generic:"+str(e))
+                    traceback.print_exc()
+
+                self.robigo_assist_enabled = False
+                self.ap_ckb('robigo_stop')
                 self.update_overlay()
 
             elif self.afk_combat_assist_enabled == True:
