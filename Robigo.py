@@ -1,7 +1,10 @@
-from threading import main_thread
+# from threading import main_thread
 from time import sleep
+import time
 
 # most of these won't be needed if integrate with EDAPGui
+
+'''
 import keyboard
 import win32gui
 
@@ -14,7 +17,22 @@ from Image_Templates import *
 from Overlay import *
 from Screen import *
 from Voice import *
+'''
 
+
+# TODO:
+#  - Use GalaxyMap Search for Robigo Mines
+#  - Clean up Loop, integrate with GUI
+#  - Rework Undocking into main ED_AP
+#  - update main ED_AP for fuel_repair_ammo()  add ammo
+#  - Handle not at Sirius Atmos, go back into SC, use Journal Body
+#  - Anything to do about crash into Robigo Ring?  check body and exit AP
+#  - use Statemachine
+#    - determine currently location and start from there
+#  - Use mission_redirected, mission_completed counters
+#  - Update: ChangeLog.md,  Robigo.md,  readme.md
+#    - new screen shots
+# 
 
 """
 File:Robigo.py   
@@ -29,6 +47,7 @@ Constraints:
     - This will ensure the Siruis Atmospherics will be on the Nav Panel on subsequent runs
 - Set Nav Menu Filter to: Stations and POI only
     - Removes the clutter and allows faster selection of Robigo Mines and Sirius Athmos
+- Set refuelthreshold low.. like 35%  so not attempt refuel with a ship that doesn't have fuel scoop
 ``
 Author: sumzer0@yahoo.com
 """
@@ -39,8 +58,6 @@ Author: sumzer0@yahoo.com
 #  - to fix this for Horizon, would have to write new routines for get_missions() and complete_missions
 #     then similar to Waypoints use the         if is_odyssey != True:   to call the right routine
 #
-# ensure Nav Menu filter is set to: Stations and POI only
-#
 # Set AP.json to change refuelthreshold to like 25 since python does not have scoop
 # Hardset your ships pitch/yaw/roll rates in main below
 #
@@ -49,7 +66,9 @@ Author: sumzer0@yahoo.com
 
 class Robigo:
     def __init__(self, ed_ap):
-        self.ap = ed_ap   # TODO: Need clean up, put some initializer in here
+        self.ap = ed_ap  
+        self.mission_redirect = 0
+        self.mission_complete = 0
       
     # 
     # This function will look to see if the passed in template is in the region of the screen specified  
@@ -59,11 +78,11 @@ class Robigo:
             match,
         ) = ap.scrReg.match_template_in_region(region, templ)
 
-        if maxVal > 80:
-            print("Image Match: "+templ+" " + str(maxVal))
+        #if maxVal > 75:
+        #    print("Image Match: "+templ+" " + str(maxVal))
 
         # use high percent 
-        if maxVal > 0.80: 
+        if maxVal > 0.75: 
             return True
         else:
             return False       
@@ -184,22 +203,7 @@ class Robigo:
                 self.select_mission(ap)
                 sleep(1.5)
 
-        ap.keys.send("UI_Back", repeat=4)  # go back to main menu
-        
-
-    def fill_repair_ammo(self, ap):
-        # on main menu on starport/outpost
-        ap.keys.send("UI_Up", hold=3)  # go to very top
-        ap.keys.send("UI_Select")  # fuel highlighted, select it
-        sleep(0.5)
-        ap.keys.send("UI_Right")  # Repair
-        ap.keys.send("UI_Select")
-        sleep(0.5)
-        ap.keys.send("UI_Right")  # Ammo (heat sinks)
-        ap.keys.send("UI_Select")
-        sleep(0.5)
-        ap.keys.send("UI_Left", repeat=2)  # back to fuel
-                
+        ap.keys.send("UI_Back", repeat=4)  # go back to main menu              
 
     def goto_passenger_lounge(self, ap):
         # Go down to station services and select
@@ -213,87 +217,22 @@ class Robigo:
         ap.keys.send("UI_Left")    #        
         ap.keys.send("UI_Select")  # select Mission Board
         sleep(1)
-        ap.keys.send("UI_Right")  # Passenger lounge
+        ap.keys.send("UI_Right")   # Passenger lounge
         sleep(0.1)
         ap.keys.send("UI_Select")
-
+        sleep(2)                   # give time to bring up menu
+               
         
-    def undock_outpost(self, ap):        
-        ap.undock()
-        # need to wait until undock complete, that is when we are back in_space
-        while ap.jn.ship_state()['status'] != 'in_space':
-            sleep(1)
-
-        # move away from station
-        sleep(1.5)
-        ap.keys.send('SetSpeed100')
-        sleep(1)
-        ap.keys.send('UseBoostJuice')
-        sleep(10)  # get away from Station
-        ap.keys.send('SetSpeedZero')   
-             
-
-    def loop(self, ap):
-        scr = ap.scr
-        scr_reg = ap.scrReg
-        loop_cnt = 0
-        mission_redirect = 0
-        mission_complete = 0
+    def travel_to_sirius_atmos(self, ap):
+ 
+        ap.jn.ship_state()['mission_redirected'] = 0        
+        self.mission_redirected = 0
         
-        starttime = time.time()
-
-        while True:
-            # start off assuming at Robigo Mines main menu
-            elapsed_time = time.time() - starttime
-            starttime = time.time()
-            print(str(loop_cnt)+" Time for loop: "+  time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
-            loop_cnt += 1
-            
-            self.fill_repair_ammo(ap)
-   
-            print("Completing missions")
-
-            # Complete Missions, if we have any
-            self.goto_passenger_lounge(ap)
-            sleep(2.5)  # wait for new menu comes up
-            self.complete_missions(ap)
-
-            print("Getting missions")
-            # Select and fill up on Sirius missions   
-            self.goto_passenger_lounge(ap)
-            sleep(1)
-            self.get_missions(ap)
-            
-            print("Setting waypont to SOTHIS")
-            # Target SOTHIS and plot route
-            ap.jn.ship_state()["target"] = None   # must clear out previous target from Journal
-            dest = ap.waypoint.set_waypoint_target(ap, "SOTHIS ", target_select_cb=ap.jn.ship_state)
-
-            if dest == False:
-                print("SOTHIS destination not set: " + str(dest))
-                break
-            
-            sleep(1)    # give time to popdown GalaxyMap
-            print("Doing Undock")
-            # if we got the destination and perform undocking
-            ap.keys.send("SetSpeedZero")  # ensure 0 so auto undock will work           
-            self.undock_outpost(ap)
-            
-            print("FSD Assist")
-            
-            # away from station, time for Route Assist to get us to SOTHIS
-            ap.fsd_assist(scr_reg)
-    
-            # [In Sothis]
-            # select Siruis Atmos
-            found = self.lock_target(ap, 'sirius_atmos')  
-            
-            if found == False:
-                print("Unable to lock on Sirius Atmos in Nav Panel")
-                return
-            
+        # at times when coming out of SC, we are still 700-800km away from Sirius Atmos
+        # if we do not get mission_redirected journal notices, then SC again
+        while self.mission_redirected == 0:        
             # SC to Marker, tell assist not to attempt docking since we are going to a marker
-            ap.sc_assist(scr_reg, do_docking=False)
+            ap.sc_assist(ap.scrReg, do_docking=False)
             
             # wait until we are back in_space
             while ap.jn.ship_state()['status'] != 'in_space':
@@ -301,26 +240,88 @@ class Robigo:
 
             # give a few more seconds
             sleep(2)
-            ap.jn.ship_state()['mission_redirected'] = 0 
+            ap.keys.send("SetSpeedZero")
             ap.keys.send("SelectTarget")    # target the marker so missions will complete
+            # takes about 10-22 sec to acknowledge missions
             sleep(15)
             if ap.jn.ship_state()['mission_redirected'] == 0:
                 print("Didnt make it to sirius atmos, should SC again")     
- 
-            mission_redirected = ap.jn.ship_state()['mission_redirected']
-                      
-            # any way to check that met mission objectives?
+
+            self.mission_redirected = ap.jn.ship_state()['mission_redirected']
+             
+
+    def loop(self, ap):
+        loop_cnt = 0
+        
+        starttime = time.time()
+
+        while True:
+            # start off assuming at Robigo Mines main menu
+            # Calc elapsed time for a loop and display it
+            elapsed_time = time.time() - starttime
+            starttime = time.time()
+            if loop_cnt != 0:
+                ap.ap_ckb('log',str(loop_cnt)+" Time for loop: "+  time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
+            loop_cnt += 1
+       
+            ap.update_ap_status("Completing missions")
             
+            # Complete Missions, if we have any
+            self.goto_passenger_lounge(ap)
+            sleep(2.5)  # wait for new menu comes up
+            self.complete_missions(ap)
+
+            ap.update_ap_status("Get missions")
+            # Select and fill up on Sirius missions   
+            self.goto_passenger_lounge(ap)
+            sleep(1)
+            self.get_missions(ap)
+            
+            ap.update_ap_status("Route to SOTHIS")
+            # Target SOTHIS and plot route
+            ap.jn.ship_state()["target"] = None   # must clear out previous target from Journal
+            dest = ap.waypoint.set_waypoint_target(ap, "SOTHIS ", target_select_cb=ap.jn.ship_state)
+
+            if dest == False:
+                ap.update_ap_status("SOTHIS not set: " + str(dest))
+                break
+            
+            sleep(1)    # give time to popdown GalaxyMap
+  
+            # if we got the destination and perform undocking
+            ap.keys.send("SetSpeedZero")  # ensure 0 so auto undock will work 
+                      
+            ap.waypoint_undock_seq()
+            
+            ap.update_ap_status("FSD to SOTHIS")
+            
+            # away from station, time for Route Assist to get us to SOTHIS
+            ap.fsd_assist(ap.scrReg)
+            
+            # [In Sothis]
+            # select Siruis Atmos
+            found = self.lock_target(ap, 'sirius_atmos')  
+            
+            if found == False:
+                ap.update_ap_status("No Sirius Atmos in Nav Panel")
+                return
+ 
+            ap.update_ap_status("SC to Marker")            
+            self.travel_to_sirius_atmos(ap)
+
+            ap.update_ap_status("Missions: "+str(self.mission_redirected))
+                                 
             # Set Route back to Robigo
             dest = ap.waypoint.set_waypoint_target(ap, "ROBIGO", target_select_cb=ap.jn.ship_state)
             sleep(2)
             
             if dest == False:
-                print("Robigo destination not set: " + str(dest))
+                ap.update_ap_status("Robigo not set: " + str(dest))
                 break
-      
+
+            ap.update_ap_status("FSD to Robigo")      
             # have Route Assist bring us back to Robigo system
-            ap.fsd_assist(scr_reg)
+            ap.fsd_assist(ap.scrReg)
             ap.keys.send("SetSpeed50")
             sleep(2)
       
@@ -330,11 +331,12 @@ class Robigo:
             found = self.lock_target(ap, 'robigo_mines')
             
             if found == False:
-                print("Unable to lock on Robigo Mines in Nav Panel")
+                ap.update_ap_status("No lock on Robigo Mines in Nav Panel")
                 return
 
+            ap.update_ap_status("SC to Robigo Mines")
             # SC Assist to Robigo Mines and dock
-            ap.sc_assist(scr_reg)
+            ap.sc_assist(ap.scrReg)
             #
             # if didn't make it to Robigo Mines (at the ring), need to retry
             #"timestamp":"2022-05-08T23:49:43Z", "event":"SupercruiseExit", "Taxi":false, "Multicrew":false, "StarSystem":"Robigo", "SystemAddress":9463020987689, "Body":"Robigo 1 A Ring", "BodyID":12, "BodyType":"PlanetaryRing" }
@@ -347,12 +349,11 @@ class Robigo:
 
             # if didn't make it to Sirius Atmos, go back into SC
             #{ "timestamp":"2022-05-08T22:01:27Z", "event":"SupercruiseExit", "Taxi":false, "Multicrew":false, "StarSystem":"Sothis", "SystemAddress":3137146456387, "Body":"Sothis A 5", "BodyID":14, "BodyType":"Planet" }
-            
-            # the sc_assist and docks does refueling and repair, need to go back Left to Fuel to be highlighted
-            ap.keys.send("UI_Left")    #               
+                        
 
 
 # --------------------------------------------------------
+'''
 global main_thrd
 global ap1
 
@@ -411,3 +412,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+'''

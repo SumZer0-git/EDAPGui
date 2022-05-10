@@ -716,8 +716,8 @@ class APGui():
         # Statusbar
         statusbar = Frame(win)
         statusbar.grid(row=3, column=0)
-        self.status = tk.Label(win, text="Status: ", bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=20)
-        self.jumpcount = tk.Label(statusbar, text="<info> ", bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=49)
+        self.status = tk.Label(win, text="Status: ", bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=29)
+        self.jumpcount = tk.Label(statusbar, text="<info> ", bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=40)
         self.status.pack(in_=statusbar, side=LEFT, fill=BOTH, expand=True)
         self.jumpcount.pack(in_=statusbar, side=RIGHT, fill=Y, expand=False)
 

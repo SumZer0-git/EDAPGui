@@ -18,6 +18,7 @@ from EDKeys import *
 from EDafk_combat import AFK_Combat
 from Overlay import *
 from Voice import *
+from Robigo import *
 
 """
 File:EDAP.py    EDAutopilot
@@ -112,6 +113,7 @@ class EDAutopilot:
         self.keys = EDKeys()
         self.afk_combat = AFK_Combat(self.keys, self.jn, self.vce)
         self.waypoint = EDWayPoint(self.jn.ship_state()['odyssey'])
+        self.robigo = Robigo(self)
 
         # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
         # has worse performance for these rates
@@ -183,13 +185,15 @@ class EDAutopilot:
             ap_mode = "Offline"
             if self.fsd_assist_enabled == True:
                 ap_mode = "FSD Route Assist"
+            elif self.robigo_assist_enabled == True:
+                ap_mode = "Robigo Assist"
             elif self.sc_assist_enabled == True:
                 ap_mode = "SC Assist"
             elif self.waypoint_assist_enabled == True:
                 ap_mode = "Waypoint Assist"
             elif self.afk_combat_assist_enabled == True:
                 ap_mode = "AFK Combat Assist"
-
+                
             ship_state = self.jn.ship_state()['status']
             if ship_state == None:
                 ship_state = '<init>'
@@ -679,13 +683,15 @@ class EDAutopilot:
                 if self.jn.ship_state()['status'] == "in_station":
                     # go to top item, select (which should be refuel)
                     self.keys.send('UI_Up', hold=3)
-                    self.keys.send('UI_Select')
+                    self.keys.send('UI_Select') # Refuel
                     sleep(0.5)
                     self.keys.send('UI_Right')  # Repair
                     self.keys.send('UI_Select')
-                    # down to station services
-                    #self.keys.send('UI_Down')
-                    #self.keys.send('UI_Select')
+                    sleep(0.5)
+                    self.keys.send('UI_Right')  # Ammo
+                    self.keys.send('UI_Select')
+                    sleep(0.5)
+                    self.keys.send("UI_Left", repeat=2)  # back to fuel
                     break
 
     def is_sun_dead_ahead(self, scr_reg):
@@ -1170,16 +1176,13 @@ class EDAutopilot:
         while self.jn.ship_state()['status'] != 'in_space':
             sleep(1)
 
-        self.update_ap_status("Undock Complete, going Supercruise")
+        self.update_ap_status("Undock Complete, accelerating")
         # move away from station
         sleep(1.5)
         self.keys.send('SetSpeed100')
         sleep(1)
         self.keys.send('UseBoostJuice')
         sleep(13)  # get away from Station
-        # Go into Supercruise
-        self.keys.send('Supercruise', hold=0.001)
-        sleep(10)  # have to wait to get into SC 
         self.keys.send('SetSpeed50')
 
     # processes the waypoints, performing jumps and sc assist if going to a station
@@ -1384,8 +1387,8 @@ class EDAutopilot:
 
         self.vce.say("Spercruise Assist complete")
 
-    def robigo_assist(self, scr_reg):
-        print("hello I am robigo assist in the ed_ap.py ca. in the line 1388")
+    def robigo_assist(self):
+        self.robigo.loop(self)
 
     # Simply monitor for Shields down so we can boost away or our fighter got destroyed
     # and thus redeploy another one
@@ -1576,7 +1579,7 @@ class EDAutopilot:
                 self.set_focus_elite_window()
                 self.update_overlay()
                 try:
-                    self.robigo_assist(self.scrReg)
+                    self.robigo_assist()
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
                 except Exception as e:

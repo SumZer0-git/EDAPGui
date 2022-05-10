@@ -1,11 +1,11 @@
 # ED Autopilot - Gui
-This Elite Dangerous (ED) Autopilot supports FSD Route assistance, Supercruise Assistance, Waypoint Assist and AFK Combat escape assistance.  For the FSD Route Assist, you select
+This Elite Dangerous (ED) Autopilot supports FSD Route assistance, Supercruise Assistance, Waypoint Assist, Robigo Assit and AFK Combat escape assistance.  For the FSD Route Assist, you select
 your destination in the GalaxyMap and then enable this assistant and it will perform all the jumps to get you to your destination, AFK.  Furthermore while
 executing route assistance it will perform detailed system scanning (honk) when jumping into a system and optionally perform FSS scanning
 to determine if Earth, Water, or Ammonia type world is present.  The supercruise (SC) assistant (and not using ED's SC Assist which takes up a slot, for a piece of software?) 
 will keep you on target and when "TO DISENGAGED" is presented will autodrop out of SC and perform autodocking with the targetted Station.  With Waypoint Assist you 
 define the route in a file and this assistance will jump to those waypoints.  If a Station is defined to dock at, the assistant will transition to SC Assist and
-dock with the station.  A early version of a trading capability is also included.  If Voice enabled, the autopilot will inform you of its actions.   
+dock with the station.  A early version of a trading capability is also included.  If Voice enabled, the autopilot will inform you of its actions.   The Robigo Assist performs the Robigo Mines passenger mission loop which includes mission selection, mission completetion, and the full loop to Sirius Atmospherics
 
 This autopilot uses Computer Vision (grabs screens and performs template matching) and issues keystrokes.  It does not perform any runtime modifications 
 of Elite Dangerous, it is an external-ED construct (similar to us commanders) 
@@ -14,7 +14,8 @@ of Elite Dangerous, it is an external-ED construct (similar to us commanders)
   ./docs
   * See Calibration.md for details on how to calibrate EDAPGui for your system if required 
   * See Waypoint.md for details on how to generate a waypoint file 
-  * See RollPitchYaw.md for details on how to tune the Pitch, Roll, Yaw values 
+  * See RollPitchYaw.md for details on how to tune the Pitch, Roll, Yaw values
+  * Robgio.md for details on the Robigo Mines loop
   ```
 
 Note: this autopilot is based on https://github.com/skai2/EDAutopilot , some of the routines were used and turned into classes and tweaks were done on sequences
@@ -82,6 +83,11 @@ Note: the autopilot.log file will capture any required keybindings that are not 
     If the waypoint file entry has an associated Station/StationCoord entry, the assistant will route a course to that station
     upon entering that system.  The assistant will then autodock, refuel and repair.  If a trading sequence is define, it will then
     execute that trade.  See HOWTO-Waypoint.md
+* Robigo Assist:  Performs the Robigo Mines Passenger missions.  See Robigo.md under the docs folder
+* AFK Combat Assist: used with a AFK Combat ship in a Rez Zone.  It will detect if shields have
+    dropped and if so, will boost away and go into supercruise for ~10sec... then drop, put pips to
+    system and weapons and deploy fighter, then terminate.  While in the Rez Zone, if your fighter has
+    been destroyed it will deploy another figher (assumes you have two bays)
 * ELW Scanner: will perform FSS scans while FSD Assist is traveling between stars.  If the FSS
     shows a signal in the region of Earth, Water or Ammonia type worlds, it will announce that discovery
     and log it into elw.txt file.  Note: it does not do the FSS scan, you would need to terminate FSD Assist
@@ -90,10 +96,6 @@ Note: the autopilot.log file will capture any required keybindings that are not 
       _Oochoss BL-M d8-3  %(dot,sig):   0.39,   0.79 Ammonia date: 2022-01-22 11:17:51.338134<br>
        Slegi BG-E c28-2  %(dot,sig):   0.36,   0.75 Water date: 2022-01-22 11:55:30.714843<br>
        Slegi TM-L c24-4  %(dot,sig):   0.31,   0.85 Earth date: 2022-01-22 12:04:47.527793<br>_
-* AFK Combat Assist: used with a AFK Combat ship in a Rez Zone.  It will detect if shields have
-    dropped and if so, will boost away and go into supercruise for ~10sec... then drop, put pips to
-    system and weapons and deploy fighter, then terminate.  While in the Rez Zone, if your fighter has
-    been destroyed it will deploy another figher (assumes you have two bays)
 * Calibrate: will iterate through a set of scaling values getting the best match for your system.  See HOWTO-Calibrate.md
 * Cap Mouse X, Y:  this will provide the StationCoord value of the Station in the SystemMap.  Selecting this button
     and then clicking on the Station in the SystemMap will return the x,y value that can be pasted in the waypoints file
@@ -107,7 +109,7 @@ Note: the autopilot.log file will capture any required keybindings that are not 
     indicate the % matched with the criteria for matching. Example:  0.55 > 0.5  means 55% match and the criteria
     is that it has to be > 50%, so in this case the match is true
     
-## Hot Keys:
+## Hot Keys (configurable)
 * Home - Start FSD Assist
 * Ins  - Start SC Assist
 * End  - Terminate any running assistants
