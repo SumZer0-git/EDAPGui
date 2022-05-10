@@ -26,8 +26,8 @@ class Screen_Regions:
         self.fss_color_range      = [array([95, 210, 70]),  array([105, 255, 120])]
         
         self.reg = {}
-        # TODO: Consider how to handle diff screen resolutions better
         # regions with associatzed filter and color ranges
+        # The rect is top left x, y, and bottom right x, y in faction of screen resolution 
         self.reg['compass']   = {'rect': [0.33, 0.65, 0.46, 0.97], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
         self.reg['target']    = {'rect': [0.33, 0.27, 0.66, 0.70], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.orange_2_color_range}   # also called destination
         self.reg['target_occluded']    = {'rect': [0.33, 0.27, 0.66, 0.70], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.target_occluded_range} 
@@ -35,7 +35,10 @@ class Screen_Regions:
         self.reg['disengage'] = {'rect': [0.42, 0.70, 0.60, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.blue_color_range} 
         self.reg['interdicted'] = {'rect': [0.60, 0.1, 0.90, 0.25], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.orange_2_color_range}
         self.reg['fss']       = {'rect': [0.5045, 0.7545, 0.532, 0.7955], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
-
+        self.reg['mission_dest']  = {'rect': [0.46, 0.38, 0.65, 0.86], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}    
+        self.reg['missions']    = {'rect': [0.50, 0.78, 0.65, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}   
+        self.reg['nav_panel']   = {'rect': [0.25, 0.36, 0.60, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}  
+        
         # convert rect from percent of screen into pixel location, calc the width/height of the area
         for i, key in enumerate(self.reg):
             xx = self.reg[key]['rect']
@@ -119,8 +122,8 @@ class Screen_Regions:
         return result
 
 
+'''
 
-"""
 from Overlay import *
 from Screen import *
 from Image_Templates import *
@@ -136,11 +139,12 @@ def main():
         #tgt = scrReg.capture_region_filtered(scr, key)   
         #print(key) 
         #print(scrReg.reg[key])
-        ov.overlay_rect(key, (scrReg.reg[key]['rect'][0], 
-            scrReg.reg[key]['rect'][1]),
-            (scrReg.reg[key]['rect'][2],
-            scrReg.reg[key]['rect'][3]) , (0,255,i*40), 2 )
-        ov.overlay_paint() 
+        if key == 'nav_panel':
+            ov.overlay_rect(key, (scrReg.reg[key]['rect'][0], 
+                scrReg.reg[key]['rect'][1]),
+                (scrReg.reg[key]['rect'][2],
+                scrReg.reg[key]['rect'][3]) , (0,255,i*40), 2 )
+            ov.overlay_paint() 
     sleep(10)
     ov.overlay_quit()
     sleep(2)  
@@ -150,5 +154,4 @@ if __name__ == "__main__":
     main()
 
 
-
-"""
+'''

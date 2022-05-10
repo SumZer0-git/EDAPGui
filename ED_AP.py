@@ -18,6 +18,7 @@ from EDKeys import *
 from EDafk_combat import AFK_Combat
 from Overlay import *
 from Voice import *
+from Robigo import *
 
 """
 File:EDAP.py    EDAutopilot
@@ -47,6 +48,7 @@ class EDAutopilot:
             "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking
             "SunBrightThreshold": 125,     # The low level for brightness detection, range 0-255, want to mask out darker items
             "FuelScoopTimeOut": 35,        # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
+            "DockingRetries": 30,          # number of time to attempt docking
             "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
             "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
             "HotKey_StopAllAssists": "end",
@@ -55,13 +57,14 @@ class EDAutopilot:
             "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
             "OverlayTextXOffset": 50,      # offset left the screen to start place overlay text
             "OverlayTextFont": "Eurostyle", 
-            "OverlayTextFontSize": 16, 
+            "OverlayTextFontSize": 14, 
             "OverlayGraphicEnable": False, # not implemented yet
             "DiscordWebhook": False,       # discord not implemented yet
             "DiscordWebhookURL": "",
             "DiscordUserID": "",
             "VoiceEnable": True,
             "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
+            "ElwScannerEnable": False,
             "LogDEBUG": False,             # enable for debug messages
             "LogINFO": True
         }
@@ -98,9 +101,9 @@ class EDAutopilot:
         # initialize all to false
         self.fsd_assist_enabled = False
         self.sc_assist_enabled = False
-        self.fss_scan_enabled = False
         self.afk_combat_assist_enabled = False
         self.waypoint_assist_enabled = False
+        self.robigo_assist_enabled = False
 
         # Create instance of each of the needed Classes
         self.scr = Screen.Screen()
@@ -110,6 +113,7 @@ class EDAutopilot:
         self.keys = EDKeys()
         self.afk_combat = AFK_Combat(self.keys, self.jn, self.vce)
         self.waypoint = EDWayPoint(self.jn.ship_state()['odyssey'])
+        self.robigo = Robigo(self)
 
         # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
         # has worse performance for these rates
@@ -181,13 +185,15 @@ class EDAutopilot:
             ap_mode = "Offline"
             if self.fsd_assist_enabled == True:
                 ap_mode = "FSD Route Assist"
+            elif self.robigo_assist_enabled == True:
+                ap_mode = "Robigo Assist"
             elif self.sc_assist_enabled == True:
                 ap_mode = "SC Assist"
             elif self.waypoint_assist_enabled == True:
                 ap_mode = "Waypoint Assist"
             elif self.afk_combat_assist_enabled == True:
                 ap_mode = "AFK Combat Assist"
-
+                
             ship_state = self.jn.ship_state()['status']
             if ship_state == None:
                 ship_state = '<init>'
@@ -204,7 +210,7 @@ class EDAutopilot:
             self.overlay.overlay_text('3', "SHIP STATUS: "+ship_state, 3, 1, (136, 53, 0))
             self.overlay.overlay_text('4', "CURRENT SYSTEM: "+location+", "+sclass, 4, 1, (136, 53, 0))
             self.overlay.overlay_text('5', "JUMPS: {} of {}".format(self.jump_cnt, self.total_jumps), 5, 1, (136, 53, 0))
-            if self.fss_scan_enabled == True:
+            if self.config["ElwScannerEnable"] == True:
                 self.overlay.overlay_text('6', "ELW SCANNER: "+self.fss_detected, 6, 1, (136, 53, 0))
             self.overlay.overlay_paint()
 
@@ -648,7 +654,7 @@ class EDAutopilot:
         self.request_docking(1)
         sleep(1)
 
-        tries = 2
+        tries = self.config['DockingRetries']
         granted = False
         if self.jn.ship_state()['status'] == "dockinggranted":
             granted = True
@@ -677,13 +683,15 @@ class EDAutopilot:
                 if self.jn.ship_state()['status'] == "in_station":
                     # go to top item, select (which should be refuel)
                     self.keys.send('UI_Up', hold=3)
-                    self.keys.send('UI_Select')
+                    self.keys.send('UI_Select') # Refuel
                     sleep(0.5)
                     self.keys.send('UI_Right')  # Repair
                     self.keys.send('UI_Select')
-                    # down to station services
-                    #self.keys.send('UI_Down')
-                    #self.keys.send('UI_Select')
+                    sleep(0.5)
+                    self.keys.send('UI_Right')  # Ammo
+                    self.keys.send('UI_Select')
+                    sleep(0.5)
+                    self.keys.send("UI_Left", repeat=2)  # back to fuel
                     break
 
     def is_sun_dead_ahead(self, scr_reg):
@@ -1007,7 +1015,7 @@ class EDAutopilot:
         # need time to get away from the Sun so heat will disipate before we use FSD
         sleep(pause_time)
 
-        if self.fss_scan_enabled == True:
+        if self.config["ElwScannerEnable"] == True:
             self.fss_detect_elw(scr_reg)
             if self.config["EnableRandomness"] == True:
                 sleep(random.randint(0, 3))
@@ -1165,15 +1173,13 @@ class EDAutopilot:
         while self.jn.ship_state()['status'] != 'in_space':
             sleep(1)
 
-        self.update_ap_status("Undock Complete, going Supercruise")
+        self.update_ap_status("Undock Complete, accelerating")
         # move away from station
+        sleep(1.5)
         self.keys.send('SetSpeed100')
         sleep(1)
         self.keys.send('UseBoostJuice')
-        sleep(10)  # get away from Station
-        # Go into Supercruise
-        self.keys.send('Supercruise', hold=0.001)
-        sleep(10)  # have to wait to get into SC 
+        sleep(13)  # get away from Station
         self.keys.send('SetSpeed50')
 
     # processes the waypoints, performing jumps and sc assist if going to a station
@@ -1310,7 +1316,7 @@ class EDAutopilot:
 
     # Supercruise Assist loop to travel to target in system and perform autodock
     #
-    def sc_assist(self, scr_reg):
+    def sc_assist(self, scr_reg, do_docking=True):
         align_failed = False
         # see if we have a compass up, if so then we have a target
         if self.have_destination(scr_reg) == False:
@@ -1340,7 +1346,8 @@ class EDAutopilot:
                     self.nav_align(scr_reg)
             else:
                 # if we dropped from SC, then we rammed into planet
-                align_false = True
+                align_failed = True
+                break
 
                 # check if we are being interdicted, means we saw it on scrren or we already got interdicted
             if self.being_interdicted(scr_reg) == True or self.jn.ship_state()['interdicted'] == True:
@@ -1360,11 +1367,12 @@ class EDAutopilot:
 
             # check for SC Disengage
             if (self.sc_disengage(scr_reg) == True):
+                sleep(1)  # wait another sec
                 self.keys.send('HyperSuperCombination', hold=0.001)
                 break
 
         # if no error, we must have gotten disengage
-        if align_failed == False:
+        if align_failed == False and do_docking == True:
             sleep(4)  # wait for the journal to catch up
             self.dock()  # go into docking sequence
             self.vce.say("Docking complete, Refueled")
@@ -1376,8 +1384,10 @@ class EDAutopilot:
 
         self.vce.say("Spercruise Assist complete")
 
-        # Simply monitor for Shields done so we can boost away or our fighter got destroyed
+    def robigo_assist(self):
+        self.robigo.loop(self)
 
+    # Simply monitor for Shields down so we can boost away or our fighter got destroyed
     # and thus redeploy another one
     def afk_combat_loop(self):
         while True:
@@ -1440,8 +1450,10 @@ class EDAutopilot:
             self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.waypoint_assist_enabled = enable
 
-    def set_fss_scan(self, enable=True):
-        self.fss_scan_enabled = enable
+    def set_robigo_assist(self, enable=True):
+        if enable == False and self.robigo_assist_enabled == True:
+            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+        self.robigo_assist_enabled = enable
 
     def set_afk_combat_assist(self, enable=True):
         if enable == False and self.afk_combat_assist_enabled == True:
@@ -1462,16 +1474,16 @@ class EDAutopilot:
 
     def set_overlay(self, enable=False):
         # TODO: apply the change without restarting the program
-        if enable == True:
-            self.config["OverlayTextEnable"] = True
-        else:
-            self.config["OverlayTextEnable"] = False
+        self.config["OverlayTextEnable"] = enable
 
     def set_voice(self, enable=False):
         if enable == True:
             self.vce.set_on()
         else:
             self.vce.set_off()
+
+    def set_fss_scan(self, enable=False):
+        self.config["ElwScannerEnable"] = enable
 
     # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
     # have then then kill python exec
@@ -1557,6 +1569,22 @@ class EDAutopilot:
 
                 self.waypoint_assist_enabled = False
                 self.ap_ckb('waypoint_stop')
+                self.update_overlay()
+
+            elif self.robigo_assist_enabled == True:
+                logger.debug("Running robigo_assist")
+                self.set_focus_elite_window()
+                self.update_overlay()
+                try:
+                    self.robigo_assist()
+                except EDAP_Interrupt:
+                    logger.debug("Caught stop exception")
+                except Exception as e:
+                    print("Trapped generic:"+str(e))
+                    traceback.print_exc()
+
+                self.robigo_assist_enabled = False
+                self.ap_ckb('robigo_stop')
                 self.update_overlay()
 
             elif self.afk_combat_assist_enabled == True:

@@ -228,9 +228,9 @@ class EDWayPoint:
         sleep(0.05)
         ap.keys.send_key('Up', 28)
        
-        sleep(.1)
+        sleep(1)
  
-        ap.keys.send('UI_Right', repeat=2) 
+        ap.keys.send('UI_Right', repeat=4) 
         sleep(0.1)       
         # go down 6x's to plot to target
         for i in range(6):

@@ -23,7 +23,10 @@ class Image_Templates:
                           'target'    : {'image': None, 'width': 1, 'height': 1},
                           'target_occluded' : {'image': None, 'width': 1, 'height': 1},
                           'disengage' : {'image': None, 'width': 1, 'height': 1},
-                          'interdicted' : {'image': None, 'width': 1, 'height': 1} 
+                          'interdicted' : {'image': None, 'width': 1, 'height': 1},
+                          'missions'  : {'image': None, 'width': 1, 'height': 1},
+                          'dest_sirius' : {'image': None, 'width': 1, 'height': 1},
+                          'sirius_atmos' : {'image': None, 'width': 1, 'height': 1}                                            
                         }
  
         # load the templates and scale them.  Default templates assumed 3440x1440 screen resolution
@@ -51,6 +54,10 @@ class Image_Templates:
         self.template['target_occluded']    = self.load_template("templates/target_occluded.png", scaleX, scaleY) 
         self.template['disengage'] = self.load_template("templates/sc-disengage.png", scaleX, scaleY) 
         self.template['interdicted'] = self.load_template("templates/interdicted.png", scaleX, scaleY) 
+        self.template['missions']  = self.load_template("templates/completed-missions.png", scaleX, scaleY) 
+        self.template['dest_sirius'] = self.load_template("templates/dest-sirius-atmos-HL.png", scaleX, scaleY)
+        self.template['robigo_mines']  = self.load_template("templates/robigo-mines-selected.png", scaleX, scaleY) 
+        self.template['sirius_atmos']  = self.load_template("templates/sirius-atmos-selected.png", scaleX, scaleY)        
         
 
     def resource_path(self,relative_path):

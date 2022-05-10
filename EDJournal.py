@@ -55,6 +55,8 @@ class EDJournal:
             'under_attack': None,
             'interdicted': False,
             'no_dock_reason': None,
+            'mission_completed': 0,
+            'mission_redirected': 0,
             'dist_jumped': 0,
             'jumps_remains': 0,
             'fuel_capacity': None,
@@ -114,6 +116,12 @@ class EDJournal:
 
             if  log_event == 'FighterDestroyed':
                 self.ship['fighter_destroyed'] = True
+                
+            if  log_event == 'MissionCompleted':
+                self.ship['mission_completed'] = self.ship['mission_completed'] + 1  
+                
+            if  log_event == 'MissionRedirected':
+                self.ship['mission_redirected'] = self.ship['mission_redirected'] + 1  
 
             if log_event == 'StartJump':
                 self.ship['status'] = str('starting_'+log['JumpType']).lower()
@@ -130,11 +138,13 @@ class EDJournal:
                 self.ship['status'] = 'dockingdenied'
                 self.ship['no_dock_reason'] = log['Reason']
 
-            elif log_event == 'SupercruiseExit' or log_event == 'DockingCancelled':
-#TODO                 or (log_event == 'Music' and self.ship['status'] == 'in_undocking') \
-#                 or (log_event == 'Location' and log['Docked'] == False):
+            elif log_event == 'SupercruiseExit':
                 self.ship['status'] = 'in_space'
+                self.ship['body'] = log['Body']
 
+            elif log_event == 'DockingCancelled':
+                self.ship['status'] = 'in_space'
+                
             elif log_event == 'Undocked':
                 self.ship['status'] = 'starting_undocking'
                 #self.ship['status'] = 'in_space'
