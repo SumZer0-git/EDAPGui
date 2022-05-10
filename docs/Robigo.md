@@ -26,7 +26,7 @@
 
 ## Testing
 - Has only been tested with a Python ship
-- Test with resolutions of 1920x1080, 2560x1080, and 3440x1440
+- Tested with resolutions of 1920x1080, 2560x1080, and 3440x1440
 
 ## Observed Behaviors
 - If Robigo Mines outpost is behind the Rings as you approach, the ship will drop out of SC
