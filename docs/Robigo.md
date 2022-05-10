@@ -15,8 +15,8 @@
 - Odyssey only (due to unique Mission Selection and Mission Completion menus)
 - Must perform 1 Robigo loop manually
     - This will ensure that Siruis Atmospherics will be on the Nav Panel on subsequent runs
-    - i.e. you must travel to Sothis A5, when you get less then 1000ls, Sirius Atmospherics will
-      show up in Nav Panel.  Select/Lock target.  From this point on (in the current session of ED) 
+    - i.e. you must travel to Sothis A5 or Don's Inheretence, when you get less then 1000 ls, Sirius Atmospherics will
+      show up in Nav Panel.  Select/Lock target to it.  From this point on (in the current session of ED) 
       Sirius Atmospheric will be on Nav Panel (which is required by this script)
 - Set Nav Menu Filter to: Stations and POI only
     - Removes the clutter and allows faster selection of Robigo Mines and Sirius Atmos
