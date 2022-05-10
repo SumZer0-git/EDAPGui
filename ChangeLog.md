@@ -1,3 +1,6 @@
+# 05/09/2022
+- Added the Robigo Mines Passenger Mission autopilot.   See docs/Robigo.md for further details
+
 # 05/07/2022 Update (nice work DopeEx)
 - Major Gui usability improvements
 - Add bookmark as station destination option for waypoints
