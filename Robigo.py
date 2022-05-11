@@ -261,7 +261,7 @@ class Robigo:
             elapsed_time = time.time() - starttime
             starttime = time.time()
             if loop_cnt != 0:
-                ap.ap_ckb('log',str(loop_cnt)+" Time for loop: "+  time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
+                ap.ap_ckb('log',"Loop: "+str(loop_cnt)+" Time: "+  time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
             loop_cnt += 1
        
             ap.update_ap_status("Completing missions")
