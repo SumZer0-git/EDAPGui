@@ -1,3 +1,9 @@
+# Survey
+Please take a moment to fill out a survey of this Autopilot to help define direction of future updates:<br>
+
+https://s.surveyplanet.com/h9j73qbw
+<br>
+
 # ED Autopilot - Gui
 This Elite Dangerous (ED) Autopilot supports FSD Route assist, Supercruise assist, Waypoint assist, Robigo Mines assit and AFK Combat escape assist.  For the FSD Route Assist, you select
 your destination in the GalaxyMap and then enable this assistant and it will perform all the jumps to get you to your destination, AFK.  Furthermore while
