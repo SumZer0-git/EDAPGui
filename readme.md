@@ -2,10 +2,17 @@
 This Elite Dangerous (ED) Autopilot supports FSD Route assist, Supercruise assist, Waypoint assist, Robigo Mines assit and AFK Combat escape assist.  For the FSD Route Assist, you select
 your destination in the GalaxyMap and then enable this assistant and it will perform all the jumps to get you to your destination, AFK.  Furthermore while
 executing route assistance it will perform detailed system scanning (honk) when jumping into a system and optionally perform FSS scanning
-to determine if Earth, Water, or Ammonia type world is present.  The supercruise (SC) assistant (and not using ED's SC Assist which takes up a slot, for a piece of software?) 
-will keep you on target and when "TO DISENGAGED" is presented will autodrop out of SC and perform autodocking with the targetted Station.  With Waypoint Assist you 
-define the route in a file and this assistance will jump to those waypoints.  If a Station is defined to dock at, the assistant will transition to SC Assist and
-dock with the station.  A early version of a trading capability is also included.  If Voice enabled, the autopilot will inform you of its actions.   The Robigo Assist performs the Robigo Mines passenger mission loop which includes mission selection, mission completetion, and the full loop to Sirius Atmospherics
+to determine if Earth, Water, or Ammonia type world is present. <br>
+
+The supercruise (SC) assistant (and not using ED's SC Assist which takes up a slot, for a piece of software?) 
+will keep you on target and when "TO DISENGAGE" is presented and will autodrop out of SC and perform autodocking with the targeted Station. <br>
+
+With Waypoint Assist you define the route in a file and this assist will jump to those waypoints.  If a Station is defined to dock at, the assistant will transition to SC Assist and
+dock with the station.  A early version of a trading capability is also included.<br>
+
+The Robigo Assist performs the Robigo Mines passenger mission loop which includes mission selection, mission completetion, and the full loop to Sirius Atmospherics<br>
+
+If Voice enabled, the autopilot will inform you of its actions
 
 This autopilot uses Computer Vision (grabs screens and performs template matching) and issues keystrokes.  It does not perform any runtime modifications 
 of Elite Dangerous, it is an external-ED construct (similar to us commanders) 
