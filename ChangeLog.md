@@ -1,12 +1,16 @@
-# 05/09/2022
+# 05/11/2022 Update
+- For Waypoints, the completed state is now updated directly in the wp list.  New option to reset the waypoint completion state via button on the GUI.  The idea is to allow picking up where you left off in your waypoint list.  Also, the loading of a waypoint list has been separated from the activation of the waypoint assist.  (Dope-Ex is fine tuning the Waypoint system)
+
+# 05/09/2022 Update
 - Added the Robigo Mines Passenger Mission autopilot.   See docs/Robigo.md for further details
 
-# 05/07/2022 Update (nice work DopeEx)
+# 05/07/2022 Update
 - Major Gui usability improvements
 - Add bookmark as station destination option for waypoints
 - If not close enough to the station during the first dock attempt, then another short throttle and reattempt docking request
 - Fix missing waypoint assist in ap modes
 - Add a new version check and discord and changelog links
+- This effort brought to you buy Dope-Ex
 
 # 05/06/2022 Update - Baselined codebase V1.0
 
