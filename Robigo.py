@@ -1,8 +1,7 @@
-# from threading import main_thread
+
 from time import sleep
 import time
 
-# most of these won't be needed if integrate with EDAPGui
 
 '''
 import keyboard
@@ -20,19 +19,6 @@ from Voice import *
 '''
 
 
-# TODO:
-#  - Use GalaxyMap Search for Robigo Mines
-#  - Clean up Loop, integrate with GUI
-#  - Rework Undocking into main ED_AP
-#  - update main ED_AP for fuel_repair_ammo()  add ammo
-#  - Handle not at Sirius Atmos, go back into SC, use Journal Body
-#  - Anything to do about crash into Robigo Ring?  check body and exit AP
-#  - use Statemachine
-#    - determine currently location and start from there
-#  - Use mission_redirected, mission_completed counters
-#  - Update: ChangeLog.md,  Robigo.md,  readme.md
-#    - new screen shots
-# 
 
 """
 File:Robigo.py   
@@ -57,10 +43,6 @@ Author: sumzer0@yahoo.com
 #  - Robigo Mines SC:  Some times Robigo mines are other side of the ring
 #  - to fix this for Horizon, would have to write new routines for get_missions() and complete_missions
 #     then similar to Waypoints use the         if is_odyssey != True:   to call the right routine
-#
-# Set AP.json to change refuelthreshold to like 25 since python does not have scoop
-# Hardset your ships pitch/yaw/roll rates in main below
-#
 #
 
 
