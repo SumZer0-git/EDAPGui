@@ -3,6 +3,7 @@ from EDlogger import logger
 import json
 from pyautogui import typewrite, keyUp, keyDown
 from  MousePt import MousePoint
+from pathlib import Path
 
 
 
@@ -80,7 +81,7 @@ class EDWayPoint:
  
     def mark_waypoint_complete(self, key):
         self.waypoints[key]['Completed'] = True
-        self.write_waypoints(data=None, fileName='./waypoints/waypoints-completed.json')  
+        self.write_waypoints(data=None, fileName='./waypoints/' + Path(self.filename).name)  
 
 
     def waypoint_next(self, ap, target_select_cb=None) -> str:
@@ -100,26 +101,27 @@ class EDWayPoint:
 
                 # if this entry is REPEAT, loop through all and mark them all as Completed = False
                 if key == "REPEAT":
-                    for j, tkey in enumerate(self.waypoints):  
-                        self.waypoints[tkey]['Completed'] = False   
-                        self.step = 0              
+                    self.mark_all_waypoints_not_complete()             
                 else: 
                     # Call sequence to select route
                     if self.set_waypoint_target(ap, key, target_select_cb) == False:
                         # Error setting target
                         logger.warning("Error setting waypoint, breaking")
-                    self.step = i
-                    self.waypoints[key]['Completed'] = True   # mark that we executed
-                    
+                    self.step = i                    
                 dest_key = key
 
                 break
             else:
                 dest_key = ""   # End of list, return empty string
-             
+        print("test: " + dest_key)     
         return dest_key
-    
 
+    def mark_all_waypoints_not_complete(self):
+        for j, tkey in enumerate(self.waypoints):  
+            self.waypoints[tkey]['Completed'] = False   
+            self.step = 0 
+        self.write_waypoints(data=None, fileName='./waypoints/' + Path(self.filename).name) 
+    
     def is_station_targeted(self, dest) -> bool:
         return self.waypoints[dest]['DockWithStation']
     

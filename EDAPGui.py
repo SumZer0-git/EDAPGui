@@ -97,7 +97,9 @@ class APGui():
             'Font Size': "Font size of the overlay.",
             'Ship Config Button': "Read in a file with roll, pitch, yaw values for a ship.",
             'Calibrate': "Will iterate through a set of scaling values \ngetting the best match for your system. \nSee HOWTO-Calibrate.md",
-            'Cap Mouse XY': "This will provide the StationCoord value of the Station in the SystemMap. \nSelecting this button and then clicking on the Station in the SystemMap \nwill return the x,y value that can be pasted in the waypoints file"
+            'Waypoint List Button': "Read in a file with with your Waypoints.",
+            'Cap Mouse XY': "This will provide the StationCoord value of the Station in the SystemMap. \nSelecting this button and then clicking on the Station in the SystemMap \nwill return the x,y value that can be pasted in the waypoints file",
+            'Reset Waypoint List': "Reset your waypoint list, \nthe waypoint assist will start again at the first point in the list."
         }
 
         self.ed_ap = EDAutopilot(cb=self.callback)
@@ -272,15 +274,6 @@ class APGui():
         self.log_msg("SC Assist stop")
 
     def start_waypoint(self):
-        filetypes = (
-            ('json files', '*.json'),
-            ('All files', '*.*')
-        )
-        filename = fd.askopenfilename(title="Waypoint File", initialdir='./waypoints/', filetypes=filetypes)
-        if filename != "":
-            self.ed_ap.waypoint.load_waypoint_file(filename)
-            sleep(2)
-
         self.ed_ap.set_waypoint_assist(True)
         self.WP_A_running = True
         self.log_msg("Waypoint Assist start")
@@ -329,7 +322,7 @@ class APGui():
     def update_statusline(self, txt):
         self.status.configure(text="Status: "+txt)
 
-    def open_file(self):
+    def open_ship_file(self):
         filetypes = (
             ('json files', '*.json'),
             ('All files', '*.*')
@@ -362,9 +355,9 @@ class APGui():
         self.ed_ap.yawrate = float(f_details['yawrate'])
         self.ed_ap.sunpitchuptime = float(f_details['SunPitchUp+Time'])
 
-        self.filelabel.set("Config: "+Path(filename).name)
+        self.ship_filelabel.set("loaded: " + Path(filename).name)
 
-    def save_file(self):
+    def save_ship_file(self):
         filetypes = (
             ('json files', '*.json'),
             ('All files', '*.*')
@@ -392,7 +385,25 @@ class APGui():
         with open(filename, 'w') as json_file:
             json.dump(f_details, json_file)
 
-        self.filelabel.set("Config: "+Path(filename).name)
+        self.ship_filelabel.set("loaded: " + Path(filename).name)
+
+    def open_wp_file(self):
+        filetypes = (
+            ('json files', '*.json'),
+            ('All files', '*.*')
+        )
+        filename = fd.askopenfilename(title="Waypoint File", initialdir='./waypoints/', filetypes=filetypes)
+        if filename != "":
+            self.ed_ap.waypoint.load_waypoint_file(filename)
+            self.wp_filelabel.set("loaded: " + Path(filename).name)
+
+    def reset_wp_file(self):
+        if self.WP_A_running != True:
+            mb = messagebox.askokcancel("Waypoint List Reset", "After resetting the Waypoint List, the Waypoint Assist will start again from the first point in the list at the next start.")
+            if mb == True:
+                self.ed_ap.waypoint.mark_all_waypoints_not_complete()
+        else:
+            mb = messagebox.showerror("Waypoint List Error", "Waypoint Assist must be disabled before you can reset the list.")
 
     def save_settings(self):
         self.entry_update()
@@ -580,9 +591,10 @@ class APGui():
         #
         menubar = Menu(win, background='#ff8000', foreground='black', activebackground='white', activeforeground='black')
         file = Menu(menubar, tearoff=0)
-        file.add_command(label="Open", command=self.open_file)
-        file.add_command(label="Save as", command=self.save_file)
+        file.add_command(label="Open", command=self.open_ship_file)
+        file.add_command(label="Save as", command=self.save_ship_file)
         file.add_separator()
+        file.add_command(label="Calibrate", command=self.calibrate_callback)
         self.checkboxvar['Enable CV View'] = IntVar()
         file.add_checkbutton(label='Enable CV View', onvalue=1, offvalue=0, variable=self.checkboxvar['Enable CV View'], command=(lambda field='Enable CV View': self.check_cb(field)))
         file.add_separator()
@@ -611,8 +623,7 @@ class APGui():
         # main options block
         blk_main = tk.Frame(page0)
         blk_main.grid(row=0, column=0, padx=10, pady=5, sticky=(E, W))
-        blk_main.columnconfigure([0, 1], weight=1, minsize=100)
-        blk_main.rowconfigure(0, weight=1, minsize=50)
+        blk_main.columnconfigure([0, 1], weight=1, minsize=100, uniform="group1")
 
         # ap mode checkboxes block
         blk_modes = LabelFrame(blk_main, text="MODE")
@@ -625,28 +636,34 @@ class APGui():
         self.entries['ship'] = self.makeform(blk_ship, FORM_TYPE_SPINBOX, ship_entry_fields, 0, 0.5)
 
         # profile load / info button in ship values block
-        self.filelabel = StringVar()
-        self.filelabel.set("<no config loaded>")
-        btn_file = Button(blk_ship, textvariable=self.filelabel, command=self.open_file)
-        btn_file.grid(row=4, column=0, padx=2, pady=2, sticky=(N,E,W))
-        tip_file = Hovertip(btn_file, self.tooltips['Ship Config Button'], hover_delay=1000)
+        self.ship_filelabel = StringVar()
+        self.ship_filelabel.set("<no config loaded>")
+        btn_ship_file = Button(blk_ship, textvariable=self.ship_filelabel, command=self.open_ship_file)
+        btn_ship_file.grid(row=4, column=0, padx=2, pady=2, sticky=(N,E,W))
+        tip_ship_file = Hovertip(btn_ship_file, self.tooltips['Ship Config Button'], hover_delay=1000)
 
-        # button block
-        blk_buttons = tk.Frame(page0)
-        blk_buttons.grid(row=1, column=0, padx=10, pady=5, sticky=(N, S, E, W))
-        blk_buttons.columnconfigure([0, 1], weight=1, minsize=100)
+        # waypoints button block
+        blk_wp_buttons = tk.LabelFrame(page0, text="Waypoints")
+        blk_wp_buttons.grid(row=1, column=0, padx=10, pady=5, columnspan=2, sticky=(N, S, E, W))
+        blk_wp_buttons.columnconfigure([0, 1], weight=1, minsize=100, uniform="group1")
 
-        btn_calibrate = Button(blk_buttons, text='Calibrate', command=self.calibrate_callback)
-        btn_calibrate.grid(row=0, column=0, padx=2, pady=2, columnspan=1, sticky=(N,E,W,S))
-        tip_calibrate = Hovertip(btn_calibrate, self.tooltips['Calibrate'], hover_delay=1000)
+        self.wp_filelabel = StringVar()
+        self.wp_filelabel.set("<no list loaded>")
+        btn_wp_file = Button(blk_wp_buttons, textvariable=self.wp_filelabel, command=self.open_wp_file)
+        btn_wp_file.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N,E,W,S))
+        tip_wp_file = Hovertip(btn_wp_file, self.tooltips['Waypoint List Button'], hover_delay=1000)
 
-        btn_coord = Button(blk_buttons, text='Cap Mouse X,Y', command=self.mouse_coord_callback)
-        btn_coord.grid(row=0, column=1, padx=2, pady=2, columnspan=1, sticky=(N,E,W,S))
+        btn_coord = Button(blk_wp_buttons, text='Cap Mouse X,Y', command=self.mouse_coord_callback)
+        btn_coord.grid(row=1, column=0, padx=2, pady=2, columnspan=1, sticky=(N,E,W,S))
         tip_coord = Hovertip(btn_coord, self.tooltips['Cap Mouse XY'], hover_delay=1000)
+
+        btn_reset = Button(blk_wp_buttons, text='Reset List', command=self.reset_wp_file)
+        btn_reset.grid(row=1, column=1, padx=2, pady=2, columnspan=1, sticky=(N,E,W,S))
+        tip_reset = Hovertip(btn_reset, self.tooltips['Reset Waypoint List'], hover_delay=1000)
 
         # log window
         log = LabelFrame(page0, text="LOG")
-        log.grid(row=2, column=0, padx=12, pady=5, sticky=(N, S, E, W))
+        log.grid(row=3, column=0, padx=12, pady=5, sticky=(N, S, E, W))
         scrollbar = Scrollbar(log)
         scrollbar.grid(row=0, column=1, sticky=(N,S))
         mylist = Listbox(log, width=72, height=10, yscrollcommand=scrollbar.set)
@@ -656,6 +673,7 @@ class APGui():
         # settings block
         blk_settings = tk.Frame(page1)
         blk_settings.grid(row=0, column=0, padx=10, pady=5, sticky=(E, W))
+        blk_main.columnconfigure([0, 1], weight=1, minsize=100, uniform="group1")
 
         # autopilot settings block
         blk_ap = LabelFrame(blk_settings, text="AUTOPILOT")
@@ -715,7 +733,7 @@ class APGui():
 
         # Statusbar
         statusbar = Frame(win)
-        statusbar.grid(row=3, column=0)
+        statusbar.grid(row=4, column=0)
         self.status = tk.Label(win, text="Status: ", bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=29)
         self.jumpcount = tk.Label(statusbar, text="<info> ", bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=40)
         self.status.pack(in_=statusbar, side=LEFT, fill=BOTH, expand=True)
@@ -725,10 +743,7 @@ class APGui():
 
     def restart_program(self):
         print("restart now")
-        # while 1:
-        #     os.system("python EDAPGui.py")
-        #     print("Restarting...")
-        #     exit()
+
         self.stop_fsd()
         self.stop_sc()
         self.ed_ap.quit()

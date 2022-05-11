@@ -62,7 +62,7 @@ class EDAutopilot:
             "DiscordWebhook": False,       # discord not implemented yet
             "DiscordWebhookURL": "",
             "DiscordUserID": "",
-            "VoiceEnable": True,
+            "VoiceEnable": False,
             "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
             "ElwScannerEnable": False,
             "LogDEBUG": False,             # enable for debug messages
