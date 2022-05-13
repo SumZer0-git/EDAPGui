@@ -18,6 +18,18 @@ from Screen import *
 from Voice import *
 '''
 
+# define the states of the Robigo loop, allow to reenter same state left off if
+# having to cancel the AP but want to restart where you left off
+STATE_MISSIONS = 1
+STATE_ROUTE_TO_SOTHIS = 2
+STATE_UNDOCK  = 3
+STATE_FSD_TO_SOTHIS = 4
+STATE_TARGET_SIRIUS = 5
+STATE_SC_TO_SIRIUS = 6
+STATE_ROUTE_TO_ROBIGO = 7
+STATE_FSD_TO_ROBIGO = 8
+STATE_TARGET_ROBIGO_MINES = 9
+STATE_SC_TO_ROBIGO_MINES = 10
 
 
 """
@@ -51,6 +63,7 @@ class Robigo:
         self.ap = ed_ap  
         self.mission_redirect = 0
         self.mission_complete = 0
+        self.state = STATE_MISSIONS   # default to turn in missions and get more
       
     # 
     # This function will look to see if the passed in template is in the region of the screen specified  
@@ -231,95 +244,158 @@ class Robigo:
 
             self.mission_redirected = ap.jn.ship_state()['mission_redirected']
              
+    def determine_state(self, ap) -> int:
+        state = STATE_MISSIONS
+        status = ap.jn.ship_state()['status']
+        target = ap.jn.ship_state()['target']
+        location = ap.jn.ship_state()['location']
+        body = ap.jn.ship_state()['body']
+        
+        if status == 'in_station':
+            state = STATE_MISSIONS
+            if target != None:    # seems we already have a target
+                state = STATE_UNDOCK
+        elif status == 'in_space' and location == 'Robigo' and target != None:
+            state = STATE_FSD_TO_SOTHIS
+        elif status == 'in_space' and location == 'Sothis' and body == 'Sothis A 5':
+            if target == None:
+                state = STATE_ROUTE_TO_ROBIGO
+            else:
+                state = STATE_FSD_TO_ROBIGO
+        elif location == 'Sothis' and status == 'in_supercruise':
+            state = STATE_SC_TO_SIRIUS 
+        elif location == 'Robigo' and status == 'in_supercruise':
+            state = STATE_SC_TO_ROBIGO_MINES
+        elif location != 'Robigo' and location != 'Sothis':
+            # we are in neither system, and using default state, so lets target
+            # Robigo and FSD there             
+            if self.state == STATE_MISSIONS:   # default state, then go back to Robigo
+                state = STATE_ROUTE_TO_ROBIGO
+            else:
+                # else we are between the systems, so lets just use the last state we were in
+                # either FSD_TO_ROBIGO or FSD_TO_SOTHIS
+                state = self.state   # other wise go back to last state
+        
+        return state
+
+
 
     def loop(self, ap):
         loop_cnt = 0
         
         starttime = time.time()
+        
+        self.state = self.determine_state(ap)
 
         while True:
-            # start off assuming at Robigo Mines main menu
-            # Calc elapsed time for a loop and display it
-            elapsed_time = time.time() - starttime
-            starttime = time.time()
-            if loop_cnt != 0:
-                ap.ap_ckb('log',"Loop: "+str(loop_cnt)+" Time: "+  time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
-            loop_cnt += 1
        
-            ap.update_ap_status("Completing missions")
-            
-            # Complete Missions, if we have any
-            self.goto_passenger_lounge(ap)
-            sleep(2.5)  # wait for new menu comes up
-            self.complete_missions(ap)
+            if self.state == STATE_MISSIONS:
+                ap.update_ap_status("Completing missions")
+                
+                # Complete Missions, if we have any
+                self.goto_passenger_lounge(ap)
+                sleep(2.5)  # wait for new menu comes up
+                self.complete_missions(ap)
 
-            ap.update_ap_status("Get missions")
-            # Select and fill up on Sirius missions   
-            self.goto_passenger_lounge(ap)
-            sleep(1)
-            self.get_missions(ap)
-            
-            ap.update_ap_status("Route to SOTHIS")
-            # Target SOTHIS and plot route
-            ap.jn.ship_state()["target"] = None   # must clear out previous target from Journal
-            dest = ap.waypoint.set_waypoint_target(ap, "SOTHIS ", target_select_cb=ap.jn.ship_state)
+                ap.update_ap_status("Get missions")
+                # Select and fill up on Sirius missions   
+                self.goto_passenger_lounge(ap)
+                sleep(1)
+                self.get_missions(ap)
+                self.state = STATE_ROUTE_TO_SOTHIS
+                
+            elif self.state == STATE_ROUTE_TO_SOTHIS:
+                ap.update_ap_status("Route to SOTHIS")
+                # Target SOTHIS and plot route
+                ap.jn.ship_state()["target"] = None   # must clear out previous target from Journal
+                dest = ap.waypoint.set_waypoint_target(ap, "SOTHIS ", target_select_cb=ap.jn.ship_state)
 
-            if dest == False:
-                ap.update_ap_status("SOTHIS not set: " + str(dest))
-                break
-            
-            sleep(1)    # give time to popdown GalaxyMap
+                if dest == False:
+                    ap.update_ap_status("SOTHIS not set: " + str(dest))
+                    break
+                
+                sleep(1)    # give time to popdown GalaxyMap
+                self.state = STATE_UNDOCK
   
-            # if we got the destination and perform undocking
-            ap.keys.send("SetSpeedZero")  # ensure 0 so auto undock will work 
-                      
-            ap.waypoint_undock_seq()
+            elif self.state == STATE_UNDOCK: 
+                # if we got the destination and perform undocking
+                ap.keys.send("SetSpeedZero")  # ensure 0 so auto undock will work 
+                        
+                ap.waypoint_undock_seq()
+                self.state = STATE_FSD_TO_SOTHIS
+                
+            elif self.state == STATE_FSD_TO_SOTHIS:
+                ap.update_ap_status("FSD to SOTHIS")
+                
+                # away from station, time for Route Assist to get us to SOTHIS
+                ap.fsd_assist(ap.scrReg)
+                self.state = STATE_TARGET_SIRIUS
             
-            ap.update_ap_status("FSD to SOTHIS")
-            
-            # away from station, time for Route Assist to get us to SOTHIS
-            ap.fsd_assist(ap.scrReg)
-            
-            # [In Sothis]
-            # select Siruis Atmos
-            found = self.lock_target(ap, 'sirius_atmos')  
-            
-            if found == False:
-                ap.update_ap_status("No Sirius Atmos in Nav Panel")
-                return
+            elif self.state == STATE_TARGET_SIRIUS:
+                ap.update_ap_status("Target Sirius")
+                # [In Sothis]
+                # select Siruis Atmos
+                found = self.lock_target(ap, 'sirius_atmos')  
+                
+                if found == False:
+                    ap.update_ap_status("No Sirius Atmos in Nav Panel")
+                    return
+                self.state = STATE_SC_TO_SIRIUS
  
-            ap.update_ap_status("SC to Marker")            
-            self.travel_to_sirius_atmos(ap)
+            elif self.state == STATE_SC_TO_SIRIUS:
+                ap.update_ap_status("SC to Marker")            
+                self.travel_to_sirius_atmos(ap)
 
-            ap.update_ap_status("Missions: "+str(self.mission_redirected))
-                                 
-            # Set Route back to Robigo
-            dest = ap.waypoint.set_waypoint_target(ap, "ROBIGO", target_select_cb=ap.jn.ship_state)
-            sleep(2)
-            
-            if dest == False:
-                ap.update_ap_status("Robigo not set: " + str(dest))
-                break
+                ap.update_ap_status("Missions: "+str(self.mission_redirected))
+                self.state = STATE_ROUTE_TO_ROBIGO
+        
+            elif self.state == STATE_ROUTE_TO_ROBIGO:  
+                ap.update_ap_status("Route to Robigo")     
+                # Set Route back to Robigo
+                dest = ap.waypoint.set_waypoint_target(ap, "ROBIGO", target_select_cb=ap.jn.ship_state)
+                sleep(2)
+                
+                if dest == False:
+                    ap.update_ap_status("Robigo not set: " + str(dest))
+                    break
+                
+                self.state = STATE_FSD_TO_ROBIGO
 
-            ap.update_ap_status("FSD to Robigo")      
-            # have Route Assist bring us back to Robigo system
-            ap.fsd_assist(ap.scrReg)
-            ap.keys.send("SetSpeed50")
-            sleep(2)
+            elif self.state == STATE_FSD_TO_ROBIGO:
+                ap.update_ap_status("FSD to Robigo")      
+                # have Route Assist bring us back to Robigo system
+                ap.fsd_assist(ap.scrReg)
+                ap.keys.send("SetSpeed50")
+                sleep(2)
+                self.state = STATE_TARGET_ROBIGO_MINES
       
-            # In Robigo System, select Robigo Mines in the Nav Panel, which should 1 down (we select in the blind)
-            #   The Robigo Mines position in the list is dependent on distance from current location
-            #   The Speed50 above and waiting 2 seconds ensures Robigo Mines is 2 down from top
-            found = self.lock_target(ap, 'robigo_mines')
-            
-            if found == False:
-                ap.update_ap_status("No lock on Robigo Mines in Nav Panel")
-                return
+            elif self.state == STATE_TARGET_ROBIGO_MINES:
+                ap.update_ap_status("Target Robigo Mines")     
+                # In Robigo System, select Robigo Mines in the Nav Panel, which should 1 down (we select in the blind)
+                #   The Robigo Mines position in the list is dependent on distance from current location
+                #   The Speed50 above and waiting 2 seconds ensures Robigo Mines is 2 down from top
+                found = self.lock_target(ap, 'robigo_mines')
+                
+                if found == False:
+                    ap.update_ap_status("No lock on Robigo Mines in Nav Panel")
+                    return
+                self.state = STATE_SC_TO_ROBIGO_MINES
 
-            ap.update_ap_status("SC to Robigo Mines")
-            # SC Assist to Robigo Mines and dock
-            ap.sc_assist(ap.scrReg)
-            #
+            elif self.state == STATE_SC_TO_ROBIGO_MINES:
+                ap.update_ap_status("SC to Robigo Mines")
+                # SC Assist to Robigo Mines and dock
+                ap.sc_assist(ap.scrReg)
+                
+                # Calc elapsed time for a loop and display it
+                elapsed_time = time.time() - starttime
+                starttime = time.time()
+                loop_cnt += 1
+                if loop_cnt != 0:
+                    ap.ap_ckb('log',"Loop: "+str(loop_cnt)+" Time: "+  time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
+                
+                self.state = STATE_MISSIONS
+            
+            # Useful Journal data that might be able to leverage
             # if didn't make it to Robigo Mines (at the ring), need to retry
             #"timestamp":"2022-05-08T23:49:43Z", "event":"SupercruiseExit", "Taxi":false, "Multicrew":false, "StarSystem":"Robigo", "SystemAddress":9463020987689, "Body":"Robigo 1 A Ring", "BodyID":12, "BodyType":"PlanetaryRing" }
 
