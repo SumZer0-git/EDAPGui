@@ -11,7 +11,8 @@
   loop again
 
 ## Constraints:
-- Must start off docked at Robigo Mines
+- This assists determines where you are in the loop and continues from there, otherwise
+  will jump you to Robigo Mines
 - Odyssey only (due to unique Mission Selection and Mission Completion menus)
 - Must perform 1 Robigo loop manually
     - This will ensure that Siruis Atmospherics will be on the Nav Panel on subsequent runs
