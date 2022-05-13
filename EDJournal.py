@@ -57,6 +57,7 @@ class EDJournal:
             'no_dock_reason': None,
             'mission_completed': 0,
             'mission_redirected': 0,
+            'body': None,
             'dist_jumped': 0,
             'jumps_remains': 0,
             'fuel_capacity': None,
@@ -166,6 +167,9 @@ class EDJournal:
                 self.ship['status'] = 'in_space'
 
             elif log_event == 'Docked':
+                self.ship['status'] = 'in_station'
+                
+            elif log_event == 'Location' and log['Docked'] == True:
                 self.ship['status'] = 'in_station'
 
             elif log_event == 'Interdicted':
