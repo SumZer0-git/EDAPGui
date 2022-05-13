@@ -1,5 +1,5 @@
 # 05/12/2022 Update
-- Added a statemachine to Robigo Mines loop.  Will now determine were your ship is at in the loop and start from there.
+- Added a statemachine to Robigo Mines loop.  Will now determine where your ship is at in the loop and start from there.
   You can then stop the Robigo Assist to handle a Hyperdiction and simply restart it to continue with the loop (it will 
   pick up where you left off).  No need to start at Robigo Mines
 
