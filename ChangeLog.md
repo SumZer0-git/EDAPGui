@@ -1,7 +1,7 @@
 # 05/12/2022 Update
 - Added a statemachine to Robigo Mines loop.  Will now determine where your ship is at in the loop and start from there.
-  You can then stop the Robigo Assist to handle a Hyperdiction and simply restart it to continue with the loop (it will 
-  pick up where you left off).  No need to start at Robigo Mines
+  You can then stop the Robigo Assist to handle a Interiction and simply restart it to continue with the loop (it will 
+  pick up where you left off).  No need to start at Robigo Mines.  See docs/Robigo.md for details
 
 # 05/11/2022 Update
 - For Waypoints, the completed state is now updated directly in the wp list.  New option to reset the waypoint completion state via button on the GUI.  The idea is to allow picking up where you left off in your waypoint list.  Also, the loading of a waypoint list has been separated from the activation of the waypoint assist.  (DopeEx is fine tuning the Waypoint system)
