@@ -18,6 +18,33 @@ from Screen import *
 from Voice import *
 '''
 
+
+"""
+File:Robigo.py   
+
+Description:
+This class contains the script required to execute the Robigo passenger mission loop
+
+Constraints:
+- Odyssey only (due to unique Mission Selection and Mission Completion menus)
+- In first run most verify that Sirius Atmospherics is in the Nav Panel after entering the Sothis System
+  - if not 'end' the Robigo Assist,  Target 'Don's Inheritence'  Supercuise there, when < 1000 ls 
+    Sirius Athmospherics will be in the Nav Panel, select it, and restart Robigo Assist
+- Set Nav Menu Filter to: Stations and POI only
+    - Removes the clutter and allows faster selection of Robigo Mines and Sirius Athmos
+- Set refuelthreshold low.. like 35%  so not attempt refuel with a ship that doesn't have fuel scoop
+
+Author: sumzer0@yahoo.com
+"""
+
+# TODO:  
+
+#  - Robigo Mines SC:  Sometimes Robigo mines are other side of the ring when approaching
+#  - to fix this for Horizon, would have to write new routines for get_missions() and complete_missions
+#     then similar to Waypoints use the         if is_odyssey != True:   to call the right routine
+#
+
+
 # define the states of the Robigo loop, allow to reenter same state left off if
 # having to cancel the AP but want to restart where you left off
 STATE_MISSIONS = 1
@@ -31,31 +58,6 @@ STATE_FSD_TO_ROBIGO = 8
 STATE_TARGET_ROBIGO_MINES = 9
 STATE_SC_TO_ROBIGO_MINES = 10
 
-
-"""
-File:Robigo.py   
-
-Description:
-This class contains the script required to execute the Robigo passenger mission loop
-
-Constraints:
-- Must start off docked at Robigo Mines
-- Odyssey only (due to unique Mission Selection and Mission Completion menus)
-- Must perform 1 Robigo loop manually
-    - This will ensure the Siruis Atmospherics will be on the Nav Panel on subsequent runs
-- Set Nav Menu Filter to: Stations and POI only
-    - Removes the clutter and allows faster selection of Robigo Mines and Sirius Athmos
-- Set refuelthreshold low.. like 35%  so not attempt refuel with a ship that doesn't have fuel scoop
-``
-Author: sumzer0@yahoo.com
-"""
-
-# TODO:  
-
-#  - Robigo Mines SC:  Some times Robigo mines are other side of the ring
-#  - to fix this for Horizon, would have to write new routines for get_missions() and complete_missions
-#     then similar to Waypoints use the         if is_odyssey != True:   to call the right routine
-#
 
 
 class Robigo:
@@ -83,8 +85,11 @@ class Robigo:
             return False       
 
 
+    # Turn in Missions, will do Credit only
     def complete_missions(self, ap):
 
+        # get how many missions were completed, @sirius atmospherics, this mission_redirected will
+        # update for each mission you selected
         loop_missions = ap.jn.ship_state()['mission_redirected']
         if loop_missions == 0:
             loop_missions = 8
@@ -120,6 +125,7 @@ class Robigo:
         ap.keys.send("UI_Back")  # seem to be going back to Mission menu
         
 
+    # Goto Nav Panel and do image matching on the passed in image template
     def lock_target(self, ap, templ) -> bool:
         found = False
         tries = 0
@@ -151,6 +157,8 @@ class Robigo:
         return found
         
 
+    # Finish the selection of the mission by assigning to a Cabin
+    # Will use the Auto fill which doesn't do a very good job optimizing the cabin fill
     def select_mission(self, ap):
         ap.keys.send("UI_Select", repeat=2)  # select mission and Pick Cabin
         ap.keys.send("UI_Down")    # move down to Auto Fill line
@@ -160,7 +168,7 @@ class Robigo:
         sleep(0.1)
         ap.keys.send("UI_Select")  # Select Accept Mission, which was auto highlighted
         
-
+    # Goes through the missions selecting any that are Sirius Atmos
     def get_missions(self, ap):
         cnt = 0
         mission_cnt = 0
@@ -174,8 +182,9 @@ class Robigo:
         ap.keys.send("UI_Select")  # select personal transport
         sleep(15)  # wait 15 second for missions menu to show up
 
-        # Loop selecting missions, go up to 15 times
-        while cnt < 15:
+        # Loop selecting missions, go up to 20 times, have seen at time up to 17 missions
+        # before getting to Sirius Atmos missions
+        while cnt < 20:
             found = self.is_found(ap, "mission_dest", "dest_sirius")
 
             # not a sirius mission
@@ -200,6 +209,7 @@ class Robigo:
 
         ap.keys.send("UI_Back", repeat=4)  # go back to main menu              
 
+    # Go to the passenger lounge menu
     def goto_passenger_lounge(self, ap):
         # Go down to station services and select
         ap.keys.send("UI_Back", repeat=5)  # make sure at station menu
@@ -217,7 +227,7 @@ class Robigo:
         ap.keys.send("UI_Select")
         sleep(2)                   # give time to bring up menu
                
-        
+    # SC to the Marker and retrieve num of missions redirected (i.e. completed)
     def travel_to_sirius_atmos(self, ap):
  
         ap.jn.ship_state()['mission_redirected'] = 0        
@@ -244,6 +254,7 @@ class Robigo:
 
             self.mission_redirected = ap.jn.ship_state()['mission_redirected']
              
+    # Determine where we are at in the Robigo Loop, return the corresponding state
     def determine_state(self, ap) -> int:
         state = STATE_MISSIONS
         status = ap.jn.ship_state()['status']
@@ -279,7 +290,7 @@ class Robigo:
         return state
 
 
-
+    # The Robigo Loop
     def loop(self, ap):
         loop_cnt = 0
         
@@ -412,6 +423,8 @@ class Robigo:
 
 # --------------------------------------------------------
 '''
+Test Code pre-integration with the GUI, run standalone
+
 global main_thrd
 global ap1
 
