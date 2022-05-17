@@ -1,7 +1,4 @@
-# Survey
-Please take a moment to fill out a survey of this Autopilot to help define direction of future updates:<br>
-
-https://s.surveyplanet.com/h9j73qbw
+See [ChangeLog](/ChangeLog.md) for latest updates
 <br>
 
 # ED Autopilot - Gui
@@ -25,9 +22,9 @@ of Elite Dangerous, it is an external-ED construct (similar to us commanders)
 
   ```
   ./docs
-  * See Calibration.md for details on how to calibrate EDAPGui for your system if required 
-  * See Waypoint.md for details on how to generate a waypoint file 
-  * See RollPitchYaw.md for details on how to tune the Pitch, Roll, Yaw values
+  * Calibration.md for details on how to calibrate EDAPGui for your system if required 
+  * Waypoint.md for details on how to generate a waypoint file 
+  * RollPitchYaw.md for details on how to tune the Pitch, Roll, Yaw values
   * Robgio.md for details on the Robigo Mines loop
   ```
 
@@ -44,7 +41,7 @@ Also Note: This repository is provided for educational purposes as a in depth pr
   for different resolutions.  The _config-resolution.json_ file captures these resolutions with the corresponding ScaleX, Y values.  If a resolution is not defined
   for your monitor the code will attempt to divide /3440  and /1440 to get the scale factor (not likely to be correct)
   ```
-  * See Calibration.md for details on how to calibrate EDAPGui for your system *
+  * See docs/Calibration.md for details on how to calibrate EDAPGui for your system *
   ```
   * Field of View (Graphics->Display) setting plays here.  I run about 10-15% on the slider scale.  If you have a large FOV then the 
     template images will likely be too large
@@ -214,7 +211,3 @@ sumzer0@yahoo.com
 # Screen Shot
 ![Alt text](screen/screen_cap.png?raw=true "Screen")
                                                                
-* Video of FSD Route Assist going between systems: https://www.youtube.com/watch?v=Ym90oVhwVzc
-  
-* Video where selected a Station as the target, then FSD Route Assist jumping into that System and auto-transitioning into SC Assist to the station. Perform target align with the Station (so it won't drift). Then detecting SC Disengage and doing the disengage SC, and requesting autodock.  Once docked, refuels and goes into the StarPort Services, then termiates SC Assist:
-https://youtu.be/PtBYxWYX0so
