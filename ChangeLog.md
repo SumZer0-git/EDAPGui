@@ -1,3 +1,9 @@
+# 05/17/2022 Update
+- Added hotkey for starting Robigo as defined in config/AP.json file ("HotKey_StartRobigo": "pgup"). Added ability to only do single loop of Robigo run where user will complete and select missions (see config/AP.json "Robigo_Single_Loop": false)
+- With single loop set to True, the Robigo Assist will work in Horizons.
+  - CMDR would complete and select Missions, set Route to SOTHIS on GalaxyMap and then start the Robigo AP, which will undock, execute the loop and redock and terminate
+  - Additional keybindings are required, see autopilot.log for missing keybindings (such as SelectTarget, Supercruise)
+
 # 05/12/2022 Update
 - Added a statemachine to Robigo Mines loop.  Will now determine where your ship is at in the loop and start from there.
   You can then stop the Robigo Assist to handle a Interiction and simply restart it to continue with the loop (it will 
