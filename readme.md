@@ -130,7 +130,7 @@ https://pythonhosted.org/pynput/keyboard.html
 ## Config File: config-AP.json
   Note: the below is from the code, the real .json file will have the True/False values as lower case, as in true/false<br>
   ```py
-        self.config = {  
+       self.config = {  
             "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS
             "JumpTries": 3,                # 
             "NavAlignTries": 3,            #
@@ -139,20 +139,25 @@ https://pythonhosted.org/pynput/keyboard.html
             "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking
             "SunBrightThreshold": 125,     # The low level for brightness detection, range 0-255, want to mask out darker items
             "FuelScoopTimeOut": 35,        # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
+            "DockingRetries": 30,          # number of time to attempt docking
             "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
             "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
+            "HotKey_StartRobigo": "pgup",  # 
             "HotKey_StopAllAssists": "end",
+            "Robigo_Single_Loop": False,   # True means only 1 loop will execute and then terminate upon docking, will not perform mission processing
             "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
             "OverlayTextEnable": False,    # Experimental at this stage
             "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
             "OverlayTextXOffset": 50,      # offset left the screen to start place overlay text
             "OverlayTextFont": "Eurostyle", 
-            "OverlayTextFontSize": 16, 
+            "OverlayTextFontSize": 14, 
             "OverlayGraphicEnable": False, # not implemented yet
             "DiscordWebhook": False,       # discord not implemented yet
             "DiscordWebhookURL": "",
             "DiscordUserID": "",
+            "VoiceEnable": False,
             "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
+            "ElwScannerEnable": False,
             "LogDEBUG": False,             # enable for debug messages
             "LogINFO": True
         }
