@@ -103,6 +103,7 @@ class APGui():
         }
 
         self.ed_ap = EDAutopilot(cb=self.callback)
+        self.ed_ap.robigo.set_single_loop(self.ed_ap.config['Robigo_Single_Loop'])
 
         self.mouse = MousePoint()
 
@@ -174,7 +175,7 @@ class APGui():
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StopAllAssists'], self.stop_all_assists)
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartFSD'], self.callback, args=('fsd_start', None))
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartSC'],  self.callback, args=('sc_start',  None))
-        # keyboard.add_hotkey('del',  self.cba)
+        keyboard.add_hotkey(self.ed_ap.config['HotKey_StartRobigo'],  self.callback, args=('robigo_start',  None))
 
         # check for updates
         self.check_updates()
