@@ -1,4 +1,5 @@
-See [ChangeLog](/ChangeLog.md) for latest updates
+See [ChangeLog](/ChangeLog.md) for latest updates<br>
+Join discord if need support or wish to provide inputs on new features:  https://discord.gg/HCgkfSc
 <br>
 
 # ED Autopilot - Gui
