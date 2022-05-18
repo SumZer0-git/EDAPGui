@@ -66,7 +66,12 @@ class Robigo:
         self.mission_redirect = 0
         self.mission_complete = 0
         self.state = STATE_MISSIONS   # default to turn in missions and get more
+        self.do_single_loop = False   # default is to continue to loop
       
+      
+    def set_single_loop(self, single_loop):
+        self.do_single_loop = single_loop  
+        
     # 
     # This function will look to see if the passed in template is in the region of the screen specified  
     def is_found(self, ap, region, templ) -> bool:
@@ -301,18 +306,19 @@ class Robigo:
         while True:
        
             if self.state == STATE_MISSIONS:
-                ap.update_ap_status("Completing missions")
-                
-                # Complete Missions, if we have any
-                self.goto_passenger_lounge(ap)
-                sleep(2.5)  # wait for new menu comes up
-                self.complete_missions(ap)
+                if self.do_single_loop == False:  # if looping, then do mission processing
+                    ap.update_ap_status("Completing missions")
+                    
+                    # Complete Missions, if we have any
+                    self.goto_passenger_lounge(ap)
+                    sleep(2.5)  # wait for new menu comes up
+                    self.complete_missions(ap)
 
-                ap.update_ap_status("Get missions")
-                # Select and fill up on Sirius missions   
-                self.goto_passenger_lounge(ap)
-                sleep(1)
-                self.get_missions(ap)
+                    ap.update_ap_status("Get missions")
+                    # Select and fill up on Sirius missions   
+                    self.goto_passenger_lounge(ap)
+                    sleep(1)
+                    self.get_missions(ap)
                 self.state = STATE_ROUTE_TO_SOTHIS
                 
             elif self.state == STATE_ROUTE_TO_SOTHIS:
@@ -405,6 +411,9 @@ class Robigo:
                     ap.ap_ckb('log',"Loop: "+str(loop_cnt)+" Time: "+  time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
                 
                 self.state = STATE_MISSIONS
+                if self.do_single_loop == True:  # we did one loop, return
+                    ap.update_ap_status("Single Loop Complete")
+                    return  
             
             # Useful Journal data that might be able to leverage
             # if didn't make it to Robigo Mines (at the ring), need to retry
