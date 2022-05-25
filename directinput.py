@@ -38,6 +38,7 @@ SCANCODE = {
     'DIK_LBRACKET'        : 0x1A,
     'DIK_RBRACKET'        : 0x1B,
     'DIK_RETURN'          : 0x1C,    # Enter on main keyboard */
+    'DIK_ENTER'          : 0x1C,    # Enter on main keyboard */
     'DIK_LCONTROL'        : 0x1D,
     'DIK_A'               : 0x1E,
     'DIK_S'               : 0x1F,
@@ -83,7 +84,7 @@ SCANCODE = {
     'DIK_NUMPAD_7'        : 0x47,
     'DIK_NUMPAD_8'        : 0x48,
     'DIK_NUMPAD_9'        : 0x49,
-    'DIK_SUBTRACT'        : 0x4A,    # - on numeric keypad */
+    'DIK_NUMPAD_SUBTRACT' : 0x4A,    # - on numeric keypad */
     'DIK_NUMPAD_4'        : 0x4B,
     'DIK_NUMPAD_5'        : 0x4C,
     'DIK_NUMPAD_6'        : 0x4D,
