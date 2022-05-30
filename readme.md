@@ -66,10 +66,12 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * See https://github.com/skai2/EDAutopilot for other constraints that probably apply
 
 # How to run:
-* With Elite Dangerous (ED) running, start EDAPGui.py
-  * python EDAPgui.py     
-  * Note: the default Roll, Pitch, and Yaw rates are for my Diamondback Explorer, you need to enter the values
-    for your ship, which can be found in Outfitting. 
+* ./EDAPGui.exe  The EPAPGui.exe must live in the folder where the templates, configs, ships, waypoints folder reside.   
+* Otherwise run the main EDAPGui.py script
+  * With Elite Dangerous (ED) running, start EDAPGui.py
+    * python EDAPGui.py     
+    * Note: the default Roll, Pitch, and Yaw rates are for my Diamondback Explorer, you need to enter the values
+      for your ship, which can be found in Outfitting. 
 * In ED, Use Left Panel to select your route
 * Go to supercruise and go ahead and line up with Target
 * In the autopilot enable FSD Assist or hit the 'Home' key.  When a assist starts it will set focus
