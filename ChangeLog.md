@@ -1,3 +1,6 @@
+# 05/30/2022 Update
+- V1.1.0 Release which includes EDAPGui.exe.  With the binary, one does not need to install all the python packages
+
 # 05/17/2022 Update
 - Added hotkey for starting Robigo as defined in config/AP.json file ("HotKey_StartRobigo": "pgup"). Added ability to only do single loop of Robigo run where user will complete and select missions (see config/AP.json "Robigo_Single_Loop": false)
 - With single loop set to True, the Robigo Assist will work in Horizons.
