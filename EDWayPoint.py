@@ -212,6 +212,9 @@ class EDWayPoint:
     # This sequence for the Odyssey
  
     def set_waypoint_target_odyssey(self, ap, target_name, target_select_cb=None) -> bool:
+        
+        x = ap.scr.screen_width / 2
+        y = ap.scr.screen_height / 2
  
         ap.keys.send('GalaxyMapOpen')
         sleep(2)
@@ -227,15 +230,18 @@ class EDWayPoint:
   
         # send enter key
         ap.keys.send_key('Down', 28)
-        sleep(0.05)
+        sleep(0.15)
         ap.keys.send_key('Up', 28)
-       
+
         sleep(1)
- 
+        self.mouse.do_click(x, y)
+        sleep(0.1)
         ap.keys.send('UI_Right', repeat=4) 
+     
         sleep(0.1)       
+
         # go down 6x's to plot to target
-        for i in range(6):
+        for i in range(7):    # ED 4.0 update, since have new menu item
             ap.keys.send('UI_Down') 
             sleep(0.05)
   

@@ -1,3 +1,9 @@
+# 12/7/2022 Update
+- Update to support ED 4.0 menu layout, so this AP works with both Odyssey and Horizon 4.0
+- Waypoint processing, after adding System name in Galaxy Map had to add a Mouse click center screen so that keybindings would work when selecting Plot Route icon
+- Robigo had to add a setSpeed50 after coming out of FSD in Sothis.  Still some issues with some users where the Robigo loop cannot find Siruis Atmos in the left menu
+- No EDAPGui.exe in this update, if there is a demand for it then will make a formal released version
+
 # 05/17/2022 Update
 - Added hotkey for starting Robigo as defined in config/AP.json file ("HotKey_StartRobigo": "pgup"). Added ability to only do single loop of Robigo run where user will complete and select missions (see config/AP.json "Robigo_Single_Loop": false)
 - With single loop set to True, the Robigo Assist will work in Horizons.
