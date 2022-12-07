@@ -102,7 +102,8 @@ class EDJournal:
 
             # If fileheader, pull whether running Odyssey or Horizons
             if log_event == 'Fileheader':
-                self.ship['odyssey'] = log['Odyssey']
+                #self.ship['odyssey'] = log['Odyssey']
+                self.ship['odyssey'] = True   # hardset to true for ED 4.0 since menus now same for Horizon
                 return   # No need to do further processing on this record, should use elif: all the way down
 
             if log_event == 'ShieldState':

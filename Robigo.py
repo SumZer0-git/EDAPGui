@@ -346,6 +346,7 @@ class Robigo:
                 
                 # away from station, time for Route Assist to get us to SOTHIS
                 ap.fsd_assist(ap.scrReg)
+                ap.keys.send("SetSpeed50")   # reset speed
                 self.state = STATE_TARGET_SIRIUS
             
             elif self.state == STATE_TARGET_SIRIUS:
