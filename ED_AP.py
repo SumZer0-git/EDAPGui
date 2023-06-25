@@ -68,7 +68,9 @@ class EDAutopilot:
             "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
             "ElwScannerEnable": False,
             "LogDEBUG": False,             # enable for debug messages
-            "LogINFO": True
+            "LogINFO": True,
+            "Enable_CV_View": 0,  # Should CV View be enabled by default
+            "ShipConfigFile": None  # Ship config to load on start
         }
 
         # used this to write the self.config table to the json file
@@ -1464,6 +1466,8 @@ class EDAutopilot:
 
     def set_cv_view(self, enable=True, x=0, y=0):
         self.cv_view = enable
+        self.config['Enable_CV_View'] = int(self.cv_view)  # update the config
+        self.update_config()  # save the config
         if enable == True:
             self.cv_view_x = x
             self.cv_view_y = y
