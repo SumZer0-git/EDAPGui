@@ -1,4 +1,4 @@
-# 6/25/2013 Update by EpicStuff
+# 6/25/2023 Update by EpicStuff
 - Made it so that the state of Enable_CV_View is saved to configs/AP.json and loads previously loaded ship config on start.
 also autoformatting (removed trailing whitespaces)
 
