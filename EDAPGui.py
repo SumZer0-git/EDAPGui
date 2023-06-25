@@ -65,35 +65,35 @@ class APGui():
     def __init__(self, root):
         self.root = root
         root.title("EDAutopilot " + EDAP_VERSION)
-        #root.overrideredirect(True)
-        #root.geometry("400x550")
-        #root.configure(bg="blue")
+        # root.overrideredirect(True)
+        # root.geometry("400x550")
+        # root.configure(bg="blue")
         root.protocol("WM_DELETE_WINDOW", self.close_window)
         root.resizable(False, False)
 
         self.tooltips = {
             'FSD Route Assist': "Will execute your route. \nAt each jump the sequence will perform some fuel scooping.",
-            'Supercruise Assist': "Will keep your ship pointed to target, \nyou target can only be a station for the autodocking to work.", 
-            'Waypoint Assist': "When selected, will prompt for the waypoint file. \nThe waypoint file contains System names that \nwill be entered into Galaxy Map and route plotted.", 
-            'Robigo Assist': "", 
-            'ELW Scanner': "Will perform FSS scans while FSD Assist is traveling between stars. \nIf the FSS shows a signal in the region of Earth, \nWater or Ammonia type worlds, it will announce that discovery.", 
+            'Supercruise Assist': "Will keep your ship pointed to target, \nyou target can only be a station for the autodocking to work.",
+            'Waypoint Assist': "When selected, will prompt for the waypoint file. \nThe waypoint file contains System names that \nwill be entered into Galaxy Map and route plotted.",
+            'Robigo Assist': "",
+            'ELW Scanner': "Will perform FSS scans while FSD Assist is traveling between stars. \nIf the FSS shows a signal in the region of Earth, \nWater or Ammonia type worlds, it will announce that discovery.",
             'AFK Combat Assist': "Used with a AFK Combat ship in a Rez Zone.",
-            'RollRate': "Roll rate your ship has.", 
-            'PitchRate': "Pitch rate your ship has.", 
-            'YawRate': "Yaw rate your ship has.", 
+            'RollRate': "Roll rate your ship has.",
+            'PitchRate': "Pitch rate your ship has.",
+            'YawRate': "Yaw rate your ship has.",
             'SunPitchUp+Time': "This field are for ship that tend to overheat. \nProviding 1-2 more seconds of Pitch up when avoiding the Sun \nwill overcome this problem.",
-            'Sun Bright Threshold': "The low level for brightness detection, \nrange 0-255, want to mask out darker items", 
-            'Nav Align Tries': "How many attempts the ap should make at alignment.", 
-            'Jump Tries': "How many attempts the ap should make to jump.", 
+            'Sun Bright Threshold': "The low level for brightness detection, \nrange 0-255, want to mask out darker items",
+            'Nav Align Tries': "How many attempts the ap should make at alignment.",
+            'Jump Tries': "How many attempts the ap should make to jump.",
             'Wait For Autodock': "After docking granted, \nwait this amount of time for us to get docked with autodocking",
-            'Start FSD': "Button to start FSD route assist.", 
-            'Start SC': "Button to start Supercruise assist.", 
+            'Start FSD': "Button to start FSD route assist.",
+            'Start SC': "Button to start Supercruise assist.",
             'Stop All': "Button to stop all assists.",
-            'Refuel Threshold': "If fuel level get below this level, \nit will attempt refuel.", 
-            'Scoop Timeout': "Number of second to wait for full tank, \nmight mean we are not scooping well or got a small scooper", 
+            'Refuel Threshold': "If fuel level get below this level, \nit will attempt refuel.",
+            'Scoop Timeout': "Number of second to wait for full tank, \nmight mean we are not scooping well or got a small scooper",
             'Fuel Threshold Abort': "Level at which AP will terminate, \nbecause we are not scooping well.",
-            'X Offset': "Offset left the screen to start place overlay text.", 
-            'Y Offset': "Offset down the screen to start place overlay text.", 
+            'X Offset': "Offset left the screen to start place overlay text.",
+            'Y Offset': "Offset down the screen to start place overlay text.",
             'Font Size': "Font size of the overlay.",
             'Ship Config Button': "Read in a file with roll, pitch, yaw values for a ship.",
             'Calibrate': "Will iterate through a set of scaling values \ngetting the best match for your system. \nSee HOWTO-Calibrate.md",
@@ -177,6 +177,13 @@ class APGui():
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartSC'],  self.callback, args=('sc_start',  None))
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartRobigo'],  self.callback, args=('robigo_start',  None))
 
+        # load default ship config file if specified
+        try:
+            if self.ed_ap.config['ShipConfigFile']:
+                self.open_ship_file(self.ed_ap.config['ShipConfigFile'])
+        except FileNotFoundError:
+            logger.warning(f"Ship Config File {self.ed_ap.config['ShipConfigFile']} not found")
+
         # check for updates
         self.check_updates()
 
@@ -229,12 +236,12 @@ class APGui():
 
         x, y = self.mouse.get_location()
 
-        # can we auto paste into clipboard?  
-        xy_str = '['+str(x)+','+str(y)+']'
+        # can we auto paste into clipboard?
+        xy_str = '[' + str(x) + ',' + str(y) + ']'
         self.root.clipboard_clear()
         self.root.clipboard_append(xy_str)
-        self.root.update()  # it stays on the clipboard 
-        messagebox.showinfo('Mouse XY', 'Values: '+xy_str+'\n has been place in your clipboard')
+        self.root.update()  # it stays on the clipboard
+        messagebox.showinfo('Mouse XY', 'Values: ' + xy_str + '\n has been place in your clipboard')
 
     def quit(self):
         self.close_window()
@@ -246,7 +253,7 @@ class APGui():
         sleep(0.1)
         self.root.destroy()
 
-    # this routine is to stop any current autopilot activity 
+    # this routine is to stop any current autopilot activity
     def stop_all_assists(self):
         self.callback('fsd_stop')
         self.callback('sc_stop')
@@ -311,7 +318,7 @@ class APGui():
         webbrowser.open_new("https://discord.gg/HCgkfSc")
 
     def log_msg(self, msg):
-        self.msgList.insert(END, datetime.now().strftime("%H:%M:%S: ")+msg)
+        self.msgList.insert(END, datetime.now().strftime("%H:%M:%S: ") + msg)
         self.msgList.yview(END)
 
     def set_statusbar(self, txt):
@@ -321,18 +328,20 @@ class APGui():
         self.jumpcount.configure(text=txt)
 
     def update_statusline(self, txt):
-        self.status.configure(text="Status: "+txt)
+        self.status.configure(text="Status: " + txt)
 
-    def open_ship_file(self):
-        filetypes = (
-            ('json files', '*.json'),
-            ('All files', '*.*')
-        )
+    def open_ship_file(self, filename=None):
+        # if a filename was not provided, then prompt user for one
+        if not filename:
+            filetypes = (
+                ('json files', '*.json'),
+                ('All files', '*.*')
+            )
 
-        filename = fd.askopenfilename(
-            title='Open a file',
-            initialdir='./ships/',
-            filetypes=filetypes)
+            filename = fd.askopenfilename(
+                title='Open a file',
+                initialdir='./ships/',
+                filetypes=filetypes)
 
         if not filename:
             return
@@ -357,6 +366,8 @@ class APGui():
         self.ed_ap.sunpitchuptime = float(f_details['SunPitchUp+Time'])
 
         self.ship_filelabel.set("loaded: " + Path(filename).name)
+        self.ed_ap.config['ShipConfigFile'] = os.path.relpath(filename)  # save ship config file path
+        self.ed_ap.update_config()
 
     def save_ship_file(self):
         filetypes = (
@@ -387,6 +398,8 @@ class APGui():
             json.dump(f_details, json_file)
 
         self.ship_filelabel.set("loaded: " + Path(filename).name)
+        self.ed_ap.config['ShipConfigFile'] = os.path.relpath(filename)  # save ship config file path
+        self.ed_ap.update_config()
 
     def open_wp_file(self):
         filetypes = (
@@ -410,9 +423,8 @@ class APGui():
         self.entry_update()
         self.ed_ap.update_config()
 
-
     # new data was added to a field, re-read them all for simple logic
-    def entry_update(self, event = ''):
+    def entry_update(self, event=''):
         try:
             self.ed_ap.pitchrate = float(self.entries['ship']['PitchRate'].get())
             self.ed_ap.rollrate = float(self.entries['ship']['RollRate'].get())
@@ -440,7 +452,7 @@ class APGui():
 
     # ('FSD Route Assist', 'Supercruise Assist', 'Enable Voice', 'Enable CV View')
     def check_cb(self, field):
-    # print("got event:",  checkboxvar['FSD Route Assist'].get(), " ", str(FSD_A_running))
+        # print("got event:",  checkboxvar['FSD Route Assist'].get(), " ", str(FSD_A_running))
         if field == 'FSD Route Assist':
             if self.checkboxvar['FSD Route Assist'].get() == 1 and self.FSD_A_running == False:
                 self.lab_ck['AFK Combat Assist'].config(state='disabled')
@@ -540,7 +552,7 @@ class APGui():
 
         if self.checkboxvar['Enable CV View'].get() == 1:
             self.cv_view = True
-            x = self.root.winfo_x()+self.root.winfo_width()+4
+            x = self.root.winfo_x() + self.root.winfo_width() + 4
             y = self.root.winfo_y()
             self.ed_ap.set_cv_view(True, x, y)
         else:
@@ -548,12 +560,12 @@ class APGui():
             self.ed_ap.set_cv_view(False)
         self.ed_ap.config['DSSButton'] = self.radiobuttonvar['dss_button'].get()
 
-    def makeform(self, win, ftype, fields, r = 0, inc = 1, rfrom = 0, rto = 1000):
+    def makeform(self, win, ftype, fields, r=0, inc=1, rfrom=0, rto=1000):
         entries = {}
 
         for field in fields:
             row = tk.Frame(win)
-            row.grid(row=r ,column=0, padx=2, pady=2, sticky=(N, S, E, W))
+            row.grid(row=r, column=0, padx=2, pady=2, sticky=(N, S, E, W))
             r += 1
 
             if ftype == FORM_TYPE_CHECKBOX:
@@ -561,7 +573,7 @@ class APGui():
                 lab = Checkbutton(row, text=field, anchor='w', width=27, justify=LEFT, variable=self.checkboxvar[field], command=(lambda field=field: self.check_cb(field)))
                 self.lab_ck[field] = lab
             else:
-                lab = tk.Label(row, anchor='w', width=20, pady=3, text=field+": ")
+                lab = tk.Label(row, anchor='w', width=20, pady=3, text=field + ": ")
                 if ftype == FORM_TYPE_SPINBOX:
                     ent = tk.Spinbox(row, width=10, from_=rfrom, to=rto, increment=inc)
                 else:
@@ -570,10 +582,10 @@ class APGui():
                 ent.insert(0, "0")
 
             lab.grid(row=0, column=0)
-            lab = Hovertip(row, self.tooltips[field], hover_delay=1000) 
+            lab = Hovertip(row, self.tooltips[field], hover_delay=1000)
 
             if ftype != FORM_TYPE_CHECKBOX:
-                ent.grid(row=0, column=1) 
+                ent.grid(row=0, column=1)
                 entries[field] = ent
 
         return entries
@@ -597,6 +609,7 @@ class APGui():
         file.add_separator()
         file.add_command(label="Calibrate", command=self.calibrate_callback)
         self.checkboxvar['Enable CV View'] = IntVar()
+        self.checkboxvar['Enable CV View'].set(int(self.ed_ap.config['Enable_CV_View']))  # set IntVar value to the one from config
         file.add_checkbutton(label='Enable CV View', onvalue=1, offvalue=0, variable=self.checkboxvar['Enable CV View'], command=(lambda field='Enable CV View': self.check_cb(field)))
         file.add_separator()
         file.add_command(label="Restart", command=self.restart_program)
@@ -618,8 +631,8 @@ class APGui():
         nb.grid()
         page0 = Frame(nb)
         page1 = Frame(nb)
-        nb.add(page0, text="Main") # main page
-        nb.add(page1, text="Settings") # options page
+        nb.add(page0, text="Main")  # main page
+        nb.add(page1, text="Settings")  # options page
 
         # main options block
         blk_main = tk.Frame(page0)
@@ -640,7 +653,7 @@ class APGui():
         self.ship_filelabel = StringVar()
         self.ship_filelabel.set("<no config loaded>")
         btn_ship_file = Button(blk_ship, textvariable=self.ship_filelabel, command=self.open_ship_file)
-        btn_ship_file.grid(row=4, column=0, padx=2, pady=2, sticky=(N,E,W))
+        btn_ship_file.grid(row=4, column=0, padx=2, pady=2, sticky=(N, E, W))
         tip_ship_file = Hovertip(btn_ship_file, self.tooltips['Ship Config Button'], hover_delay=1000)
 
         # waypoints button block
@@ -651,22 +664,22 @@ class APGui():
         self.wp_filelabel = StringVar()
         self.wp_filelabel.set("<no list loaded>")
         btn_wp_file = Button(blk_wp_buttons, textvariable=self.wp_filelabel, command=self.open_wp_file)
-        btn_wp_file.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N,E,W,S))
+        btn_wp_file.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
         tip_wp_file = Hovertip(btn_wp_file, self.tooltips['Waypoint List Button'], hover_delay=1000)
 
         btn_coord = Button(blk_wp_buttons, text='Cap Mouse X,Y', command=self.mouse_coord_callback)
-        btn_coord.grid(row=1, column=0, padx=2, pady=2, columnspan=1, sticky=(N,E,W,S))
+        btn_coord.grid(row=1, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
         tip_coord = Hovertip(btn_coord, self.tooltips['Cap Mouse XY'], hover_delay=1000)
 
         btn_reset = Button(blk_wp_buttons, text='Reset List', command=self.reset_wp_file)
-        btn_reset.grid(row=1, column=1, padx=2, pady=2, columnspan=1, sticky=(N,E,W,S))
+        btn_reset.grid(row=1, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
         tip_reset = Hovertip(btn_reset, self.tooltips['Reset Waypoint List'], hover_delay=1000)
 
         # log window
         log = LabelFrame(page0, text="LOG")
         log.grid(row=3, column=0, padx=12, pady=5, sticky=(N, S, E, W))
         scrollbar = Scrollbar(log)
-        scrollbar.grid(row=0, column=1, sticky=(N,S))
+        scrollbar.grid(row=0, column=1, sticky=(N, S))
         mylist = Listbox(log, width=72, height=10, yscrollcommand=scrollbar.set)
         mylist.grid(row=0, column=0)
         scrollbar.config(command=mylist.yview)
@@ -690,7 +703,7 @@ class APGui():
         blk_dss = Frame(blk_buttons)
         blk_dss.grid(row=0, column=0, columnspan=2, padx=0, pady=0, sticky=(N, S, E, W))
         lb_dss = Label(blk_dss, width=18, anchor='w', pady=3, text="DSS Button: ")
-        lb_dss.grid(row=0, column=0, sticky=(W)) 
+        lb_dss.grid(row=0, column=0, sticky=(W))
         self.radiobuttonvar['dss_button'] = StringVar()
         rb_dss_primary = Radiobutton(blk_dss, pady=3, text="Primary", variable=self.radiobuttonvar['dss_button'], value="Primary", command=(lambda field='dss_button': self.check_cb(field)))
         rb_dss_primary.grid(row=0, column=1, sticky=(W))
@@ -708,7 +721,7 @@ class APGui():
         blk_overlay.grid(row=1, column=1, padx=2, pady=2, sticky=(N, S, E, W))
         self.checkboxvar['Enable Overlay'] = BooleanVar()
         cb_enable = Checkbutton(blk_overlay, text='Enable (requires restart)', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['Enable Overlay'], command=(lambda field='Enable Overlay': self.check_cb(field)))
-        cb_enable.grid(row=0, column=0, columnspan=2, sticky=(W)) 
+        cb_enable.grid(row=0, column=0, columnspan=2, sticky=(W))
         self.entries['overlay'] = self.makeform(blk_overlay, FORM_TYPE_SPINBOX, overlay_entry_fields, 1, 1.0, 0.0, 3000.0)
 
         # tts / voice settings block
@@ -716,7 +729,7 @@ class APGui():
         blk_voice.grid(row=2, column=0, padx=2, pady=2, sticky=(N, S, E, W))
         self.checkboxvar['Enable Voice'] = BooleanVar()
         cb_enable = Checkbutton(blk_voice, text='Enable', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['Enable Voice'], command=(lambda field='Enable Voice': self.check_cb(field)))
-        cb_enable.grid(row=0, column=0, columnspan=2, sticky=(W)) 
+        cb_enable.grid(row=0, column=0, columnspan=2, sticky=(W))
 
         # Scanner settings block
         blk_voice = LabelFrame(blk_settings, text="ELW SCANNER")
@@ -730,7 +743,7 @@ class APGui():
         blk_settings_buttons.grid(row=3, column=0, padx=10, pady=5, sticky=(N, S, E, W))
         blk_settings_buttons.columnconfigure([0, 1], weight=1, minsize=100)
         btn_save = Button(blk_settings_buttons, text='Save Settings', command=self.save_settings)
-        btn_save.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N,E,W,S))
+        btn_save.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
 
         # Statusbar
         statusbar = Frame(win)
@@ -751,7 +764,7 @@ class APGui():
         sleep(0.1)
 
         import sys
-        print("argv was",sys.argv)
+        print("argv was", sys.argv)
         print("sys.executable was", sys.executable)
         print("restart now")
 
@@ -767,6 +780,7 @@ def main():
     app = APGui(root)
 
     root.mainloop()
+
 
 if __name__ == "__main__":
     main()
