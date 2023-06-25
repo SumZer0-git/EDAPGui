@@ -1,3 +1,6 @@
+# 6/25/2013 Update by EpicStuff
+- Made it so that the state of Enable_CV_View is saved to configs/AP.json and loads previously loaded ship config on start.
+also autoformatting (removed trailing whitespaces)
 
 # 12/7/2022 Update
 - Update to support ED 4.0 menu layout, so this AP works with both Odyssey and Horizon 4.0
