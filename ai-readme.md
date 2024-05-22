@@ -14,6 +14,7 @@ To enhance the capabilities of the ED Autopilot, we are integrating advanced AI 
     > python .\Chat.py
     ```
    You will be asked if you use openrouter, for your api key and your commander name. After the selected whisper model downloaded and initiliazed you will be ready to start talking.
+
    ![CLI Startup](screen/cli_startup.png?raw=true "Screen")
 
    You can change the used model and backstory in `Chat.py`. (Starting of file, but below imports section)
@@ -78,3 +79,4 @@ tremendouslyrude@yandex.com
 # ToDo
 * Faster whisper implementation
 * Capture and send image to LLM if compatible (GPT-4, GPT-4-Turbo, GPT-4-O, llava, phi-3, [..])
+* EDAP functionalities as callable functions for the LLM (from simple button presses to undocking procedures)
