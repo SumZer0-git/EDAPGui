@@ -25,6 +25,8 @@ import json
 
 import requests
 
+import getpass
+
 import sys
 from pathlib import Path
 
@@ -59,7 +61,7 @@ def prompt_for_config():
         print("Invalid input. Please enter 'yes' or 'no'.")
         openrouter = input("Do you use Openrouter (yes/no): ").strip().lower()
 
-    api_key = input("Enter your API key: ").strip()
+    api_key = getpass.getpass("Enter your API key: ").strip()
 
     print("\nYour settings have been saved. Erase config.json to reenter information.\n")
 
