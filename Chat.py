@@ -155,7 +155,6 @@ def getCurrentState():
         "time",
         "odyssey",
         "fighter_destroyed",
-        "interdicted",
         "no_dock_reason",
         "mission_completed",
         "mission_redirected"
@@ -181,7 +180,8 @@ def checkForJournalUpdates(client, commanderName):
         'shieldsup',
         'under_attack',
         'type',
-        'fuel_percent'
+        'fuel_percent',
+        'interdicted'
     ]
     current_status = getCurrentState()
 
@@ -211,6 +211,8 @@ def checkForJournalUpdates(client, commanderName):
         if key == 'fuel_percent':
             if new_value <= 25:
                 handle_conversation(client, commanderName, f"(Commander {commanderName}'s ship has less than 25% fuel reserves! Warn about immediate danger!)")
+        if key == 'interdicted':
+            handle_conversation(client, commanderName, f"(Commander {commanderName}'s ship is being interdicted! Warn about immediate danger, advise to run or to prepare or a fight.!)")
 
     # Update previous status
     previous_status = current_status
