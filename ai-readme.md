@@ -72,7 +72,47 @@ These event-driven interactions are designed to enhance safety, decision-making,
    ```sh
       > pip install torch==2.2.2 torchvision==0.17.2 torchaudio==2.2.2 --index-url https://download.pytorch.org/whl/cpu OpenAI
     ```
-   
+
+## CLI Arguments
+
+Add these flags to the cli call to configure Whisper:
+
+### `--model`
+
+- **Description**: Model to use.
+- **Default**: `"small"`
+- **Choices**: `["tiny", "base", "small", "medium", "large"]`
+
+### `--non_english`
+
+- **Description**: Don't use the English model.
+- **Action**: Store `True` if present.
+
+### `--energy_threshold`
+
+- **Description**: Energy level for microphone to detect.
+- **Default**: `1000`
+- **Type**: Integer
+
+### `--record_timeout`
+
+- **Description**: How real time the recording is in seconds.
+- **Default**: `15`
+- **Type**: Float
+
+### `--phrase_timeout`
+
+- **Description**: How much empty space between recordings before we consider it a new line in the transcription.
+- **Default**: `5`
+- **Type**: Float
+
+### `--default_microphone`
+
+- **Description**: Default microphone name for SpeechRecognition.
+- **Default (Linux)**: `'pulse'`
+- **Type**: String
+- **Note**: Run with `'list'` to view available Microphones.
+
 # Contact
 tremendouslyrude@yandex.com
 

@@ -51,7 +51,7 @@ conversation = []
 
 # Function to prompt user for API key and Openrouter status
 def prompt_for_config():
-    commander_name = input("Enter your Commander name(without the CMDR): ").strip()
+    commander_name = input("Enter your Commander name (without the CMDR): ").strip()
     openrouter = input("You use Openrouter instead of OpenAI (yes/no): ").strip().lower()
 
     # Validate Openrouter input
