@@ -120,3 +120,4 @@ tremendouslyrude@yandex.com
 * Faster whisper implementation
 * Capture and send image to LLM if compatible (GPT-4, GPT-4-Turbo, GPT-4-O, llava, phi-3, [..])
 * EDAP functionalities as callable functions for the LLM (from simple button presses to undocking procedures)
+* EDAP GUI Integration (start via GUI instead of cli)
