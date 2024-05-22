@@ -35,7 +35,7 @@ sys.path.append(str(parent_dir))
 from Voice import *
 from EDJournal import *
 
-openrouterModel = "undi95/toppy-m-7b:free"
+aiModel = "undi95/toppy-m-7b:free"
 
 backstory = """You are PILOT, short for Precision Interface for Long-distance Operations and Transport, the onboard AI of my starship. \
 You possess extensive knowledge and can provide detailed and accurate information on a wide range of topics, \
@@ -60,6 +60,8 @@ def prompt_for_config():
         openrouter = input("Do you use Openrouter (yes/no): ").strip().lower()
 
     api_key = input("Enter your API key: ").strip()
+
+    print("\nYour settings have been saved. Erase config.json to reenter information.\n")
 
     return api_key, openrouter == 'yes', commander_name
 
@@ -126,7 +128,7 @@ def handle_conversation(client, commander_name, user_input):
             "HTTP-Referer": "https://github.com/SumZer0-git/EDAPGui",
             "X-Title": "ED Autopilot AI Integration",
         },
-        model=openrouterModel,
+        model=aiModel,
         messages=context,
     )
 
@@ -224,11 +226,13 @@ def main():
       api_key=apiKey,
     )
 
-    print(f"API Key: Loaded")
+    print(f"Initializing CMDR {commanderName}'s personal AI...\n")
+    print("API Key: Loaded")
     print(f"Using Openrouter: {useOpenrouter}")
-    print(f"Welcome CMDR {commanderName}!")
-    print(f"Config complete!")
-    print(f"Loading whisper model...")
+    print(f"Current model: {aiModel}")
+    print(f"Current backstory: {backstory}")
+    print("\nBasic configuration complete.\n")
+    print("Loading voice interface...")
 
     # TTS Setup
     v.set_on()
@@ -307,7 +311,7 @@ def main():
     recorder.listen_in_background(source, record_callback, phrase_time_limit=record_timeout)
 
     # Cue the user that we're ready to go.
-    print("Model loaded.\n")
+    print("Voice interface ready.\n")
 
     counter = 0
 
