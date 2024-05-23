@@ -13,3 +13,13 @@ pyttsx3==2.90
 pywin32==302
 win32gui
 requests
+pyaudio
+SpeechRecognition
+--extra-index-url https://download.pytorch.org/whl/cu116
+numpy
+git+https://github.com/openai/whisper.git
+torch==2.2.2
+torchvision==0.17.2
+torchaudio==2.2.2
+--index-url https://download.pytorch.org/whl/cpu
+OpenAI

@@ -219,3 +219,5 @@ sumzer0@yahoo.com
 # Screen Shot
 ![Alt text](screen/screen_cap.png?raw=true "Screen")
                                                                
+# AI Integration
+[Link to AI Integration Document](ai-readme.md)
