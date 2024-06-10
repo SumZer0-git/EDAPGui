@@ -1386,7 +1386,7 @@ class EDAutopilot:
             self.keys.send('SetSpeedZero')  # make sure we don't continue to land   
             self.ap_ckb('log', "Supercruise dropped, terminating SC Assist")
 
-        self.vce.say("Spercruise Assist complete")
+        self.vce.say("Supercruise Assist complete")
 
     def robigo_assist(self):
         self.robigo.loop(self)
