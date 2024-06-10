@@ -474,12 +474,16 @@ class EDAutopilot:
 
         # must be > 0.80 to have solid hit, otherwise we are facing wrong way (empty circle)
         if n_maxVal < 0.80:
-            result = None
+            final_x = 0.0
+            final_y = 0.0
+            final_z = -1.0 # Behind
+            result = {'x': final_x, 'y': final_y, 'z': final_z}
         else:
             final_x = ((n_pt[0]+((1/2)*wid))-((1/2)*c_wid))-5.5
             final_y = (((1/2)*c_hgt)-(n_pt[1]+((1/2)*hgt)))+6.5
+            final_z = 1.0 # Ahead
             logger.debug(("maxVal="+str(n_maxVal)+" x:"+str(final_x)+" y:"+str(final_y)))
-            result = {'x': final_x, 'y': final_y}
+            result = {'x': final_x, 'y': final_y, 'z': final_z}
 
         return result
 
@@ -758,17 +762,20 @@ class EDAutopilot:
         off = self.get_nav_offset(scr_reg)
 
         # check to see if we are already converged, if so return    
-        if off != None and abs(off['x']) < close and abs(off['y']) < close:
+        if off['z'] > 0 and abs(off['x']) < close and abs(off['y']) < close:
             self.keys.send('SetSpeed100')
             return
 
         # nav point must be behind us, pitch up until somewhat in front of us
-        while not off:
+        while off['z'] < 0:
+            if off['y'] >= 0:
+                self.pitchUp(90)
+            if off['y'] < 0:
             self.pitchDown(90)
             off = self.get_nav_offset(scr_reg)
 
-            # check if converged, unlikely at this point
-        if abs(off['x']) < close and abs(off['y']) < close:
+        # check if converged, unlikely at this point
+        if off['z'] > 0 and abs(off['x']) < close and abs(off['y']) < close:
             self.keys.send('SetSpeed100')
             return
 
@@ -777,11 +784,14 @@ class EDAutopilot:
         for ii in range(self.config['NavAlignTries']):
             off = self.get_nav_offset(scr_reg)
 
-            if off != None and abs(off['x']) < close and abs(off['y']) < close:
+            if off['z'] > 0 and abs(off['x']) < close and abs(off['y']) < close:
                 self.keys.send('SetSpeed100')
                 break
 
-            while not off:
+            while off['z'] < 0:
+                if off['y'] >= 0:
+                    self.pitchUp(45)
+                if off['y'] < 0:
                 self.pitchDown(45)
                 off = self.get_nav_offset(scr_reg)
 
@@ -811,7 +821,10 @@ class EDAutopilot:
 
             sleep(0.15)  # wait for image to stablize
             off = self.get_nav_offset(scr_reg)
-            while not off:
+            while off['z'] < 0:
+                if off['y'] >= 0:
+                    self.pitchUp(45)
+                if off['y'] < 0:
                 self.pitchDown(45)
                 off = self.get_nav_offset(scr_reg)
 
