@@ -1353,7 +1353,7 @@ class EDAutopilot:
                 align_failed = True
                 break
 
-                # check if we are being interdicted, means we saw it on scrren or we already got interdicted
+                # check if we are being interdicted, means we saw it on screen or we already got interdicted
             if self.being_interdicted(scr_reg) == True or self.jn.ship_state()['interdicted'] == True:
 
                 self.keys.send('SetSpeedZero')  # submit
