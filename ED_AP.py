@@ -401,9 +401,9 @@ class EDAutopilot:
 
         return
 
-    # check to see if the compass is on the screen
-    #
     def have_destination(self, scr_reg) -> bool:
+        """ Check to see if the compass is on the screen. """
+
         icompass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('compass', 'compass')
 
         logger.debug("has_destination:"+str(maxVal))
@@ -432,8 +432,8 @@ class EDAutopilot:
         else:
             return True
 
-    # determine the x,y offset from center of the compass of the nav point
     def get_nav_offset(self, scr_reg):
+        """ Determine the x,y offset from center of the compass of the nav point. """
 
         icompass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('compass', 'compass')
         pt = maxLoc
@@ -746,10 +746,10 @@ class EDAutopilot:
 
         return 90-result
 
-    # nav_align will use the compass to find the nav point position.  Will then perform rotation and pitching
-    # to put the nav point in the middle, i.e. target right in front of us
-    #         
     def nav_align(self, scr_reg):
+        """ Use the compass to find the nav point position.  Will then perform rotation and pitching
+        to put the nav point in the middle of the compass, i.e. target right in front of us """
+
         close = 2
         if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
             logger.error('align=err1')
@@ -847,9 +847,9 @@ class EDAutopilot:
 
         self.keys.send('SetSpeed100')
 
-    # routine to coarse align to target to support FSD Jumping
-    #
     def target_align(self, scr_reg):
+        """ Coarse align to the target to support FSD jumping """
+
         self.vce.say("Target Align")
 
         logger.debug('align= fine align')
@@ -920,9 +920,10 @@ class EDAutopilot:
         self.target_align(scr_reg)
         
 
-    # Stays tight on the target, monitors for disengage and obscured
-    #
     def sc_target_align(self, scr_reg) -> bool:
+        """ Stays tight on the target, monitors for disengage and obscured.
+        If target could not be found, return false."""
+
         close = 6
         off = None
 
@@ -940,6 +941,7 @@ class EDAutopilot:
         # Could not be found, return
         if off == None:
             print("sc_target_align not finding")
+            self.ap_ckb('log', 'Target not found, terminating SC Assist')
             return False
 
         logger.debug("sc_target_align x: "+str(off['x'])+" y:"+str(off['y']))
@@ -1270,10 +1272,9 @@ class EDAutopilot:
         self.ap_ckb('log', "Waypoint Route Complete, total distance jumped: "+str(self.total_dist_jumped)+"LY")
         self.update_ap_status("Idle")
 
-        # FSD Route assist
-
-    #
     def fsd_assist(self, scr_reg):
+        """ FSD Route Assist. """
+
         logger.debug('self.jn.ship_state='+str(self.jn.ship_state()))
 
         starttime = time.time()
@@ -1283,7 +1284,7 @@ class EDAutopilot:
 
             self.update_overlay()
 
-            if self.jn.ship_state()['status'] == 'in_space' or self.jn.ship_state()['status'] == 'in_supercruise':
+            if (self.jn.ship_state()['status'] == 'in_space' or self.jn.ship_state()['status'] == 'in_supercruise'):
                 self.update_ap_status("Align")
 
                 self.mnvr_to_target(scr_reg)
@@ -1317,9 +1318,9 @@ class EDAutopilot:
                     self.vce.say("AP Aborting, low fuel")
                     break
 
-        sleep(2)  # wait until screen stablizes from possible last positioning
+        sleep(2)  # wait until screen stabilizes from possible last positioning
 
-        # if there is not destination definedw we are done
+        # if there is no destination defined, we are done
         if self.have_destination(scr_reg) == False:
             self.keys.send('SetSpeedZero')
             self.vce.say("Destination Reached, distance jumped:"+str(int(self.total_dist_jumped))+" lightyears")
@@ -1334,9 +1335,12 @@ class EDAutopilot:
     # Supercruise Assist loop to travel to target in system and perform autodock
     #
     def sc_assist(self, scr_reg, do_docking=True):
+        logger.debug("Entered sc_assist")
         align_failed = False
         # see if we have a compass up, if so then we have a target
         if self.have_destination(scr_reg) == False:
+            self.ap_ckb('log', "Quiting SC Assist - Compass not found. Rotate ship and try again.")
+            logger.debug("Quiting sc_assist - compass not found")
             return
 
         # if we are in space but not in supercruise, get into supercruise
@@ -1391,6 +1395,7 @@ class EDAutopilot:
         # if no error, we must have gotten disengage
         if align_failed == False and do_docking == True:
             sleep(4)  # wait for the journal to catch up
+            self.update_ap_status("Initiating Docking Procedure")
             self.dock()  # go into docking sequence
             self.vce.say("Docking complete, Refueled")
             self.update_ap_status("Docking Complete")
@@ -1557,6 +1562,7 @@ class EDAutopilot:
                 self.set_focus_elite_window()
                 self.update_overlay()
                 try:
+                    self.update_ap_status("SC to Target")
                     self.sc_assist(self.scrReg)
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
@@ -1564,6 +1570,7 @@ class EDAutopilot:
                     print("Trapped generic:"+str(e))
                     traceback.print_exc()
 
+                logger.debug("Completed sc_assist")
                 self.sc_assist_enabled = False
                 self.ap_ckb('sc_stop')
                 self.update_overlay()
