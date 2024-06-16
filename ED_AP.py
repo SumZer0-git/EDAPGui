@@ -1201,6 +1201,13 @@ class EDAutopilot:
         sleep(13)  # get away from Station
         self.keys.send('SetSpeed50')
 
+    def sc_engage(self):
+        """ Engages supercruise, then returns us to 50% speed """
+        self.keys.send('SetSpeed100')
+        self.keys.send('Supercruise', hold=0.001)
+        sleep(12)
+        self.keys.send('SetSpeed50')
+
     # processes the waypoints, performing jumps and sc assist if going to a station
     # also can then perform trades if specific in the waypoints file
     #
@@ -1221,10 +1228,7 @@ class EDAutopilot:
 
             # if we are in space but not in supercruise, get into supercruise
         if self.jn.ship_state()['status'] != 'in_supercruise':
-            self.keys.send('SetSpeed100')
-            self.keys.send('Supercruise', hold=0.001)
-            sleep(12)
-            self.keys.send('SetSpeed50')
+            self.sc_engage()
 
         # keep looping while we have a destination defined
         while dest != "":
@@ -1345,9 +1349,7 @@ class EDAutopilot:
 
         # if we are in space but not in supercruise, get into supercruise
         if self.jn.ship_state()['status'] != 'in_supercruise':
-            self.keys.send('SetSpeed100')
-            self.keys.send('Supercruise', hold=0.001)
-            sleep(12)
+            self.sc_engage()
 
         # Ensure we are 50%, don't want the loop of shame
         # Align Nav to target
