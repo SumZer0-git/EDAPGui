@@ -771,7 +771,7 @@ class EDAutopilot:
             if off['y'] >= 0:
                 self.pitchUp(90)
             if off['y'] < 0:
-            self.pitchDown(90)
+                self.pitchDown(90)
             off = self.get_nav_offset(scr_reg)
 
         # check if converged, unlikely at this point
@@ -792,7 +792,7 @@ class EDAutopilot:
                 if off['y'] >= 0:
                     self.pitchUp(45)
                 if off['y'] < 0:
-                self.pitchDown(45)
+                    self.pitchDown(45)
                 off = self.get_nav_offset(scr_reg)
 
             # determine the angle and the hold time to keep the button pressed to roll that number of degrees
@@ -825,7 +825,7 @@ class EDAutopilot:
                 if off['y'] >= 0:
                     self.pitchUp(45)
                 if off['y'] < 0:
-                self.pitchDown(45)
+                    self.pitchDown(45)
                 off = self.get_nav_offset(scr_reg)
 
             # calc pitch time based on nav point location
