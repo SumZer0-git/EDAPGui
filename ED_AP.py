@@ -596,7 +596,7 @@ class EDAutopilot:
     def undock(self):
         # Assume we are in Star Port Services                              
         # Now we are on initial menu, we go up to top (which is Refuel)
-        self.keys.send('UI_Up', hold=3)
+        self.keys.send('UI_Up', repeat=3)
 
         # down to Auto Undock and Select it...
         self.keys.send('UI_Down')
@@ -1284,11 +1284,16 @@ class EDAutopilot:
         starttime = time.time()
         starttime -= 20  # to account for first instance not doing positioning
 
-        while self.jn.ship_state()['target']:
+        if self.jn.ship_state()['target']:
+            # if we are starting the waypoint docked at a station, we need to undock first
+            if self.jn.ship_state()['status'] == 'in_station':
+                self.update_overlay()
+                self.waypoint_undock_seq()
 
+        while self.jn.ship_state()['target']:
             self.update_overlay()
 
-            if (self.jn.ship_state()['status'] == 'in_space' or self.jn.ship_state()['status'] == 'in_supercruise'):
+            if self.jn.ship_state()['status'] == 'in_space' or self.jn.ship_state()['status'] == 'in_supercruise':
                 self.update_ap_status("Align")
 
                 self.mnvr_to_target(scr_reg)
