@@ -596,7 +596,7 @@ class EDAutopilot:
     def undock(self):
         # Assume we are in Star Port Services                              
         # Now we are on initial menu, we go up to top (which is Refuel)
-        self.keys.send('UI_Up', hold=3)
+        self.keys.send('UI_Up', repeat=3)
 
         # down to Auto Undock and Select it...
         self.keys.send('UI_Down')
@@ -771,7 +771,7 @@ class EDAutopilot:
             if off['y'] >= 0:
                 self.pitchUp(90)
             if off['y'] < 0:
-            self.pitchDown(90)
+                self.pitchDown(90)
             off = self.get_nav_offset(scr_reg)
 
         # check if converged, unlikely at this point
@@ -792,7 +792,7 @@ class EDAutopilot:
                 if off['y'] >= 0:
                     self.pitchUp(45)
                 if off['y'] < 0:
-                self.pitchDown(45)
+                    self.pitchDown(45)
                 off = self.get_nav_offset(scr_reg)
 
             # determine the angle and the hold time to keep the button pressed to roll that number of degrees
@@ -825,7 +825,7 @@ class EDAutopilot:
                 if off['y'] >= 0:
                     self.pitchUp(45)
                 if off['y'] < 0:
-                self.pitchDown(45)
+                    self.pitchDown(45)
                 off = self.get_nav_offset(scr_reg)
 
             # calc pitch time based on nav point location
@@ -1201,6 +1201,13 @@ class EDAutopilot:
         sleep(13)  # get away from Station
         self.keys.send('SetSpeed50')
 
+    def sc_engage(self):
+        """ Engages supercruise, then returns us to 50% speed """
+        self.keys.send('SetSpeed100')
+        self.keys.send('Supercruise', hold=0.001)
+        sleep(12)
+        self.keys.send('SetSpeed50')
+
     # processes the waypoints, performing jumps and sc assist if going to a station
     # also can then perform trades if specific in the waypoints file
     #
@@ -1221,10 +1228,7 @@ class EDAutopilot:
 
             # if we are in space but not in supercruise, get into supercruise
         if self.jn.ship_state()['status'] != 'in_supercruise':
-            self.keys.send('SetSpeed100')
-            self.keys.send('Supercruise', hold=0.001)
-            sleep(12)
-            self.keys.send('SetSpeed50')
+            self.sc_engage()
 
         # keep looping while we have a destination defined
         while dest != "":
@@ -1280,11 +1284,16 @@ class EDAutopilot:
         starttime = time.time()
         starttime -= 20  # to account for first instance not doing positioning
 
-        while self.jn.ship_state()['target']:
+        if self.jn.ship_state()['target']:
+            # if we are starting the waypoint docked at a station, we need to undock first
+            if self.jn.ship_state()['status'] == 'in_station':
+                self.update_overlay()
+                self.waypoint_undock_seq()
 
+        while self.jn.ship_state()['target']:
             self.update_overlay()
 
-            if (self.jn.ship_state()['status'] == 'in_space' or self.jn.ship_state()['status'] == 'in_supercruise'):
+            if self.jn.ship_state()['status'] == 'in_space' or self.jn.ship_state()['status'] == 'in_supercruise':
                 self.update_ap_status("Align")
 
                 self.mnvr_to_target(scr_reg)
@@ -1345,9 +1354,7 @@ class EDAutopilot:
 
         # if we are in space but not in supercruise, get into supercruise
         if self.jn.ship_state()['status'] != 'in_supercruise':
-            self.keys.send('SetSpeed100')
-            self.keys.send('Supercruise', hold=0.001)
-            sleep(12)
+            self.sc_engage()
 
         # Ensure we are 50%, don't want the loop of shame
         # Align Nav to target
