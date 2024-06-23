@@ -1226,7 +1226,7 @@ class EDAutopilot:
         if dest != "" and self.jn.ship_state()['status'] == 'in_station':
             self.waypoint_undock_seq()
 
-            # if we are in space but not in supercruise, get into supercruise
+        # if we are in space but not in supercruise, get into supercruise
         if self.jn.ship_state()['status'] != 'in_supercruise':
             self.sc_engage()
 
