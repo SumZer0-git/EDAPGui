@@ -401,9 +401,9 @@ class EDAutopilot:
 
         return
 
-    # check to see if the compass is on the screen
-    #
     def have_destination(self, scr_reg) -> bool:
+        """ Check to see if the compass is on the screen. """
+
         icompass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('compass', 'compass')
 
         logger.debug("has_destination:"+str(maxVal))
@@ -432,8 +432,8 @@ class EDAutopilot:
         else:
             return True
 
-    # determine the x,y offset from center of the compass of the nav point
     def get_nav_offset(self, scr_reg):
+        """ Determine the x,y offset from center of the compass of the nav point. """
 
         icompass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('compass', 'compass')
         pt = maxLoc
@@ -474,12 +474,16 @@ class EDAutopilot:
 
         # must be > 0.80 to have solid hit, otherwise we are facing wrong way (empty circle)
         if n_maxVal < 0.80:
-            result = None
+            final_x = 0.0
+            final_y = 0.0
+            final_z = -1.0 # Behind
+            result = {'x': final_x, 'y': final_y, 'z': final_z}
         else:
             final_x = ((n_pt[0]+((1/2)*wid))-((1/2)*c_wid))-5.5
             final_y = (((1/2)*c_hgt)-(n_pt[1]+((1/2)*hgt)))+6.5
+            final_z = 1.0 # Ahead
             logger.debug(("maxVal="+str(n_maxVal)+" x:"+str(final_x)+" y:"+str(final_y)))
-            result = {'x': final_x, 'y': final_y}
+            result = {'x': final_x, 'y': final_y, 'z': final_z}
 
         return result
 
@@ -592,7 +596,7 @@ class EDAutopilot:
     def undock(self):
         # Assume we are in Star Port Services                              
         # Now we are on initial menu, we go up to top (which is Refuel)
-        self.keys.send('UI_Up', hold=3)
+        self.keys.send('UI_Up', repeat=3)
 
         # down to Auto Undock and Select it...
         self.keys.send('UI_Down')
@@ -742,10 +746,10 @@ class EDAutopilot:
 
         return 90-result
 
-    # nav_align will use the compass to find the nav point position.  Will then perform rotation and pitching
-    # to put the nav point in the middle, i.e. target right in front of us
-    #         
     def nav_align(self, scr_reg):
+        """ Use the compass to find the nav point position.  Will then perform rotation and pitching
+        to put the nav point in the middle of the compass, i.e. target right in front of us """
+
         close = 2
         if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
             logger.error('align=err1')
@@ -758,17 +762,20 @@ class EDAutopilot:
         off = self.get_nav_offset(scr_reg)
 
         # check to see if we are already converged, if so return    
-        if off != None and abs(off['x']) < close and abs(off['y']) < close:
+        if off['z'] > 0 and abs(off['x']) < close and abs(off['y']) < close:
             self.keys.send('SetSpeed100')
             return
 
         # nav point must be behind us, pitch up until somewhat in front of us
-        while not off:
-            self.pitchDown(90)
+        while off['z'] < 0:
+            if off['y'] >= 0:
+                self.pitchUp(90)
+            if off['y'] < 0:
+                self.pitchDown(90)
             off = self.get_nav_offset(scr_reg)
 
-            # check if converged, unlikely at this point
-        if abs(off['x']) < close and abs(off['y']) < close:
+        # check if converged, unlikely at this point
+        if off['z'] > 0 and abs(off['x']) < close and abs(off['y']) < close:
             self.keys.send('SetSpeed100')
             return
 
@@ -777,12 +784,15 @@ class EDAutopilot:
         for ii in range(self.config['NavAlignTries']):
             off = self.get_nav_offset(scr_reg)
 
-            if off != None and abs(off['x']) < close and abs(off['y']) < close:
+            if off['z'] > 0 and abs(off['x']) < close and abs(off['y']) < close:
                 self.keys.send('SetSpeed100')
                 break
 
-            while not off:
-                self.pitchDown(45)
+            while off['z'] < 0:
+                if off['y'] >= 0:
+                    self.pitchUp(45)
+                if off['y'] < 0:
+                    self.pitchDown(45)
                 off = self.get_nav_offset(scr_reg)
 
             # determine the angle and the hold time to keep the button pressed to roll that number of degrees
@@ -811,8 +821,11 @@ class EDAutopilot:
 
             sleep(0.15)  # wait for image to stablize
             off = self.get_nav_offset(scr_reg)
-            while not off:
-                self.pitchDown(45)
+            while off['z'] < 0:
+                if off['y'] >= 0:
+                    self.pitchUp(45)
+                if off['y'] < 0:
+                    self.pitchDown(45)
                 off = self.get_nav_offset(scr_reg)
 
             # calc pitch time based on nav point location
@@ -834,9 +847,9 @@ class EDAutopilot:
 
         self.keys.send('SetSpeed100')
 
-    # routine to coarse align to target to support FSD Jumping
-    #
     def target_align(self, scr_reg):
+        """ Coarse align to the target to support FSD jumping """
+
         self.vce.say("Target Align")
 
         logger.debug('align= fine align')
@@ -907,9 +920,10 @@ class EDAutopilot:
         self.target_align(scr_reg)
         
 
-    # Stays tight on the target, monitors for disengage and obscured
-    #
     def sc_target_align(self, scr_reg) -> bool:
+        """ Stays tight on the target, monitors for disengage and obscured.
+        If target could not be found, return false."""
+
         close = 6
         off = None
 
@@ -927,6 +941,7 @@ class EDAutopilot:
         # Could not be found, return
         if off == None:
             print("sc_target_align not finding")
+            self.ap_ckb('log', 'Target not found, terminating SC Assist')
             return False
 
         logger.debug("sc_target_align x: "+str(off['x'])+" y:"+str(off['y']))
@@ -1186,6 +1201,13 @@ class EDAutopilot:
         sleep(13)  # get away from Station
         self.keys.send('SetSpeed50')
 
+    def sc_engage(self):
+        """ Engages supercruise, then returns us to 50% speed """
+        self.keys.send('SetSpeed100')
+        self.keys.send('Supercruise', hold=0.001)
+        sleep(12)
+        self.keys.send('SetSpeed50')
+
     # processes the waypoints, performing jumps and sc assist if going to a station
     # also can then perform trades if specific in the waypoints file
     #
@@ -1206,10 +1228,7 @@ class EDAutopilot:
 
             # if we are in space but not in supercruise, get into supercruise
         if self.jn.ship_state()['status'] != 'in_supercruise':
-            self.keys.send('SetSpeed100')
-            self.keys.send('Supercruise', hold=0.001)
-            sleep(12)
-            self.keys.send('SetSpeed50')
+            self.sc_engage()
 
         # keep looping while we have a destination defined
         while dest != "":
@@ -1257,17 +1276,21 @@ class EDAutopilot:
         self.ap_ckb('log', "Waypoint Route Complete, total distance jumped: "+str(self.total_dist_jumped)+"LY")
         self.update_ap_status("Idle")
 
-        # FSD Route assist
-
-    #
     def fsd_assist(self, scr_reg):
+        """ FSD Route Assist. """
+
         logger.debug('self.jn.ship_state='+str(self.jn.ship_state()))
 
         starttime = time.time()
         starttime -= 20  # to account for first instance not doing positioning
 
-        while self.jn.ship_state()['target']:
+        if self.jn.ship_state()['target']:
+            # if we are starting the waypoint docked at a station, we need to undock first
+            if self.jn.ship_state()['status'] == 'in_station':
+                self.update_overlay()
+                self.waypoint_undock_seq()
 
+        while self.jn.ship_state()['target']:
             self.update_overlay()
 
             if self.jn.ship_state()['status'] == 'in_space' or self.jn.ship_state()['status'] == 'in_supercruise':
@@ -1304,9 +1327,9 @@ class EDAutopilot:
                     self.vce.say("AP Aborting, low fuel")
                     break
 
-        sleep(2)  # wait until screen stablizes from possible last positioning
+        sleep(2)  # wait until screen stabilizes from possible last positioning
 
-        # if there is not destination definedw we are done
+        # if there is no destination defined, we are done
         if self.have_destination(scr_reg) == False:
             self.keys.send('SetSpeedZero')
             self.vce.say("Destination Reached, distance jumped:"+str(int(self.total_dist_jumped))+" lightyears")
@@ -1321,16 +1344,17 @@ class EDAutopilot:
     # Supercruise Assist loop to travel to target in system and perform autodock
     #
     def sc_assist(self, scr_reg, do_docking=True):
+        logger.debug("Entered sc_assist")
         align_failed = False
         # see if we have a compass up, if so then we have a target
         if self.have_destination(scr_reg) == False:
+            self.ap_ckb('log', "Quiting SC Assist - Compass not found. Rotate ship and try again.")
+            logger.debug("Quiting sc_assist - compass not found")
             return
 
         # if we are in space but not in supercruise, get into supercruise
         if self.jn.ship_state()['status'] != 'in_supercruise':
-            self.keys.send('SetSpeed100')
-            self.keys.send('Supercruise', hold=0.001)
-            sleep(12)
+            self.sc_engage()
 
         # Ensure we are 50%, don't want the loop of shame
         # Align Nav to target
@@ -1353,7 +1377,7 @@ class EDAutopilot:
                 align_failed = True
                 break
 
-                # check if we are being interdicted, means we saw it on scrren or we already got interdicted
+                # check if we are being interdicted, means we saw it on screen or we already got interdicted
             if self.being_interdicted(scr_reg) == True or self.jn.ship_state()['interdicted'] == True:
 
                 self.keys.send('SetSpeedZero')  # submit
@@ -1378,6 +1402,7 @@ class EDAutopilot:
         # if no error, we must have gotten disengage
         if align_failed == False and do_docking == True:
             sleep(4)  # wait for the journal to catch up
+            self.update_ap_status("Initiating Docking Procedure")
             self.dock()  # go into docking sequence
             self.vce.say("Docking complete, Refueled")
             self.update_ap_status("Docking Complete")
@@ -1386,7 +1411,7 @@ class EDAutopilot:
             self.keys.send('SetSpeedZero')  # make sure we don't continue to land   
             self.ap_ckb('log', "Supercruise dropped, terminating SC Assist")
 
-        self.vce.say("Spercruise Assist complete")
+        self.vce.say("Supercruise Assist complete")
 
     def robigo_assist(self):
         self.robigo.loop(self)
@@ -1544,6 +1569,7 @@ class EDAutopilot:
                 self.set_focus_elite_window()
                 self.update_overlay()
                 try:
+                    self.update_ap_status("SC to Target")
                     self.sc_assist(self.scrReg)
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
@@ -1551,6 +1577,7 @@ class EDAutopilot:
                     print("Trapped generic:"+str(e))
                     traceback.print_exc()
 
+                logger.debug("Completed sc_assist")
                 self.sc_assist_enabled = False
                 self.ap_ckb('sc_stop')
                 self.update_overlay()

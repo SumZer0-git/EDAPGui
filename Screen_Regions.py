@@ -26,8 +26,8 @@ class Screen_Regions:
         self.fss_color_range      = [array([95, 210, 70]),  array([105, 255, 120])]
         
         self.reg = {}
-        # regions with associatzed filter and color ranges
-        # The rect is top left x, y, and bottom right x, y in faction of screen resolution 
+        # regions with associated filter and color ranges
+        # The rect is top left x, y, and bottom right x, y in fraction of screen resolution
         self.reg['compass']   = {'rect': [0.33, 0.65, 0.46, 0.97], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
         self.reg['target']    = {'rect': [0.33, 0.27, 0.66, 0.70], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.orange_2_color_range}   # also called destination
         self.reg['target_occluded']    = {'rect': [0.33, 0.27, 0.66, 0.70], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.target_occluded_range} 
