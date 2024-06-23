@@ -1352,6 +1352,11 @@ class EDAutopilot:
             logger.debug("Quiting sc_assist - compass not found")
             return
 
+        # if we are starting the waypoint docked at a station, we need to undock first
+        if self.jn.ship_state()['status'] == 'in_station':
+            self.update_overlay()
+            self.waypoint_undock_seq()
+
         # if we are in space but not in supercruise, get into supercruise
         if self.jn.ship_state()['status'] != 'in_supercruise':
             self.sc_engage()

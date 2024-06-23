@@ -1,7 +1,10 @@
+# 6/24/2024 Update
+ - Stumpii Added undocking if necessary to start of supercruise assist.
+
 # 6/23/2024 Targetting update
 - Stumpii provided change to Nav Offset to include Z axis where Z=+1 for target ahead and Z=-1 for target behind. Use the data to navigate to the target quicker when the target is behind us (pitch up or down depending if target is above/below us).
 
-# 8/6/23 latest mss libary causing crash
+# 8/6/23 latest mss library causing crash
 - if you are seeing:  AttributeError: '_thread._local' object has no attribute 'srcdc'   then you need to downgrade the mss library.  Updated the requirements.txt file accordingly
 - pip install mss==8.0.3
 
