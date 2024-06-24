@@ -195,27 +195,32 @@ class APGui():
         if key == 'log':
             self.log_msg(body)
         elif key == 'fsd_stop':
+            logger.debug("Detected 'fsd_stop' key")
             self.checkboxvar['FSD Route Assist'].set(0)
             self.check_cb('FSD Route Assist')
         elif key == 'fsd_start':
             self.checkboxvar['FSD Route Assist'].set(1)
             self.check_cb('FSD Route Assist')
         elif key == 'sc_stop':
+            logger.debug("Detected 'sc_stop' key")
             self.checkboxvar['Supercruise Assist'].set(0)
             self.check_cb('Supercruise Assist')
         elif key == 'sc_start':
             self.checkboxvar['Supercruise Assist'].set(1)
             self.check_cb('Supercruise Assist')
         elif key == 'waypoint_stop':
+            logger.debug("Detected 'waypoint_stop' key")
             self.checkboxvar['Waypoint Assist'].set(0)
             self.check_cb('Waypoint Assist')
         elif key == 'robigo_stop':
+            logger.debug("Detected 'robigo_stop' key")
             self.checkboxvar['Robigo Assist'].set(0)
             self.check_cb('Robigo Assist')
         elif key == 'robigo_start':
             self.checkboxvar['Robigo Assist'].set(1)
             self.check_cb('Robigo Assist')
         elif key == 'afk_stop':
+            logger.debug("Detected 'afk_stop' key")
             self.checkboxvar['AFK Combat Assist'].set(0)
             self.check_cb('AFK Combat Assist')
         elif key == 'jumpcount':
@@ -244,9 +249,11 @@ class APGui():
         messagebox.showinfo('Mouse XY', 'Values: ' + xy_str + '\n has been place in your clipboard')
 
     def quit(self):
+        logger.debug("Entered: quit")
         self.close_window()
 
     def close_window(self):
+        logger.debug("Entered: close_window")
         self.stop_fsd()
         self.stop_sc()
         self.ed_ap.quit()
@@ -255,6 +262,7 @@ class APGui():
 
     # this routine is to stop any current autopilot activity
     def stop_all_assists(self):
+        logger.debug("Entered: stop_all_assists")
         self.callback('fsd_stop')
         self.callback('sc_stop')
         self.callback('afk_stop')
@@ -262,44 +270,56 @@ class APGui():
         self.callback('robigo_stop')
 
     def start_fsd(self):
+        logger.debug("Entered: start_fsd")
         self.ed_ap.set_fsd_assist(True)
         self.FSD_A_running = True
         self.log_msg("FSD Route Assist start")
 
     def stop_fsd(self):
+        logger.debug("Entered: stop_fsd")
         self.ed_ap.set_fsd_assist(False)
         self.FSD_A_running = False
         self.log_msg("FSD Route Assist stop")
+        self.update_statusline("Idle")
 
     def start_sc(self):
+        logger.debug("Entered: start_sc")
         self.ed_ap.set_sc_assist(True)
         self.SC_A_running = True
         self.log_msg("SC Assist start")
 
     def stop_sc(self):
+        logger.debug("Entered: stop_sc")
         self.ed_ap.set_sc_assist(False)
         self.SC_A_running = False
         self.log_msg("SC Assist stop")
+        self.update_statusline("Idle")
 
     def start_waypoint(self):
+        logger.debug("Entered: start_waypoint")
         self.ed_ap.set_waypoint_assist(True)
         self.WP_A_running = True
         self.log_msg("Waypoint Assist start")
 
     def stop_waypoint(self):
+        logger.debug("Entered: stop_waypoint")
         self.ed_ap.set_waypoint_assist(False)
         self.WP_A_running = False
         self.log_msg("Waypoint Assist stop")
+        self.update_statusline("Idle")
 
     def start_robigo(self):
+        logger.debug("Entered: start_robigo")
         self.ed_ap.set_robigo_assist(True)
         self.RO_A_running = True
         self.log_msg("Robigo Assist start")
 
     def stop_robigo(self):
+        logger.debug("Entered: stop_robigo")
         self.ed_ap.set_robigo_assist(False)
         self.RO_A_running = False
         self.log_msg("Robigo Assist stop")
+        self.update_statusline("Idle")
 
     def about(self):
         webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui")
@@ -756,6 +776,7 @@ class APGui():
         return mylist
 
     def restart_program(self):
+        logger.debug("Entered: restart_program")
         print("restart now")
 
         self.stop_fsd()

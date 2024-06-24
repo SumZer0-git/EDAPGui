@@ -520,9 +520,10 @@ class EDAutopilot:
         else:
             return False
 
-    # Determine how far off we are from the destination being in the middle of the screen (in this case the specified region
-    #
     def get_destination_offset(self, scr_reg):
+        """ Determine how far off we are from the target being in the middle of the screen
+        (in this case the specified region). """
+
         threshold = 0.54
         dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('target', 'target')
 
@@ -755,7 +756,6 @@ class EDAutopilot:
             logger.error('align=err1')
             raise Exception('nav_align not in super or space')
 
-        self.keys.send('SetSpeed50')
         self.vce.say("Navigation Align")
 
         # get the x,y offset from center, or none, which means our point is behind us
@@ -763,7 +763,6 @@ class EDAutopilot:
 
         # check to see if we are already converged, if so return    
         if off['z'] > 0 and abs(off['x']) < close and abs(off['y']) < close:
-            self.keys.send('SetSpeed100')
             return
 
         # nav point must be behind us, pitch up until somewhat in front of us
@@ -776,7 +775,6 @@ class EDAutopilot:
 
         # check if converged, unlikely at this point
         if off['z'] > 0 and abs(off['x']) < close and abs(off['y']) < close:
-            self.keys.send('SetSpeed100')
             return
 
         # try multiple times to get aligned.  If the sun is shining on console, this it will be hard to match
@@ -785,7 +783,6 @@ class EDAutopilot:
             off = self.get_nav_offset(scr_reg)
 
             if off['z'] > 0 and abs(off['x']) < close and abs(off['y']) < close:
-                self.keys.send('SetSpeed100')
                 break
 
             while off['z'] < 0:
@@ -844,8 +841,6 @@ class EDAutopilot:
                 pass
             sleep(.1)
             logger.debug("final x:"+str(off['x'])+" y:"+str(off['y']))
-
-        self.keys.send('SetSpeed100')
 
     def target_align(self, scr_reg):
         """ Coarse align to the target to support FSD jumping """
@@ -940,7 +935,7 @@ class EDAutopilot:
 
         # Could not be found, return
         if off == None:
-            print("sc_target_align not finding")
+            logger.debug("sc_target_align not finding target")
             self.ap_ckb('log', 'Target not found, terminating SC Assist')
             return False
 
@@ -979,6 +974,13 @@ class EDAutopilot:
             new = self.get_destination_offset(scr_reg)
             if new:
                 off = new
+
+            # Check if target is outside the target region (behind us) and break loop
+            if new == None:
+                logger.debug("sc_target_align lost target")
+                self.ap_ckb('log', 'Target lost, attempting re-alignment.')
+                return False
+
         return True
 
     # Reposition is use when the target is obscured by a world
@@ -1226,7 +1228,7 @@ class EDAutopilot:
         if dest != "" and self.jn.ship_state()['status'] == 'in_station':
             self.waypoint_undock_seq()
 
-            # if we are in space but not in supercruise, get into supercruise
+        # if we are in space but not in supercruise, get into supercruise
         if self.jn.ship_state()['status'] != 'in_supercruise':
             self.sc_engage()
 
@@ -1352,6 +1354,11 @@ class EDAutopilot:
             logger.debug("Quiting sc_assist - compass not found")
             return
 
+        # if we are starting the waypoint docked at a station, we need to undock first
+        if self.jn.ship_state()['status'] == 'in_station':
+            self.update_overlay()
+            self.waypoint_undock_seq()
+
         # if we are in space but not in supercruise, get into supercruise
         if self.jn.ship_state()['status'] != 'in_supercruise':
             self.sc_engage()
@@ -1366,18 +1373,23 @@ class EDAutopilot:
 
         # Loop forever keeping tight align to target, until we get SC Disengage popup
         while True:
-            self.keys.send('SetSpeed50')
             sleep(0.05)
 
             if self.jn.ship_state()['status'] == 'in_supercruise':
+
+                # Align and stay on target. If false is returned, we have lost the target behind us.
                 if self.sc_target_align(scr_reg) == False:
-                    self.nav_align(scr_reg)
+                    # Continue ahead before aligning to prevent us circling the target
+                    self.keys.send('SetSpeed100')
+                    sleep(5)
+                    self.keys.send('SetSpeed50')
+                    self.nav_align(scr_reg) # Align to target
             else:
                 # if we dropped from SC, then we rammed into planet
                 align_failed = True
                 break
 
-                # check if we are being interdicted, means we saw it on screen or we already got interdicted
+            # check if we are being interdicted, means we saw it on screen or we already got interdicted
             if self.being_interdicted(scr_reg) == True or self.jn.ship_state()['interdicted'] == True:
 
                 self.keys.send('SetSpeedZero')  # submit
