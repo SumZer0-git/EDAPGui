@@ -79,8 +79,8 @@ class APGui():
             'ELW Scanner': "Will perform FSS scans while FSD Assist is traveling between stars. \nIf the FSS shows a signal in the region of Earth, \nWater or Ammonia type worlds, it will announce that discovery.",
             'AFK Combat Assist': "Used with a AFK Combat ship in a Rez Zone.",
             'RollRate': "Roll rate your ship has.",
-            'PitchRate': "Pitch rate your ship has.",
-            'YawRate': "Yaw rate your ship has.",
+            'PitchRate': "Pitch (up/down) rate your ship has.",
+            'YawRate': "Yaw rate (rudder) your ship has.",
             'SunPitchUp+Time': "This field are for ship that tend to overheat. \nProviding 1-2 more seconds of Pitch up when avoiding the Sun \nwill overcome this problem.",
             'Sun Bright Threshold': "The low level for brightness detection, \nrange 0-255, want to mask out darker items",
             'Nav Align Tries': "How many attempts the ap should make at alignment.",
@@ -122,6 +122,7 @@ class APGui():
         self.msgList = self.gui_gen(root)
 
         self.checkboxvar['Enable Randomness'].set(self.ed_ap.config['EnableRandomness'])
+        self.checkboxvar['Activate Elite for each key'].set(self.ed_ap.config['ActivateEliteEachKey'])
         self.checkboxvar['Enable Overlay'].set(self.ed_ap.config['OverlayTextEnable'])
         self.checkboxvar['Enable Voice'].set(self.ed_ap.config['VoiceEnable'])
 
@@ -555,6 +556,13 @@ class APGui():
         else:
             self.ed_ap.set_randomness(False)
 
+        if self.checkboxvar['Activate Elite for each key'].get():
+            self.ed_ap.set_activate_elite_eachkey(True)
+            self.ed_ap.keys.activate_window=True
+        else:
+            self.ed_ap.set_activate_elite_eachkey(False)
+            self.ed_ap.keys.activate_window = False
+
         if self.checkboxvar['Enable Overlay'].get():
             self.ed_ap.set_overlay(True)
         else:
@@ -716,6 +724,9 @@ class APGui():
         self.checkboxvar['Enable Randomness'] = BooleanVar()
         cb_random = Checkbutton(blk_ap, text='Enable Randomness', anchor='w', pady=3, justify=LEFT, onvalue=1, offvalue=0, variable=self.checkboxvar['Enable Randomness'], command=(lambda field='Enable Randomness': self.check_cb(field)))
         cb_random.grid(row=4, column=0, columnspan=2, sticky=(W))
+        self.checkboxvar['Activate Elite for each key'] = BooleanVar()
+        cb_random = Checkbutton(blk_ap, text='Activate Elite for each key', anchor='w', pady=3, justify=LEFT, onvalue=1, offvalue=0, variable=self.checkboxvar['Activate Elite for each key'], command=(lambda field='Activate Elite for each key': self.check_cb(field)))
+        cb_random.grid(row=5, column=0, columnspan=2, sticky=(W))
 
         # buttons settings block
         blk_buttons = LabelFrame(blk_settings, text="BUTTONS")

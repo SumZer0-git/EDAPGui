@@ -3,6 +3,8 @@ from os.path import abspath, getmtime, isfile, join
 from time import sleep, time
 from xml.etree.ElementTree import parse
 
+import win32gui
+
 from directinput import *
 from EDlogger import logger
 
@@ -18,6 +20,15 @@ Constraints:  This file will use the latest modified *.binds file
 
 Author: sumzer0@yahoo.com
 """
+
+
+def set_focus_elite_window():
+    """ set focus to the ED window, if ED does not have focus then the keystrokes will go to the window
+    that does have focus. """
+    handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
+    if handle != 0:
+        win32gui.SetForegroundWindow(handle)  # give focus to ED
+
 
 class EDKeys:
 
@@ -62,6 +73,7 @@ class EDKeys:
             'Supercruise'
         ]
         self.keys = self.get_bindings(self.keys_to_obtain)
+        self.activate_window = False
 
         # dump config to log
         for key in self.keys_to_obtain:
@@ -149,6 +161,11 @@ class EDKeys:
         return latest_bindings
 
     def send_key(self, type, key):
+        # Focus Elite window if configured
+        if self.activate_window:
+            set_focus_elite_window()
+            sleep(0.05)
+
         if type == 'Up':
             ReleaseKey(key)
         else:
@@ -162,6 +179,10 @@ class EDKeys:
 
         logger.debug('send=key:'+str(key)+',hold:'+str(hold)+',repeat:'+str(repeat)+',repeat_delay:'+str(repeat_delay)+',state:'+str(state))
         for i in range(repeat):
+            # Focus Elite window if configured.
+            if self.activate_window:
+                set_focus_elite_window()
+                sleep(0.05)
 
             if state is None or state == 1:
                 if 'mod' in key:
@@ -187,6 +208,7 @@ class EDKeys:
                 sleep(repeat_delay)
             else:
                 sleep(self.key_repeat_delay)
+
 
 def main():
     k = EDKeys()
