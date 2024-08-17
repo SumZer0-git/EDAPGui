@@ -1,3 +1,7 @@
+# 8/17/2024 New ships and auto focus
+ - Stumpii: Added configs for the two new ships (Python Mk2 and Type-8).
+ - Stumpii: Added option to refocus Elite client window before each new key press to avoid sending keys to an unwanted window.
+
 # 6/24/2024 Update
  - Stumpii: Added undocking if necessary to start of supercruise assist.
  - Stumpii: Removed speed demands from the nav alignment code. Nav align should just do the alignment, the calling function determine what to do if alignment is successful or not. All but one of the calling routines sets the speed after calling the routine anyway.
