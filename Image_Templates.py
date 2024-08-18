@@ -32,11 +32,10 @@ class Image_Templates:
         # load the templates and scale them.  Default templates assumed 3440x1440 screen resolution
         self.reload_templates(scaleX, scaleY)
        
-
-    # load the template image as grayscale (we do matching in gray only)
-    #  Resize the image, as the templates are based on 3440x1440 resolution, so scale to current screen resolution  
-    #  return image and size info    
     def load_template(self, file_name, scaleX, scaleY):
+        """ Load the template image in color. If we need grey scale for matching, we can apply that later as needed.
+        Resize the image, as the templates are based on 3440x1440 resolution, so scale to current screen resolution
+         return image and size info. """
         template = cv2.imread(self.resource_path(file_name), cv2.IMREAD_GRAYSCALE)
         #logger.debug("File:"+self.resource_path(file_name)+" template:"+str(template))
         template = cv2.resize(template, (0, 0), fx=scaleX, fy=scaleY)

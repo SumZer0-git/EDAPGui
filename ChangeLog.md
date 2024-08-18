@@ -1,3 +1,8 @@
+# 8/18/2024 Cleanup - in prep for additional testing changes.
+ - Stumpii: Moved most threshold values to Screen_Regions for consisancy throughout the program and match coded and display values.
+ - Stumpii: Cleaned up many comments.
+ - Stumpii: Moved the one test routine out to its own file. Added more test routines.
+
 # 8/17/2024 New ships and auto focus
  - Stumpii: Added configs for the two new ships (Python Mk2 and Type-8).
  - Stumpii: Added option to refocus Elite client window before each new key press to avoid sending keys to an unwanted window.
