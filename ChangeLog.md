@@ -1,7 +1,7 @@
 # 8/18/2024 Cleanup - in prep for additional testing changes.
  - Stumpii: Moved most threshold values to Screen_Regions for consisancy throughout the program and match coded and display values.
  - Stumpii: Cleaned up many comments.
- - Stumpii: Moved the one test routine out to its own file. Added more test routines.
+ - Stumpii: Moved the one test routine out to its own file. Added more test routines. These are described in the Test_Routines.py file.
 
 # 8/17/2024 New ships and auto focus
  - Stumpii: Added configs for the two new ships (Python Mk2 and Type-8).
