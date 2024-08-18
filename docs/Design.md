@@ -1,6 +1,10 @@
   
 # Approach
 ## FSD Assist FLow
+* Leave space station if docked.
+* Enter supercruise if necessary.
+* Align to selected system.
+* Jump to system.
 * When entering a new System, Speed to 0
 * Pitch up until sun is out of field of view
 * Accelerate to 100 for "some #" of seconds, speed to 50, fuel scooping will start
@@ -16,7 +20,9 @@
   else have not reach destination, so issue FSD and loop 
  
 ## SC Assist Flow
-* Loop 
+* Leave space station if docked.
+* Enter supercruise if necessary.
+* Loop: 
   * Do Target align, keeping is us a tight deadband on the target
   * Do image match checking to see if SC Disengage pops up, if so, break loop
   * Check for interdiction, if so execut response 
