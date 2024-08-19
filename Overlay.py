@@ -33,6 +33,7 @@ ov.overlay_quit()
 
 lines = {}
 text = {}
+floating_text = {}
 fnt = ["Times New Roman", 12, 12]
 pos = [0,0]
 elite_dangerous_window = "Elite - Dangerous (CLIENT)"
@@ -60,7 +61,7 @@ class Overlay:
         self.overlay_thr = threading.Thread(target=self.overlay_win32_run)
         self.overlay_thr.setDaemon(False)
         self.overlay_thr.start()
-        self.targetRect = Vector(0, 0, 900, 900)
+        self.targetRect = Vector(0, 0, 1920, 1080)
         self.tHwnd = None
 
     def overlay_win32_run(self):
@@ -138,6 +139,10 @@ class Overlay:
         global text
         text[key] = [txt, row, col, color]
 
+    def overlay_floating_text(self, key, txt, x, y, color):
+        global floating_text
+        floating_text[key] = [txt, x, y, color]
+
     def overlay_paint(self):
         # if a parent was specified check to see if it moved, if so reposition our origin to new window location
         if self.tHwnd:
@@ -147,6 +152,11 @@ class Overlay:
                 win32gui.MoveWindow(self.hWindow, self.targetRect.x, self.targetRect.y, self.targetRect.w, self.targetRect.h, True)
 
         win32gui.RedrawWindow(self.hWindow, None, None, win32con.RDW_INVALIDATE | win32con.RDW_ERASE) 
+
+    def overlay_clear(self):
+        lines.clear()
+        text.clear()
+        floating_text.clear()
 
     def overlay_quit(self):
         win32gui.PostMessage(self.hWindow, win32con.WM_CLOSE, 0, 0)  
@@ -258,6 +268,15 @@ class Overlay:
 
         win32gui.DrawText(hdc,  txt,  -1,  rect,   win32con.DT_LEFT | win32con.DT_NOCLIP | win32con.DT_SINGLELINE | win32con.DT_TOP   )
 
+
+    @staticmethod
+    def overlay_draw_floating_text(hWnd, hdc, txt, x, y, color):
+        rect = (x, y, 1, 1)
+        win32gui.SetTextColor(hdc,win32api.RGB(color[0], color[1], color[2]))
+
+        win32gui.DrawText(hdc,  txt,  -1,  rect,   win32con.DT_LEFT | win32con.DT_NOCLIP | win32con.DT_SINGLELINE | win32con.DT_TOP   )
+
+
     @staticmethod 
     def wndProc(hWnd, message, wParam, lParam):
         global lines, text
@@ -273,6 +292,11 @@ class Overlay:
             for i, key in enumerate(text):
                 #print(text[key])
                 Overlay.overlay_draw_text(hWnd, hdc, text[key][0], text[key][1], text[key][2], text[key][3])
+
+            for i, key in enumerate(floating_text):
+                #print(text[key])
+                Overlay.overlay_draw_floating_text(hWnd, hdc, floating_text[key][0], floating_text[key][1],
+                                                   floating_text[key][2], floating_text[key][3])
 
             win32gui.EndPaint(hWnd, paintStruct)
             return 0
@@ -291,7 +315,7 @@ def main():
 
     #       key    x,y       x,y end      color      thinkness
     rect = {'a': [(50,50), (500, 500), (120, 255, 0),2],
-            'b': [(150,150), (200, 550), (20, 10, 255),15] , 
+            'b': [(800,800), (1000, 1000), (20, 10, 255),15] ,
             'c': [(220,30), (350, 700), (255, 20, 10),1] 
            }
 

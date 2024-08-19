@@ -278,9 +278,39 @@ class EDAutopilot:
             # must reload the templates with this scale value
             self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY)
 
-            # do image matching on the compass and the 
+            # do image matching on the compass and the target
             compass_image, (minVal, maxVal, minLoc, maxLoc), match = self.scrReg.match_template_in_region('compass', 'compass')
             dst_image, (minVal1, maxVal1, minLoc1, maxLoc1), match = self.scrReg.match_template_in_region('target', 'target')
+
+            border = 10  # border to prevent the box from interfering with future matches
+            reg_compass_pos = self.scrReg.reg['compass']['rect']
+            comp_width = self.scrReg.templates.template['compass']['width'] + border + border
+            comp_height = self.scrReg.templates.template['compass']['height'] + border + border
+            comp_left = reg_compass_pos[0] + maxLoc[0] - border
+            comp_top = reg_compass_pos[1] + maxLoc[1] - border
+
+            reg_target_pos = self.scrReg.reg['target']['rect']
+            targ_width = self.scrReg.templates.template['target']['width'] + border + border
+            targ_height = self.scrReg.templates.template['target']['height'] + border + border
+            targ_left = reg_target_pos[0] + maxLoc1[0] - border
+            targ_top = reg_target_pos[1] + maxLoc1[1] - border
+
+            if maxVal > threshold and maxVal1 > threshold and maxVal > max_pick:
+                # Draw box around compass
+                self.overlay.overlay_rect(20, (comp_left, comp_top),(comp_left + comp_width, comp_top + comp_height), (0, 255, 0), 2)
+                self.overlay.overlay_floating_text(20, f'Match: {maxVal:5.2f}', comp_left, comp_top - 25, (0, 255, 0))
+                # Draw box around target
+                self.overlay.overlay_rect(22, (targ_left, targ_top), (targ_left + targ_width, targ_top + targ_height), (0, 255, 0), 2)
+                self.overlay.overlay_floating_text(22, f'Match: {maxVal1:5.2f}', targ_left, targ_top - 25, (0, 255, 0))
+            else:
+                # Draw box around compass
+                self.overlay.overlay_rect(21, (comp_left, comp_top),(comp_left + comp_width, comp_top + comp_height), (255, 0, 0), 2)
+                self.overlay.overlay_floating_text(21, f'Match: {maxVal:5.2f}', comp_left, comp_top - 25, (255, 0, 0))
+                # Draw box around target
+                self.overlay.overlay_rect(23, (targ_left, targ_top),  (targ_left + targ_width, targ_top + targ_height), (255, 0, 0), 2)
+                self.overlay.overlay_floating_text(23, f'Match: {maxVal1:5.2f}', targ_left, targ_top - 25, (255, 0, 0))
+
+            self.overlay.overlay_paint()
 
             #print("Looping i:"+str(i)+ ' scale:'+str(self.scr.scaleX)+ " maxVal:"+str(maxVal)+" maxVal1:"+str(maxVal1))
 
@@ -293,13 +323,24 @@ class EDAutopilot:
                 if maxVal > max_pick:
                     max_pick = maxVal
                     scale = i
-                    self.ap_ckb('log', 'Cal: Found scale value:'+f'{self.scr.scaleX:5.2f}')
+                    self.ap_ckb('log', 'Cal: Found match:' + f'{max_pick:5.2f}' + "% with scale:" + f'{self.scr.scaleX:5.2f}')
 
         return scale, max_pick
 
     # Routine to find the optimal scaling values for the tempalte images
     def calibrate(self):
         self.set_focus_elite_window()
+
+        # Draw the target and compass regions on the screen
+        for i, key in enumerate(self.scrReg.reg):
+             if key == 'target' or key == 'compass':
+                targ_region = self.scrReg.reg[key]
+                self.overlay.overlay_rect(key, (targ_region['rect'][0], targ_region['rect'][1]),
+                                (targ_region['rect'][2], targ_region['rect'][3]),(0, 0, 255), 2)
+                self.overlay.overlay_floating_text(key, key, targ_region['rect'][0],
+                                                   targ_region['rect'][1], (0, 0, 255))
+        self.overlay.overlay_paint()
+
         range_low = 30
         range_high = 200
         match_level = 0.5
@@ -335,6 +376,11 @@ class EDAutopilot:
             self.scr.write_config(data=None)  # None means the writer will use its own scales variable which we modified
         else:
             self.ap_ckb('log', 'Cal: Insufficient matching to meet reliability, max % match:'+str(max_val))
+
+        # Wait, then clean up
+        sleep(3)
+        self.overlay.overlay_clear()
+        self.overlay.overlay_paint()
 
             # Go into FSS, check to see if we have a signal waveform in the Earth, Water or Ammonia zone
 
@@ -1520,6 +1566,10 @@ class EDAutopilot:
     def set_overlay(self, enable=False):
         # TODO: apply the change without restarting the program
         self.config["OverlayTextEnable"] = enable
+        if not enable:
+            self.overlay.overlay_clear()
+
+        self.overlay.overlay_paint()
 
     def set_voice(self, enable=False):
         if enable == True:

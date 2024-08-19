@@ -29,7 +29,7 @@ def main():
     #
     # Does NOT require Elite Dangerous to be running.
     # ======================================================================
-    rescale_screenshots('test/images-to-rescale', 0.76, 0.76)
+    # rescale_screenshots('test/images-to-rescale', 0.76, 0.76)
 
     # Shows filtering and matching for the specified region...
     # Requires Elite Dangerous to be running.
@@ -47,8 +47,10 @@ def main():
     # Shows regions on the Elite window...
     # Requires Elite Dangerous to be running.
     # =======================================
-    # regions_test('nav_panel')
-    # regions_test('disengage')
+    wanted_regions = ["compass", "target", "nav_panel", "disengage", "interdicted", "fss", "mission_dest", "missions",
+                      "sun"]
+    wanted_regions = ["compass", "target", "nav_panel", "disengage"]  # The more common regions for navigation
+    regions_test(wanted_regions)
 
     # HSV Tester...
     #
@@ -150,27 +152,48 @@ def template_matching_test(region_name, template):
             break
 
 
-def regions_test(region_name):
+def regions_test(regions):
     """ Draw a rectangle indicating the given region on the Elite Dangerous window.
-        :param region_name: The name of the region with the required filter to apply to the image."""
-    ov = Overlay("",1)
+        :param regions: An array names of the regions to indicate on screen (i.e. ["compass", "target"])."""
+    ov = Overlay("", 0)
     scr = Screen()
     templ = Image_Templates(scr.scaleX, scr.scaleY)
     scrReg = Screen_Regions(scr, templ)
 
+    overlay_colors = [
+        (255, 255, 255),
+        (255, 0, 0),
+        (0, 255, 0),
+        (0, 0, 255),
+        (255, 255, 0),
+        (0, 255, 255),
+        (255, 0, 255),
+        (192, 192, 192),
+        (128, 128, 128),
+        (128, 0, 0),
+        (128, 128, 0),
+        (0, 128, 0),
+        (128, 0, 128),
+        (0, 128, 128),
+        (0, 0, 128)
+    ]
+
     for i, key in enumerate(scrReg.reg):
-        #tgt = scrReg.capture_region_filtered(scr, key)   
-        #print(key) 
+        #tgt = scrReg.capture_region_filtered(scr, key)
+        #print(key)
         #print(scrReg.reg[key])
-        if key == region_name:
-            ov.overlay_rect(key, (scrReg.reg[key]['rect'][0], 
-                scrReg.reg[key]['rect'][1]),
-                (scrReg.reg[key]['rect'][2],
-                scrReg.reg[key]['rect'][3]) , (0,255,i*40), 2 )
-            ov.overlay_paint() 
+        if key in regions:
+            ov.overlay_rect(key, (scrReg.reg[key]['rect'][0], scrReg.reg[key]['rect'][1]),
+                            (scrReg.reg[key]['rect'][2], scrReg.reg[key]['rect'][3]),
+                            overlay_colors[i+1], 2)
+            ov.overlay_floating_text(key, key, scrReg.reg[key]['rect'][0], scrReg.reg[key]['rect'][1],
+                                     overlay_colors[i+1])
+
+    ov.overlay_paint()
+
     sleep(10)
     ov.overlay_quit()
-    sleep(2)  
+    sleep(2)
 
 
 def hsv_tester(image_path):
