@@ -278,9 +278,39 @@ class EDAutopilot:
             # must reload the templates with this scale value
             self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY)
 
-            # do image matching on the compass and the 
+            # do image matching on the compass and the target
             compass_image, (minVal, maxVal, minLoc, maxLoc), match = self.scrReg.match_template_in_region('compass', 'compass')
             dst_image, (minVal1, maxVal1, minLoc1, maxLoc1), match = self.scrReg.match_template_in_region('target', 'target')
+
+            border = 10  # border to prevent the box from interfering with future matches
+            reg_compass_pos = self.scrReg.reg['compass']['rect']
+            comp_width = self.scrReg.templates.template['compass']['width'] + border + border
+            comp_height = self.scrReg.templates.template['compass']['height'] + border + border
+            comp_left = reg_compass_pos[0] + maxLoc[0] - border
+            comp_top = reg_compass_pos[1] + maxLoc[1] - border
+
+            reg_target_pos = self.scrReg.reg['target']['rect']
+            targ_width = self.scrReg.templates.template['target']['width'] + border + border
+            targ_height = self.scrReg.templates.template['target']['height'] + border + border
+            targ_left = reg_target_pos[0] + maxLoc1[0] - border
+            targ_top = reg_target_pos[1] + maxLoc1[1] - border
+
+            if maxVal > threshold and maxVal1 > threshold and maxVal > max_pick:
+                # Draw box around compass
+                self.overlay.overlay_rect(20, (comp_left, comp_top),(comp_left + comp_width, comp_top + comp_height), (0, 255, 0), 2)
+                self.overlay.overlay_floating_text(20, f'Match: {maxVal:5.2f}', comp_left, comp_top - 25, (0, 255, 0))
+                # Draw box around target
+                self.overlay.overlay_rect(22, (targ_left, targ_top), (targ_left + targ_width, targ_top + targ_height), (0, 255, 0), 2)
+                self.overlay.overlay_floating_text(22, f'Match: {maxVal1:5.2f}', targ_left, targ_top - 25, (0, 255, 0))
+            else:
+                # Draw box around compass
+                self.overlay.overlay_rect(21, (comp_left, comp_top),(comp_left + comp_width, comp_top + comp_height), (255, 0, 0), 2)
+                self.overlay.overlay_floating_text(21, f'Match: {maxVal:5.2f}', comp_left, comp_top - 25, (255, 0, 0))
+                # Draw box around target
+                self.overlay.overlay_rect(23, (targ_left, targ_top),  (targ_left + targ_width, targ_top + targ_height), (255, 0, 0), 2)
+                self.overlay.overlay_floating_text(23, f'Match: {maxVal1:5.2f}', targ_left, targ_top - 25, (255, 0, 0))
+
+            self.overlay.overlay_paint()
 
             #print("Looping i:"+str(i)+ ' scale:'+str(self.scr.scaleX)+ " maxVal:"+str(maxVal)+" maxVal1:"+str(maxVal1))
 
@@ -293,13 +323,24 @@ class EDAutopilot:
                 if maxVal > max_pick:
                     max_pick = maxVal
                     scale = i
-                    self.ap_ckb('log', 'Cal: Found scale value:'+f'{self.scr.scaleX:5.2f}')
+                    self.ap_ckb('log', 'Cal: Found match:' + f'{max_pick:5.2f}' + "% with scale:" + f'{self.scr.scaleX:5.2f}')
 
         return scale, max_pick
 
     # Routine to find the optimal scaling values for the tempalte images
     def calibrate(self):
         self.set_focus_elite_window()
+
+        # Draw the target and compass regions on the screen
+        for i, key in enumerate(self.scrReg.reg):
+             if key == 'target' or key == 'compass':
+                targ_region = self.scrReg.reg[key]
+                self.overlay.overlay_rect(key, (targ_region['rect'][0], targ_region['rect'][1]),
+                                (targ_region['rect'][2], targ_region['rect'][3]),(0, 0, 255), 2)
+                self.overlay.overlay_floating_text(key, key, targ_region['rect'][0],
+                                                   targ_region['rect'][1], (0, 0, 255))
+        self.overlay.overlay_paint()
+
         range_low = 30
         range_high = 200
         match_level = 0.5
@@ -335,6 +376,11 @@ class EDAutopilot:
             self.scr.write_config(data=None)  # None means the writer will use its own scales variable which we modified
         else:
             self.ap_ckb('log', 'Cal: Insufficient matching to meet reliability, max % match:'+str(max_val))
+
+        # Wait, then clean up
+        sleep(3)
+        self.overlay.overlay_clear()
+        self.overlay.overlay_paint()
 
             # Go into FSS, check to see if we have a signal waveform in the Earth, Water or Ammonia zone
 
@@ -408,8 +454,8 @@ class EDAutopilot:
 
         logger.debug("has_destination:"+str(maxVal))
 
-        # need > 50% in the match to say we do have a destination
-        if maxVal < 0.50:
+        # need > x in the match to say we do have a destination
+        if maxVal < scr_reg.compass_match_thresh:
             return False
         else:
             return True
@@ -435,7 +481,8 @@ class EDAutopilot:
     def get_nav_offset(self, scr_reg):
         """ Determine the x,y offset from center of the compass of the nav point. """
 
-        icompass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('compass', 'compass')
+        icompass_image, (minVal, maxVal, minLoc, maxLoc), match = (
+            scr_reg.match_template_in_region('compass', 'compass'))
         pt = maxLoc
 
         # get wid/hgt of templates  
@@ -449,8 +496,22 @@ class EDAutopilot:
         compass_image = icompass_image[abs(pt[1]-pad): pt[1]+c_hgt+pad, abs(pt[0]-pad): pt[0]+c_wid+pad].copy()
 
         # find the nav point within the compass box
-        navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = scr_reg.match_template_in_image(compass_image, 'navpoint')
+        navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = (
+            scr_reg.match_template_in_image(compass_image, 'navpoint'))
         n_pt = n_maxLoc
+
+        # must be > x to have solid hit, otherwise we are facing wrong way (empty circle)
+        if n_maxVal < scr_reg.navpoint_match_thresh:
+            final_x = 0.0
+            final_y = 0.0
+            final_z = -1.0 # Behind
+            result = {'x': final_x, 'y': final_y, 'z': final_z}
+        else:
+            final_x = ((n_pt[0]+((1/2)*wid))-((1/2)*c_wid))-5.5
+            final_y = (((1/2)*c_hgt)-(n_pt[1]+((1/2)*hgt)))+6.5
+            final_z = 1.0 # Ahead
+            logger.debug(("maxVal="+str(n_maxVal)+" x:"+str(final_x)+" y:"+str(final_y)))
+            result = {'x': final_x, 'y': final_y, 'z': final_z}
 
         if self.cv_view:
             icompass_image_d = cv2.cvtColor(icompass_image, cv2.COLOR_GRAY2RGB)
@@ -463,8 +524,8 @@ class EDAutopilot:
             #   dim = (int(destination_width/3), int(destination_height/3))
 
             #   img = cv2.resize(dst_image, dim, interpolation =cv2.INTER_AREA) 
-            cv2.putText(icompass_image_d, f'C:{maxVal:5.2f} >0.6', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.putText(icompass_image_d, f'N:{n_maxVal:5.2f} >0.8', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(icompass_image_d, f'Compass: {maxVal:5.2f} > {scr_reg.compass_match_thresh:5.2f}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(icompass_image_d, f'Nav Point: {n_maxVal:5.2f} > {scr_reg.navpoint_match_thresh:5.2f}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
             #cv2.circle(icompass_image_display, (pt[0]+n_pt[0], pt[1]+n_pt[1]), 5, (0, 255, 0), 3)
             cv2.imshow('compass', icompass_image_d)
             #cv2.imshow('nav', navpt_image)
@@ -472,26 +533,12 @@ class EDAutopilot:
             #cv2.moveWindow('nav', self.cv_view_x, self.cv_view_y) 
             cv2.waitKey(30)
 
-        # must be > 0.80 to have solid hit, otherwise we are facing wrong way (empty circle)
-        if n_maxVal < 0.80:
-            final_x = 0.0
-            final_y = 0.0
-            final_z = -1.0 # Behind
-            result = {'x': final_x, 'y': final_y, 'z': final_z}
-        else:
-            final_x = ((n_pt[0]+((1/2)*wid))-((1/2)*c_wid))-5.5
-            final_y = (((1/2)*c_hgt)-(n_pt[1]+((1/2)*hgt)))+6.5
-            final_z = 1.0 # Ahead
-            logger.debug(("maxVal="+str(n_maxVal)+" x:"+str(final_x)+" y:"+str(final_y)))
-            result = {'x': final_x, 'y': final_y, 'z': final_z}
-
         return result
 
     # Looks to see if the 'dashed' line of the target is present indicating the target is occluded by the planet
     #  return True if meets threshold 
     #
     def is_destination_occluded(self, scr_reg) -> bool:
-        threshold = 0.75
         dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('target_occluded', 'target_occluded')
 
         pt = maxLoc
@@ -508,14 +555,14 @@ class EDAutopilot:
                 dim = (int(destination_width/2), int(destination_height/2))
 
                 img = cv2.resize(dst_image_d, dim, interpolation=cv2.INTER_AREA)
-                cv2.putText(img, f'{maxVal:5.2f} >.54', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                cv2.putText(img, f'{maxVal:5.2f} > {scr_reg.target_occluded_thresh:5.2f}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
                 cv2.imshow('occluded', img)
                 cv2.moveWindow('occluded', self.cv_view_x, self.cv_view_y+650)
             except Exception as e:
                 print("exception in getdest: "+str(e))
             cv2.waitKey(30)
 
-        if maxVal > threshold:
+        if maxVal > scr_reg.target_occluded_thresh:
             return True
         else:
             return False
@@ -523,8 +570,6 @@ class EDAutopilot:
     def get_destination_offset(self, scr_reg):
         """ Determine how far off we are from the target being in the middle of the screen
         (in this case the specified region). """
-
-        threshold = 0.54
         dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('target', 'target')
 
         pt = maxLoc
@@ -550,7 +595,7 @@ class EDAutopilot:
                 dim = (int(destination_width/2), int(destination_height/2))
 
                 img = cv2.resize(dst_image_d, dim, interpolation=cv2.INTER_AREA)
-                cv2.putText(img, f'{maxVal:5.2f} >.54', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                cv2.putText(img, f'{maxVal:5.2f} > {scr_reg.target_thresh:5.2f}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
                 cv2.imshow('target', img)
                 #cv2.imshow('tt', scr_reg.templates.template['target']['image'])
                 cv2.moveWindow('target', self.cv_view_x+500, self.cv_view_y)
@@ -559,8 +604,8 @@ class EDAutopilot:
             cv2.waitKey(30)
 
         #print (maxVal)
-        # must be > 0.55 to have solid hit, otherwise we are facing wrong way (empty circle)
-        if maxVal < threshold:
+        # must be > x to have solid hit, otherwise we are facing wrong way (empty circle)
+        if maxVal < scr_reg.target_thresh:
             result = None
         else:
             result = {'x': final_x, 'y': final_y}
@@ -579,14 +624,14 @@ class EDAutopilot:
 
         if self.cv_view:
             self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
-            cv2.putText(dis_image, f'{maxVal:5.2f} >.45', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
+            cv2.putText(dis_image, f'{maxVal:5.2f} > {scr_reg.disengage_thresh}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
             cv2.imshow('disengage', dis_image)
-            cv2.moveWindow('disengage', self.cv_view_x-460,self.cv_view_y+460)
+            cv2.moveWindow('disengage', self.cv_view_x-460,self.cv_view_y+575)
             cv2.waitKey(1)
 
         logger.debug("Disenage = "+str(maxVal))
 
-        if (maxVal > 0.45):
+        if (maxVal > scr_reg.disengage_thresh):
             self.vce.say("Disengaging Supercruise")
             return True
         else:
@@ -1521,6 +1566,10 @@ class EDAutopilot:
     def set_overlay(self, enable=False):
         # TODO: apply the change without restarting the program
         self.config["OverlayTextEnable"] = enable
+        if not enable:
+            self.overlay.overlay_clear()
+
+        self.overlay.overlay_paint()
 
     def set_voice(self, enable=False):
         if enable == True:

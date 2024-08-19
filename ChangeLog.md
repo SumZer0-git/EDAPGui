@@ -1,3 +1,17 @@
+# 8/19/2024 Improved calibration and overlay features.
+ - Stumpii: Added Floating Test option to the Overlay class to be able to write text anywhere on the screen.
+ - Stumpii: Added Clear method to the Overlay class to clear all overlay items.
+ - Stumpii: When overlay checkbox unchecked, overlay now clears. The checkbox said restart required, but that does not appear to be the case.
+ - Stumpii: Improved text for calibration popup.
+ - Stumpii: When performing calibration, the compass and target regions are shown as well as the current and bast matches.
+ - Stumpii: Changed regions test function to display all the regions wanted on the Elite client screen.
+ - Stumpii: For regions test, the region name is printed within the region box (the reason floating text was added to the Overlay class).
+
+# 8/18/2024 Cleanup - in prep for additional testing changes.
+ - Stumpii: Moved most threshold values to Screen_Regions for consisancy throughout the program and match coded and display values.
+ - Stumpii: Cleaned up many comments.
+ - Stumpii: Moved the one test routine out to its own file. Added more test routines. These are described in the Test_Routines.py file.
+
 # 8/17/2024 New ships and auto focus
  - Stumpii: Added configs for the two new ships (Python Mk2 and Type-8).
  - Stumpii: Added option to refocus Elite client window before each new key press to avoid sending keys to an unwanted window.

@@ -12,19 +12,27 @@ Description:
 Author: sumzer0@yahoo.com
 """
 
+
 class Screen_Regions:
     def __init__(self, screen, templ):
         self.screen = screen
         self.templates = templ
+
+        # Define the thresholds for template matching to be consistent throughout the program
+        self.compass_match_thresh = 0.5
+        self.navpoint_match_thresh = 0.8
+        self.target_thresh = 0.54
+        self.target_occluded_thresh = 0.75
         self.sun_threshold = 125
-        
+        self.disengage_thresh = 0.45
+
         # array is in HSV order which represents color ranges for filtering
         self.orange_color_range   = [array([0, 130, 123]),  array([25, 235, 220])]
         self.orange_2_color_range = [array([16, 165, 220]), array([98, 255, 255])]
         self.target_occluded_range= [array([16, 31, 85]),   array([26, 160, 212])]
         self.blue_color_range     = [array([0, 28, 170]),   array([180, 100, 255])]
         self.fss_color_range      = [array([95, 210, 70]),  array([105, 255, 120])]
-        
+
         self.reg = {}
         # regions with associated filter and color ranges
         # The rect is top left x, y, and bottom right x, y in fraction of screen resolution
@@ -47,26 +55,33 @@ class Screen_Regions:
             self.reg[key]['width']  = self.reg[key]['rect'][2] - self.reg[key]['rect'][0]
             self.reg[key]['height'] = self.reg[key]['rect'][3] - self.reg[key]['rect'][1]
 
-
-    # just grab the screen based on the region name/rect
     def capture_region(self, screen, region_name):
-        return screen.get_screen_region(self.reg[region_name]['rect'])  
-         
-    # grab screen region and call its filter routine
+        """ Just grab the screen based on the region name/rect.
+        Returns an unfiltered image. """
+        return screen.get_screen_region(self.reg[region_name]['rect'])
+
     def capture_region_filtered(self, screen, region_name):
+        """ Grab screen region and call its filter routine.
+        Returns the filtered image. """
         scr = screen.get_screen_region(self.reg[region_name]['rect'])
         if self.reg[region_name]['filterCB'] == None:
+            # return the screen region untouched in BGRA format.
             return scr
         else:
+            # return the screen region in the format returned by the filter.
             return self.reg[region_name]['filterCB'] (scr, self.reg[region_name]['filter'])          
-        
+
     def match_template_in_region(self, region_name, templ):
+        """ Attempt to match the given template in the given region which is filtered using the region filter.
+        Returns the filtered image, detail of match and the match mask. """
         img_region = self.capture_region_filtered(self.screen, region_name)    # which would call, reg.capture_region('compass') and apply defined filter
         match = cv2.matchTemplate(img_region, self.templates.template[templ]['image'], cv2.TM_CCOEFF_NORMED)
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(match)
         return img_region, (minVal, maxVal, minLoc, maxLoc), match 
     
     def match_template_in_image(self, image, template):
+        """ Attempt to match the given template in the (unfiltered) image.
+        Returns the original image, detail of match and the match mask. """
         match = cv2.matchTemplate(image, self.templates.template[template]['image'], cv2.TM_CCOEFF_NORMED)
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(match)
         return image, (minVal, maxVal, minLoc, maxLoc), match     
@@ -82,6 +97,9 @@ class Screen_Regions:
         return img_out
         
     def filter_by_color(self, image, color_range):
+        """Filters an image based on a given color range.
+        Returns the filtered image. Pixels within the color range are returned
+        their original color, otherwise black."""
         # converting from BGR to HSV color space
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         # filte passed in color low, high
@@ -120,38 +138,3 @@ class Screen_Regions:
         result = int((wht / (wht+blk))*100)
 
         return result
-
-
-'''
-
-from Overlay import *
-from Screen import *
-from Image_Templates import *
-from time import sleep
-
-def main():
-    ov = Overlay("",1)
-    scr = Screen()
-    templ = Image_Templates(scr.scaleX, scr.scaleY)
-    scrReg = Screen_Regions(scr, templ)
-
-    for i, key in enumerate(scrReg.reg):
-        #tgt = scrReg.capture_region_filtered(scr, key)   
-        #print(key) 
-        #print(scrReg.reg[key])
-        if key == 'nav_panel':
-            ov.overlay_rect(key, (scrReg.reg[key]['rect'][0], 
-                scrReg.reg[key]['rect'][1]),
-                (scrReg.reg[key]['rect'][2],
-                scrReg.reg[key]['rect'][3]) , (0,255,i*40), 2 )
-            ov.overlay_paint() 
-    sleep(10)
-    ov.overlay_quit()
-    sleep(2)  
-
-
-if __name__ == "__main__":
-    main()
-
-
-'''

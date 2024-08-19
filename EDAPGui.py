@@ -230,8 +230,9 @@ class APGui():
             self.update_statusline(body)
 
     def calibrate_callback(self):
-        ans = messagebox.askyesno('Calibration', 'Select OK to begin Cal')
-        if ans == False:
+        msg = 'Select OK to begin Calibration. You must be in space and have a valid station targeted in center screen.'
+        ans = messagebox.askokcancel('Calibration', msg)
+        if not ans:
             return
 
         self.log_msg('Calibration starting')
