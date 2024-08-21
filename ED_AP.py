@@ -1580,6 +1580,21 @@ class EDAutopilot:
     def set_fss_scan(self, enable=False):
         self.config["ElwScannerEnable"] = enable
 
+    def set_log_error(self, enable=False):
+        self.config["LogDEBUG"] = False
+        self.config["LogINFO"] = False
+        logger.setLevel(logging.ERROR)
+
+    def set_log_debug(self, enable=False):
+        self.config["LogDEBUG"] = True
+        self.config["LogINFO"] = False
+        logger.setLevel(logging.DEBUG)
+
+    def set_log_info(self, enable=False):
+        self.config["LogDEBUG"] = False
+        self.config["LogINFO"] = True
+        logger.setLevel(logging.INFO)
+
     # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
     # have then then kill python exec
     def quit(self):

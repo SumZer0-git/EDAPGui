@@ -170,6 +170,13 @@ class APGui():
         self.entries['buttons']['Start SC'].insert(0, str(self.ed_ap.config['HotKey_StartSC']))
         self.entries['buttons']['Stop All'].insert(0, str(self.ed_ap.config['HotKey_StopAllAssists']))
 
+        if self.ed_ap.config['LogDEBUG']:
+            self.radiobuttonvar['debug_mode'].set("Debug")
+        elif self.ed_ap.config['LogINFO']:
+            self.radiobuttonvar['debug_mode'].set("Info")
+        else:
+            self.radiobuttonvar['debug_mode'].set("Error")
+
         # global trap for these keys, the 'end' key will stop any current AP action
         # the 'home' key will start the FSD Assist.  May want another to start SC Assist
 
@@ -338,6 +345,9 @@ class APGui():
 
     def open_discord(self):
         webbrowser.open_new("https://discord.gg/HCgkfSc")
+
+    def open_logfile(self):
+        os.startfile('autopilot.log')
 
     def log_msg(self, msg):
         self.msgList.insert(END, datetime.now().strftime("%H:%M:%S: ") + msg)
@@ -587,7 +597,16 @@ class APGui():
         else:
             self.cv_view = False
             self.ed_ap.set_cv_view(False)
+
         self.ed_ap.config['DSSButton'] = self.radiobuttonvar['dss_button'].get()
+
+        if self.radiobuttonvar['debug_mode'].get() == "Error":
+            self.ed_ap.set_log_error(True)
+        elif self.radiobuttonvar['debug_mode'].get() == "Debug":
+            self.ed_ap.set_log_debug(True)
+        elif self.radiobuttonvar['debug_mode'].get() == "Info":
+            self.ed_ap.set_log_info(True)
+
 
     def makeform(self, win, ftype, fields, r=0, inc=1, rfrom=0, rto=1000):
         entries = {}
@@ -660,8 +679,10 @@ class APGui():
         nb.grid()
         page0 = Frame(nb)
         page1 = Frame(nb)
+        page2 = Frame(nb)
         nb.add(page0, text="Main")  # main page
         nb.add(page1, text="Settings")  # options page
+        nb.add(page2, text="Debug/Test")  # debug/test page
 
         # main options block
         blk_main = tk.Frame(page0)
@@ -774,7 +795,31 @@ class APGui():
         blk_settings_buttons = tk.Frame(page1)
         blk_settings_buttons.grid(row=3, column=0, padx=10, pady=5, sticky=(N, S, E, W))
         blk_settings_buttons.columnconfigure([0, 1], weight=1, minsize=100)
-        btn_save = Button(blk_settings_buttons, text='Save Settings', command=self.save_settings)
+        btn_save = Button(blk_settings_buttons, text='Save All Settings', command=self.save_settings)
+        btn_save.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+
+        # debug block
+        blk_debug = tk.Frame(page2)
+        blk_debug.grid(row=0, column=0, padx=10, pady=5, sticky=(E, W))
+        blk_debug.columnconfigure([0, 1], weight=1, minsize=100, uniform="group2")
+
+        # debug settings block
+        blk_debug_settings = LabelFrame(blk_debug, text="DEBUG")
+        blk_debug_settings.grid(row=0, column=0, padx=2, pady=2, sticky=(N, S, E, W))
+        self.radiobuttonvar['debug_mode'] = StringVar()
+        rb_debug_debug = Radiobutton(blk_debug_settings, pady=3, text="Debug + Info + Errors", variable=self.radiobuttonvar['debug_mode'], value="Debug", command=(lambda field='debug_mode': self.check_cb(field)))
+        rb_debug_debug.grid(row=0, column=1, sticky=(W))
+        rb_debug_info = Radiobutton(blk_debug_settings, pady=3, text="Info + Errors", variable=self.radiobuttonvar['debug_mode'], value="Info", command=(lambda field='debug_mode': self.check_cb(field)))
+        rb_debug_info.grid(row=1, column=1, sticky=(W))
+        rb_debug_error = Radiobutton(blk_debug_settings, pady=3, text="Errors only (default)", variable=self.radiobuttonvar['debug_mode'], value="Error", command=(lambda field='debug_mode': self.check_cb(field)))
+        rb_debug_error.grid(row=2, column=1, sticky=(W))
+        btn_open_logfile = Button(blk_debug_settings, text='Open Log File', command=self.open_logfile)
+        btn_open_logfile.grid(row=3, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+
+        blk_debug_buttons = tk.Frame(page2)
+        blk_debug_buttons.grid(row=3, column=0, padx=10, pady=5, sticky=(N, S, E, W))
+        blk_debug_buttons.columnconfigure([0, 1], weight=1, minsize=100)
+        btn_save = Button(blk_debug_buttons, text='Save All Settings', command=self.save_settings)
         btn_save.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
 
         # Statusbar
