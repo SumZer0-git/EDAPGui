@@ -1,3 +1,7 @@
+# 8/20/2024 Added debug options to GUI.
+ - Stumpii: Added debug/test tab to GUI.
+ - Stumpii: Added debug options and log file open to the GUI to make for easier troubleshooting.
+
 # 8/19/2024 Improved calibration and overlay features.
  - Stumpii: Added Floating Test option to the Overlay class to be able to write text anywhere on the screen.
  - Stumpii: Added Clear method to the Overlay class to clear all overlay items.
