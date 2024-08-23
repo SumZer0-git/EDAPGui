@@ -223,6 +223,8 @@ situation
 sumzer0@yahoo.com
 
 
-# Screen Shot
-![Alt text](screen/screen_cap.png?raw=true "Screen")
+# Screen Shots
+![Alt text](screen/screen_cap_main.png?raw=true "Main Tab")
+![Alt text](screen/screen_cap_settings.png?raw=true "Settings Tab")
+![Alt text](screen/screen_cap.png?raw=true "Debug Tab")
                                                                
