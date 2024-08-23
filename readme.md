@@ -3,19 +3,24 @@ Join discord if need support or wish to provide inputs on new features:  https:/
 <br>
 
 # ED Autopilot - Gui
-This Elite Dangerous (ED) Autopilot supports FSD Route assist, Supercruise assist, Waypoint assist, Robigo Mines assit and AFK Combat escape assist.  For the FSD Route Assist, you select
-your destination in the GalaxyMap and then enable this assistant and it will perform all the jumps to get you to your destination, AFK.  Furthermore while
+This Elite Dangerous (ED) Autopilot supports the following main features:
+## FSD Route assist
+For the FSD Route Assist, you select your destination in the GalaxyMap and then enable this assistant and it will perform all the jumps to get you to your destination, AFK.  Furthermore while
 executing route assistance it will perform detailed system scanning (honk) when jumping into a system and optionally perform FSS scanning
-to determine if Earth, Water, or Ammonia type world is present. <br>
-
+to determine if Earth, Water, or Ammonia type world is present.
+## Supercruise assist
 The supercruise (SC) assistant (and not using ED's SC Assist which takes up a slot, for a piece of software?) 
 will keep you on target and when "TO DISENGAGE" is presented and will autodrop out of SC and perform autodocking with the targeted Station. <br>
-
+## Waypoint assist
 With Waypoint Assist you define the route in a file and this assist will jump to those waypoints.  If a Station is defined to dock at, the assistant will transition to SC Assist and
 dock with the station.  A early version of a trading capability is also included.<br>
+Additional information can be found [here](docs/Waypoint.md).
+## Robigo Mines assist
+The Robigo Assist performs the Robigo Mines passenger mission loop which includes mission selection, mission completetion, and the full loop to Sirius Atmospherics.<br>
+Additional information can be found [here](docs/Robigo.md). 
+## AFK Combat escape assist
 
-The Robigo Assist performs the Robigo Mines passenger mission loop which includes mission selection, mission completetion, and the full loop to Sirius Atmospherics<br>
-
+## Additional Features
 If Voice enabled, the autopilot will inform you of its actions
 
 This autopilot uses Computer Vision (grabs screens and performs template matching) and issues keystrokes.  It does not perform any runtime modifications 
@@ -69,13 +74,15 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * ./EDAPGui.exe  The EPAPGui.exe must live in the folder where the templates, configs, ships, waypoints folder reside.   
 * Otherwise run the main EDAPGui.py script
   * With Elite Dangerous (ED) running, start EDAPGui.py
-    * python EDAPGui.py     
-    * Note: the default Roll, Pitch, and Yaw rates are for my Diamondback Explorer, you need to enter the values
-      for your ship, which can be found in Outfitting. 
-* In ED, Use Left Panel to select your route
-* Go to supercruise and go ahead and line up with Target
-* In the autopilot enable FSD Assist or hit the 'Home' key.  When a assist starts it will set focus
-      to the Elite Dangerous window.  
+    * python EDAPGui.py
+
+Once ED_AP has started there are few steps to complete the first time ED AP is run. These will help avoid common issues.
+1. Perform screen calibration, detailed [here](docs/Calibration.md). This will configure ED_AP for your screen resolution. Many issues can be avoided with correct calibration.
+2. Check and if necessary, change keybinding options.
+3. Select the correct ship file matching the ship you are flying, this will configure the pitch, roll and yaw rates to match. Depending on the ship, you may need to tune the values for best response a detailed [here](docs/RollPitchYaw.md). 
+4. In ED, Use Left Panel to select your route, or use the galaxy map.
+5. Go to supercruise and go ahead and line up with Target.
+6. In the autopilot enable FSD Assist or hit the 'Home' key.  When a assist starts it will set focus to the Elite Dangerous window.  
 Note: the autopilot.log file will capture any required keybindings that are not set
   
 # Autopilot Options:
