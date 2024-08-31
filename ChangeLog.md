@@ -1,3 +1,6 @@
+# 8/31/2024 Updated docs.
+ - Stumpii: Updated docs.
+
 # 8/20/2024 Added debug options to GUI.
  - Stumpii: Added debug/test tab to GUI.
  - Stumpii: Added debug options and log file open to the GUI to make for easier troubleshooting.
