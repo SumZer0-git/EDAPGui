@@ -78,13 +78,66 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 
 Once ED_AP has started there are few steps to complete the first time ED AP is run. These will help avoid common issues.
 1. Perform screen calibration, detailed [here](docs/Calibration.md). This will configure ED_AP for your screen resolution. Many issues can be avoided with correct calibration.
-2. Check and if necessary, change keybinding options.
+2. Check and if necessary, change keybinding options, detailed below.
 3. Select the correct ship file matching the ship you are flying, this will configure the pitch, roll and yaw rates to match. Depending on the ship, you may need to tune the values for best response a detailed [here](docs/RollPitchYaw.md). 
 4. In ED, Use Left Panel to select your route, or use the galaxy map.
 5. Go to supercruise and go ahead and line up with Target.
 6. In the autopilot enable FSD Assist or hit the 'Home' key.  When a assist starts it will set focus to the Elite Dangerous window.  
 Note: the autopilot.log file will capture any required keybindings that are not set
-  
+
+# Required Keybindings
+The following keybindings are required by AP, so make sure a key is assigned to each by going into the Elite Dangerous options and assigning a key. After changing keybindings run AP again for the chagnes to be read. An error will appear if any of the keybindings are missing in Elite Dangerous.
+
+| Binding       | Name                     | Location under OPTIONS > CONTROLS            |
+|---------------|--------------------------|----------------------------------------------|
+|UI_Up| UI PANEL UP              | GENERAL CONTROLS > INTERFACE MODE            |
+|UI_Down| UI PANEL DOWN            | GENERAL CONTROLS > INTERFACE MODE            |
+|UI_Left| UI PANEL LEFT            | GENERAL CONTROLS > INTERFACE MODE            |
+|UI_Right| UI PANEL RIGHT           | GENERAL CONTROLS > INTERFACE MODE            |
+|UI_Select| UI PANEL SELECT          | GENERAL CONTROLS > INTERFACE MODE            |
+|UI_Back| UI Back                  | GENERAL CONTROLS > INTERFACE MODE            |
+|CycleNextPanel| NEXT PANEL TAB           | GENERAL CONTROLS > INTERFACE MODE            |
+| |                          |                                              |
+|MouseReset| RESET MOUSE              | SHIP CONTROLS > MOUSE CONTROLS               |
+| |                          |                                              |
+|YawLeftButton| YAW LEFT                 | SHIP CONTROLS > FLIGHT ROTATION              |
+|YawRightButton| YAW RIGHT                | SHIP CONTROLS > FLIGHT ROTATION              |
+|RollLeftButton| ROLL LEFT                | SHIP CONTROLS > FLIGHT ROTATION              |
+|RollRightButton| ROLL RIGHT               | SHIP CONTROLS > FLIGHT ROTATION              |
+|PitchUpButton| PITCH UP                 | SHIP CONTROLS > FLIGHT ROTATION              |
+|PitchDownButton| PITCH DOWN               | SHIP CONTROLS > FLIGHT ROTATION              |
+| |                          |                                              |
+|SetSpeedZero| SET SPEED TO 0%          | SHIP CONTROLS > FLIGHT THROTTLE              |
+|SetSpeed50| SET SPEED TO 50%         | SHIP CONTROLS > FLIGHT THROTTLE              |
+|SetSpeed100| SET SPEED TO 100%        | SHIP CONTROLS > FLIGHT THROTTLE              |
+| |                          |                                              |
+|UseBoostJuice| ENGINE BOOST             | SHIP CONTROLS > FLIGHT MISCELLANEOUS         |
+|HyperSuperCombination| TOGGLE FRAME SHIFT DRIVE | SHIP CONTROLS > FLIGHT MISCELLANEOUS         |
+|Supercruise| SUPERCRUISE              | SHIP CONTROLS > FLIGHT MISCELLANEOUS         |
+| |                          |                                              |
+|SelectTarget| SELECT TARGET AHEAD      | SHIP CONTROLS > TARGETING                    |
+| |                          |                                              |
+|PrimaryFire| PRIMARY FIRE             | SHIP CONTROLS > WEAPONS                      |
+|SecondaryFire| SECONDARY FIRE           | SHIP CONTROLS > WEAPONS                      |
+|DeployHardpointToggle| DEPLOY HARDPOINTS        | SHIP CONTROLS > WEAPONS                      |
+| |                          |                                              |
+|DeployHeatSink| DEPLOY HEATSINK          | SHIP CONTROLS > COOLING                      |
+| |                          |                                              |
+|IncreaseEnginesPower| DIVERT POWER TO ENGINES  | SHIP CONTROLS > MISCELLANEOUS                |
+|IncreaseWeaponsPower| DIVERT POWER TO WEAPONS  | SHIP CONTROLS > MISCELLANEOUS                |
+|IncreaseSystemsPower| DIVERT POWER TO SYSTEMS  | SHIP CONTROLS > MISCELLANEOUS                |
+| |                          |                                              |
+|UIFocus| UI FOCUS                 | SHIP CONTROLS > MODE SWITCHES                |
+|GalaxyMapOpen| OPEN GALAXY MAP          | SHIP CONTROLS > MODE SWITCHES                |
+|SystemMapOpen| OPEN SYSTEM MAP          | SHIP CONTROLS > MODE SWITCHES                |
+|ExplorationFSSEnter| ENTER FSS MODE           | SHIP CONTROLS > MODE SWITCHES                |
+| |                          |                                              |
+|HeadLookReset| RESET HEADLOOK           | SHIP CONTROLS > HEADLOOK MODE                |
+| |                          |                                              |
+|ExplorationFSSQuit| LEAVE FSS                | SHIP CONTROLS > FULL SPECTRUM SYSTEM SCANNER |
+
+
+
 # Autopilot Options:
 * FSD Route Assist: will execute your route.  At each jump the sequence will perform some fuel scooping, however, if 
     fuel level goes down below a threshold  the sequence will stop at the Star until refueling is complete.  
