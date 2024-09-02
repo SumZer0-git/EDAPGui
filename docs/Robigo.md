@@ -37,6 +37,7 @@
 - Set Nav Menu Filter to: Stations and POI only
     - Removes the clutter and allows faster selection of Robigo Mines and Sirius Atmos
 - Must have Advanced Docking Computer, don't need a SC Assist module
+- If you have never taken passenger missions from Robigo, I would recommend doing one mission manually so that all locations are discovered before trying Robigo Assist. Otherwise, following 'first loop' instructions below.
 - First Loop:
   - When arriving in Sothis, the Robigo Assist will target Sirius Atmospherics from the Nav Panel
     - Likely, in this first loop, Sirius Atmospherics will not be listed in the Nav Panel
