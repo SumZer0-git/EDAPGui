@@ -54,18 +54,14 @@ class MousePoint:
         return self.x, self.y
  
         
-    def do_click(self, x, y):
-        # position the mouse and do left click
+    def do_click(self, x, y, delay = 0.1):
+        # position the mouse and do left click, duration in seconds
         self.ms.position=(x, y)
         #hself.ms.click(Button.left)
         
         self.ms.press(Button.left)
-        sleep(0.1)
+        sleep(delay)
         self.ms.release(Button.left)
-        sleep(0.1)
-        self.ms.press(Button.left)
-        sleep(1.25)
-        self.ms.release(Button.left) 
 
 
 def main():

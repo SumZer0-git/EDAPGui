@@ -151,6 +151,7 @@ class EDWayPoint:
             ap.keys.send('UI_Select', hold=4.0)
         else:
             self.mouse.do_click(x, y)
+            self.mouse.do_click(x, y, 1.25)
 
             # for horizons we need to select it
             if self.is_odyssey == False:
