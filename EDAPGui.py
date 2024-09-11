@@ -45,6 +45,7 @@ Ideas taken from:  https://github.com/skai2/EDAutopilot
  HotKeys:
     Home - Start FSD Assist
     INS  - Start SC Assist
+    PG UP - Start Robigo Assist
     End - Terminate any ongoing assist (FSD, SC, AFK)
 
 Author: sumzer0@yahoo.com
@@ -88,6 +89,7 @@ class APGui():
             'Wait For Autodock': "After docking granted, \nwait this amount of time for us to get docked with autodocking",
             'Start FSD': "Button to start FSD route assist.",
             'Start SC': "Button to start Supercruise assist.",
+            'Start Robigo': "Button to start Robigo assist.",
             'Stop All': "Button to stop all assists.",
             'Refuel Threshold': "If fuel level get below this level, \nit will attempt refuel.",
             'Scoop Timeout': "Number of second to wait for full tank, \nmight mean we are not scooping well or got a small scooper",
@@ -148,6 +150,7 @@ class APGui():
 
         self.entries['buttons']['Start FSD'].delete(0, END)
         self.entries['buttons']['Start SC'].delete(0, END)
+        self.entries['buttons']['Start Robigo'].delete(0, END)
         self.entries['buttons']['Stop All'].delete(0, END)
 
         self.entries['ship']['PitchRate'].insert(0, float(self.ed_ap.pitchrate))
@@ -168,6 +171,7 @@ class APGui():
 
         self.entries['buttons']['Start FSD'].insert(0, str(self.ed_ap.config['HotKey_StartFSD']))
         self.entries['buttons']['Start SC'].insert(0, str(self.ed_ap.config['HotKey_StartSC']))
+        self.entries['buttons']['Start Robigo'].insert(0, str(self.ed_ap.config['HotKey_StartRobigo']))
         self.entries['buttons']['Stop All'].insert(0, str(self.ed_ap.config['HotKey_StopAllAssists']))
 
         if self.ed_ap.config['LogDEBUG']:
@@ -475,6 +479,7 @@ class APGui():
             self.ed_ap.config['OverlayTextFontSize'] = int(self.entries['overlay']['Font Size'].get())
             self.ed_ap.config['HotKey_StartFSD'] = str(self.entries['buttons']['Start FSD'].get())
             self.ed_ap.config['HotKey_StartSC'] = str(self.entries['buttons']['Start SC'].get())
+            self.ed_ap.config['HotKey_StartRobigo'] = str(self.entries['buttons']['Start Robigo'].get())
             self.ed_ap.config['HotKey_StopAllAssists'] = str(self.entries['buttons']['Stop All'].get())
             self.ed_ap.config['VoiceEnable'] = self.checkboxvar['Enable Voice'].get()
         except:
@@ -643,7 +648,7 @@ class APGui():
         modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'Robigo Assist', 'AFK Combat Assist')
         ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time')
         autopilot_entry_fields = ('Sun Bright Threshold', 'Nav Align Tries', 'Jump Tries', 'Wait For Autodock')
-        buttons_entry_fields = ('Start FSD', 'Start SC', 'Stop All')
+        buttons_entry_fields = ('Start FSD', 'Start SC', 'Start Robigo', 'Stop All')
         refuel_entry_fields = ('Refuel Threshold', 'Scoop Timeout', 'Fuel Threshold Abort')
         overlay_entry_fields = ('X Offset', 'Y Offset', 'Font Size')
 
