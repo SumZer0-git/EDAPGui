@@ -1,4 +1,6 @@
-# 8/31/2024 Updated docs.
+# 9/10/2024 Updated docs and minor fixes.
+ - Stumpii: Correction to mouse click.
+ - Stumpii: Add hotkey data entry on GUI for Robigo Assist (Pg Up) which is not shown anywhere.
  - Stumpii: Updated docs.
 
 # 8/20/2024 Added debug options to GUI.
