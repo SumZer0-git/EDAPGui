@@ -249,6 +249,10 @@ If you encounter any issues during pip install, try running:
 > python -m pip install -r requirements.txt
 instead of > pip install -r requirements.txt
 
+The following error may occur:
+> AttributeError: '_thread._local' object has no attribute 'srcdc'
+
+The error is usually as a result of mss incompatibility. Try pip install mss==8.0.3 or pip install mss==8.0.3.
 
 ## Known Limitations
  * If you jump into a system with 2 suns next to each other, will likely over heat and drop from Supercruise.
