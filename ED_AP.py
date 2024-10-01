@@ -16,6 +16,7 @@ from EDWayPoint import *
 from EDJournal import *
 from EDKeys import *
 from EDafk_combat import AFK_Combat
+from ModulesInfoParser import ModulesInfoParser
 from Overlay import *
 from Voice import *
 from Robigo import *
@@ -119,6 +120,7 @@ class EDAutopilot:
         self.afk_combat = AFK_Combat(self.keys, self.jn, self.vce)
         self.waypoint = EDWayPoint(self.jn.ship_state()['odyssey'])
         self.robigo = Robigo(self)
+        self.modules_info = ModulesInfoParser()
 
         # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
         # has worse performance for these rates
@@ -1120,7 +1122,7 @@ class EDAutopilot:
                     sleep(1)
                 logger.debug('jump= speed 0')
                 self.jump_cnt = self.jump_cnt+1
-                self.keys.send('SetSpeedZero')
+                self.keys.send('SetSpeedZero', repeat=3)  # Let's be triply sure that we set speed to 0% :)
                 sleep(1)  # wait 1 sec after jump to allow graphics to stablize and accept inputs
                 logger.debug('jump=complete')
                 return True
@@ -1151,6 +1153,8 @@ class EDAutopilot:
 
     #
     def refuel(self, scr_reg):
+        # Check if we have a fuel scoop
+        has_fuel_scoop = self.modules_info.has_fuel_scoop()
 
         logger.debug('refuel')
         scoopable_stars = ['F', 'O', 'G', 'K', 'B', 'A', 'M']
@@ -1166,19 +1170,21 @@ class EDAutopilot:
         # sun types.  Since we won't scoop it doesn't matter how much we pitch up
         # if scoopable we know white/yellow stars are bright, so set higher threshold, this will allow us to 
         #  mast out the galaxy edge (which is bright) and not pitch up too much and avoid scooping
-        if is_star_scoopable == False:
+        if is_star_scoopable == False or not has_fuel_scoop:
             scr_reg.set_sun_threshold(25)
         else:
             scr_reg.set_sun_threshold(self.config['SunBrightThreshold'])
                     
         # Lets avoid the sun, shall we
         self.vce.say("Sun avoidance")
+        self.update_ap_status("Circumnavigating star")
+        self.ap_ckb('log', 'Circumnavigating star')
         self.sun_avoid(scr_reg)
-                
 
-        if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and is_star_scoopable:
+        if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and is_star_scoopable and has_fuel_scoop:
             logger.debug('refuel= start refuel')
             self.vce.say("Refueling")
+            self.ap_ckb('log', 'Refueling')
             self.update_ap_status("Refueling")
             
             # mnvr into position
@@ -1210,16 +1216,24 @@ class EDAutopilot:
                 
             logger.debug('refuel=complete')
             return True
-        
+
         elif is_star_scoopable == False:
+            self.ap_ckb('log', 'Skip refuel - not a fuel star')
             logger.debug('refuel= needed, unsuitable star')
             self.pitchUp(20)
             return False
-        
+
         elif self.jn.ship_state()['fuel_percent'] >= self.config['RefuelThreshold']:
+            self.ap_ckb('log', 'Skip refuel - fuel level okay')
             logger.debug('refuel= not needed')
             return False
-        
+
+        elif not has_fuel_scoop:
+            self.ap_ckb('log', 'Skip refuel - no fuel scoop fitted')
+            logger.debug('No fuel scoop fitted.')
+            self.pitchUp(20)
+            return False
+
         else:
             self.pitchUp(15)  # if not refueling pitch up somemore so we won't heat up
             return False
@@ -1425,8 +1439,8 @@ class EDAutopilot:
                 # Align and stay on target. If false is returned, we have lost the target behind us.
                 if self.sc_target_align(scr_reg) == False:
                     # Continue ahead before aligning to prevent us circling the target
-                    self.keys.send('SetSpeed100')
-                    sleep(5)
+                    #self.keys.send('SetSpeed100')
+                    sleep(10)
                     self.keys.send('SetSpeed50')
                     self.nav_align(scr_reg) # Align to target
             else:
@@ -1452,8 +1466,8 @@ class EDAutopilot:
 
             # check for SC Disengage
             if (self.sc_disengage(scr_reg) == True):
-                sleep(1)  # wait another sec
-                self.keys.send('HyperSuperCombination', hold=0.001)
+                #sleep(1)  # wait another sec
+                self.keys.send('HyperSuperCombination')#, hold=0.001)
                 break
 
         # if no error, we must have gotten disengage
