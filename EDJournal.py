@@ -4,6 +4,7 @@ from json import loads
 from time import sleep, time
 from datetime import datetime
 
+from EDAP_data import ship_size_map
 from EDlogger import logger
 from WindowsKnownPaths import *
 
@@ -36,6 +37,17 @@ TODO: thinking self.ship()[name]  uses the same names as in the journal, so can 
 """
 
 
+def get_ship_size(ship: str) -> str:
+    """ Gets the ship size from the journal ship name.
+        @ship:  The ship name from the journal (i.e. 'diamondbackxl').
+        @return: The ship size ('S', 'M', 'L' or '' if ship not found or size not valid).
+    """
+    if ship in ship_size_map:
+        return ship_size_map[ship]
+    else:
+        return ''
+
+
 class EDJournal:
     def __init__(self):
         self.log_file = None
@@ -64,6 +76,8 @@ class EDJournal:
             'fuel_level': None,
             'fuel_percent': None,
             'is_scooping': False,
+            'cargo_capacity': None,
+            'ship_size': None,
         }
         self.ship_state()    # load up from file
         self.reset_items()
@@ -177,8 +191,15 @@ class EDJournal:
                 self.ship['interdicted'] = True
 
             # parse ship type
-            if log_event == 'LoadGame' or log_event == 'Loadout':
+            if log_event == 'LoadGame':
                 self.ship['type'] = log['Ship']
+                self.ship['ship_size'] = get_ship_size(log['Ship'])
+
+            # Parse Loadout
+            if log_event == 'Loadout':
+                self.ship['type'] = log['Ship']
+                self.ship['ship_size'] = get_ship_size(log['Ship'])
+                self.ship['cargo_capacity'] = log['CargoCapacity']
 
             # parse fuel
             if 'FuelLevel' in log and self.ship['type'] != 'TestBuggy':
