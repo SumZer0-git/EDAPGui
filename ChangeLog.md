@@ -1,3 +1,11 @@
+# 9/30/2024 Stumpii: Various changes:
+ - Added ship type and ship size to the journal and ship status.
+ - Added ED_data file for constants.
+ - Added ModulesInfoParser to detect if fuel scoop is installed. The other parsers will be added as needed.
+ - Removed setting speed to 100% when target lost as this happen when target is in front and causes gravity well message.
+ - Removed time delay on SC disengage as it was sometimes too slow and overshooting the station.
+ - Detection of monitor > 1 and identify which monitor ED is on.
+
 # 9/10/2024 Updated docs and minor fixes.
  - Stumpii: Correction to mouse click.
  - Stumpii: Add hotkey data entry on GUI for Robigo Assist (Pg Up) which is not shown anywhere.
