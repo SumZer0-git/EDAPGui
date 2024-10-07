@@ -199,9 +199,6 @@ class APGui():
         # check for updates
         self.check_updates()
 
-    # def cba(self):
-    #    self.ed_ap.jn.ship_state()['interdicted'] = True
-
     # callback from the EDAP, to configure GUI items
     def callback(self, key, body=None):
         if key == 'log':
