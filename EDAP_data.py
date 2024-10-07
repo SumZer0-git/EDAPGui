@@ -9,6 +9,62 @@ Note: Some of this file comes from EDMarketConnector's edmc_data.py file
 
 """
 
+# Status.json / Dashboard Flags constants
+FlagsDocked = 1 << 0             # on a landing pad
+FlagsLanded = 1 << 1             # on planet surface
+FlagsLandingGearDown = 1 << 2
+FlagsShieldsUp = 1 << 3
+FlagsSupercruise = 1 << 4         # While in super-cruise
+FlagsFlightAssistOff = 1 << 5
+FlagsHardpointsDeployed = 1 << 6
+FlagsInWing = 1 << 7
+FlagsLightsOn = 1 << 8
+FlagsCargoScoopDeployed = 1 << 9
+FlagsSilentRunning = 1 << 10
+FlagsScoopingFuel = 1 << 11
+FlagsSrvHandbrake = 1 << 12
+FlagsSrvTurret = 1 << 13         # using turret view
+FlagsSrvUnderShip = 1 << 14      # turret retracted
+FlagsSrvDriveAssist = 1 << 15
+FlagsFsdMassLocked = 1 << 16
+FlagsFsdCharging = 1 << 17       # While charging and jumping for super-cruise or system jump
+FlagsFsdCooldown = 1 << 18       # Following super-cruise or jump
+FlagsLowFuel = 1 << 19           # < 25%
+FlagsOverHeating = 1 << 20       # > 100%, or is this 80% now ?
+FlagsHasLatLong = 1 << 21
+FlagsIsInDanger = 1 << 22
+FlagsBeingInterdicted = 1 << 23
+FlagsInMainShip = 1 << 24
+FlagsInFighter = 1 << 25
+FlagsInSRV = 1 << 26
+FlagsAnalysisMode = 1 << 27      # Hud in Analysis mode
+FlagsNightVision = 1 << 28
+FlagsAverageAltitude = 1 << 29   # Altitude from Average radius
+FlagsFsdJump = 1 << 30           # While jumping to super-cruise or system jump
+FlagsSrvHighBeam = 1 << 31
+
+# Status.json / Dashboard Flags2 constants
+Flags2OnFoot = 1 << 0
+Flags2InTaxi = 1 << 1  # (or dropship/shuttle)
+Flags2InMulticrew = 1 << 2  # (ie in someone else’s ship)
+Flags2OnFootInStation = 1 << 3
+Flags2OnFootOnPlanet = 1 << 4
+Flags2AimDownSight = 1 << 5
+Flags2LowOxygen = 1 << 6
+Flags2LowHealth = 1 << 7
+Flags2Cold = 1 << 8
+Flags2Hot = 1 << 9
+Flags2VeryCold = 1 << 10
+Flags2VeryHot = 1 << 11
+Flags2GlideMode = 1 << 12
+Flags2OnFootInHangar = 1 << 13
+Flags2OnFootSocialSpace = 1 << 14
+Flags2OnFootExterior = 1 << 15
+Flags2BreathableAtmosphere = 1 << 16
+Flags2TelepresenceMulticrew = 1 << 17
+Flags2PhysicalMulticrew = 1 << 18
+Flags2FsdHyperdriveCharging = 1 << 19       # While charging and jumping for system jump
+
 # Status.json Dashboard GuiFocus constants
 GuiFocusNoFocus = 0
 GuiFocusInternalPanel = 1        # right hand side

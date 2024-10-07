@@ -49,10 +49,10 @@ def main():
     # Shows regions on the Elite window...
     # Requires Elite Dangerous to be running.
     # =======================================
-    wanted_regions = ["compass", "target", "nav_panel", "disengage", "interdicted", "fss", "mission_dest", "missions",
+    wanted_regions = ["compass", "target", "nav_panel", "disengage", "fss", "mission_dest", "missions",
                       "sun"]
     wanted_regions = ["compass", "target", "nav_panel", "disengage"]  # The more common regions for navigation
-    regions_test(wanted_regions)
+    # show_regions(wanted_regions)
 
     # HSV Tester...
     #
@@ -154,10 +154,10 @@ def template_matching_test(region_name, template):
             break
 
 
-def regions_test(regions):
+def show_regions(region_names):
     """ Draw a rectangle indicating the given region on the Elite Dangerous window.
-        :param regions: An array names of the regions to indicate on screen (i.e. ["compass", "target"])."""
-    ov = Overlay("", 0)
+        :param region_names: An array names of the regions to indicate on screen (i.e. ["compass", "target"])."""
+    ov = Overlay("", 1)
     scr = Screen()
     templ = Image_Templates(scr.scaleX, scr.scaleY)
     scrReg = Screen_Regions(scr, templ)
@@ -184,7 +184,7 @@ def regions_test(regions):
         #tgt = scrReg.capture_region_filtered(scr, key)
         #print(key)
         #print(scrReg.reg[key])
-        if key in regions:
+        if key in region_names:
             ov.overlay_rect(key, (scrReg.reg[key]['rect'][0], scrReg.reg[key]['rect'][1]),
                             (scrReg.reg[key]['rect'][2], scrReg.reg[key]['rect'][3]),
                             overlay_colors[i+1], 2)

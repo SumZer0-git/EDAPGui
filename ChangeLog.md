@@ -1,3 +1,11 @@
+# 10/6/2024 Stumpii: Various changes:
+ - Added status flags and status parser for processing Status.json file.
+ - Change interdiction check to check Status.json instead of Journal and image matching.
+ - Added interdiction checks when avoiding sun and fuel scooping.
+ - Force module into updates by going to the interior panel before undocking.
+ - Updated screen region to use the correct monitor.
+ - Added code to allow Python 3.9 and maybe earlier to run correctly with a workaround for the changes that use new features.
+ 
 # 9/30/2024 Stumpii: Various changes:
  - Added ship type and ship size to the journal and ship status.
  - Added ED_data file for constants.
