@@ -17,7 +17,6 @@ from EDWayPoint import *
 from EDJournal import *
 from EDKeys import *
 from EDafk_combat import AFK_Combat
-from ModulesInfoParser import ModulesInfoParser
 from Overlay import *
 from StatusParser import StatusParser
 from Voice import *
@@ -122,7 +121,6 @@ class EDAutopilot:
         self.afk_combat = AFK_Combat(self.keys, self.jn, self.vce)
         self.waypoint = EDWayPoint(self.jn.ship_state()['odyssey'])
         self.robigo = Robigo(self)
-        self.modules_info = ModulesInfoParser()
         self.status = StatusParser()
 
         # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
@@ -667,12 +665,6 @@ class EDAutopilot:
     #  
     def undock(self):
         # Assume we are in Star Port Services                              
-        # Go to interior panel which will update ModulesInfo.json if any modules have changed.
-        self.keys.send('UIFocus', state=1)
-        self.keys.send('UI_Right')
-        self.keys.send('UIFocus', state=0)
-        self.keys.send('UI_Back')
-
         # Now we are on initial menu, we go up to top (which is Refuel)
         self.keys.send('UI_Up', repeat=3)
 
@@ -1191,7 +1183,7 @@ class EDAutopilot:
     #
     def refuel(self, scr_reg):
         # Check if we have a fuel scoop
-        has_fuel_scoop = self.modules_info.has_fuel_scoop()
+        has_fuel_scoop = self.jn.ship_state()['has_fuel_scoop']
 
         logger.debug('refuel')
         scoopable_stars = ['F', 'O', 'G', 'K', 'B', 'A', 'M']

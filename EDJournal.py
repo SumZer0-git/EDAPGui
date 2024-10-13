@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from os import environ, listdir
 from os.path import join, isfile, getmtime, abspath
 from json import loads
@@ -48,6 +50,21 @@ def get_ship_size(ship: str) -> str:
         return ''
 
 
+def check_fuel_scoop(modules: list[dict[str, any]] | None) -> bool:
+    """ Gets whether the ship has a fuel scoop.
+    """
+    # Default to fuel scoop fitted if modules is None
+    if modules is None:
+        return True
+
+    # Check all modules. Could just check the internals, but this is easier.
+    for module in modules:
+        if "FUELSCOOP" in module['Item'].upper():
+            return True
+
+    return False
+
+
 class EDJournal:
     def __init__(self):
         self.log_file = None
@@ -78,6 +95,7 @@ class EDJournal:
             'is_scooping': False,
             'cargo_capacity': None,
             'ship_size': None,
+            'has_fuel_scoop': None,
         }
         self.ship_state()    # load up from file
         self.reset_items()
@@ -196,10 +214,13 @@ class EDJournal:
                 self.ship['ship_size'] = get_ship_size(log['Ship'])
 
             # Parse Loadout
+            # When written: at startup, when loading from main menu, or when switching ships,
+            # or after changing the ship in Outfitting, or when docking SRV back in mothership
             if log_event == 'Loadout':
                 self.ship['type'] = log['Ship']
                 self.ship['ship_size'] = get_ship_size(log['Ship'])
                 self.ship['cargo_capacity'] = log['CargoCapacity']
+                self.ship['has_fuel_scoop'] = check_fuel_scoop(log['Modules'])
 
             # parse fuel
             if 'FuelLevel' in log and self.ship['type'] != 'TestBuggy':
