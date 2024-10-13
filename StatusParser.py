@@ -187,7 +187,7 @@ class StatusParser:
                     data = json.load(file)
                     break
             except Exception as e:
-                logger.error('An error occurred when reading Status.json file')
+                logger.debug('An error occurred when reading Status.json file')
                 sleep(backoff)
                 logger.debug('Attempting to restart status file reader after failure')
                 backoff *= 2
