@@ -78,12 +78,22 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 
 Once ED_AP has started there are few steps to complete the first time ED AP is run. These will help avoid common issues.
 1. Perform screen calibration, detailed [here](docs/Calibration.md). This will configure ED_AP for your screen resolution. Many issues can be avoided with correct calibration.
-2. Check and if necessary, change keybinding options, detailed below.
-3. Select the correct ship file matching the ship you are flying, this will configure the pitch, roll and yaw rates to match. Depending on the ship, you may need to tune the values for best response a detailed [here](docs/RollPitchYaw.md). 
-4. In ED, Use Left Panel to select your route, or use the galaxy map.
-5. Go to supercruise and go ahead and line up with Target.
-6. In the autopilot enable FSD Assist or hit the 'Home' key.  When a assist starts it will set focus to the Elite Dangerous window.  
-Note: the autopilot.log file will capture any required keybindings that are not set
+2. Check and if necessary, change keybinding options, detailed below. Pay special attention that the Ins, Home, End and Pg Up are not used by ED as these are used by EDAP.
+3. Note: the autopilot.log file will capture any required keybindings that are not set.
+4. Select the correct ship file matching the ship you are flying, this will configure the pitch, roll and yaw rates to match. Depending on the ship, you may need to tune the values for best response a detailed [here](docs/RollPitchYaw.md).
+5. Perform an in-system test:
+    * In ED, use Left Panel to select a local target.
+    * In the autopilot enable SC Assist or hit the 'Ins' key.
+    * When a assist starts it will set focus to the Elite Dangerous window.
+    * Ship will undock if docked, jump to SC, maneuver to the target and upon arriving at the target, will attempt to dock if it is a station.
+    * Any flight issues, check ship tuning.
+ 6. Perform an out-of-system test:
+    * In ED, use Galaxy Map select a target system.
+    * In the autopilot enable FSD Assist or hit the 'Home' key.
+    * When a assist starts it will set focus to the Elite Dangerous window.
+    * Ship will undock if docked, jump to SC, maneuver to the target, perform an FSD jump. Upon arrival in the system, it will manuever aroung the star, fuel scoop as necessary and either stop if no in system target is selected, or attempt to fly to the target and  attempt to dock if it is a station.
+    * Any flight issues, check ship tuning.
+
 
 # Required Keybindings
 The following keybindings are required by AP, so make sure a key is assigned to each by going into the Elite Dangerous options and assigning a key. After changing keybindings run AP again for the chagnes to be read. An error will appear if any of the keybindings are missing in Elite Dangerous.
