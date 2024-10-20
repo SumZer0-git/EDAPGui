@@ -353,6 +353,7 @@ class APGui():
     def log_msg(self, msg):
         self.msgList.insert(END, datetime.now().strftime("%H:%M:%S: ") + msg)
         self.msgList.yview(END)
+        logger.info(f"Log Msg: {msg}")
 
     def set_statusbar(self, txt):
         self.statusbar.configure(text=txt)
@@ -362,6 +363,7 @@ class APGui():
 
     def update_statusline(self, txt):
         self.status.configure(text="Status: " + txt)
+        self.log_msg(f"Status update: {txt}")
 
     def open_ship_file(self, filename=None):
         # if a filename was not provided, then prompt user for one

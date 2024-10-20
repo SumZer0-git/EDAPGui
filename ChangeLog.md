@@ -1,3 +1,6 @@
+# 10/20/2024 Stumpii: Added logging.
+ - To aid debugging, status bar updates are written to the gui log. Also gui log updates are written to the autopilot log.
+
 # 10/13/2024 Stumpii: Fixed FuelScoop detection.
  - Change fuelscoop detection from ModulesInfo.json to the Journal because ModulesInfo.json was not updated by the game enough to be useful.
 
