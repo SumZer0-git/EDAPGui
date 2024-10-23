@@ -1,3 +1,6 @@
+# 10/22/2024 Stumpii: Minor updates.
+ - Minor updates.
+
 # 10/20/2024 Stumpii: Added logging.
  - To aid debugging, status bar updates are written to the gui log. Also gui log updates are written to the autopilot log.
 
