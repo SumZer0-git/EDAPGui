@@ -41,7 +41,7 @@ class StatusParser:
     #         try:
     #             self._watch_file()
     #         except Exception as e:
-    #             logger.error('An error occurred when reading status file')
+    #             logger.debug('An error occurred when reading status file')
     #             sleep(backoff)
     #             logger.debug('Attempting to restart status file reader after failure')
     #             backoff *= 2
@@ -273,12 +273,12 @@ class StatusParser:
         for item in flag_array2:
             print(f"Status Flags2: '{item}' is OFF")
 
-    # Loads data from the JSON file and returns only GuiFocus field.
     def get_gui_focus(self) -> int:
-        with open(self.file_path, 'r') as file:
-            data = json.load(file)
-
-        return data.get('GuiFocus', 0)
+        """ Gets the value of the GUI Focus flag.
+        The Flag constants are defined in 'EDAP_data.py'.
+        """
+        self.get_cleaned_data()
+        return self.current_data.get('GuiFocus', 0)
 
     def wait_for_flag_on(self, flag: int, timeout: float = 15) -> bool:
         """ Waits for the of the selected flag to turn true.

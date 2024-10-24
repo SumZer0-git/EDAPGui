@@ -66,7 +66,7 @@ Flags2PhysicalMulticrew = 1 << 18
 Flags2FsdHyperdriveCharging = 1 << 19       # While charging and jumping for system jump
 
 # Status.json Dashboard GuiFocus constants
-GuiFocusNoFocus = 0
+GuiFocusNoFocus = 0              # ship view
 GuiFocusInternalPanel = 1        # right hand side
 GuiFocusExternalPanel = 2        # left hand (nav) panel
 GuiFocusCommsPanel = 3		     # top
