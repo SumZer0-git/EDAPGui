@@ -158,6 +158,7 @@ class EDKeys:
         if not list_of_bindings:
             return None
         latest_bindings = max(list_of_bindings, key=getmtime)
+        logger.Info(f'Latest keybindings file:{latest_bindings}')
         return latest_bindings
 
     def send_key(self, type, key):

@@ -542,7 +542,7 @@ class APGui():
                 self.lab_ck['Waypoint Assist'].config(state='disabled')
                 self.start_robigo()
 
-            elif self.checkboxvar['Waypoint Assist'].get() == 0 and self.RO_A_running == True:
+            elif self.checkboxvar['Robigo Assist'].get() == 0 and self.RO_A_running == True:
                 self.stop_robigo()
                 self.lab_ck['FSD Route Assist'].config(state='active')
                 self.lab_ck['Supercruise Assist'].config(state='active')
