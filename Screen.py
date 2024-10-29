@@ -161,7 +161,11 @@ class Screen:
         image = array(self.mss.grab(monitor))
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         return image
-        
-       
-   
 
+    def get_screen_full(self):
+        """ Grabs a full screenshot and returns the image.
+        """
+        image = self.get_screen(0, 0, self.screen_width, self.screen_height)
+        # TODO delete this line when COLOR_RGB2BGR is removed from get_screen()
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        return image

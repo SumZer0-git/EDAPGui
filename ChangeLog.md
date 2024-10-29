@@ -1,3 +1,6 @@
+# 10/28/2024 Stumpii: Minor debug additions.
+ - Minor debug additions.
+
 # 10/22/2024 Stumpii: Minor updates.
  - Minor updates.
 

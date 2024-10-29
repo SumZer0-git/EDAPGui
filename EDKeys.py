@@ -158,6 +158,7 @@ class EDKeys:
         if not list_of_bindings:
             return None
         latest_bindings = max(list_of_bindings, key=getmtime)
+        logger.info(f'Latest keybindings file:{latest_bindings}')
         return latest_bindings
 
     def send_key(self, type, key):
@@ -177,7 +178,7 @@ class EDKeys:
             logger.warning('SEND=NONE !!!!!!!!')
             return
 
-        logger.debug('send=key:'+str(key)+',hold:'+str(hold)+',repeat:'+str(repeat)+',repeat_delay:'+str(repeat_delay)+',state:'+str(state))
+        logger.debug('send='+key_name+',key:'+str(key)+',hold:'+str(hold)+',repeat:'+str(repeat)+',repeat_delay:'+str(repeat_delay)+',state:'+str(state))
         for i in range(repeat):
             # Focus Elite window if configured.
             if self.activate_window:
