@@ -46,7 +46,7 @@ FlagsSrvHighBeam = 1 << 31
 # Status.json / Dashboard Flags2 constants
 Flags2OnFoot = 1 << 0
 Flags2InTaxi = 1 << 1  # (or dropship/shuttle)
-Flags2InMulticrew = 1 << 2  # (ie in someone else’s ship)
+Flags2InMulticrew = 1 << 2  # (ie in someone elseï¿½s ship)
 Flags2OnFootInStation = 1 << 3
 Flags2OnFootOnPlanet = 1 << 4
 Flags2AimDownSight = 1 << 5
@@ -110,6 +110,7 @@ ship_name_map = {
     'krait_mkii':                   'Krait MkII',
     'krait_light':                  'Krait Phantom',
     'mamba':                        'Mamba',
+    'mandalay':                     'Mandalay',
     'orca':                         'Orca',
     'python':                       'Python',
     'python_nx':                    'Python Mk II',
@@ -160,6 +161,7 @@ ship_size_map = {
     'krait_mkii':                    'M',
     'krait_light':                   'M',
     'mamba':                         'M',
+    'mandalay':                      'M',
     'orca':                          'L',
     'python':                        'M',
     'python_nx':                     'M',

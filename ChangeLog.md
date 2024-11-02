@@ -1,3 +1,6 @@
+# 11/2/2024 Stumpii: Added Mandalay.
+ - Added Mandalay.
+
 # 10/28/2024 Stumpii: Minor debug additions.
  - Minor debug additions.
 
