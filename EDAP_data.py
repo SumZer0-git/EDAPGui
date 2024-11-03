@@ -46,7 +46,7 @@ FlagsSrvHighBeam = 1 << 31
 # Status.json / Dashboard Flags2 constants
 Flags2OnFoot = 1 << 0
 Flags2InTaxi = 1 << 1  # (or dropship/shuttle)
-Flags2InMulticrew = 1 << 2  # (ie in someone else�s ship)
+Flags2InMulticrew = 1 << 2  # (ie in someone else’s ship)
 Flags2OnFootInStation = 1 << 3
 Flags2OnFootOnPlanet = 1 << 4
 Flags2AimDownSight = 1 << 5
