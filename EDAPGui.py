@@ -79,9 +79,9 @@ class APGui():
             'Robigo Assist': "",
             'ELW Scanner': "Will perform FSS scans while FSD Assist is traveling between stars. \nIf the FSS shows a signal in the region of Earth, \nWater or Ammonia type worlds, it will announce that discovery.",
             'AFK Combat Assist': "Used with a AFK Combat ship in a Rez Zone.",
-            'RollRate': "Roll rate your ship has.",
-            'PitchRate': "Pitch (up/down) rate your ship has.",
-            'YawRate': "Yaw rate (rudder) your ship has.",
+            'RollRate': "Roll rate your ship has in deg/sec. Higher the number the more maneuverable the ship.",
+            'PitchRate': "Pitch (up/down) rate your ship has in deg/sec. Higher the number the more maneuverable the ship.",
+            'YawRate': "Yaw rate (rudder) your ship has in deg/sec. Higher the number the more maneuverable the ship.",
             'SunPitchUp+Time': "This field are for ship that tend to overheat. \nProviding 1-2 more seconds of Pitch up when avoiding the Sun \nwill overcome this problem.",
             'Sun Bright Threshold': "The low level for brightness detection, \nrange 0-255, want to mask out darker items",
             'Nav Align Tries': "How many attempts the ap should make at alignment.",
@@ -364,6 +364,15 @@ class APGui():
     def update_statusline(self, txt):
         self.status.configure(text="Status: " + txt)
         self.log_msg(f"Status update: {txt}")
+
+    def ship_tst_pitch(self):
+        self.ed_ap.ship_tst_pitch()
+
+    def ship_tst_roll(self):
+        self.ed_ap.ship_tst_roll()
+
+    def ship_tst_yaw(self):
+        self.ed_ap.ship_tst_yaw()
 
     def open_ship_file(self, filename=None):
         # if a filename was not provided, then prompt user for one
@@ -702,12 +711,18 @@ class APGui():
         blk_ship = LabelFrame(blk_main, text="SHIP")
         blk_ship.grid(row=0, column=1, padx=2, pady=2, sticky=(N, S, E, W))
         self.entries['ship'] = self.makeform(blk_ship, FORM_TYPE_SPINBOX, ship_entry_fields, 0, 0.5)
+        btn_tst_roll = Button(blk_ship, text='Test Roll', command=self.ship_tst_roll)
+        btn_tst_roll.grid(row=4, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        btn_tst_pitch = Button(blk_ship, text='Test Pitch', command=self.ship_tst_pitch)
+        btn_tst_pitch.grid(row=5, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        btn_tst_yaw = Button(blk_ship, text='Test Yaw', command=self.ship_tst_yaw)
+        btn_tst_yaw.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
 
         # profile load / info button in ship values block
         self.ship_filelabel = StringVar()
         self.ship_filelabel.set("<no config loaded>")
         btn_ship_file = Button(blk_ship, textvariable=self.ship_filelabel, command=self.open_ship_file)
-        btn_ship_file.grid(row=4, column=0, padx=2, pady=2, sticky=(N, E, W))
+        btn_ship_file.grid(row=8, column=0, padx=2, pady=2, sticky=(N, E, W))
         tip_ship_file = Hovertip(btn_ship_file, self.tooltips['Ship Config Button'], hover_delay=1000)
 
         # waypoints button block

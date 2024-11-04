@@ -1758,6 +1758,61 @@ class EDAutopilot:
             cv2.waitKey(10)
             sleep(1)
 
+    def ship_tst_pitch(self):
+        """ Performs a ship pitch test by pitching 360 degrees.
+        If the ship does not rotate enough, decrease the pitch value.
+        If the ship rotates too much, increase the pitch value.
+        """
+        if not self.status.get_flag(FlagsSupercruise):
+            self.ap_ckb('log', "Enter Supercruise and try again.")
+            return
+
+        if self.jn.ship_state()['target'] is None:
+            self.ap_ckb('log', "Select a target system and try again.")
+            return
+
+        self.set_focus_elite_window()
+        sleep(0.25)
+        self.keys.send('SetSpeed50')
+        self.pitchUp(360)
+
+    def ship_tst_roll(self):
+        """ Performs a ship roll test by pitching 360 degrees.
+        If the ship does not rotate enough, decrease the roll value.
+        If the ship rotates too much, increase the roll value.
+        """
+        if not self.status.get_flag(FlagsSupercruise):
+            self.ap_ckb('log', "Enter Supercruise and try again.")
+            return
+
+        if self.jn.ship_state()['target'] is None:
+            self.ap_ckb('log', "Select a target system and try again.")
+            return
+
+        self.set_focus_elite_window()
+        sleep(0.25)
+        self.keys.send('SetSpeed50')
+        self.rotateLeft(360)
+
+    def ship_tst_yaw(self):
+        """ Performs a ship yaw test by pitching 360 degrees.
+        If the ship does not rotate enough, decrease the yaw value.
+        If the ship rotates too much, increase the yaw value.
+        """
+        if not self.status.get_flag(FlagsSupercruise):
+            self.ap_ckb('log', "Enter Supercruise and try again.")
+            return
+
+        if self.jn.ship_state()['target'] is None:
+            self.ap_ckb('log', "Select a target system and try again.")
+            return
+
+        self.set_focus_elite_window()
+        sleep(0.25)
+        self.keys.send('SetSpeed50')
+        self.yawLeft(360)
+
+
 #
 # This main is for testing purposes.
 #

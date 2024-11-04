@@ -13,25 +13,26 @@ done by one CMDR: https://forums.frontier.co.uk/threads/supercruise-handling-of-
 Also see: https://lavewiki.com/ship-control
 
 1. To start, use the values from Outfitting or start with the values from another similar ship.  
-2. Go into supercruise with a space station as target. Set speed to zero.
+2. Go into supercruise with a system as target. Set speed to 50%.
 3. For the Roll Rate:
-   1. Maneuver so that the navigation dot is to the far right of the compass (at the 3 o'clock position).
-   2. Enable Supercruise Assist. The ship should roll so that the navigation dot is at 12 o'clock. If the roll
-   overshoots, then increase the value in the Roll field, decrease if the roll undershoots. Ignore the pitch 
-   at this time.
-   3. Repeat the above a couple of times until the roll rate is acceptable.
+   1. Maneuver so that the navigation dot is at the top of the compass (at the 12 o'clock position).
+   2. Press the Test Roll button. The ship will roll 360 degrees so that the navigation dot is at 12 o'clock again.
+   3. If the roll overshoots, then increase the value in the Roll field, decrease if the roll undershoots. Overshooting 
+   translates into not being able to control properly, it is better to undershoot than overshoot.
+   4. Repeat the above a couple of times until the roll rate is acceptable.
 4. For the Pitch Rate:
-   1. Maneuver so that the navigation dot is in the center of the compass but behind the ship.
-   2. Enable Supercruise Assist. The ship will pitch the 180 deg up/down in 90 deg steps with a slight pause after each.
-   If the rate is set correctly, the first pause will be at top or bottom of the compass and the ship will stop when the
-   target is dead ahead. If the pitch overshoots the target then the pitch value needs to be increased. Overshooting 
+   1. Maneuver so that the navigation dot is in the center of the compass ahead of the ship.
+   2. Press the Test Pitch button. The ship will pitch 360 degrees so that the navigation dot is at the center again.
+   3. If the pitch overshoots target then the pitch value needs to be increased, decrease if pitch undershoots. Overshooting 
    translates into not being able to control properly, it is better to undershoot than overshoot.  
-   3. Repeat the above a couple of times until the pitch rate is acceptable.
-
-How to adjust while ED has focus.  Use the Hot keys.  Configure a route in GalaxyMap and then adjust the ship 
-orientation away from target, then use the hot to enable FSD Route Assist ("home").  Once the assistant rolls and pitches
-use the hot key "(end") to terminate the assistant.   Adjust your values on the GUI, reselect ED to give it focus and 
-re-enable FSD Route Assist.
+   4. Repeat the above a couple of times until the pitch rate is acceptable.
+5. For the Yaw Rate:
+   1. Maneuver so that the navigation dot is in the center of the compass ahead of the ship.
+   2. Press the Test Yaw button. The ship will yaw 360 degrees so that the navigation dot is at the center again.
+   3. If the pitch overshoots target then the yaw value needs to be increased, decrease if yaw undershoots. Overshooting 
+   translates into not being able to control properly, it is better to undershoot than overshoot.  
+   4. Repeat the above a couple of times until the pitch rate is acceptable.
+6. Save your settings.
 
 As of this writing, only the DBX, ASPX, Cutter, and Sidewinder configuration files (RPY values) were tested.  
 Additional configs were provided in this release but not tested (based on values from Outfitting)
