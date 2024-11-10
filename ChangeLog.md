@@ -1,3 +1,11 @@
+# 11/10/2024 Stumpii: Various changes.
+ - Added SupercruiseDestinationDrop to determine if we drop at signal source and cannot request docking.
+ - Only log journal on change, not every request.
+ - Removed logging of statusparser.json file timestamp changes.
+ - Added Elite Window check.
+ - Added option to screen to allow alternate image for testing.
+ - Added a couple of screen functions need for OCR.
+
 # 11/3/2024 Stumpii: Added test buttons for ship calibration.
  - Added test buttons for ship calibration.
  - Updated Mandalay.

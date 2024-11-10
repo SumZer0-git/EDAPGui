@@ -1,12 +1,9 @@
 from __future__ import annotations
 import typing
-import logging
-
 import cv2
 import win32gui
 from numpy import array
 import mss
-from pyautogui import size
 import json
 
 from EDlogger import logger
@@ -33,6 +30,8 @@ elite_dangerous_window = "Elite - Dangerous (CLIENT)"
 class Screen:
     def __init__(self):
         self.mss = mss.mss()
+        self.using_screen = True  # True to use screen, false to use an image. Set screen_image to the image
+        self._screen_image = None  # Screen image captured from screen, or loaded by user for testing.
 
         # Find ED window position to determine which monitor it is on
         ed_rect = self.get_elite_window_rect()
@@ -125,6 +124,16 @@ class Screen:
         else:
             return None
 
+    @staticmethod
+    def elite_window_exists() -> bool:
+        """ Does the ED Client Window exist (i.e. is ED running)
+        """
+        hwnd = win32gui.FindWindow(None, elite_dangerous_window)
+        if hwnd:
+            return True
+        else:
+            return False
+
     def write_config(self, data, fileName='./configs/resolution.json'):
         if data is None:
             data = self.scales
@@ -133,7 +142,6 @@ class Screen:
                 json.dump(data,fp, indent=4)
         except Exception as e:
             logger.warning("Screen.py write_config error:"+str(e))
-            
 
     def read_config(self, fileName='./configs/resolution.json'):
         s = None
@@ -146,11 +154,11 @@ class Screen:
         return s
 
     # reg defines a box as a percentage of screen width and height
-    def get_screen_region(self, reg):      
+    def get_screen_region(self, reg):
         image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]))
         return image
-    
-    def get_screen(self, x_left, y_top, x_right, y_bot):    #  if absolute need to scale??
+
+    def get_screen(self, x_left, y_top, x_right, y_bot):    # if absolute need to scale??
         monitor = {
             "top": self.mon["top"] + y_top,
             "left": self.mon["left"] + x_left,
@@ -161,11 +169,80 @@ class Screen:
         image = array(self.mss.grab(monitor))
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         return image
+        
+    def get_screen_region_pct(self, region):
+        """ Grabs a screenshot and returns the selected region as an image.
+        @param region: The region to check in % (0.0 - 1.0).
+        """
+        if self.using_screen:
+            abs_rect = self.screen_pct_to_abs(region)
+            image = self.get_screen(abs_rect[0], abs_rect[1], abs_rect[2], abs_rect[3])
+            # TODO delete this line when COLOR_RGB2BGR is removed from get_screen()
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            return image
+        else:
+            if self._screen_image is None:
+                return None
+       
+            image = self.crop_image_by_pct(self._screen_image, region)
+            return image
+
+    def screen_pct_to_abs(self, reg):
+        """ Converts and array of real percentage screen values to int absolutes. """
+        abs_rect = [int(reg[0] * self.screen_width), int(reg[1] * self.screen_height),
+                    int(reg[2] * self.screen_width), int(reg[3] * self.screen_height)]
+        return abs_rect
 
     def get_screen_full(self):
         """ Grabs a full screenshot and returns the image.
         """
-        image = self.get_screen(0, 0, self.screen_width, self.screen_height)
-        # TODO delete this line when COLOR_RGB2BGR is removed from get_screen()
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        return image
+        if self.using_screen:
+            image = self.get_screen(0, 0, self.screen_width, self.screen_height)
+            # TODO delete this line when COLOR_RGB2BGR is removed from get_screen()
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            return image
+        else:
+            if self._screen_image is None:
+                return None
+
+            return self._screen_image
+
+    def crop_image_by_pct(self, image, rect):
+        """ Crop an image using a percentage values (0.0 - 1.0).
+        Rect is an array of crop % [0.10, 0.20, 0.90, 0.95] = [Left, Top, Right, Bottom]
+        Returns the cropped image. """
+        # Existing size
+        h, w, ch = image.shape
+
+        # Crop to leave only the selected rectangle
+        x0 = int(w * rect[0])
+        y0 = int(h * rect[1])
+        x1 = int(w * rect[2])
+        y1 = int(h * rect[3])
+
+        # Crop image
+        cropped = image[y0:y1, x0:x1]
+        return cropped
+
+    def crop_image(self, image, rect):
+        """ Crop an image using a pixel values.
+        Rect is an array of pixel values [100, 200, 1800, 1600] = [X0, Y0, X1, Y1]
+        Returns the cropped image."""
+        cropped = image[rect[1]:rect[3], rect[0]:rect[2]]  # i.e. [y:y+h, x:x+w]
+        return cropped
+
+    def set_screen_image(self, image):
+        """ Use an image instead of a screen capture. Sets the image and also sets the
+        screen width and height to the image properties.
+        @param image: The image to use.
+        """
+        self.using_screen = False
+        self._screen_image = image
+
+        # Existing size
+        h, w, ch = image.shape
+
+        # Set the screen size to the original image size, not the region size
+        self.screen_width = w
+        self.screen_height = h
+

@@ -99,6 +99,7 @@ class EDJournal:
             'cargo_capacity': None,
             'ship_size': None,
             'has_fuel_scoop': None,
+            'SupercruiseDestinationDrop_type': None
         }
         self.ship_state()    # load up from file
         self.reset_items()
@@ -162,6 +163,7 @@ class EDJournal:
 
             if log_event == 'StartJump':
                 self.ship['status'] = str('starting_'+log['JumpType']).lower()
+                self.ship['SupercruiseDestinationDrop_type'] = None
                 if log['JumpType'] == 'Hyperspace':
                     self.ship['star_class'] = log['StarClass']
 
@@ -178,6 +180,9 @@ class EDJournal:
             elif log_event == 'SupercruiseExit':
                 self.ship['status'] = 'in_space'
                 self.ship['body'] = log['Body']
+
+            elif log_event == 'SupercruiseDestinationDrop':
+                self.ship['SupercruiseDestinationDrop_type'] = log['Type']
 
             elif log_event == 'DockingCancelled':
                 self.ship['status'] = 'in_space'
@@ -328,9 +333,12 @@ class EDJournal:
             else:
                 log = loads(line)
                 cnt = cnt + 1
+                current_jrnl = self.ship.copy()
                 self.parse_line(log)
 
-        logger.debug('read:  '+str(cnt)+' ship: '+str(self.ship))
+                if self.ship != current_jrnl:
+                    logger.debug('Journal*.log: read: '+str(cnt)+' ship: '+str(self.ship))
+
         return self.ship
 
 
