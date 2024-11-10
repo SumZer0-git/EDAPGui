@@ -1504,10 +1504,18 @@ class EDAutopilot:
         # if no error, we must have gotten disengage
         if align_failed == False and do_docking == True:
             sleep(4)  # wait for the journal to catch up
-            self.update_ap_status("Initiating Docking Procedure")
-            self.dock()  # go into docking sequence
-            self.vce.say("Docking complete, Refueled")
-            self.update_ap_status("Docking Complete")
+
+            # Check if this is a target we cannot dock at
+            skip_docking = False
+            if not self.jn.ship_state()['SupercruiseDestinationDrop_type'] is None:
+                if self.jn.ship_state()['SupercruiseDestinationDrop_type'].startswith("$USS_Type"):
+                    skip_docking = True
+
+            if not skip_docking:
+                self.update_ap_status("Initiating Docking Procedure")
+                self.dock()  # go into docking sequence
+                self.vce.say("Docking complete, Refueled")
+                self.update_ap_status("Docking Complete")
         else:
             self.vce.say("Exiting Supercruise, setting throttle to zero")
             self.keys.send('SetSpeedZero')  # make sure we don't continue to land   

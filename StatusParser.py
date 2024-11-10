@@ -227,7 +227,7 @@ class StatusParser:
         self.last_data = self.current_data
         self.current_data = cleaned_data
         self.last_mod_time = self.get_file_modified_time()
-        logger.debug(f'Status.json mod timestamp {self.last_mod_time} updated.')
+        #logger.debug(f'Status.json mod timestamp {self.last_mod_time} updated.')
         # print(f'Status.json mod timestamp {self.last_mod_time} updated.')
         # print(json.dumps(data, indent=4))
 
