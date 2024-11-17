@@ -122,6 +122,18 @@ class StatusParser:
             "Telepresence Multicrew": bool(flags2_value & 131072),
             "Physical Multicrew": bool(flags2_value & 262144),
             "Fsd hyperdrive charging": bool(flags2_value & 524288),
+            "Flags2Future20": bool(flags2_value & 1048576),
+            "Flags2Future21": bool(flags2_value & 2097152),
+            "Flags2Future22": bool(flags2_value & 4194304),
+            "Flags2Future23": bool(flags2_value & 8388608),
+            "Flags2Future24": bool(flags2_value & 16777216),
+            "Flags2Future25": bool(flags2_value & 33554432),
+            "Flags2Future26": bool(flags2_value & 67108864),
+            "Flags2Future27": bool(flags2_value & 134217728),
+            "Flags2Future28": bool(flags2_value & 268435456),
+            "Flags2Future29": bool(flags2_value & 536870912),
+            "Flags2Future30": bool(flags2_value & 1073741824),
+            "Flags2Future31": bool(flags2_value & 2147483648),
         }
 
         # Return only flags that are True

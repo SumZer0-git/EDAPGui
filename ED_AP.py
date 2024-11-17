@@ -95,7 +95,7 @@ class EDAutopilot:
 
         # config the voice interface
         self.vce = Voice()
-        self.vce.set_on()
+        self.vce.v_enabled = self.config['VoiceEnable']
         self.vce.set_voice_id(self.config['VoiceID'])
         self.vce.say("Welcome to Autopilot")
 
@@ -1224,7 +1224,7 @@ class EDAutopilot:
             self.keys.send('SetSpeedZero', repeat=3)
             
             self.refuel_cnt += 1
-            
+
             # The log will not reflect a FuelScoop until first 5 tons filled, then every 5 tons until complete
             #if we don't scoop first 5 tons with 40 sec break, since not scooping or not fast enough or not at all, then abort
             startime = time.time()
@@ -1289,6 +1289,10 @@ class EDAutopilot:
 
     def waypoint_undock_seq(self):
         self.update_ap_status("Executing Undocking")
+
+        # Store current location (on planet or in space)
+        on_planet = self.status.get_flag(FlagsHasLatLong)
+
         self.undock()
         # need to wait until undock complete, that is when we are back in_space
         while self.jn.ship_state()['status'] != 'in_space':
@@ -1296,12 +1300,39 @@ class EDAutopilot:
 
         self.update_ap_status("Undock Complete, accelerating")
         # move away from station
-        sleep(1.5)
-        self.keys.send('SetSpeed100')
-        sleep(1)
-        self.keys.send('UseBoostJuice')
-        sleep(13)  # get away from Station
-        self.keys.send('SetSpeed50')
+        if not on_planet:
+            # In space (launch from starport or outpost etc.)
+            sleep(1.5)
+            self.keys.send('SetSpeed100')
+            sleep(1)
+            self.keys.send('UseBoostJuice')
+            sleep(13)  # get away from Station
+            self.keys.send('SetSpeed50')
+        else:
+            # From planetary settlement
+            self.keys.send('SetSpeed50')
+            self.pitchUp(90)  # The pitch rates are defined in SC, not normal flights, so this will be approximate.
+            self.keys.send('SetSpeed100')
+
+            # While Mass Locked, keep boosting.
+            while not self.status.wait_for_flag_off(FlagsFsdMassLocked, timeout=2):
+                self.keys.send('UseBoostJuice')
+
+            # Enter supercruise
+            self.keys.send('Supercruise')
+
+            # Wait for SC
+            res = self.status.wait_for_flag_on(FlagsSupercruise, timeout=30)
+
+            # Enable SCO. If SCO not fitted, this will do nothing.
+            self.keys.send('UseBoostJuice')
+
+            # Wait until out of orbit.
+            res = self.status.wait_for_flag_off(FlagsHasLatLong, timeout=60)
+            # TODO - do we need to check if we never leave orbit?
+
+            # Disable SCO. If SCO not fitted, this will do nothing.
+            self.keys.send('UseBoostJuice')
 
     def sc_engage(self):
         """ Engages supercruise, then returns us to 50% speed """
