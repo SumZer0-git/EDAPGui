@@ -10,8 +10,8 @@ Note: Some of this file comes from EDMarketConnector's edmc_data.py file
 """
 
 # Status.json / Dashboard Flags constants
-FlagsDocked = 1 << 0             # on a landing pad
-FlagsLanded = 1 << 1             # on planet surface
+FlagsDocked = 1 << 0             # on a landing pad in space or planet
+FlagsLanded = 1 << 1             # on planet surface (not planet landing pad)
 FlagsLandingGearDown = 1 << 2
 FlagsShieldsUp = 1 << 3
 FlagsSupercruise = 1 << 4         # While in super-cruise
@@ -31,7 +31,7 @@ FlagsFsdCharging = 1 << 17       # While charging and jumping for super-cruise o
 FlagsFsdCooldown = 1 << 18       # Following super-cruise or jump
 FlagsLowFuel = 1 << 19           # < 25%
 FlagsOverHeating = 1 << 20       # > 100%, or is this 80% now ?
-FlagsHasLatLong = 1 << 21
+FlagsHasLatLong = 1 << 21        # On when altimeter is visible (either OC/DRP mode or 2Km/SURF mode).
 FlagsIsInDanger = 1 << 22
 FlagsBeingInterdicted = 1 << 23
 FlagsInMainShip = 1 << 24
@@ -39,7 +39,7 @@ FlagsInFighter = 1 << 25
 FlagsInSRV = 1 << 26
 FlagsAnalysisMode = 1 << 27      # Hud in Analysis mode
 FlagsNightVision = 1 << 28
-FlagsAverageAltitude = 1 << 29   # Altitude from Average radius
+FlagsAverageAltitude = 1 << 29   # Altitude from Average radius. On when altimeter shows OC/DRP, Off if altimeter is not shown or showing 2Km/SURF.
 FlagsFsdJump = 1 << 30           # While jumping to super-cruise or system jump
 FlagsSrvHighBeam = 1 << 31
 
@@ -64,6 +64,18 @@ Flags2BreathableAtmosphere = 1 << 16
 Flags2TelepresenceMulticrew = 1 << 17
 Flags2PhysicalMulticrew = 1 << 18
 Flags2FsdHyperdriveCharging = 1 << 19       # While charging and jumping for system jump
+Flags2Future20 = 1 << 20
+Flags2Future21 = 1 << 21
+Flags2Future22 = 1 << 22
+Flags2Future23 = 1 << 23
+Flags2Future24 = 1 << 24
+Flags2Future25 = 1 << 25
+Flags2Future26 = 1 << 26
+Flags2Future27 = 1 << 27
+Flags2Future28 = 1 << 28
+Flags2Future29 = 1 << 29
+Flags2Future30 = 1 << 30
+Flags2Future31 = 1 << 31
 
 # Status.json Dashboard GuiFocus constants
 GuiFocusNoFocus = 0              # ship view
