@@ -488,15 +488,16 @@ class EDAutopilot:
         self.status.wait_for_flag_on(FlagsFsdCooldown)
 
         # Boost while waiting for cooldown to complete.
-        while not self.status.wait_for_flag_off(FlagsFsdCooldown, timeout=2):
+        while not self.status.wait_for_flag_off(FlagsFsdCooldown, timeout=1):
             self.keys.send('UseBoostJuice')
 
         # Cooldown over, get us out of here.
-        self.keys.send('HyperSuperCombination', hold=0.001)
+        self.keys.send('Supercruise')
 
-        # Wait for supercruise, keep boosting.
-        while not self.status.wait_for_flag_on(FlagsSupercruise, timeout=2):
+        # Wait for jump to supercruise, keep boosting.
+        while not self.status.get_flag(FlagsFsdJump):
             self.keys.send('UseBoostJuice')
+            sleep(1)
 
         # Update journal flag.
         self.jn.ship_state()['interdicted'] = False  # reset flag
@@ -1539,7 +1540,15 @@ class EDAutopilot:
             # Check if this is a target we cannot dock at
             skip_docking = False
             if not self.jn.ship_state()['SupercruiseDestinationDrop_type'] is None:
-                if self.jn.ship_state()['SupercruiseDestinationDrop_type'].startswith("$USS_Type"):
+                if (self.jn.ship_state()['SupercruiseDestinationDrop_type'].startswith("$USS_Type")
+                        # Bulk Cruisers
+                        or "-class Cropper" in self.jn.ship_state()['SupercruiseDestinationDrop_type']
+                        or "-class Hauler" in self.jn.ship_state()['SupercruiseDestinationDrop_type']
+                        or "-class Reformatory" in self.jn.ship_state()['SupercruiseDestinationDrop_type']
+                        or "-class Researcher" in self.jn.ship_state()['SupercruiseDestinationDrop_type']
+                        or "-class Surveyor" in self.jn.ship_state()['SupercruiseDestinationDrop_type']
+                        or "-class Traveller" in self.jn.ship_state()['SupercruiseDestinationDrop_type']
+                        or "-class Tanker" in self.jn.ship_state()['SupercruiseDestinationDrop_type']):
                     skip_docking = True
 
             if not skip_docking:

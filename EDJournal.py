@@ -44,11 +44,10 @@ def get_ship_size(ship: str) -> str:
         @ship:  The ship name from the journal (i.e. 'diamondbackxl').
         @return: The ship size ('S', 'M', 'L' or '' if ship not found or size not valid).
     """
-    if ship in ship_size_map:
-        return ship_size_map[ship]
+    if ship.lower() in ship_size_map:
+        return ship_size_map[ship.lower()]
     else:
         return ''
-
 
 def check_fuel_scoop(modules: list[dict[str, any]] | None) -> bool:
     """ Gets whether the ship has a fuel scoop.
@@ -243,14 +242,14 @@ class EDJournal:
 
             # parse ship type
             if log_event == 'LoadGame':
-                self.ship['type'] = log['Ship']
+                self.ship['type'] = log['Ship'].lower()
                 self.ship['ship_size'] = get_ship_size(log['Ship'])
 
             # Parse Loadout
             # When written: at startup, when loading from main menu, or when switching ships,
             # or after changing the ship in Outfitting, or when docking SRV back in mothership
             if log_event == 'Loadout':
-                self.ship['type'] = log['Ship']
+                self.ship['type'] = log['Ship'].lower()
                 self.ship['ship_size'] = get_ship_size(log['Ship'])
                 self.ship['cargo_capacity'] = log['CargoCapacity']
                 self.ship['has_fuel_scoop'] = check_fuel_scoop(log['Modules'])
