@@ -40,7 +40,7 @@ FlagsInSRV = 1 << 26
 FlagsAnalysisMode = 1 << 27      # Hud in Analysis mode
 FlagsNightVision = 1 << 28
 FlagsAverageAltitude = 1 << 29   # Altitude from Average radius. On when altimeter shows OC/DRP, Off if altimeter is not shown or showing 2Km/SURF.
-FlagsFsdJump = 1 << 30           # While jumping to super-cruise or system jump
+FlagsFsdJump = 1 << 30           # While jumping to super-cruise or system jump. See also Flags2FsdHyperdriveCharging.
 FlagsSrvHighBeam = 1 << 31
 
 # Status.json / Dashboard Flags2 constants
@@ -98,8 +98,9 @@ ship_name_map = {
     'asp':                          'Asp Explorer',
     'asp_scout':                    'Asp Scout',
     'belugaliner':                  'Beluga Liner',
-    'cobramkiii':                   'Cobra MkIII',
-    'cobramkiv':                    'Cobra MkIV',
+    'cobramkiii':                   'Cobra Mk III',
+    'cobramkiv':                    'Cobra Mk IV',
+    'cobramkv':                     'Cobra Mk V',
     'clipper':                      'Panther Clipper',
     'cutter':                       'Imperial Cutter',
     'diamondback':                  'Diamondback Scout',
@@ -119,7 +120,7 @@ ship_name_map = {
     'hauler':                       'Hauler',
     'independant_trader':           'Keelback',
     'independent_fighter':          'Taipan Fighter',
-    'krait_mkii':                   'Krait MkII',
+    'krait_mkii':                   'Krait Mk II',
     'krait_light':                  'Krait Phantom',
     'mamba':                        'Mamba',
     'mandalay':                     'Mandalay',
@@ -137,8 +138,8 @@ ship_name_map = {
     'typex':                        'Alliance Chieftain',
     'typex_2':                      'Alliance Crusader',
     'typex_3':                      'Alliance Challenger',
-    'viper':                        'Viper MkIII',
-    'viper_mkiv':                   'Viper MkIV',
+    'viper':                        'Viper Mk III',
+    'viper_mkiv':                   'Viper Mk IV',
     'vulture':                      'Vulture',
 }
 
@@ -151,6 +152,7 @@ ship_size_map = {
     'belugaliner':                   'L',
     'cobramkiii':                    'S',
     'cobramkiv':                     'S',
+    'cobramkv':                      'S',
     'clipper':                       '',
     'cutter':                        'L',
     'diamondback':                   'S',

@@ -38,6 +38,10 @@ class Voice:
 
     def say(self, vSay):
         if self.v_enabled:
+            # A better way to correct mis-pronunciation?
+            vSay = vSay.replace(' Mk V ', ' mark five ')
+            vSay = vSay.replace(' Mk ', ' mark ')
+            vSay = vSay.replace(' Krait ', ' crate ')
             self.q.put(vSay)
 
     def set_off(self):
