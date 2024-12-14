@@ -1805,6 +1805,26 @@ class EDAutopilot:
                 self.afk_combat_assist_enabled = False
                 self.ap_ckb('afk_stop')
                 self.update_overlay()
+            # Check once EDAPGUI loaded to prevent errors logging to the listbox before loaded
+            if self.gui_loaded:
+                # Check if ship has changed
+                ship = self.jn.ship_state()['type']
+                ship_fullname = get_ship_fullname(ship)
+                if ship != self.current_ship_type:
+                    if self.current_ship_type is not None:
+                        cur_ship_fullname = get_ship_fullname(self.current_ship_type)
+                        self.ap_ckb('log+vce', f"Switched ship from your {cur_ship_fullname} to your {ship_fullname}.")
+                    else:
+                        self.ap_ckb('log+vce', f"Welcome aboard your {ship_fullname}.")
+
+                    # Check for fuel scoop and advanced docking computer
+                    if not self.jn.ship_state()['has_fuel_scoop']:
+                        self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is not fitted with a Fuel Scoop.")
+                    if not self.jn.ship_state()['has_adv_dock_comp']:
+                        self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is not fitted with an Advanced Docking Computer.")
+
+                    # Store ship for change detection
+                    self.current_ship_type = ship
 
             # Check once EDAPGUI loaded to prevent errors logging to the listbox before loaded
             if self.gui_loaded:
