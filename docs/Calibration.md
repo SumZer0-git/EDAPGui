@@ -19,13 +19,15 @@ Also see:  HOWTO-RollPitchYaw.md on how to adjust your autopilot performance whi
 ![Alt text](../screen/screen-cap-calibrate.png?raw=true "Calibrate ED Config")  
 
 # To run the calibration
-* Start EDAPGui   > python EDAPGui.py
-* Under File, enable _CV View_ , this will allow you to see the calibration in progress, but this is not required
-* Select the Calibrate button on the GUI circled in this screenshot"<br>
-![Alt text](../screen/EDAPGui-calibrate.png?raw=true "Calibrate ED Config") 
+* Start EDAPGui
+* Under the File menu, click 'Calibrate'
 * Select OK from the popup
+  * Two blue boxes appear, one around the compass and one around the center of the screen
+  * Ensure that the compass and target are visible within these areas
   * The calibration will likely take less than 1 minute
+  * Red boxes will appear in the blue boxes and will attempt to find matching images. When a match is found, a green box will appear over the match. This is the bext match found so far
+  * The process is repeated a number of times with different matching thresholds. The green box will always indicate the best match and should be located around the compass and target
+  * The match percentabe (0.0 to 1.0) is shown above the green box. A match of > 0.5 for both compass and target is required for success
   * The GUI Window will show the results 
     * Also you can open config-resolution.json to see the selected scaling values for the 'Calibrated' key
-
-# Restart EDAPGui after this process to ensure picking up the correct scaling values
+* Restart EDAPGui after this process to ensure picking up the correct scaling values
