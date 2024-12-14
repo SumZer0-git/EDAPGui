@@ -1,3 +1,15 @@
+# 12/13/2024 Stumpii: Added Cobra Mk V and ship detection
+ - Added Cobra Mk V to data file.
+ - Fixed defaulting of new AP.json properties on startup.
+ - Added AP engine loop delay until GUI started to prevent error logging to listbox too early.
+ - Added detection of ship on startup and on journal change.
+ - Added warning of no fuel scoop or autopilot on start and on ship change.
+ - Added new callback option of log and voice to try to reduce the redundant logging code.
+ - Added journal code to return full ship names.
+ - Added journal detection of fuel scoop.
+ - Added journal modified date detection to avoid reading journal when it has not changed.
+ - Added word replacement for some words that are not pronounced correctly by voice engine.
+
 # 11/27/2024 Stumpii: Various minor changes.
  - Fixed minor issue with interdiction timing that would occasionally cause SCO trigger coming out of interdiction.
  - Added detection of other SC drop locations that do not need a request to dock.
