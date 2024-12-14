@@ -199,10 +199,15 @@ class APGui():
         # check for updates
         self.check_updates()
 
+        self.ed_ap.gui_loaded = True
+
     # callback from the EDAP, to configure GUI items
     def callback(self, key, body=None):
         if key == 'log':
             self.log_msg(body)
+        elif key == 'log+vce':
+            self.log_msg(body)
+            self.ed_ap.vce.say(body)
         elif key == 'fsd_stop':
             logger.debug("Detected 'fsd_stop' key")
             self.checkboxvar['FSD Route Assist'].set(0)

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import os
 from os import environ, listdir
 from os.path import join, isfile, getmtime, abspath
 from json import loads
 from time import sleep, time
 from datetime import datetime
 
-from EDAP_data import ship_size_map
+from EDAP_data import ship_size_map, ship_name_map
 from EDlogger import logger
 from WindowsKnownPaths import *
 
@@ -49,6 +50,18 @@ def get_ship_size(ship: str) -> str:
     else:
         return ''
 
+
+def get_ship_fullname(ship: str) -> str:
+    """ Gets the ship full name from the journal ship name.
+        @ship:  The ship name from the journal (i.e. 'diamondbackxl').
+        @return: The ship full name ('Diamondback Explorer' or '' if ship not found).
+    """
+    if ship.lower() in ship_name_map:
+        return ship_name_map[ship.lower()]
+    else:
+        return ''
+
+
 def check_fuel_scoop(modules: list[dict[str, any]] | None) -> bool:
     """ Gets whether the ship has a fuel scoop.
     """
@@ -58,7 +71,22 @@ def check_fuel_scoop(modules: list[dict[str, any]] | None) -> bool:
 
     # Check all modules. Could just check the internals, but this is easier.
     for module in modules:
-        if "FUELSCOOP" in module['Item'].upper():
+        if "fuelscoop" in module['Item'].lower():
+            return True
+
+    return False
+
+
+def check_adv_docking_computer(modules: list[dict[str, any]] | None) -> bool:
+    """ Gets whether the ship has an advanced docking computer.
+    """
+    # Default to docking computer fitted if modules is None
+    if modules is None:
+        return True
+
+    # Check all modules. Could just check the internals, but this is easier.
+    for module in modules:
+        if "dockingcomputer_advanced" in module['Item'].lower():
             return True
 
     return False
@@ -66,6 +94,7 @@ def check_fuel_scoop(modules: list[dict[str, any]] | None) -> bool:
 
 class EDJournal:
     def __init__(self):
+        self.last_mod_time = None
         self.log_file = None
         self.current_log = self.get_latest_log()
         self.open_journal(self.current_log)
@@ -98,10 +127,14 @@ class EDJournal:
             'cargo_capacity': None,
             'ship_size': None,
             'has_fuel_scoop': None,
-            'SupercruiseDestinationDrop_type': None
+            'SupercruiseDestinationDrop_type': None,
+            'has_adv_dock_comp': None,
         }
         self.ship_state()    # load up from file
         self.reset_items()
+
+    def get_file_modified_time(self) -> float:
+        return os.path.getmtime(self.current_log)
 
     # these items do not have respective log entries to clear them.  After initial reading of log file, clear these items
     # also the App will need to reset these to False after detecting they were True    
@@ -128,6 +161,7 @@ class EDJournal:
 
         # open the latest journal
         self.log_file = open(log_name, encoding="utf-8")
+        self.last_mod_time = None
 
     def parse_line(self, log):
         # parse data
@@ -253,6 +287,7 @@ class EDJournal:
                 self.ship['ship_size'] = get_ship_size(log['Ship'])
                 self.ship['cargo_capacity'] = log['CargoCapacity']
                 self.ship['has_fuel_scoop'] = check_fuel_scoop(log['Modules'])
+                self.ship['has_adv_dock_comp'] = check_adv_docking_computer(log['Modules'])
 
             # parse fuel
             if 'FuelLevel' in log and self.ship['type'] != 'TestBuggy':
@@ -313,17 +348,18 @@ class EDJournal:
             #logger.exception("Exception occurred")
             print(e)
 
-
     def ship_state(self):
-
         latest_log = self.get_latest_log()
 
         # open journal file if not open yet or there is a more recent journal
-        if self.current_log == None or self.current_log != latest_log:
+        if self.current_log is None or self.current_log != latest_log:
             self.open_journal(latest_log)
 
-        cnt = 0
+        # Check if file changed
+        if self.get_file_modified_time() == self.last_mod_time:
+            return self.ship
 
+        cnt = 0
         while True:
             line = self.log_file.readline()
             # if end of file then break from while True
@@ -338,6 +374,7 @@ class EDJournal:
                 if self.ship != current_jrnl:
                     logger.debug('Journal*.log: read: '+str(cnt)+' ship: '+str(self.ship))
 
+        self.last_mod_time = self.get_file_modified_time()
         return self.ship
 
 
