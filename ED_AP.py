@@ -1,8 +1,8 @@
-from pickletools import read_unicodestring1
 import traceback
 from math import atan, degrees
 import json
 import random
+from tkinter import messagebox
 
 import cv2
 from PIL import Image
@@ -73,7 +73,11 @@ class EDAutopilot:
             "LogDEBUG": False,             # enable for debug messages
             "LogINFO": True,
             "Enable_CV_View": 0,  # Should CV View be enabled by default
-            "ShipConfigFile": None  # Ship config to load on start
+            "ShipConfigFile": None,  # Ship config to load on start - deprecated
+            "TargetScale": 1.0,  # Scaling of the target when a system is selected
+        }
+        self.ship_configs = {
+            "Ship_Configs": {},  # Dictionary of ship types with additional settings
         }
 
         # used this to write the self.config table to the json file
@@ -88,6 +92,8 @@ class EDAutopilot:
                 # Add default values for new entries
                 if 'SunBrightThreshold' not in cnf:
                     cnf['SunBrightThreshold'] = 125
+                if 'TargetScale' not in cnf:
+                    cnf['TargetScale'] = 1.0
                 self.config = cnf
                 logger.debug("read AP json:"+str(cnf))
             else:
@@ -95,6 +101,23 @@ class EDAutopilot:
                 logger.debug("read AP json:"+str(cnf))
         else:
             self.write_config(self.config)
+
+        shp_cnf = self.read_ship_configs()
+        # if we read it then point to it, otherwise use the default table above
+        if shp_cnf is not None:
+            if len(shp_cnf) != len(self.ship_configs):
+                # If configs of different lengths, then a new parameter was added.
+                # self.write_config(self.config)
+                # Add default values for new entries
+                if 'Ship_Configs' not in shp_cnf:
+                    shp_cnf['Ship_Configs'] = dict()
+                self.ship_configs = shp_cnf
+                logger.debug("read Ships Config json:" + str(shp_cnf))
+            else:
+                self.ship_configs = shp_cnf
+                logger.debug("read Ships Config json:" + str(shp_cnf))
+        else:
+            self.write_ship_configs(self.ship_configs)
 
         # config the voice interface
         self.vce = Voice()
@@ -117,10 +140,13 @@ class EDAutopilot:
 
         # Create instance of each of the needed Classes
         self.scr = Screen.Screen()
-        self.templ = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY)
+        self.scr.scaleX = self.config['TargetScale']
+        self.scr.scaleY = self.config['TargetScale']
+        self.templ = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
         self.scrReg = Screen_Regions.Screen_Regions(self.scr, self.templ)
         self.jn = EDJournal()
         self.keys = EDKeys()
+        self.keys.activate_window = self.config['ActivateEliteEachKey']
         self.afk_combat = AFK_Combat(self.keys, self.jn, self.vce)
         self.waypoint = EDWayPoint(self.jn.ship_state()['odyssey'])
         self.robigo = Robigo(self)
@@ -133,6 +159,7 @@ class EDAutopilot:
         # If you find that you are overshoot in pitch or roll, need to adjust these numbers.
         # Algorithm will roll the vehicle for the nav point to be north or south and then pitch to get the nave point
         # to center
+        self.compass_scale = 0.0
         self.yawrate   = 8.0
         self.rollrate  = 80.0
         self.pitchrate = 33.0
@@ -159,7 +186,7 @@ class EDAutopilot:
         self.update_overlay()
 
         # debug window
-        self.cv_view = False
+        self.cv_view = self.config['Enable_CV_View']
         self.cv_view_x = 10
         self.cv_view_y = 10
 
@@ -190,6 +217,38 @@ class EDAutopilot:
                 json.dump(data, fp, indent=4)
         except Exception as e:
             logger.warning("EDAPGui.py write_config error:"+str(e))
+
+    def read_ship_configs(self, filename='./configs/ship_configs.json'):
+        """ Read the user's ship configuration file."""
+        s = None
+        try:
+            with open(filename, "r") as fp:
+                s = json.load(fp)
+        except  Exception as e:
+            logger.warning("EDAPGui.py read_ship_configs error :"+str(e))
+
+        return s
+
+    def update_ship_configs(self):
+        """ Update the user's ship configuration file."""
+        # Check if a ship and not a suit (on foot)
+        if self.current_ship_type in ship_size_map:
+            self.ship_configs['Ship_Configs'][self.current_ship_type]['compass_scale'] = round(self.compass_scale, 4)
+            self.ship_configs['Ship_Configs'][self.current_ship_type]['PitchRate'] = self.pitchrate
+            self.ship_configs['Ship_Configs'][self.current_ship_type]['RollRate'] = self.rollrate
+            self.ship_configs['Ship_Configs'][self.current_ship_type]['YawRate'] = self.yawrate
+            self.ship_configs['Ship_Configs'][self.current_ship_type]['SunPitchUp+Time'] = self.sunpitchuptime
+
+            self.write_ship_configs(self.ship_configs)
+
+    def write_ship_configs(self, data, filename='./configs/ship_configs.json'):
+        """ Write the user's ship configuration file."""
+        try:
+            with open(filename, "w") as fp:
+                json.dump(data, fp, indent=4)
+        except Exception as e:
+            logger.warning("EDAPGui.py write_ship_configs error:"+str(e))
+
 
     # draw the overlay data on the ED Window
     #
@@ -273,125 +332,196 @@ class EDAutopilot:
             # right tic
             cv2.line(img, (int(pt2[0]), int(pt1[1]+half_hgt)), (int(pt2[0]+tic_len), int(pt1[1]+half_hgt)), color, thick)
 
-    # find the best scale value in the given range of scales with the passed in threshold
-    #
-    def calibrate_range(self, range_low, range_high, threshold):
-        #print("--- new range ---")
+    def calibrate_region(self, range_low, range_high, range_step, threshold: float, reg_name: str, templ_name: str):
+        """ Find the best scale value in the given range of scales with the passed in threshold
+        @param reg_name:
+        @param range_low:
+        @param range_high:
+        @param range_step:
+        @param threshold: The minimum threshold to match (0.0 - 1.0)
+        @param templ_name: The region name i.i 'compass' or 'target'
+        @return:
+        """
         scale = 0
         max_pick = 0
-        for i in range(range_low, range_high):
-            self.scr.scaleX = float(i/100)
+        i = range_low
+        while i <= range_high:
+            self.scr.scaleX = float(i / 100)
             self.scr.scaleY = self.scr.scaleX
 
-            # must reload the templates with this scale value
-            self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY)
+            # reload the templates with this scale value
+            self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
 
             # do image matching on the compass and the target
-            compass_image, (minVal, maxVal, minLoc, maxLoc), match = self.scrReg.match_template_in_region('compass', 'compass')
-            dst_image, (minVal1, maxVal1, minLoc1, maxLoc1), match = self.scrReg.match_template_in_region('target', 'target')
+            image, (minVal, maxVal, minLoc, maxLoc), match = self.scrReg.match_template_in_region(reg_name, templ_name)
 
             border = 10  # border to prevent the box from interfering with future matches
-            reg_compass_pos = self.scrReg.reg['compass']['rect']
-            comp_width = self.scrReg.templates.template['compass']['width'] + border + border
-            comp_height = self.scrReg.templates.template['compass']['height'] + border + border
-            comp_left = reg_compass_pos[0] + maxLoc[0] - border
-            comp_top = reg_compass_pos[1] + maxLoc[1] - border
+            reg_pos = self.scrReg.reg[reg_name]['rect']
+            width = self.scrReg.templates.template[templ_name]['width'] + border + border
+            height = self.scrReg.templates.template[templ_name]['height'] + border + border
+            left = reg_pos[0] + maxLoc[0] - border
+            top = reg_pos[1] + maxLoc[1] - border
 
-            reg_target_pos = self.scrReg.reg['target']['rect']
-            targ_width = self.scrReg.templates.template['target']['width'] + border + border
-            targ_height = self.scrReg.templates.template['target']['height'] + border + border
-            targ_left = reg_target_pos[0] + maxLoc1[0] - border
-            targ_top = reg_target_pos[1] + maxLoc1[1] - border
-
-            if maxVal > threshold and maxVal1 > threshold and maxVal > max_pick:
-                # Draw box around compass
-                self.overlay.overlay_rect(20, (comp_left, comp_top),(comp_left + comp_width, comp_top + comp_height), (0, 255, 0), 2)
-                self.overlay.overlay_floating_text(20, f'Match: {maxVal:5.2f}', comp_left, comp_top - 25, (0, 255, 0))
-                # Draw box around target
-                self.overlay.overlay_rect(22, (targ_left, targ_top), (targ_left + targ_width, targ_top + targ_height), (0, 255, 0), 2)
-                self.overlay.overlay_floating_text(22, f'Match: {maxVal1:5.2f}', targ_left, targ_top - 25, (0, 255, 0))
+            if maxVal > threshold and maxVal > max_pick:
+                # Draw box around region
+                self.overlay.overlay_rect(20, (left, top), (left + width, top + height), (0, 255, 0), 2)
+                self.overlay.overlay_floating_text(20, f'Match: {maxVal:5.4f}', left, top - 25, (0, 255, 0))
             else:
-                # Draw box around compass
-                self.overlay.overlay_rect(21, (comp_left, comp_top),(comp_left + comp_width, comp_top + comp_height), (255, 0, 0), 2)
-                self.overlay.overlay_floating_text(21, f'Match: {maxVal:5.2f}', comp_left, comp_top - 25, (255, 0, 0))
-                # Draw box around target
-                self.overlay.overlay_rect(23, (targ_left, targ_top),  (targ_left + targ_width, targ_top + targ_height), (255, 0, 0), 2)
-                self.overlay.overlay_floating_text(23, f'Match: {maxVal1:5.2f}', targ_left, targ_top - 25, (255, 0, 0))
+                # Draw box around region
+                self.overlay.overlay_rect(21, (left, top), (left + width, top + height), (255, 0, 0), 2)
+                self.overlay.overlay_floating_text(21, f'Match: {maxVal:5.4f}', left, top - 25, (255, 0, 0))
 
             self.overlay.overlay_paint()
 
-            #print("Looping i:"+str(i)+ ' scale:'+str(self.scr.scaleX)+ " maxVal:"+str(maxVal)+" maxVal1:"+str(maxVal1))
-
-            # Show the bounding box           
-            self.get_nav_offset(self.scrReg)
-            self.get_destination_offset(self.scrReg)
-
-            if maxVal > threshold and maxVal1 > threshold:
-                #print("met criteria:"+f'{self.scr.scaleX:5.2f} '+str(threshold))
+            # Check the match percentage
+            if maxVal > threshold:
                 if maxVal > max_pick:
                     max_pick = maxVal
                     scale = i
-                    self.ap_ckb('log', 'Cal: Found match:' + f'{max_pick:5.2f}' + "% with scale:" + f'{self.scr.scaleX:5.2f}')
+                    #self.ap_ckb('log', 'Cal: Found match:' + f'{max_pick:5.4f}' + "% with scale:" + f'{self.scr.scaleX:5.4f}')
+
+            # Next range
+            i = i + range_step
+
+        # Leave the results for the user for a couple of seconds
+        sleep(2)
+
+        # Clean up screen
+        self.overlay.overlay_remove_rect(20)
+        self.overlay.overlay_remove_floating_text(20)
+        self.overlay.overlay_remove_rect(21)
+        self.overlay.overlay_remove_floating_text(21)
+        self.overlay.overlay_paint()
 
         return scale, max_pick
 
-    # Routine to find the optimal scaling values for the tempalte images
     def calibrate(self):
+        """ Routine to find the optimal scaling values for the template images. """
+        msg = 'Select OK to begin Calibration. You must be in space and have a star system targeted in center screen.'
+        self.vce.say(msg)
+        ans = messagebox.askokcancel('Calibration', msg)
+        if not ans:
+            return
+
+        self.ap_ckb('log+vce', 'Calibration starting.')
+
         self.set_focus_elite_window()
 
         # Draw the target and compass regions on the screen
-        for i, key in enumerate(self.scrReg.reg):
-             if key == 'target' or key == 'compass':
-                targ_region = self.scrReg.reg[key]
-                self.overlay.overlay_rect(key, (targ_region['rect'][0], targ_region['rect'][1]),
-                                (targ_region['rect'][2], targ_region['rect'][3]),(0, 0, 255), 2)
-                self.overlay.overlay_floating_text(key, key, targ_region['rect'][0],
-                                                   targ_region['rect'][1], (0, 0, 255))
+        key = 'target'
+        targ_region = self.scrReg.reg[key]
+        self.overlay.overlay_rect1(key, targ_region['rect'], (0, 0, 255), 2)
+        self.overlay.overlay_floating_text(key, key, targ_region['rect'][0], targ_region['rect'][1], (0, 0, 255))
         self.overlay.overlay_paint()
 
-        range_low = 30
-        range_high = 200
-        match_level = 0.5
-        scale_max = 0
-        max_val = 0
+        # Calibrate system target
+        self.calibrate_target()
 
-        # loop through thresholds from 50 to 90% in 5% increments.  Find out which scale factor
-        # meets the highest threshold value
-        #        
-        for i in range(50, 90, 5):
-            threshold = float(i/100)
-            scale, max_pick = self.calibrate_range(range_low, range_high, threshold)  # match from 50-> 100 by 5
-            #print("i:"+str(i)+" scale:"+str(scale)+ " threshold:"+str(threshold))
-            if scale != 0:
-                scale_max = scale
-                max_val = max_pick
-                range_low = scale-2
-                range_high = scale+2
-                if range_high > 100:
-                    range_high = 100
-            else:
-                break  # no match found with threshold
-
-        if scale_max == 99:
-            scale_max = 100
-
-        # if we found a scaling factor that meets our criteria, then save it to the resolution.json file
-        if max_val != 0:
-            self.scr.scaleX = float(scale_max/100)
-            self.scr.scaleY = self.scr.scaleX
-            self.ap_ckb('log', 'Cal: Max best match:'+f'{max_val:5.2f}'+"% with scale:"+f'{self.scr.scaleX:5.2f}')
-            self.scr.scales['Calibrated'] = [self.scr.scaleX, self.scr.scaleY]
-            self.scr.write_config(data=None)  # None means the writer will use its own scales variable which we modified
-        else:
-            self.ap_ckb('log', 'Cal: Insufficient matching to meet reliability, max % match:'+str(max_val))
-
-        # Wait, then clean up
-        sleep(3)
+        # Clean up
         self.overlay.overlay_clear()
         self.overlay.overlay_paint()
 
-            # Go into FSS, check to see if we have a signal waveform in the Earth, Water or Ammonia zone
+        self.ap_ckb('log+vce', 'Calibration complete.')
 
+    def calibrate_compass(self):
+        """ Routine to find the optimal scaling values for the template images. """
+        msg = 'Select OK to begin Calibration. You must be in space and have the compass visible.'
+        self.vce.say(msg)
+        ans = messagebox.askokcancel('Calibration', msg)
+        if not ans:
+            return
+
+        self.ap_ckb('log+vce', 'Calibration starting.')
+
+        self.set_focus_elite_window()
+
+        # Draw the target and compass regions on the screen
+        key = 'compass'
+        targ_region = self.scrReg.reg[key]
+        self.overlay.overlay_rect1(key, targ_region['rect'], (0, 0, 255), 2)
+        self.overlay.overlay_floating_text(key, key, targ_region['rect'][0], targ_region['rect'][1], (0, 0, 255))
+        self.overlay.overlay_paint()
+
+        # Calibrate compass
+        self.calibrate_ship_compass()
+
+        # Clean up
+        self.overlay.overlay_clear()
+        self.overlay.overlay_paint()
+
+        self.ap_ckb('log+vce', 'Calibration complete.')
+
+    def calibrate_target(self):
+        """ Calibrate target """
+        range_low = 30
+        range_high = 200
+        range_step = 1
+        scale_max = 0
+        max_val = 0
+
+        # loop through the test twice. Once over the wide scaling range at 1% increments and once over a
+        # small scaling range at 0.1% increments.
+        # Find out which scale factor meets the highest threshold value.
+        for i in range(2):
+            threshold = 0.5  # Minimum match is constant. Result will always be the highest match.
+            scale, max_pick = self.calibrate_region(range_low, range_high, range_step, threshold, 'target', 'target')
+            if scale != 0:
+                scale_max = scale
+                max_val = max_pick
+                range_low = scale - 5
+                range_high = scale + 5
+                range_step = 0.1
+            else:
+                break  # no match found with threshold
+
+        # if we found a scaling factor that meets our criteria, then save it to the resolution.json file
+        if max_val != 0:
+            self.scr.scaleX = float(scale_max / 100)
+            self.scr.scaleY = self.scr.scaleX
+            self.ap_ckb('log', f'Target Cal: Best match: {max_val * 100:5.2f}% at scale: {self.scr.scaleX:5.4f}')
+            self.config['TargetScale'] = round(self.scr.scaleX, 4)
+            # self.scr.scales['Calibrated'] = [self.scr.scaleX, self.scr.scaleY]
+            self.scr.write_config(
+                data=None)  # None means the writer will use its own scales variable which we modified
+        else:
+            self.ap_ckb('log',
+                        f'Target Cal: Insufficient matching to meet reliability, max % match: {max_val * 100:5.2f}%')
+
+
+    def calibrate_ship_compass(self):
+        """ Calibrate Compass """
+        range_low = 30
+        range_high = 200
+        range_step = 1
+        scale_max = 0
+        max_val = 0
+
+        # loop through the test twice. Once over the wide scaling range at 1% increments and once over a
+        # small scaling range at 0.1% increments.
+        # Find out which scale factor meets the highest threshold value.
+        for i in range(2):
+            threshold = 0.5  # Minimum match is constant. Result will always be the highest match.
+            scale, max_pick = self.calibrate_region(range_low, range_high, range_step, threshold, 'compass','compass')
+            if scale != 0:
+                scale_max = scale
+                max_val = max_pick
+                range_low = scale - 5
+                range_high = scale + 5
+                range_step = 0.1
+            else:
+                break  # no match found with threshold
+
+        # if we found a scaling factor that meets our criteria, then save it to the resolution.json file
+        if max_val != 0:
+            c_scaleX = float(scale_max / 100)
+            self.ap_ckb('log',
+                        f'Compass Cal: Max best match: {max_val * 100:5.2f}% with scale: {c_scaleX:5.4f}')
+            self.compass_scale = c_scaleX
+        else:
+            self.ap_ckb('log',
+                        f'Compass Cal: Insufficient matching to meet reliability, max % match: {max_val * 100:5.2f}%')
+
+    # Go into FSS, check to see if we have a signal waveform in the Earth, Water or Ammonia zone
     #  if so, announce finding and log the type of world found
     #
     def fss_detect_elw(self, scr_reg):
@@ -534,12 +664,12 @@ class EDAutopilot:
         if n_maxVal < scr_reg.navpoint_match_thresh:
             final_x = 0.0
             final_y = 0.0
-            final_z = -1.0 # Behind
+            final_z = -1.0  # Behind
             result = {'x': final_x, 'y': final_y, 'z': final_z}
         else:
             final_x = ((n_pt[0]+((1/2)*wid))-((1/2)*c_wid))-5.5
             final_y = (((1/2)*c_hgt)-(n_pt[1]+((1/2)*hgt)))+6.5
-            final_z = 1.0 # Ahead
+            final_z = 1.0  # Ahead
             logger.debug(("maxVal="+str(n_maxVal)+" x:"+str(final_x)+" y:"+str(final_y)))
             result = {'x': final_x, 'y': final_y, 'z': final_z}
 
@@ -554,8 +684,10 @@ class EDAutopilot:
             #   dim = (int(destination_width/3), int(destination_height/3))
 
             #   img = cv2.resize(dst_image, dim, interpolation =cv2.INTER_AREA) 
-            cv2.putText(icompass_image_d, f'Compass: {maxVal:5.2f} > {scr_reg.compass_match_thresh:5.2f}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.putText(icompass_image_d, f'Nav Point: {n_maxVal:5.2f} > {scr_reg.navpoint_match_thresh:5.2f}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+            icompass_image_d = cv2.rectangle(icompass_image_d, (0, 0), (1000, 45), (0, 0, 0), -1)
+            cv2.putText(icompass_image_d, f'Compass: {maxVal:5.4f} > {scr_reg.compass_match_thresh:5.2f}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(icompass_image_d, f'Nav Point: {n_maxVal:5.4f} > {scr_reg.navpoint_match_thresh:5.2f}', (1, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(icompass_image_d, f'Result: {result}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             #cv2.circle(icompass_image_display, (pt[0]+n_pt[0], pt[1]+n_pt[1]), 5, (0, 255, 0), 3)
             cv2.imshow('compass', icompass_image_d)
             #cv2.imshow('nav', navpt_image)
@@ -585,7 +717,8 @@ class EDAutopilot:
                 dim = (int(destination_width/2), int(destination_height/2))
 
                 img = cv2.resize(dst_image_d, dim, interpolation=cv2.INTER_AREA)
-                cv2.putText(img, f'{maxVal:5.2f} > {scr_reg.target_occluded_thresh:5.2f}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                img = cv2.rectangle(img, (0, 0), (1000, 25), (0, 0, 0), -1)
+                cv2.putText(img, f'{maxVal:5.4f} > {scr_reg.target_occluded_thresh:5.2f}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
                 cv2.imshow('occluded', img)
                 cv2.moveWindow('occluded', self.cv_view_x, self.cv_view_y+650)
             except Exception as e:
@@ -625,10 +758,11 @@ class EDAutopilot:
                 dim = (int(destination_width/2), int(destination_height/2))
 
                 img = cv2.resize(dst_image_d, dim, interpolation=cv2.INTER_AREA)
-                cv2.putText(img, f'{maxVal:5.2f} > {scr_reg.target_thresh:5.2f}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                img = cv2.rectangle(img, (0, 0), (1000, 25), (0, 0, 0), -1)
+                cv2.putText(img, f'{maxVal:5.4f} > {scr_reg.target_thresh:5.2f}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
                 cv2.imshow('target', img)
                 #cv2.imshow('tt', scr_reg.templates.template['target']['image'])
-                cv2.moveWindow('target', self.cv_view_x+500, self.cv_view_y)
+                cv2.moveWindow('target', self.cv_view_x, self.cv_view_y+425)
             except Exception as e:
                 print("exception in getdest: "+str(e))
             cv2.waitKey(30)
@@ -642,9 +776,8 @@ class EDAutopilot:
 
         return result
 
-    # look for the "PRESS [J] TO DISENGAGE", if in this region then return true
-    #
     def sc_disengage(self, scr_reg) -> bool:
+        """ look for the "PRESS [J] TO DISENGAGE", if in this region then return true """
         dis_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('disengage', 'disengage')
 
         pt = maxLoc
@@ -654,7 +787,8 @@ class EDAutopilot:
 
         if self.cv_view:
             self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
-            cv2.putText(dis_image, f'{maxVal:5.2f} > {scr_reg.disengage_thresh}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
+            dis_image = cv2.rectangle(dis_image, (0, 0), (1000, 25), (0, 0, 0), -1)
+            cv2.putText(dis_image, f'{maxVal:5.4f} > {scr_reg.disengage_thresh}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('disengage', dis_image)
             cv2.moveWindow('disengage', self.cv_view_x-460,self.cv_view_y+575)
             cv2.waitKey(1)
@@ -662,6 +796,7 @@ class EDAutopilot:
         logger.debug("Disenage = "+str(maxVal))
 
         if (maxVal > scr_reg.disengage_thresh):
+            logger.info("'PRESS [] TO DISENGAGE' detected. Disengaging Supercruise")
             self.vce.say("Disengaging Supercruise")
             return True
         else:
@@ -682,9 +817,8 @@ class EDAutopilot:
 
         # Performs left menu ops to request docking
 
-    # Required that the left menu is on the "NAVIGATION" tab otherwise this doesn't work
-    #
     def request_docking(self, toCONTACT):
+        """ Request docking from Nav Panel. """
         self.keys.send('UI_Back', repeat=10)
         self.keys.send('HeadLookReset')
         self.keys.send('UIFocus', state=1)
@@ -924,7 +1058,7 @@ class EDAutopilot:
             sleep(.1)
             logger.debug("final x:"+str(off['x'])+" y:"+str(off['y']))
 
-    def target_align(self, scr_reg):
+    def fsd_target_align(self, scr_reg):
         """ Coarse align to the target to support FSD jumping """
 
         self.vce.say("Target Align")
@@ -994,7 +1128,7 @@ class EDAutopilot:
         self.nav_align(scr_reg)
         self.keys.send('SetSpeed100')
 
-        self.target_align(scr_reg)
+        self.fsd_target_align(scr_reg)
         
 
     def sc_target_align(self, scr_reg) -> bool:
@@ -1809,43 +1943,47 @@ class EDAutopilot:
             if self.gui_loaded:
                 # Check if ship has changed
                 ship = self.jn.ship_state()['type']
-                ship_fullname = get_ship_fullname(ship)
-                if ship != self.current_ship_type:
-                    if self.current_ship_type is not None:
-                        cur_ship_fullname = get_ship_fullname(self.current_ship_type)
-                        self.ap_ckb('log+vce', f"Switched ship from your {cur_ship_fullname} to your {ship_fullname}.")
-                    else:
-                        self.ap_ckb('log+vce', f"Welcome aboard your {ship_fullname}.")
+                # Check if a ship and not a suit (on foot)
+                if ship not in ship_size_map:
+                    # Clear current ship
+                    self.current_ship_type = ''
+                else:
+                    ship_fullname = get_ship_fullname(ship)
 
-                    # Check for fuel scoop and advanced docking computer
-                    if not self.jn.ship_state()['has_fuel_scoop']:
-                        self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is not fitted with a Fuel Scoop.")
-                    if not self.jn.ship_state()['has_adv_dock_comp']:
-                        self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is not fitted with an Advanced Docking Computer.")
+                    # Check if ship changed or just loaded
+                    if ship != self.current_ship_type:
+                        if self.current_ship_type is not None:
+                            cur_ship_fullname = get_ship_fullname(self.current_ship_type)
+                            self.ap_ckb('log+vce', f"Switched ship from your {cur_ship_fullname} to your {ship_fullname}.")
+                        else:
+                            self.ap_ckb('log+vce', f"Welcome aboard your {ship_fullname}.")
 
-                    # Store ship for change detection
-                    self.current_ship_type = ship
+                        # Check for fuel scoop and advanced docking computer
+                        if not self.jn.ship_state()['has_fuel_scoop']:
+                            self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is not fitted with a Fuel Scoop.")
+                        if not self.jn.ship_state()['has_adv_dock_comp']:
+                            self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is not fitted with an Advanced Docking Computer.")
 
-            # Check once EDAPGUI loaded to prevent errors logging to the listbox before loaded
-            if self.gui_loaded:
-                # Check if ship has changed
-                ship = self.jn.ship_state()['type']
-                ship_fullname = get_ship_fullname(ship)
-                if ship != self.current_ship_type:
-                    if self.current_ship_type is not None:
-                        cur_ship_fullname = get_ship_fullname(self.current_ship_type)
-                        self.ap_ckb('log+vce', f"Switched ship from your {cur_ship_fullname} to your {ship_fullname}.")
-                    else:
-                        self.ap_ckb('log+vce', f"Welcome aboard your {ship_fullname}.")
+                        # Add ship to ship configs if missing
+                        if ship is not None:
+                            if ship not in self.ship_configs['Ship_Configs']:
+                                self.ship_configs['Ship_Configs'][ship] = dict()
 
-                    # Check for fuel scoop and advanced docking computer
-                    if not self.jn.ship_state()['has_fuel_scoop']:
-                        self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is not fitted with a Fuel Scoop.")
-                    if not self.jn.ship_state()['has_adv_dock_comp']:
-                        self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is not fitted with an Advanced Docking Computer.")
+                            current_ship_cfg = self.ship_configs['Ship_Configs'][ship]
+                            self.compass_scale = current_ship_cfg.get('compass_scale', self.scr.scaleX)
+                            self.rollrate = current_ship_cfg.get('RollRate', 80.0)
+                            self.pitchrate = current_ship_cfg.get('PitchRate', 33.0)
+                            self.yawrate = current_ship_cfg.get('YawRate', 8.0)
+                            self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
 
-                    # Store ship for change detection
-                    self.current_ship_type = ship
+                            # Update GUI
+                            self.ap_ckb('update_ship_cfg')
+
+                        # Store ship for change detection
+                        self.current_ship_type = ship
+
+                        # Reload templates
+                        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale)
 
             self.update_overlay()
             cv2.waitKey(10)

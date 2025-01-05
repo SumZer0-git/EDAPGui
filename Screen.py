@@ -79,7 +79,7 @@ class Screen:
             '2560x1080':  [0.75, 0.75],  # tested
             '2560x1440':  [1.0, 1.0],    # tested
             '3440x1440':  [1.0, 1.0],    # tested
-            'Calibrated': [-1.0, -1.0]
+            # 'Calibrated': [-1.0, -1.0]
         }
 
         # used this to write the self.scales table to the json file
@@ -104,13 +104,13 @@ class Screen:
             self.scaleY = self.screen_height / 1440.0
             
         # if the calibration scale values are not -1, then use those regardless of above
-        if self.scales['Calibrated'][0] != -1.0:
-            self.scaleX = self.scales['Calibrated'][0]            
-        if self.scales['Calibrated'][1] != -1.0:
-            self.scaleY = self.scales['Calibrated'][1]
+        # if self.scales['Calibrated'][0] != -1.0:
+        #     self.scaleX = self.scales['Calibrated'][0]
+        # if self.scales['Calibrated'][1] != -1.0:
+        #     self.scaleY = self.scales['Calibrated'][1]
         
         logger.debug('screen size: '+str(self.screen_width)+" "+str(self.screen_height))
-        logger.debug('Scale X, Y: '+str(self.scaleX)+", "+str(self.scaleY))
+        logger.debug('Default scale X, Y: '+str(self.scaleX)+", "+str(self.scaleY))
 
     @staticmethod
     def get_elite_window_rect() -> typing.Tuple[int, int, int, int] | None:

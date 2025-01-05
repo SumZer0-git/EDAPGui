@@ -189,13 +189,6 @@ class APGui():
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartSC'],  self.callback, args=('sc_start',  None))
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartRobigo'],  self.callback, args=('robigo_start',  None))
 
-        # load default ship config file if specified
-        try:
-            if self.ed_ap.config['ShipConfigFile']:
-                self.open_ship_file(self.ed_ap.config['ShipConfigFile'])
-        except FileNotFoundError:
-            logger.warning(f"Ship Config File {self.ed_ap.config['ShipConfigFile']} not found")
-
         # check for updates
         self.check_updates()
 
@@ -208,6 +201,8 @@ class APGui():
         elif key == 'log+vce':
             self.log_msg(body)
             self.ed_ap.vce.say(body)
+        elif key == 'statusline':
+            self.update_statusline(body)
         elif key == 'fsd_stop':
             logger.debug("Detected 'fsd_stop' key")
             self.checkboxvar['FSD Route Assist'].set(0)
@@ -239,17 +234,26 @@ class APGui():
             self.check_cb('AFK Combat Assist')
         elif key == 'jumpcount':
             self.update_jumpcount(body)
-        elif key == 'statusline':
-            self.update_statusline(body)
+        elif key == 'update_ship_cfg':
+            self.update_ship_cfg()
+
+    def update_ship_cfg(self):
+        # load up the display with what we read from ED_AP for the current ship
+        self.entries['ship']['PitchRate'].delete(0, END)
+        self.entries['ship']['RollRate'].delete(0, END)
+        self.entries['ship']['YawRate'].delete(0, END)
+        self.entries['ship']['SunPitchUp+Time'].delete(0, END)
+
+        self.entries['ship']['PitchRate'].insert(0, self.ed_ap.pitchrate)
+        self.entries['ship']['RollRate'].insert(0, self.ed_ap.rollrate)
+        self.entries['ship']['YawRate'].insert(0, self.ed_ap.yawrate)
+        self.entries['ship']['SunPitchUp+Time'].insert(0, self.ed_ap.sunpitchuptime)
 
     def calibrate_callback(self):
-        msg = 'Select OK to begin Calibration. You must be in space and have a valid station targeted in center screen.'
-        ans = messagebox.askokcancel('Calibration', msg)
-        if not ans:
-            return
-
-        self.log_msg('Calibration starting')
         self.ed_ap.calibrate()
+
+    def calibrate_compass_callback(self):
+        self.ed_ap.calibrate_compass()
 
     def mouse_coord_callback(self):
         ans = messagebox.askyesno('Mouse XY', 'Select OK\nYour next Mouse click should be on the Station')
@@ -415,39 +419,6 @@ class APGui():
         self.ed_ap.sunpitchuptime = float(f_details['SunPitchUp+Time'])
 
         self.ship_filelabel.set("loaded: " + Path(filename).name)
-        self.ed_ap.config['ShipConfigFile'] = os.path.relpath(filename)  # save ship config file path
-        self.ed_ap.update_config()
-
-    def save_ship_file(self):
-        filetypes = (
-            ('json files', '*.json'),
-            ('All files', '*.*')
-        )
-
-        self.ed_ap.pitchrate = float(self.entries['ship']['PitchRate'].get())
-        self.ed_ap.rollrate = float(self.entries['ship']['RollRate'].get())
-        self.ed_ap.yawrate = float(self.entries['ship']['YawRate'].get())
-        self.ed_ap.sunpitchuptime = float(self.entries['ship']['SunPitchUp+Time'].get())
-
-        f_details = {
-            'rollrate': self.ed_ap.rollrate,
-            'pitchrate': self.ed_ap.pitchrate,
-            'yawrate': self.ed_ap.yawrate,
-            'SunPitchUp+Time': self.ed_ap.sunpitchuptime
-        }
-        filename = fd.asksaveasfilename(
-            title='Save a file',
-            initialdir='.', initialfile="ship-",
-            filetypes=filetypes)
-
-        if not filename:
-            return
-
-        with open(filename, 'w') as json_file:
-            json.dump(f_details, json_file)
-
-        self.ship_filelabel.set("loaded: " + Path(filename).name)
-        self.ed_ap.config['ShipConfigFile'] = os.path.relpath(filename)  # save ship config file path
         self.ed_ap.update_config()
 
     def open_wp_file(self):
@@ -471,6 +442,8 @@ class APGui():
     def save_settings(self):
         self.entry_update()
         self.ed_ap.update_config()
+        self.ed_ap.update_ship_configs()
+
 
     # new data was added to a field, re-read them all for simple logic
     def entry_update(self, event=''):
@@ -670,10 +643,8 @@ class APGui():
         #
         menubar = Menu(win, background='#ff8000', foreground='black', activebackground='white', activeforeground='black')
         file = Menu(menubar, tearoff=0)
-        file.add_command(label="Open", command=self.open_ship_file)
-        file.add_command(label="Save as", command=self.save_ship_file)
-        file.add_separator()
-        file.add_command(label="Calibrate", command=self.calibrate_callback)
+        file.add_command(label="Calibrate Target", command=self.calibrate_callback)
+        file.add_command(label="Calibrate Compass", command=self.calibrate_compass_callback)
         self.checkboxvar['Enable CV View'] = IntVar()
         self.checkboxvar['Enable CV View'].set(int(self.ed_ap.config['Enable_CV_View']))  # set IntVar value to the one from config
         file.add_checkbutton(label='Enable CV View', onvalue=1, offvalue=0, variable=self.checkboxvar['Enable CV View'], command=(lambda field='Enable CV View': self.check_cb(field)))
@@ -824,24 +795,24 @@ class APGui():
 
         # debug block
         blk_debug = tk.Frame(page2)
-        blk_debug.grid(row=0, column=0, padx=10, pady=5, sticky=(E, W))
+        blk_debug.grid(row=0, column=0, padx=10, pady=5, columnspan=2, sticky=(E, W))
         blk_debug.columnconfigure([0, 1], weight=1, minsize=100, uniform="group2")
 
         # debug settings block
         blk_debug_settings = LabelFrame(blk_debug, text="DEBUG")
-        blk_debug_settings.grid(row=0, column=0, padx=2, pady=2, sticky=(N, S, E, W))
+        blk_debug_settings.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, S, E, W))
         self.radiobuttonvar['debug_mode'] = StringVar()
         rb_debug_debug = Radiobutton(blk_debug_settings, pady=3, text="Debug + Info + Errors", variable=self.radiobuttonvar['debug_mode'], value="Debug", command=(lambda field='debug_mode': self.check_cb(field)))
-        rb_debug_debug.grid(row=0, column=1, sticky=(W))
+        rb_debug_debug.grid(row=0, column=1, columnspan=2, sticky=(W))
         rb_debug_info = Radiobutton(blk_debug_settings, pady=3, text="Info + Errors", variable=self.radiobuttonvar['debug_mode'], value="Info", command=(lambda field='debug_mode': self.check_cb(field)))
-        rb_debug_info.grid(row=1, column=1, sticky=(W))
+        rb_debug_info.grid(row=1, column=1, columnspan=2, sticky=(W))
         rb_debug_error = Radiobutton(blk_debug_settings, pady=3, text="Errors only (default)", variable=self.radiobuttonvar['debug_mode'], value="Error", command=(lambda field='debug_mode': self.check_cb(field)))
-        rb_debug_error.grid(row=2, column=1, sticky=(W))
+        rb_debug_error.grid(row=2, column=1, columnspan=2, sticky=(W))
         btn_open_logfile = Button(blk_debug_settings, text='Open Log File', command=self.open_logfile)
         btn_open_logfile.grid(row=3, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
 
         blk_debug_buttons = tk.Frame(page2)
-        blk_debug_buttons.grid(row=3, column=0, padx=10, pady=5, sticky=(N, S, E, W))
+        blk_debug_buttons.grid(row=3, column=0, padx=10, pady=5, columnspan=2, sticky=(N, S, E, W))
         blk_debug_buttons.columnconfigure([0, 1], weight=1, minsize=100)
         btn_save = Button(blk_debug_buttons, text='Save All Settings', command=self.save_settings)
         btn_save.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
