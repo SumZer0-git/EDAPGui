@@ -1,8 +1,8 @@
 # Roll, Pitch, Yaw (RPY)
-The values for Pitch and Roll are critical for proper Autopilot behavior. Currently the Autopilot does not utilize Yaw
-as it is much to slow.  A saved set of rates should be maintained for each ship you plan to use with this Autopilot.
-Use the "Save As" under the File menu to do so.  Also, use Open to load these rates before you begin using any
-of the Assistants this Autopilot provides.
+The values for Pitch and Roll are critical for proper Autopilot behavior. Yaw is also used, but to a lesser degree.
+Each ship type will have different RPY values that need to be determined using the instructions below. Once the RPY
+values have been determined for a ship type, EDAP will store the values and will automatically load the correct values
+when the active ship is changed. A ship config can also be manually loaded using the load button.
 
 Take the RPY values from Outfitting, pay attention to the order, it is Pitch, Roll, Yaw in Outfitting.  Also pay
 attention to the order on the GUI as it is Roll, Pitch, Yaw.

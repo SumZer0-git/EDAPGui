@@ -238,6 +238,9 @@ https://pythonhosted.org/pynput/keyboard.html
 ```
 ## Setup:
 _Requires **python 3** and **git**_
+
+_Python 3.11 is the recommended version of Python. Python 3.9 or 3.10 may also be used._
+
 1. Clone this repository
 ```sh
 > git clone https://github.com/sumzer0-git/EDAPGui
