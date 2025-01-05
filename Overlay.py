@@ -125,7 +125,11 @@ class Overlay:
 
     def overlay_rect(self, key, pt1, pt2, color, thick):
         global lines
-        lines[key] = [pt1,pt2,color, thick]
+        lines[key] = [pt1, pt2, color, thick]
+
+    def overlay_rect1(self, key, rect, color, thick):
+        global lines
+        lines[key] = [(rect[0], rect[1]), (rect[2], rect[3]), color, thick]
 
     def overlay_setfont(self, fontname, fsize ):
         global fnt
@@ -157,6 +161,15 @@ class Overlay:
         lines.clear()
         text.clear()
         floating_text.clear()
+
+    def overlay_remove_rect(self, key):
+        lines.pop(key)
+
+    def overlay_remove_text(self, key):
+        text.pop(key)
+
+    def overlay_remove_floating_text(self, key):
+        floating_text.pop(key)
 
     def overlay_quit(self):
         win32gui.PostMessage(self.hWindow, win32con.WM_CLOSE, 0, 0)  

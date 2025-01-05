@@ -1,3 +1,11 @@
+# 1/5/2025 Stumpii: Separated target and compass calibration
+ - Separated compass from target calibration.
+ - Added ship config file that will hold ship data.
+ - Moved calibrated screen scaling from resolution file to settings file.
+ - Increased range of compass region for the Mandalay.
+ - Added additional methods for overlays to add item as rectangle and also to remove overlay items.
+ - Updated requirements text file.
+
 # 12/13/2024 Stumpii: Added Cobra Mk V and ship detection
  - Added Cobra Mk V to data file.
  - Fixed defaulting of new AP.json properties on startup.
