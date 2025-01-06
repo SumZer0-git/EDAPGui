@@ -1,15 +1,18 @@
-#auto_mix_prep==0.2.0
 colorlog==6.5.0
+httpcore<0.14 # Specific version required for paddlepaddle.
 keyboard==0.13.5
 kthread==0.2.2
 logger==1.4
 mss==8.0.3
-numpy==1.22.2
+numpy==1.25.1 # <2.0 # Specific version required for paddleOCR.
 opencv_python==4.5.5.62
+paddleocr
+paddlepaddle
 Pillow==9.0.1
 PyAutoGUI==0.9.53
 pynput==1.7.6
 pyttsx3==2.90
 pywin32==303
+protobuf<=3.20.2 # Specific version required for paddlepaddle.
 requests
-#win32gui
+strsimpy

@@ -1,3 +1,10 @@
+# 1/6/2025 Stumpii: OCR for SCO detection
+ - Added OCR routine.
+ - Added SCO active detection using OCR. Detection is performed on a separate thread to prevent the main loop being delayed for processing.
+ - Added SCO deactivation is SCO is active and we are low on fuel or high on temperature.
+ - Updated requirements for PaddleOCR.
+ - Added separate color filter range for SCO text.
+
 # 1/5/2025 Stumpii: Separated target and compass calibration
  - Separated compass from target calibration.
  - Added ship config file that will hold ship data.

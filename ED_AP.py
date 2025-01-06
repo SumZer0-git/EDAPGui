@@ -17,6 +17,7 @@ from EDWayPoint import *
 from EDJournal import *
 from EDKeys import *
 from EDafk_combat import AFK_Combat
+from OCR import OCR
 from Overlay import *
 from StatusParser import StatusParser
 from Voice import *
@@ -41,7 +42,7 @@ class EDAutopilot:
 
     def __init__(self, cb, doThread=True):
 
-        self.config = {  
+        self.config = {
             "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS
             "JumpTries": 3,                # 
             "NavAlignTries": 3,            #
@@ -79,6 +80,10 @@ class EDAutopilot:
         self.ship_configs = {
             "Ship_Configs": {},  # Dictionary of ship types with additional settings
         }
+        self._sc_sco_active_loop_thread = None
+        self._sc_sco_active_loop_enable = False
+        self.sc_sco_is_active = 0
+        self._sc_sco_active_on_ls = 0
 
         # used this to write the self.config table to the json file
         # self.write_config(self.config)
@@ -142,6 +147,8 @@ class EDAutopilot:
         self.scr = Screen.Screen()
         self.scr.scaleX = self.config['TargetScale']
         self.scr.scaleY = self.config['TargetScale']
+
+        self.ocr = OCR(self.scr)
         self.templ = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
         self.scrReg = Screen_Regions.Screen_Regions(self.scr, self.templ)
         self.jn = EDJournal()
@@ -802,6 +809,82 @@ class EDAutopilot:
         else:
             return False
 
+    def _sc_sco_active_loop(self):
+        """ A loop to determine is Supercruise Overcharge is active.
+        This runs on a separate thread monitoring the screen in the background. """
+        while self._sc_sco_active_loop_enable:
+            sc_sco_is_active_ls = self.sc_sco_is_active
+            self.sc_sco_is_active = self.sc_sco_active(self.scrReg)
+
+            if self.sc_sco_is_active and not sc_sco_is_active_ls:
+                self.ap_ckb('log+vce', "Supercruise Overcharge activated")
+            if sc_sco_is_active_ls and not self.sc_sco_is_active:
+                self.ap_ckb('log+vce', "Supercruise Overcharge deactivated")
+
+            sleep(0.5)
+
+    def sc_sco_active(self, scr_reg) -> bool:
+        """ Determine if Supercruise Overcharge is active.
+        @param scr_reg: The screen regions dictionary.
+        @return: True if SCO is active, else False.
+        """
+        image = self.scr.get_screen_region(scr_reg.reg['sco']['rect'])
+        # TODO delete this line when COLOR_RGB2BGR is removed from get_screen()
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        mask = scr_reg.capture_region_filtered(self.scr, 'sco')
+        masked_image = cv2.bitwise_and(image, image, mask=mask)
+        image = masked_image
+
+        # OCR the selected item
+        sim_match = 0.35  # Similarity match 0.0 - 1.0 for 0% - 100%)
+        sim = 0.0
+        ocr_textlist = self.ocr.image_simple_ocr(image)
+        #print(ocr_textlist)
+
+        if ocr_textlist is not None:
+            sim = self.ocr.string_similarity(f"SUPERCRUISE OVERCHARGE ACTIVE", str(ocr_textlist))
+            logger.info(f"SCO similarity with {str(ocr_textlist)} is {sim}")
+
+        if self.cv_view:
+            image = cv2.rectangle(image, (0, 0), (1000, 30), (0, 0, 0), -1)
+            cv2.putText(image, f'Text: {str(ocr_textlist)}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(image, f'Similarity: {sim:5.4f} > {sim_match}', (1, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.imshow('sco_active', image)
+            cv2.moveWindow('sco_active', self.cv_view_x - 460, self.cv_view_y + 850)
+            cv2.waitKey(1)
+
+        if sim > sim_match:
+            #logger.info("Supercruise Overcharge (SCO) is active")
+            #cv2.imwrite(f'test/sco.png', image)
+            return True
+
+        return False
+
+    def sc_sco_check(self) -> bool:
+        """ Checks if Supercruise Overcharge is active.
+        @return: True if SCO is active, else False.
+        """
+        if self.sc_sco_is_active:
+            if self.status.get_flag(FlagsOverHeating):
+                logger.info("SCO Aborting, overheating")
+                self.ap_ckb('log+vce', "SCO Aborting, overheating")
+                self.keys.send('UseBoostJuice')
+                return False
+            elif self.status.get_flag(FlagsLowFuel):
+                logger.info("SCO Aborting, < 25% fuel")
+                self.ap_ckb('log+vce', "SCO Aborting, < 25% fuel")
+                self.keys.send('UseBoostJuice')
+                return False
+            elif self.jn.ship_state()['fuel_percent'] < self.config['FuelThreasholdAbortAP']:
+                logger.info("SCO Aborting, < users low fuel threshold")
+                self.ap_ckb('log+vce', "SCO Aborting, < users low fuel threshold")
+                self.keys.send('UseBoostJuice')
+                return False
+
+            return True
+        else:
+            return False
+
     # Performs menu action to undock from Station
     #  
     def undock(self):
@@ -989,6 +1072,9 @@ class EDAutopilot:
                 self.pitchDown(90)
             off = self.get_nav_offset(scr_reg)
 
+            # Check if SCO active
+            self.sc_sco_check()
+
         # check if converged, unlikely at this point
         if off['z'] > 0 and abs(off['x']) < close and abs(off['y']) < close:
             return
@@ -997,6 +1083,9 @@ class EDAutopilot:
         # the vehicle should be positioned with the sun below us via the sun_avoid() routine after a jump
         for ii in range(self.config['NavAlignTries']):
             off = self.get_nav_offset(scr_reg)
+
+            # Check if SCO active
+            self.sc_sco_check()
 
             if off['z'] > 0 and abs(off['x']) < close and abs(off['y']) < close:
                 break
@@ -1007,6 +1096,9 @@ class EDAutopilot:
                 if off['y'] < 0:
                     self.pitchDown(45)
                 off = self.get_nav_offset(scr_reg)
+
+                # Check if SCO active
+                self.sc_sco_check()
 
             # determine the angle and the hold time to keep the button pressed to roll that number of degrees
             ang = self.x_angle(off)%90
@@ -1040,6 +1132,9 @@ class EDAutopilot:
                 if off['y'] < 0:
                     self.pitchDown(45)
                 off = self.get_nav_offset(scr_reg)
+
+                # Check if SCO active
+                self.sc_sco_check()
 
             # calc pitch time based on nav point location
             # this is assuming 40 offset is max displacement on the Y axis.  So get percentage we are offset
@@ -1186,6 +1281,9 @@ class EDAutopilot:
             # this checks if suddenly the target show up behind the planete
             if self.is_destination_occluded(scr_reg) == True:
                 self.reposition(scr_reg)
+
+            # Check if SCO active
+            self.sc_sco_check()
 
             new = self.get_destination_offset(scr_reg)
             if new:
@@ -1666,6 +1764,9 @@ class EDAutopilot:
                 self.keys.send('SetSpeed50')
                 self.nav_align(scr_reg)  # realign with station
 
+            # Check if SCO active
+            self.sc_sco_check()
+
             # check for SC Disengage
             if (self.sc_disengage(scr_reg) == True):
                 #sleep(1)  # wait another sec
@@ -1842,6 +1943,13 @@ class EDAutopilot:
     #
     def engine_loop(self):
         while not self.terminate:
+            self._sc_sco_active_loop_enable = True
+
+            if self._sc_sco_active_loop_enable:
+                if self._sc_sco_active_loop_thread is None or not self._sc_sco_active_loop_thread.is_alive():
+                    self._sc_sco_active_loop_thread = threading.Thread(target=self._sc_sco_active_loop, daemon=True)
+                    self._sc_sco_active_loop_thread.start()
+
             if self.fsd_assist_enabled == True:
                 logger.debug("Running fsd_assist")
                 self.set_focus_elite_window()
