@@ -1,3 +1,7 @@
+# 1/6/2025 Stumpii: Undock from planetary surface
+ - Added undocking from planetary surface (i.e. takeoff when not at a docking station). Ship will thrust up, toggle landing gear, rotate roughly 90 deg, boost and SCO out of orbit. 
+ - Added extra key bindings for undocking.
+
 # 1/6/2025 Stumpii: OCR for SCO detection
  - Added OCR routine.
  - Added SCO active detection using OCR. Detection is performed on a separate thread to prevent the main loop being delayed for processing.
