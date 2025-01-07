@@ -70,7 +70,9 @@ class EDKeys:
             'GalaxyMapOpen',
             'SystemMapOpen',
             'UseBoostJuice',
-            'Supercruise'
+            'Supercruise',
+            'UpThrustButton',
+            'LandingGearToggle'
         ]
         self.keys = self.get_bindings(self.keys_to_obtain)
         self.activate_window = False

@@ -885,10 +885,9 @@ class EDAutopilot:
         else:
             return False
 
-    # Performs menu action to undock from Station
-    #  
     def undock(self):
-        # Assume we are in Star Port Services                              
+        """ Performs menu action to undock from Station """
+        # Assume we are in Star Port Services
         # Now we are on initial menu, we go up to top (which is Refuel)
         self.keys.send('UI_Up', repeat=3)
 
@@ -1531,12 +1530,25 @@ class EDAutopilot:
         # Store current location (on planet or in space)
         on_planet = self.status.get_flag(FlagsHasLatLong)
 
-        self.undock()
-        # need to wait until undock complete, that is when we are back in_space
-        while self.jn.ship_state()['status'] != 'in_space':
-            sleep(1)
+        # Check if we are on a landing pad in space or planet, or landed on a planet
+        if self.status.get_flag(FlagsDocked):
+            # We are on a landing pad in space or planet
+            # Undock from station
+            self.undock()
 
-        self.update_ap_status("Undock Complete, accelerating")
+            # need to wait until undock complete, that is when we are back in_space
+            while self.jn.ship_state()['status'] != 'in_space':
+                sleep(1)
+
+            self.update_ap_status("Undock Complete, accelerating")
+        elif self.status.get_flag(FlagsLanded):
+            # We are on planet surface (not planet landing pad)
+            # Hold UP for takeoff
+            self.keys.send('UpThrustButton', hold=6)
+            self.keys.send('LandingGearToggle')
+
+            self.update_ap_status("Takeoff Complete, accelerating")
+
         # move away from station
         if not on_planet:
             # In space (launch from starport or outpost etc.)
@@ -1571,6 +1583,7 @@ class EDAutopilot:
 
             # Disable SCO. If SCO not fitted, this will do nothing.
             self.keys.send('UseBoostJuice')
+            self.keys.send('SetSpeed50')
 
     def sc_engage(self):
         """ Engages supercruise, then returns us to 50% speed """
@@ -1594,7 +1607,7 @@ class EDAutopilot:
         dest = self.waypoint.waypoint_next(self, self.jn.ship_state)
 
         # if we are starting the waypoint docked at a station, we need to undock first
-        if dest != "" and self.jn.ship_state()['status'] == 'in_station':
+        if dest != "" and (self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded)):
             self.waypoint_undock_seq()
 
         # if we are in space but not in supercruise, get into supercruise
@@ -1630,7 +1643,7 @@ class EDAutopilot:
                 else:
                     self.ap_ckb('log', " - Could not target station: "+self.waypoint.waypoints[dest]['DockWithStation'])
 
-                    # Mark this waypoint as complated
+            # Mark this waypoint as completed
             self.waypoint.mark_waypoint_complete(dest)
 
             self.update_ap_status("Setting route to next waypoint")
@@ -1640,7 +1653,7 @@ class EDAutopilot:
             dest = self.waypoint.waypoint_next(self, self.jn.ship_state)
 
             # if we have another waypoint and we're docked, then undock first before moving on
-            if dest != "" and docked_at_station:
+            if dest != "" and self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
                 self.waypoint_undock_seq()
 
                 # Done with waypoints
@@ -1657,7 +1670,7 @@ class EDAutopilot:
 
         if self.jn.ship_state()['target']:
             # if we are starting the waypoint docked at a station, we need to undock first
-            if self.jn.ship_state()['status'] == 'in_station':
+            if self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
                 self.update_overlay()
                 self.waypoint_undock_seq()
 
@@ -1718,13 +1731,13 @@ class EDAutopilot:
         logger.debug("Entered sc_assist")
         align_failed = False
         # see if we have a compass up, if so then we have a target
-        if self.have_destination(scr_reg) == False:
+        if not self.have_destination(scr_reg):
             self.ap_ckb('log', "Quiting SC Assist - Compass not found. Rotate ship and try again.")
             logger.debug("Quiting sc_assist - compass not found")
             return
 
-        # if we are starting the waypoint docked at a station, we need to undock first
-        if self.jn.ship_state()['status'] == 'in_station':
+        # if we are starting the waypoint docked at a station or landed, we need to undock/takeoff first
+        if self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
             self.update_overlay()
             self.waypoint_undock_seq()
 
@@ -1746,7 +1759,7 @@ class EDAutopilot:
             if self.jn.ship_state()['status'] == 'in_supercruise':
 
                 # Align and stay on target. If false is returned, we have lost the target behind us.
-                if self.sc_target_align(scr_reg) == False:
+                if not self.sc_target_align(scr_reg):
                     # Continue ahead before aligning to prevent us circling the target
                     #self.keys.send('SetSpeed100')
                     sleep(10)
