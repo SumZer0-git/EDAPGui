@@ -1,5 +1,5 @@
 import json
-from os import listdir
+from os import environ, listdir
 import os
 from os.path import getmtime, isfile, join
 from time import sleep
