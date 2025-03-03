@@ -64,7 +64,7 @@ class OCR:
         """
         ocr_data = self.paddleocr.ocr(image)
 
-        # print(ocr_data)
+        # print(f"image_simple_ocr: {ocr_data}")
 
         if ocr_data is None:
             return None
@@ -77,8 +77,8 @@ class OCR:
                 for line in res:
                     ocr_textlist.append(line[1][0])
 
-            #print(ocr_textlist)
-            #logger.info(f"OCR: {ocr_textlist}")
+            # print(f"image_simple_ocr: {ocr_textlist}")
+            # logger.info(f"image_simple_ocr: {ocr_textlist}")
             return ocr_textlist
 
     def get_highlighted_item_data(self, image, min_w, min_h):

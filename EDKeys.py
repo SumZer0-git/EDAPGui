@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from os import environ, listdir
 import os
@@ -5,6 +7,8 @@ from os.path import getmtime, isfile, join
 from time import sleep
 from typing import Any, final
 from xml.etree.ElementTree import parse
+
+import win32gui
 
 from directinput import *
 from EDlogger import logger
@@ -15,6 +19,14 @@ Description:  Pulls the keybindings for specific controls from the ED Key Bindin
 
 Constraints:  This file will use the latest modified *.binds file
 """
+
+
+def set_focus_elite_window():
+    """ set focus to the ED window, if ED does not have focus then the keystrokes will go to the window
+    that does have focus. """
+    handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
+    if handle != 0:
+        win32gui.SetForegroundWindow(handle)  # give focus to ED
 
 
 @final
@@ -62,9 +74,11 @@ class EDKeys:
             'UseBoostJuice',
             'Supercruise',
             'UpThrustButton',
-            'LandingGearToggle'
+            'LandingGearToggle',
+            'CamZoomIn',  # Gal map zoom in
         ]
         self.keys = self.get_bindings()
+        self.activate_window = False
 
         self.missing_keys = []
         # dump config to log
@@ -144,6 +158,11 @@ class EDKeys:
         return latest_bindings
 
     def send_key(self, type, key):
+        # Focus Elite window if configured
+        if self.activate_window:
+            set_focus_elite_window()
+            sleep(0.05)
+
         if type == 'Up':
             ReleaseKey(key)
         else:
@@ -160,6 +179,10 @@ class EDKeys:
             repeat) + ',repeat_delay:' + str(repeat_delay) + ',state:' + str(state))
 
         for i in range(repeat):
+            # Focus Elite window if configured.
+            if self.activate_window:
+                set_focus_elite_window()
+                sleep(0.05)
 
             if state is None or state == 1:
                 for mod in key['mods']:
