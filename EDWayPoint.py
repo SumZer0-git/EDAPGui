@@ -221,24 +221,24 @@ class EDWayPoint:
 
         # navigate to and select: search field
         ap.keys.send('UI_Up')
-        sleep(.05)
+        sleep(0.05)
         ap.keys.send('UI_Select')
-        sleep(.05)
+        sleep(0.05)
 
         #print("Target:"+target_name)       
         # type in the System name
         typewrite(target_name, interval=0.25)
-        sleep(.05)
+        sleep(0.05)
 
         # send enter key (removes focus out of input field)
         ap.keys.send_key('Down', 'Key_Enter')
         sleep(0.05)
         ap.keys.send_key('Up', 'Key_Enter')
-        sleep(.05)
+        sleep(0.05)
 
         # navigate to and select: search button
         ap.keys.send('UI_Right')
-        sleep(.05)
+        sleep(0.05)
         ap.keys.send('UI_Select')
 
         # rotate camera, skips camera animation and sets focus on target
