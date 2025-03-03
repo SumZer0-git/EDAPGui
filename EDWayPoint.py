@@ -249,6 +249,13 @@ class EDWayPoint:
         ap.keys.send('UI_Select', hold=0.75)
 
         sleep(0.05)
+
+        # if got passed through the ship() object, lets call it to see if a target has been
+        # selected yet.. otherwise we wait.  If long route, it may take a few seconds
+        if target_select_cb != None:
+            while not target_select_cb()['target']:
+                sleep(1)
+
         ap.keys.send('GalaxyMapOpen')
         
         return True
