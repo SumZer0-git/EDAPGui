@@ -218,48 +218,38 @@ class EDWayPoint:
  
         ap.keys.send('GalaxyMapOpen')
         sleep(2)
+
+        # navigate to and select: search field
         ap.keys.send('UI_Up')
-        sleep(.5)
+        sleep(.05)
         ap.keys.send('UI_Select')
-        sleep(.5)
- 
+        sleep(.05)
+
         #print("Target:"+target_name)       
         # type in the System name
         typewrite(target_name, interval=0.25)
-        sleep(1)         
-  
-        # send enter key
-        ap.keys.send_key('Down', 28)
-        sleep(0.15)
-        ap.keys.send_key('Up', 28)
+        sleep(.05)
 
-        sleep(1)
-        self.mouse.do_click(x, y)
-        sleep(0.1)
-        ap.keys.send('UI_Right', repeat=4) 
-     
-        sleep(0.1)       
+        # send enter key (removes focus out of input field)
+        ap.keys.send_key('Down', 'Key_Enter')
+        sleep(0.05)
+        ap.keys.send_key('Up', 'Key_Enter')
+        sleep(.05)
 
-        # go down 6x's to plot to target
-        for i in range(7):    # ED 4.0 update, since have new menu item
-            ap.keys.send('UI_Down') 
-            sleep(0.05)
-  
-        sleep(0.1)
-               
-        # select Plot course       
+        # navigate to and select: search button
+        ap.keys.send('UI_Right')
+        sleep(.05)
         ap.keys.send('UI_Select')
-  
-        # if got passed through the ship() object, lets call it to see if a target has been
-        # selected yet.. otherwise we wait.  If long route, it may take a few seconds      
-        if target_select_cb != None:
-            while not target_select_cb()['target']:
-                sleep(1)        
-        
-        sleep(1)
- 
+
+        # rotate camera, skips camera animation and sets focus on target
+        ap.keys.send('CamYawLeft')
+        sleep(0.05)
+
+        # plot route
+        ap.keys.send('UI_Select', hold=0.75)
+
+        sleep(0.05)
         ap.keys.send('GalaxyMapOpen')
-        sleep(1)
         
         return True
     
