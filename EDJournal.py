@@ -92,6 +92,24 @@ def check_adv_docking_computer(modules: list[dict[str, any]] | None) -> bool:
     return False
 
 
+def check_sco_fsd(modules: list[dict[str, any]] | None) -> bool:
+    """ Gets whether the ship has an FSD with SCO.
+    """
+    # Default to SCO fitted if modules is None
+    if modules is None:
+        return True
+
+    # Check all modules. Could just check the internals, but this is easier.
+    for module in modules:
+        if module['Slot'] == "FrameShiftDrive":
+            if "overcharge" in module['Item'].lower():
+                #print("FrameShiftDrive has SCO!")
+                return True
+
+    #print("FrameShiftDrive has no SCO")
+    return False
+
+
 class EDJournal:
     def __init__(self):
         self.last_mod_time = None
@@ -129,6 +147,7 @@ class EDJournal:
             'has_fuel_scoop': None,
             'SupercruiseDestinationDrop_type': None,
             'has_adv_dock_comp': None,
+            'has_sco_fsd': None,
         }
         self.ship_state()    # load up from file
         self.reset_items()
@@ -288,6 +307,7 @@ class EDJournal:
                 self.ship['cargo_capacity'] = log['CargoCapacity']
                 self.ship['has_fuel_scoop'] = check_fuel_scoop(log['Modules'])
                 self.ship['has_adv_dock_comp'] = check_adv_docking_computer(log['Modules'])
+                self.ship['has_sco_fsd'] = check_sco_fsd(log['Modules'])
 
             # parse fuel
             if 'FuelLevel' in log and self.ship['type'] != 'TestBuggy':

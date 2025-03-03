@@ -19,6 +19,7 @@ class Image_Templates:
         self.template = { 'elw'       : {'image': None, 'width': 1, 'height': 1},
                           'elw_sig'   : {'image': None, 'width': 1, 'height': 1}, 
                           'navpoint'  : {'image': None, 'width': 1, 'height': 1}, 
+                          'navpoint-behind': {'image': None, 'width': 1, 'height': 1},
                           'compass'   : {'image': None, 'width': 1, 'height': 1},
                           'target'    : {'image': None, 'width': 1, 'height': 1},
                           'target_occluded' : {'image': None, 'width': 1, 'height': 1},
@@ -46,6 +47,7 @@ class Image_Templates:
         self.template['elw']       = self.load_template("templates/elw-template.png", scaleX, scaleY) 
         self.template['elw_sig']   = self.load_template("templates/elw-sig-template.png", scaleX, scaleY) 
         self.template['navpoint']  = self.load_template("templates/navpoint.png", compass_scale, compass_scale)
+        self.template['navpoint-behind']  = self.load_template("templates/navpoint-behind.png", compass_scale, compass_scale)
         self.template['compass']   = self.load_template("templates/compass.png", compass_scale,compass_scale)
         self.template['target']    = self.load_template("templates/destination.png", scaleX, scaleY) 
         self.template['target_occluded']    = self.load_template("templates/target_occluded.png", scaleX, scaleY) 

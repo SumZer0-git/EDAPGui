@@ -1,3 +1,4 @@
+import math
 import traceback
 from math import atan, degrees
 import json
@@ -646,10 +647,18 @@ class EDAutopilot:
         return True
 
     def get_nav_offset(self, scr_reg):
-        """ Determine the x,y offset from center of the compass of the nav point. """
+        """ Determine the x,y offset from center of the compass of the nav point.
+         Returns the x,y,z value as x,y in degrees (-90 to 90) and z as 1 or -1.
+         {'roll': r, 'pit': p, 'yaw': y}
+         Where 'roll' is:
+            -180deg (6 o'oclock anticlockwise) to
+             0deg (12 o'clock) to
+             180deg (6 o'oclock clockwise)
+         """
 
         icompass_image, (minVal, maxVal, minLoc, maxLoc), match = (
             scr_reg.match_template_in_region('compass', 'compass'))
+
         pt = maxLoc
 
         # get wid/hgt of templates  
@@ -667,18 +676,64 @@ class EDAutopilot:
             scr_reg.match_template_in_image(compass_image, 'navpoint'))
         n_pt = n_maxLoc
 
-        # must be > x to have solid hit, otherwise we are facing wrong way (empty circle)
+        compass_x_min = pad
+        compass_x_max = c_wid + pad - wid
+        compass_y_min = pad
+        compass_y_max = c_hgt + pad - hgt
+
         if n_maxVal < scr_reg.navpoint_match_thresh:
-            final_x = 0.0
-            final_y = 0.0
-            final_z = -1.0  # Behind
-            result = {'x': final_x, 'y': final_y, 'z': final_z}
+            final_z_pct = -1.0  # Behind
+
+            # find the nav point within the compass box using the -behind template
+            navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = (
+                scr_reg.match_template_in_image(compass_image, 'navpoint-behind'))
+            n_pt = n_maxLoc
         else:
-            final_x = ((n_pt[0]+((1/2)*wid))-((1/2)*c_wid))-5.5
-            final_y = (((1/2)*c_hgt)-(n_pt[1]+((1/2)*hgt)))+6.5
-            final_z = 1.0  # Ahead
-            logger.debug(("maxVal="+str(n_maxVal)+" x:"+str(final_x)+" y:"+str(final_y)))
-            result = {'x': final_x, 'y': final_y, 'z': final_z}
+            final_z_pct = 1.0  # Ahead
+
+        # Continue calc
+        final_x_pct = 2*(((n_pt[0]-compass_x_min)/(compass_x_max-compass_x_min))-0.5)  # X as percent (-1.0 to 1.0, 0.0 in the center)
+        final_x_pct = max(min(final_x_pct, 1.0), -1.0)
+
+        final_y_pct = -2*(((n_pt[1]-compass_y_min)/(compass_y_max-compass_y_min))-0.5)  # Y as percent (-1.0 to 1.0, 0.0 in the center)
+        final_y_pct = max(min(final_y_pct, 1.0), -1.0)
+
+        # Calc angle in degrees starting at 0 deg at 12 o'clock and increasing clockwise
+        # so 3 o'clock is +90° and 9 o'clock is -90°.
+        final_roll_deg = 0.0
+        if final_x_pct > 0.0:
+            final_roll_deg = 90 - degrees(atan(final_y_pct/final_x_pct))
+        elif final_x_pct < 0.0:
+            final_roll_deg = -90 - degrees(atan(final_y_pct/final_x_pct))
+
+        # 'longitudinal' radius of compass at given 'latitude'
+        lng_rad_at_lat = math.cos(math.asin(final_y_pct))
+        lng_rad_at_lat = max(lng_rad_at_lat, 0.001)  # Prevent div by zero
+
+        # 'Latitudinal' radius of compass at given 'longitude'
+        lat_rad_at_lng = math.sin(math.acos(final_x_pct))
+        lat_rad_at_lng = max(lat_rad_at_lng, 0.001)  # Prevent div by zero
+
+        # Pitch and yaw as a % of the max as defined by the compass circle
+        pit_pct = max(min(final_y_pct/lat_rad_at_lng, 1.0), -1.0)
+        yaw_pct = max(min(final_x_pct/lng_rad_at_lat, 1.0), -1.0)
+
+        if final_z_pct > 0:
+            final_pit_deg = (-1 * degrees(math.acos(pit_pct))) + 90  # Y in deg (-90.0 to 90.0, 0.0 in the center)
+            final_yaw_deg = (-1 * degrees(math.acos(yaw_pct))) + 90  # X in deg (-90.0 to 90.0, 0.0 in the center)
+        else:
+            if final_y_pct > 0:
+                final_pit_deg = degrees(math.acos(pit_pct)) + 90  # Y in deg (-90.0 to 90.0, 0.0 in the center)
+            else:
+                final_pit_deg = degrees(math.acos(pit_pct)) - 270  # Y in deg (-90.0 to 90.0, 0.0 in the center)
+
+            if final_x_pct > 0:
+                final_yaw_deg = degrees(math.acos(yaw_pct)) + 90  # X in deg (-90.0 to 90.0, 0.0 in the center)
+            else:
+                final_yaw_deg = degrees(math.acos(yaw_pct)) - 270  # X in deg (-90.0 to 90.0, 0.0 in the center)
+
+        result = {'x': round(final_x_pct, 2), 'y': round(final_y_pct, 2), 'z': round(final_z_pct, 2),
+                  'roll': round(final_roll_deg, 2), 'pit': round(final_pit_deg, 2), 'yaw': round(final_yaw_deg, 2)}
 
         if self.cv_view:
             icompass_image_d = cv2.cvtColor(icompass_image, cv2.COLOR_GRAY2RGB)
@@ -691,15 +746,17 @@ class EDAutopilot:
             #   dim = (int(destination_width/3), int(destination_height/3))
 
             #   img = cv2.resize(dst_image, dim, interpolation =cv2.INTER_AREA) 
-            icompass_image_d = cv2.rectangle(icompass_image_d, (0, 0), (1000, 45), (0, 0, 0), -1)
+            icompass_image_d = cv2.rectangle(icompass_image_d, (0, 0), (1000, 60), (0, 0, 0), -1)
             cv2.putText(icompass_image_d, f'Compass: {maxVal:5.4f} > {scr_reg.compass_match_thresh:5.2f}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.putText(icompass_image_d, f'Nav Point: {n_maxVal:5.4f} > {scr_reg.navpoint_match_thresh:5.2f}', (1, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.putText(icompass_image_d, f'Result: {result}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            #cv2.putText(icompass_image_d, f'Result: {result}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(icompass_image_d, f'x: {final_x_pct:5.2f} y: {final_y_pct:5.2f} z: {final_z_pct:5.2f}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(icompass_image_d, f'r: {final_roll_deg:5.2f}deg p: {final_pit_deg:5.2f}deg y: {final_yaw_deg:5.2f}deg', (1, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             #cv2.circle(icompass_image_display, (pt[0]+n_pt[0], pt[1]+n_pt[1]), 5, (0, 255, 0), 3)
             cv2.imshow('compass', icompass_image_d)
             #cv2.imshow('nav', navpt_image)
-            cv2.moveWindow('compass', self.cv_view_x, self.cv_view_y)
-            #cv2.moveWindow('nav', self.cv_view_x, self.cv_view_y) 
+            cv2.moveWindow('compass', self.cv_view_x - 400, self.cv_view_y + 600)
+            #cv2.moveWindow('nav', self.cv_view_x, self.cv_view_y)
             cv2.waitKey(30)
 
         return result
@@ -783,8 +840,11 @@ class EDAutopilot:
 
         return result
 
-    def sc_disengage(self, scr_reg) -> bool:
-        """ look for the "PRESS [J] TO DISENGAGE", if in this region then return true """
+    def sc_disengage_sco_label_up(self, scr_reg) -> bool:
+        """ look for messages like "PRESS [J] TO DISENGAGE" or "SUPERCRUISE OVERCHARGE ACTIVE",
+         if in this region then return true.
+        The aim of this function is to return that a message is there, and then use OCR to determine
+        what the message is. This will only use the high CPU usage OCR when necessary."""
         dis_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('disengage', 'disengage')
 
         pt = maxLoc
@@ -800,28 +860,91 @@ class EDAutopilot:
             cv2.moveWindow('disengage', self.cv_view_x-460,self.cv_view_y+575)
             cv2.waitKey(1)
 
-        logger.debug("Disenage = "+str(maxVal))
+        if maxVal > scr_reg.disengage_thresh:
+            return True
+        else:
+            return False
 
-        if (maxVal > scr_reg.disengage_thresh):
+    def sc_disengage(self, scr_reg) -> bool:
+        """ look for the "PRESS [J] TO DISENGAGE" image, if in this region then return true """
+        dis_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('disengage', 'disengage')
+
+        pt = maxLoc
+
+        width = scr_reg.templates.template['disengage']['width']
+        height = scr_reg.templates.template['disengage']['height']
+
+        if self.cv_view:
+            self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
+            dis_image = cv2.rectangle(dis_image, (0, 0), (1000, 25), (0, 0, 0), -1)
+            cv2.putText(dis_image, f'{maxVal:5.4f} > {scr_reg.disengage_thresh}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.imshow('disengage', dis_image)
+            cv2.moveWindow('disengage', self.cv_view_x-460,self.cv_view_y+575)
+            cv2.waitKey(1)
+
+        #logger.debug("Disenage = "+str(maxVal))
+
+        if maxVal > scr_reg.disengage_thresh:
             logger.info("'PRESS [] TO DISENGAGE' detected. Disengaging Supercruise")
             self.vce.say("Disengaging Supercruise")
             return True
         else:
             return False
 
+    def sc_disengage_active(self, scr_reg) -> bool:
+        """ look for the "SUPERCRUISE OVERCHARGE ACTIVE" text using OCR, if in this region then return true. """
+        image = self.scr.get_screen_region(scr_reg.reg['disengage']['rect'])
+        # TODO delete this line when COLOR_RGB2BGR is removed from get_screen()
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        mask = scr_reg.capture_region_filtered(self.scr, 'disengage')
+        masked_image = cv2.bitwise_and(image, image, mask=mask)
+        image = masked_image
+
+        # OCR the selected item
+        sim_match = 0.35  # Similarity match 0.0 - 1.0 for 0% - 100%)
+        sim = 0.0
+        ocr_textlist = self.ocr.image_simple_ocr(image)
+        if ocr_textlist is not None:
+            sim = self.ocr.string_similarity(f"PRESS TO DISENGAGE", str(ocr_textlist))
+            logger.info(f"Disengage similarity with {str(ocr_textlist)} is {sim}")
+
+        if self.cv_view:
+            image = cv2.rectangle(image, (0, 0), (1000, 30), (0, 0, 0), -1)
+            cv2.putText(image, f'Text: {str(ocr_textlist)}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(image, f'Similarity: {sim:5.4f} > {sim_match}', (1, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.imshow('disengage2', image)
+            cv2.moveWindow('disengage2', self.cv_view_x - 460, self.cv_view_y + 650)
+            cv2.waitKey(30)
+
+        if sim > sim_match:
+            logger.info("'PRESS [] TO DISENGAGE' detected. Disengaging Supercruise")
+            #cv2.imwrite(f'test/disengage.png', image)
+            return True
+
+        return False
+
     def _sc_sco_active_loop(self):
         """ A loop to determine is Supercruise Overcharge is active.
         This runs on a separate thread monitoring the screen in the background. """
         while self._sc_sco_active_loop_enable:
+            # Try to determine if the disengage/sco text is there
             sc_sco_is_active_ls = self.sc_sco_is_active
-            self.sc_sco_is_active = self.sc_sco_active(self.scrReg)
 
-            if self.sc_sco_is_active and not sc_sco_is_active_ls:
-                self.ap_ckb('log+vce', "Supercruise Overcharge activated")
-            if sc_sco_is_active_ls and not self.sc_sco_is_active:
-                self.ap_ckb('log+vce', "Supercruise Overcharge deactivated")
+            msg_up = self.sc_disengage_sco_label_up(self.scrReg)
+            if msg_up:
+                # Check if this is SCO
+                self.sc_sco_is_active = self.sc_sco_active(self.scrReg)
 
-            sleep(0.5)
+                if self.sc_sco_is_active and not sc_sco_is_active_ls:
+                    self.ap_ckb('log+vce', "Supercruise Overcharge activated")
+                # if sc_sco_is_active_ls and not self.sc_sco_is_active:
+                #     self.ap_ckb('log+vce', "Supercruise Overcharge deactivated")
+            else:
+                self.sc_sco_is_active = False
+                if sc_sco_is_active_ls and not self.sc_sco_is_active:
+                    self.ap_ckb('log+vce', "Supercruise Overcharge deactivated")
+
+            sleep(1)
 
     def sc_sco_active(self, scr_reg) -> bool:
         """ Determine if Supercruise Overcharge is active.
@@ -1033,122 +1156,70 @@ class EDAutopilot:
         sleep(self.sunpitchuptime)  # some ships heat up too much and need pitch up a little further
         self.keys.send('PitchUpButton', state=0)
         
-
-    # we know x, y offset of the nav point from center, use arc tan to determine the angle, convert to degrees
-    # we want the angle to the 90 (up) and 180 (down) axis 
-    def x_angle(self, point=None):
-        if not point:
-            return None
-        if point['x'] == 0:
-            point['x'] = 0.1
-        result = degrees(atan(abs(point['y'])/abs(point['x'])))
-
-        return 90-result
-
     def nav_align(self, scr_reg):
         """ Use the compass to find the nav point position.  Will then perform rotation and pitching
         to put the nav point in the middle of the compass, i.e. target right in front of us """
 
-        close = 2
+        close = 10  # in degrees
         if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
             logger.error('align=err1')
             raise Exception('nav_align not in super or space')
 
         self.vce.say("Navigation Align")
 
-        # get the x,y offset from center, or none, which means our point is behind us
-        off = self.get_nav_offset(scr_reg)
-
-        # check to see if we are already converged, if so return    
-        if off['z'] > 0 and abs(off['x']) < close and abs(off['y']) < close:
-            return
-
-        # nav point must be behind us, pitch up until somewhat in front of us
-        while off['z'] < 0:
-            if off['y'] >= 0:
-                self.pitchUp(90)
-            if off['y'] < 0:
-                self.pitchDown(90)
-            off = self.get_nav_offset(scr_reg)
-
-            # Check if SCO active
-            self.sc_sco_check()
-
-        # check if converged, unlikely at this point
-        if off['z'] > 0 and abs(off['x']) < close and abs(off['y']) < close:
-            return
-
         # try multiple times to get aligned.  If the sun is shining on console, this it will be hard to match
         # the vehicle should be positioned with the sun below us via the sun_avoid() routine after a jump
         for ii in range(self.config['NavAlignTries']):
             off = self.get_nav_offset(scr_reg)
 
-            # Check if SCO active
-            self.sc_sco_check()
-
-            if off['z'] > 0 and abs(off['x']) < close and abs(off['y']) < close:
+            if abs(off['yaw']) < close and abs(off['pit']) < close:
                 break
 
-            while off['z'] < 0:
-                if off['y'] >= 0:
-                    self.pitchUp(45)
-                if off['y'] < 0:
-                    self.pitchDown(45)
-                off = self.get_nav_offset(scr_reg)
-
-                # Check if SCO active
-                self.sc_sco_check()
-
-            # determine the angle and the hold time to keep the button pressed to roll that number of degrees
-            ang = self.x_angle(off)%90
-            htime = ang/self.rollrate
-
-            logger.debug("Angle:"+str(ang)+" x: "+str(off['x'])+" rolltime:"+str(htime))
-
-            # first roll to get the nav point at the vertical position
-            if (abs(off['x']) > close):
-                # top right quad, then roll right to get to 90 up
-                if (off['x'] > 0 and off['y'] > 0):
-                    self.keys.send('RollRightButton', hold=htime)
-                    # bottom right quad, then roll left
-                elif (off['x'] > 0 and off['y'] < 0):
-                    self.keys.send('RollLeftButton', hold=htime)
-                    # top left quad, then roll left
-                elif (off['x'] < 0 and off['y'] > 0):
-                    self.keys.send('RollLeftButton', hold=htime)
-                    # bottom left quad, then roll right
+            for i in range(3):
+                # Calc roll time based on nav point location
+                if abs(off['roll']) > close and (180 - abs(off['roll']) > close):
+                    # first roll to get the nav point at the vertical position
+                    if off['yaw'] > 0 and off['pit'] > 0:
+                        # top right quad, then roll right to get to 90 up
+                        self.rotateRight(off['roll'])
+                    elif off['yaw'] > 0 > off['pit']:
+                        # bottom right quad, then roll left
+                        self.rotateLeft(180 - off['roll'])
+                    elif off['yaw'] < 0 < off['pit']:
+                        # top left quad, then roll left
+                        self.rotateLeft(-off['roll'])
+                    else:
+                        # bottom left quad, then roll right
+                        self.rotateRight(180 + off['roll'])
+                    sleep(1)
+                    off = self.get_nav_offset(scr_reg)
                 else:
-                    self.keys.send('RollRightButton', hold=htime)
-            else:
-                #print("X is <= "+str(close))
-                pass
+                    break
 
-            sleep(0.15)  # wait for image to stablize
-            off = self.get_nav_offset(scr_reg)
-            while off['z'] < 0:
-                if off['y'] >= 0:
-                    self.pitchUp(45)
-                if off['y'] < 0:
-                    self.pitchDown(45)
-                off = self.get_nav_offset(scr_reg)
-
-                # Check if SCO active
-                self.sc_sco_check()
-
-            # calc pitch time based on nav point location
-            # this is assuming 40 offset is max displacement on the Y axis.  So get percentage we are offset
-            #
-            utime = (abs(off['y'])/40.)*(90./self.pitchrate)
-            logger.debug("ptichtime:"+str(utime)+" x:"+str(off['x'])+" y:"+str(off['y']))
-
-            if (abs(off['y']) > close):
-                if (off['y'] < 0):
-                    self.keys.send('PitchDownButton', hold=utime)
+            for i in range(3):
+                # Calc pitch time based on nav point location
+                if abs(off['pit']) > close:
+                    if off['pit'] < 0:
+                        self.pitchDown(abs(off['pit']))
+                    else:
+                        self.pitchUp(abs(off['pit']))
+                    sleep(0.5)
+                    off = self.get_nav_offset(scr_reg)
                 else:
-                    self.keys.send('PitchUpButton', hold=utime)
-            else:
-                #print("Y is <= "+str(close))
-                pass
+                    break
+
+            for i in range(3):
+                # Calc yaw time based on nav point location
+                if abs(off['yaw']) > close:
+                    if off['yaw'] < 0:
+                        self.yawLeft(abs(off['yaw']))
+                    else:
+                        self.yawRight(abs(off['yaw']))
+                    sleep(0.5)
+                    off = self.get_nav_offset(scr_reg)
+                else:
+                    break
+
             sleep(.1)
             logger.debug("final x:"+str(off['x'])+" y:"+str(off['y']))
 
@@ -1325,22 +1396,26 @@ class EDAutopilot:
         self.keys.send('SetSpeed100')
 
         # Do the Discovery Scan (Honk)
-        if self.config['DSSButton'] == 'Primary':
-            logger.debug('position=scanning')
-            self.keys.send('PrimaryFire', state=1)
-        else:
-            logger.debug('position=scanning')
-            self.keys.send('SecondaryFire', state=1)
 
-        sleep(7)  # roughly 6 seconds for DSS
+        if self.status.get_flag(FlagsAnalysisMode):
+            if self.config['DSSButton'] == 'Primary':
+                logger.debug('position=scanning')
+                self.keys.send('PrimaryFire', state=1)
+            else:
+                logger.debug('position=scanning')
+                self.keys.send('SecondaryFire', state=1)
 
-        # stop pressing the Scanner button
-        if self.config['DSSButton'] == 'Primary':
-            logger.debug('position=scanning complete')
-            self.keys.send('PrimaryFire', state=0)
+            sleep(7)  # roughly 6 seconds for DSS
+
+            # stop pressing the Scanner button
+            if self.config['DSSButton'] == 'Primary':
+                logger.debug('position=scanning complete')
+                self.keys.send('PrimaryFire', state=0)
+            else:
+                logger.debug('position=scanning complete')
+                self.keys.send('SecondaryFire', state=0)
         else:
-            logger.debug('position=scanning complete')
-            self.keys.send('SecondaryFire', state=0)
+            self.ap_ckb('log', 'Not in analysis mode. Skipping discovery scan (honk).')
 
         # Need time to move past Sun, account for slowed ship if refuled
         pause_time = add_time
@@ -1368,11 +1443,12 @@ class EDAutopilot:
 
         self.vce.say("Frameshift Jump")
 
-        for i in range(self.config['JumpTries']):
+        jump_tries = self.config['JumpTries']
+        for i in range(jump_tries):
 
             logger.debug('jump= try:'+str(i))
             if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
-                logger.error('jump=err1')
+                logger.error('Not ready to FSD jump. jump=err1')
                 raise Exception('not ready to jump')
             sleep(0.5)
             logger.debug('jump= start fsd')
@@ -1393,8 +1469,8 @@ class EDAutopilot:
                 logger.debug('jump=complete')
                 return True
 
-        logger.error('jump=err2')
-        raise Exception("jump failure")
+        logger.error(f'FSD Jump failed {jump_tries} times. jump=err2')
+        raise Exception("FSD Jump failure")
 
         # a set of convience routes to pitch, rotate by specified degress
 
@@ -1402,6 +1478,10 @@ class EDAutopilot:
     def rotateLeft(self, deg):
         htime = deg/self.rollrate
         self.keys.send('RollLeftButton', hold=htime)
+
+    def rotateRight(self, deg):
+        htime = deg/self.rollrate
+        self.keys.send('RollRightButton', hold=htime)
 
     def pitchDown(self, deg):
         htime = deg/self.pitchrate
@@ -1414,6 +1494,10 @@ class EDAutopilot:
     def yawLeft(self, deg):
         htime = deg/self.yawrate
         self.keys.send('YawLeftButton', hold=htime)
+
+    def yawRight(self, deg):
+        htime = deg / self.yawrate
+        self.keys.send('YawRightButton', hold=htime)
 
         # check if refueling needed, ensure correct start type
 
@@ -1781,10 +1865,11 @@ class EDAutopilot:
             self.sc_sco_check()
 
             # check for SC Disengage
-            if (self.sc_disengage(scr_reg) == True):
-                #sleep(1)  # wait another sec
-                self.keys.send('HyperSuperCombination')#, hold=0.001)
-                break
+            if self.sc_disengage_sco_label_up(scr_reg):
+                if self.sc_disengage_active(scr_reg):
+                    self.ap_ckb('log+vce', 'Disengage Supercruise')
+                    self.keys.send('HyperSuperCombination')
+                    break
 
         # if no error, we must have gotten disengage
         if align_failed == False and do_docking == True:
@@ -2060,6 +2145,7 @@ class EDAutopilot:
                 self.afk_combat_assist_enabled = False
                 self.ap_ckb('afk_stop')
                 self.update_overlay()
+
             # Check once EDAPGUI loaded to prevent errors logging to the listbox before loaded
             if self.gui_loaded:
                 # Check if ship has changed

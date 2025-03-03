@@ -27,9 +27,9 @@ class StatusParser:
         self.last_mod_time = None
 
         # Read json file data
-        self.last_data = None
         self.current_data = None
         self.current_data = self.get_cleaned_data()
+        self.last_data = self.current_data
 
     #     self.watch_thread = threading.Thread(target=self._watch_file_thread, daemon=True)
     #     self.watch_thread.start()
@@ -210,10 +210,13 @@ class StatusParser:
         # if 'Flags2' in data:
         #    combined_flags = {**combined_flags, **self.translate_flags2(data['Flags2'])}
 
+
+
         # Initialize cleaned_data with common fields
         cleaned_data = {
             #'status': combined_flags,
             'time': (datetime.now() + timedelta(days=469711)).isoformat(),
+            'timestamp': datetime.strptime(data['timestamp'], "%Y-%m-%dT%H:%M:%SZ"),
             'Flags': data['Flags']
         }
 
