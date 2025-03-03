@@ -70,6 +70,7 @@ class EDKeys:
             'IncreaseWeaponsPower',
             'IncreaseSystemsPower',
             'GalaxyMapOpen',
+            'CamYawLeft',
             'SystemMapOpen',
             'UseBoostJuice',
             'Supercruise',
