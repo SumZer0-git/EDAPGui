@@ -82,15 +82,26 @@ class EDKeys:
         self.activate_window = False
 
         self.missing_keys = []
+        # We want to log the keyboard name instead of just the key number so we build a reverse dictionary
+        # so we can look up the name also
+        reversed_dict = {value: key for key, value in SCANCODE.items()}
+ 
         # dump config to log
         for key in self.keys_to_obtain:
             try:
-                logger.info('get_bindings_<' + str(key) + '>=' + str(self.keys[key]))
-                if not key in self.keys:
-                    logger.warning(str("get_bindings_<" + key + ">= does not have a valid keyboard keybind.").upper())
+                # lookup the keyname in the SCANCODE reverse dictionary and output that key name
+                keyname = reversed_dict.get(self.keys[key]['key'], "Key not found") 
+                keymod = " "
+                #if key modifier, then look up that modifier name also
+                if len(self.keys[key]['mods']) != 0:
+                    keymod  = reversed_dict.get(self.keys[key]['mods'][0], " ")  
+        
+                logger.info('get_bindings_<{}>={} Key: <{}> Mod: <{}>'.format(key, self.keys[key], keyname, keymod))
+                if key not in self.keys:
+                    logger.warning("get_bindings_<{}>= does not have a valid keyboard keybind {}".format(key, keyname).upper())
                     self.missing_keys.append(key)
             except Exception as e:
-                logger.warning(str("get_bindings_<" + key + ">= does not have a valid keyboard keybind.").upper())
+                logger.warning("get_bindings_<{}>= does not have a valid keyboard keybind.".format(key).upper())
                 self.missing_keys.append(key)                
 
     def get_bindings(self) -> dict[str, Any]:
