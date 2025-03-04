@@ -1,5 +1,5 @@
 # 3/4/205 SumZer0
- - Updated EDKeys.py to add back in the keyboard binding name to the autopilot.log file instead of just the keyboard scancode
+ - Updated EDKeys.py to add back in the keyboard binding name to the autopilot.log file instead of just the keyboard scancode.  Also handle KeyError exception when dumping bindings to log file
 
 # 3/2/205 Stumpii: Compass update and OCR fix for high CPU
  - Removed the OCR detection of SCO as it was using high CPU. Now it will only use OCR when the disengage template is detected.
