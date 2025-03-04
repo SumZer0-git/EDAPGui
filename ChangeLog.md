@@ -1,3 +1,6 @@
+# 3/4/205 SumZer0
+ - Updated EDKeys.py to add back in the keyboard binding name to the autopilot.log file instead of just the keyboard scancode
+
 # 3/2/205 Stumpii: Compass update and OCR fix for high CPU
  - Removed the OCR detection of SCO as it was using high CPU. Now it will only use OCR when the disengage template is detected.
  - Lowered discharge threshold so that the discharge template will detect both disengage and sco and use OCR to determine which is active.
