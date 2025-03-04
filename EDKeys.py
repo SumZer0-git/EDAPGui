@@ -84,10 +84,14 @@ class EDKeys:
         self.missing_keys = []
         # dump config to log
         for key in self.keys_to_obtain:
-            logger.info('get_bindings_<' + str(key) + '>=' + str(self.keys[key]))
-            if not key in self.keys:
+            try:
+                logger.info('get_bindings_<' + str(key) + '>=' + str(self.keys[key]))
+                if not key in self.keys:
+                    logger.warning(str("get_bindings_<" + key + ">= does not have a valid keyboard keybind.").upper())
+                    self.missing_keys.append(key)
+            except Exception as e:
                 logger.warning(str("get_bindings_<" + key + ">= does not have a valid keyboard keybind.").upper())
-                self.missing_keys.append(key)
+                self.missing_keys.append(key)                
 
     def get_bindings(self) -> dict[str, Any]:
         """Returns a dict struct with the direct input equivalent of the necessary elite keybindings"""
