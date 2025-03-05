@@ -25,14 +25,25 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
         
-    - name: List directory contents
+    - name: List directory contents for debugging
       run: |
+        echo "Root directory:"
         dir
+        echo "====================="
+        echo "Screen directory:"
         dir screen
+        echo "====================="
+        echo "Recursive listing of all directories:"
+        dir /s /b /a:d
 
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed --icon="screen\edap.ico" --add-data "screen\edap.ico;screen" --add-data "config.json;." --add-data "ships.json;." --add-data "waypoints.json;." --add-data "*.py;." EDAPGui.py
+        # Create a default config.json if it doesn't exist
+        if (-not (Test-Path -Path "config.json")) {
+          echo "{}" > config.json
+        }
+        
+        pyinstaller --onefile --windowed --icon="screen\edap.ico" --add-data "screen\edap.ico;screen" --add-data "*.py;." EDAPGui.py
         
     - name: Create Release
       id: create_release
