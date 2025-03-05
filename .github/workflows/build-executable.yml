@@ -24,6 +24,38 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         
+    # Download PaddleOCR models to ensure they're available during build
+    - name: Pre-download PaddleOCR models
+      run: |
+        # Create a script to pre-download models
+        echo "
+from paddleocr import PaddleOCR
+import os
+import sys
+
+# Redirect stdout to null to avoid tqdm output issues
+original_stdout = sys.stdout
+sys.stdout = open(os.devnull, 'w')
+
+# Initialize PaddleOCR to download models
+ocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False, use_dilation=True, use_space_char=True)
+
+# Restore stdout
+sys.stdout = original_stdout
+
+# Print downloaded model locations for debugging
+print('PaddleOCR models downloaded to:')
+print(f'Home directory: {os.path.expanduser(\"~\")}')
+print(f'.paddleocr directory: {os.path.join(os.path.expanduser(\"~\"), \".paddleocr\")}')
+" > download_models.py
+        
+        # Run the script to download models
+        python download_models.py
+        
+        # List the downloaded model files
+        echo "Downloaded model files:"
+        dir %USERPROFILE%\.paddleocr
+        
     # Custom PyInstaller installation with bootloader recompilation
     - name: Install custom PyInstaller
       run: |
@@ -88,6 +120,9 @@ jobs:
         $buildDate = Get-Date -Format "yyyy-MM-dd"
         echo "Build date: $buildDate" > build_info.txt
         
+        # Add the .paddleocr directory to the packaged files
+        $paddleocr_dir = Join-Path -Path $env:USERPROFILE -ChildPath ".paddleocr"
+        
         # Run PyInstaller with options to reduce false positives
         # Using --onedir instead of --onefile significantly reduces false positives
         pyinstaller --onedir --windowed --icon="screen\edap.ico" `
@@ -96,6 +131,7 @@ jobs:
           --add-data "*.py;." `
           --add-data "build_info.txt;." `
           --add-data "config.json;." `
+          --add-data "$paddleocr_dir;.paddleocr" `
           --collect-data "paddle" `
           --collect-all "paddleocr" `
           --hidden-import=PIL `
