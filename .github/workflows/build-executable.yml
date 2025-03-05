@@ -48,6 +48,11 @@ jobs:
         
         # Use the spec file instead of direct command
         pyinstaller EDAPGui.spec
+        
+        # Copy README-VIRUS-WARNING.md to the dist folder
+        if (Test-Path -Path "README-VIRUS-WARNING.md") {
+          Copy-Item -Path "README-VIRUS-WARNING.md" -Destination "dist\README-VIRUS-WARNING.md"
+        }
     
     # For GitHub Actions demo only - in production use a proper certificate from a CA
     - name: Create and use self-signed certificate (for testing)
@@ -77,9 +82,24 @@ jobs:
         # Note: This self-signed certificate is for demonstration only and won't eliminate Windows Defender warnings
         # In production, use a certificate from a trusted certificate authority
 
-    - name: Upload artifact
+    - name: Create ZIP package with documentation
+      run: |
+        # Create a ZIP file that includes the executable and documentation
+        Compress-Archive -Path .\dist\* -DestinationPath EDAPGui-Package.zip
+        
+        # Move ZIP to dist directory
+        Move-Item -Path EDAPGui-Package.zip -Destination .\dist\EDAPGui-Package.zip
+
+    - name: Upload executable
       uses: actions/upload-artifact@v4
       with:
         name: EDAPGui-executable
         path: ./dist/EDAPGui.exe
+        retention-days: 90
+        
+    - name: Upload complete package
+      uses: actions/upload-artifact@v4
+      with:
+        name: EDAPGui-package
+        path: ./dist/EDAPGui-Package.zip
         retention-days: 90

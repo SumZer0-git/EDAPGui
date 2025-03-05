@@ -1,8 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-# Import the PyiBlockCipher for encryption
-from PyInstaller.utils.crypto import PyiBlockCipher
-block_cipher = PyiBlockCipher(key='YourRandomKeyHere12345')
+# No encryption - removed due to compatibility issues
+block_cipher = None
 
 # Get paddleocr dependencies 
 from PyInstaller.utils.hooks import collect_all
@@ -51,4 +50,5 @@ exe = EXE(
     icon='screen/edap.ico',
     version='version.txt',  # Add version information
     uac_admin=False,  # Don't request admin privileges
+    manifest='EDAPGui.manifest',  # Include manifest file
 ) 
