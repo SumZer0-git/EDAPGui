@@ -46,10 +46,9 @@ jobs:
           echo "{}" > config.json
         }
         
-        # Create version file for the build
-        $version = Get-Content -Path version.txt -Raw
+        # Create build info file with just the date
         $buildDate = Get-Date -Format "yyyy-MM-dd"
-        echo "Build date: $buildDate`nVersion: $version" > build_info.txt
+        echo "Build date: $buildDate" > build_info.txt
         
         # Use UPX to compress the executable (reduces false positives)
         pip install upx-packer
@@ -70,11 +69,10 @@ jobs:
           --clean `
           EDAPGui.py
           
-        # Rename the file to include version
+        # Rename the file to include date
         $exePath = ".\dist\EDAP-Autopilot.exe"
         if (Test-Path $exePath) {
-          $versionNumber = ($version -split "`n")[0].Trim()
-          $newName = ".\dist\EDAP-Autopilot-$versionNumber.exe"
+          $newName = ".\dist\EDAP-Autopilot-$buildDate.exe"
           Rename-Item -Path $exePath -NewName $newName
           echo "Created: $newName"
         }
