@@ -17,7 +17,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.11'
         
     - name: Install dependencies
       run: |
@@ -46,7 +46,7 @@ jobs:
           echo "{}" > config.json
         }
         
-        pyinstaller --onefile --windowed --icon="screen\edap.ico" --add-data "screen\edap.ico;screen" --add-data "screen\*.png;screen" --add-data "*.py;." EDAPGui.py
+        pyinstaller --onefile --windowed --icon="screen\edap.ico" --add-data "screen\edap.ico;screen" --add-data "screen\*.png;screen" --add-data "*.py;." --collect-data "paddle" --collect-all "paddleocr" EDAPGui.py
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
