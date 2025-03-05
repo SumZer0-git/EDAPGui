@@ -27,15 +27,33 @@ jobs:
     # Download PaddleOCR models to ensure they're available during build
     - name: Pre-download PaddleOCR models
       run: |
-        # Create scripts directory if it doesn't exist
-        if (-not (Test-Path -Path "scripts")) {
-          mkdir scripts
-        }
+        # Create a script to pre-download models
+        echo "
+from paddleocr import PaddleOCR
+import os
+import sys
+
+# Redirect stdout to null to avoid tqdm output issues
+original_stdout = sys.stdout
+sys.stdout = open(os.devnull, 'w')
+
+# Initialize PaddleOCR to download models
+ocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False, use_dilation=True, use_space_char=True)
+
+# Restore stdout
+sys.stdout = original_stdout
+
+# Print downloaded model locations for debugging
+print('PaddleOCR models downloaded to:')
+print(f'Home directory: {os.path.expanduser(\"~\")}')
+print(f'.paddleocr directory: {os.path.join(os.path.expanduser(\"~\"), \".paddleocr\")}')
+" > download_models.py
         
-        # Run the model download script
-        python scripts/download_paddleocr_models.py
+        # Run the script to download models
+        python download_models.py
         
-        # List the model directory
+        # List the downloaded model files
+        echo "Downloaded model files:"
         dir %USERPROFILE%\.paddleocr
         
     # Custom PyInstaller installation with bootloader recompilation
