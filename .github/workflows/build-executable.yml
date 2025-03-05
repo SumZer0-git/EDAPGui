@@ -120,29 +120,40 @@ jobs:
         }
 
     - name: Check build with Windows Defender
+      continue-on-error: true
       run: |
-        # Enable all Windows Defender features
-        Set-MpPreference -DisableRealtimeMonitoring $false
-        Set-MpPreference -DisableBehaviorMonitoring $false
-        Set-MpPreference -DisableIOAVProtection $false
-        Set-MpPreference -DisableIntrusionPreventionSystem $false
-        Set-MpPreference -DisablePrivacyMode $false
+        # Try to enable Windows Defender if possible
+        try {
+          Set-MpPreference -DisableRealtimeMonitoring $false -ErrorAction SilentlyContinue
+          Set-MpPreference -DisableBehaviorMonitoring $false -ErrorAction SilentlyContinue
+        } catch {
+          echo "::warning::Cannot configure Windows Defender settings"
+        }
         
-        # Update definitions
-        Update-MpSignature -Verbose
-        
-        # Scan the executable
+        # Scan using direct command line tool
         $buildDate = Get-Date -Format "yyyy-MM-dd"
-        Start-MpScan -ScanPath ".\dist\EDAP-Autopilot-$buildDate" -ScanType CustomScan
+        $buildPath = Resolve-Path ".\dist\EDAP-Autopilot-$buildDate"
         
-        # Check for threats
-        $threats = Get-MpThreat
-        if ($threats) {
-          echo "::warning::Windows Defender detected threats:"
-          $threats | Format-List
-          echo "This might be a false positive, but should be investigated."
-        } else {
-          echo "No threats detected by Windows Defender."
+        echo "Scanning path: $buildPath"
+        
+        # Run the scan and capture output
+        $scanOutput = & "C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File "$buildPath" 2>&1
+        
+        # Display the scan output
+        echo "Scan results:"
+        echo $scanOutput
+        
+        # Try to get threat detections (this may not work in GitHub Actions environment)
+        try {
+          $threats = Get-MpThreat -ErrorAction SilentlyContinue
+          if ($threats) {
+            echo "::warning::Windows Defender detected threats:"
+            $threats | Format-List
+          } else {
+            echo "No threats detected by Windows Defender."
+          }
+        } catch {
+          echo "Could not retrieve threat information."
         }
 
     - name: Upload artifact
