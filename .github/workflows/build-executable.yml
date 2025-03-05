@@ -48,6 +48,27 @@ jobs:
         
         # Use the spec file instead of direct command
         pyinstaller EDAPGui.spec
+    
+    # For GitHub Actions demo only - in production use a proper certificate from a CA
+    - name: Create and use self-signed certificate (for testing)
+      if: github.event_name == 'workflow_dispatch'  # Only run on manual trigger
+      run: |
+        # Create a self-signed certificate (for testing only)
+        $cert = New-SelfSignedCertificate -Subject "CN=EDAPGui Developer" -Type CodeSigning -CertStoreLocation Cert:\CurrentUser\My
+        
+        # Export certificate to pfx file with password
+        $password = ConvertTo-SecureString -String "test123" -Force -AsPlainText
+        Export-PfxCertificate -Cert $cert -FilePath certificate.pfx -Password $password
+        
+        # Sign the executable
+        # Install signtool from Windows SDK
+        Invoke-WebRequest -Uri "https://aka.ms/signtool64" -OutFile "signtool.exe"
+        
+        # Sign the executable (requires Windows SDK or SignTool)
+        .\signtool.exe sign /f certificate.pfx /p test123 /t http://timestamp.digicert.com /d "EDAP GUI Application" /du "https://github.com/yourusername/yourrepo" .\dist\EDAPGui.exe
+        
+        # Note: This self-signed certificate is for demonstration only and won't eliminate Windows Defender warnings
+        # In production, use a certificate from a trusted certificate authority
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
