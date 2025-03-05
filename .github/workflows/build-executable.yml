@@ -23,7 +23,14 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pyinstaller
+        
+    # Custom PyInstaller installation with bootloader recompilation
+    - name: Install custom PyInstaller
+      run: |
+        $Env:CL = "/Od"
+        $Env:PYINSTALLER_COMPILE_BOOTLOADER = "true"
+        python -m pip install --force-reinstall --ignore-installed --no-binary :all: --no-cache pyinstaller@git+https://github.com/pyinstaller/pyinstaller.git@0d562b5
+        $Env:CL = ""
         
     # Add version info file
     - name: Create Version Info
@@ -82,7 +89,8 @@ jobs:
         echo "Build date: $buildDate" > build_info.txt
         
         # Run PyInstaller with options to reduce false positives
-        pyinstaller --onefile --windowed --icon="screen\edap.ico" `
+        # Using --onedir instead of --onefile significantly reduces false positives
+        pyinstaller --onedir --windowed --icon="screen\edap.ico" `
           --add-data "screen\edap.ico;screen" `
           --add-data "screen\*.png;screen" `
           --add-data "*.py;." `
@@ -96,19 +104,50 @@ jobs:
           --version-file="version_info.txt" `
           --name "EDAP-Autopilot-$buildDate" `
           --clean `
+          --noupx `
+          --noconfirm `
           EDAPGui.py
         
+        # Create zip archive of the directory for distribution
+        Compress-Archive -Path ".\dist\EDAP-Autopilot-$buildDate" -DestinationPath ".\dist\EDAP-Autopilot-$buildDate.zip"
+        
         # Check if build was successful
-        if (Test-Path ".\dist\EDAP-Autopilot-$buildDate.exe") {
-          echo "Build successful: EDAP-Autopilot-$buildDate.exe"
+        if (Test-Path ".\dist\EDAP-Autopilot-$buildDate.zip") {
+          echo "Build successful: EDAP-Autopilot-$buildDate.zip"
         } else {
           echo "Build failed or file not found at expected location"
           exit 1
+        }
+
+    - name: Check build with Windows Defender
+      run: |
+        # Enable all Windows Defender features
+        Set-MpPreference -DisableRealtimeMonitoring $false
+        Set-MpPreference -DisableBehaviorMonitoring $false
+        Set-MpPreference -DisableIOAVProtection $false
+        Set-MpPreference -DisableIntrusionPreventionSystem $false
+        Set-MpPreference -DisablePrivacyMode $false
+        
+        # Update definitions
+        Update-MpSignature -Verbose
+        
+        # Scan the executable
+        $buildDate = Get-Date -Format "yyyy-MM-dd"
+        Start-MpScan -ScanPath ".\dist\EDAP-Autopilot-$buildDate" -ScanType CustomScan
+        
+        # Check for threats
+        $threats = Get-MpThreat
+        if ($threats) {
+          echo "::warning::Windows Defender detected threats:"
+          $threats | Format-List
+          echo "This might be a false positive, but should be investigated."
+        } else {
+          echo "No threats detected by Windows Defender."
         }
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: EDAP-Autopilot
-        path: ./dist/EDAP-Autopilot-*.exe
+        path: ./dist/EDAP-Autopilot-*.zip
         retention-days: 90
