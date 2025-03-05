@@ -39,6 +39,103 @@ jobs:
         echo "Recursive listing of all directories:"
         Get-ChildItem -Path . -Directory -Recurse | Select-Object FullName
 
+    - name: Create manifest file
+      run: |
+        @"
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity version="1.0.0.0" processorArchitecture="X86" name="EDAPGui" type="win32"/>
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+    <security>
+      <requestedPrivileges>
+        <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <supportedOS Id="{e2011457-1546-43c5-a5fe-008deee3d3f0}"/>
+      <supportedOS Id="{35138b9a-5d96-4fbd-8e2d-a2440225f93a}"/>
+      <supportedOS Id="{4a2f28e3-53b9-4441-ba9c-d69d4a4a6e38}"/>
+      <supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}"/>
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
+    </application>
+  </compatibility>
+</assembly>
+"@ | Out-File -FilePath "EDAPGui.manifest" -Encoding utf8
+
+    - name: Create spec file
+      run: |
+        @"
+# -*- mode: python ; coding: utf-8 -*-
+import os
+from PyInstaller.utils.hooks import collect_all
+
+block_cipher = None
+
+datas = [
+    ('screen\\edap.ico', 'screen'),
+    ('screen\\*.png', 'screen')
+]
+
+if os.path.exists('config.json'):
+    datas.append(('config.json', '.'))
+
+# Get paddleocr dependencies without manual paths
+paddleocr_datas, paddleocr_binaries, paddleocr_hiddenimports = collect_all('paddleocr')
+datas.extend(paddleocr_datas)
+
+# Add all Python files
+py_files = []
+for root, dirs, files in os.walk('.'):
+    for file in files:
+        if file.endswith('.py'):
+            py_files.append((os.path.join(root, file), '.'))
+datas.extend(py_files)
+
+a = Analysis(
+    ['EDAPGui.py'],
+    pathex=[],
+    binaries=paddleocr_binaries,
+    datas=datas,
+    hiddenimports=['paddleocr', 'paddleocr.tools'] + paddleocr_hiddenimports,
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=True,
+    cipher=block_cipher,
+    noarchive=False,
+)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    [],
+    name='EDAPGui',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=False,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=False,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    manifest='EDAPGui.manifest',
+    icon='screen\\edap.ico',
+)
+"@ | Out-File -FilePath "EDAPGui.spec" -Encoding utf8
+
     - name: Build executable
       run: |
         # Create a default config.json if it doesn't exist
@@ -46,7 +143,7 @@ jobs:
           echo "{}" > config.json
         }
         
-        pyinstaller --onefile --windowed --icon="screen\edap.ico" --add-data "screen\edap.ico;screen" --add-data "screen\*.png;screen" --add-data "*.py;." EDAPGui.py
+        pyinstaller EDAPGui.spec
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
