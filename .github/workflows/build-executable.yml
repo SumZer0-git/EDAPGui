@@ -65,16 +65,16 @@ jobs:
           --hidden-import=PIL `
           --hidden-import=PIL._imagingtk `
           --hidden-import=PIL._tkinter_finder `
-          --name "EDAP-Autopilot" `
+          --name "EDAP-Autopilot-$buildDate" `
           --clean `
           EDAPGui.py
-          
-        # Rename the file to include date
-        $exePath = ".\dist\EDAP-Autopilot.exe"
-        if (Test-Path $exePath) {
-          $newName = ".\dist\EDAP-Autopilot-$buildDate.exe"
-          Rename-Item -Path $exePath -NewName $newName
-          echo "Created: $newName"
+        
+        # Check if build was successful
+        if (Test-Path ".\dist\EDAP-Autopilot-$buildDate.exe") {
+          echo "Build successful: EDAP-Autopilot-$buildDate.exe"
+        } else {
+          echo "Build failed or file not found at expected location"
+          exit 1
         }
 
     - name: Upload artifact
