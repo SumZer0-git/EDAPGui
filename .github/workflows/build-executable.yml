@@ -17,7 +17,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.11'
         
     - name: Install dependencies
       run: |
@@ -25,27 +25,32 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
         
+    - name: List directory contents for debugging
+      run: |
+        echo "Root directory:"
+        dir
+        echo "====================="
+        echo "Screen directory:"
+        dir screen
+        echo "====================="
+        echo "List all Python files:"
+        Get-ChildItem -Path . -Filter "*.py" -Recurse | Select-Object FullName
+        echo "====================="
+        echo "Recursive listing of all directories:"
+        Get-ChildItem -Path . -Directory -Recurse | Select-Object FullName
+
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed --icon=EDAPGui.ico --add-data "EDAPGui.ico;." --add-data "config.json;." --add-data "ships.json;." --add-data "waypoints.json;." --add-data "*.py;." EDAPGui.py
+        # Create a default config.json if it doesn't exist
+        if (-not (Test-Path -Path "config.json")) {
+          echo "{}" > config.json
+        }
         
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        pyinstaller --onefile --windowed --icon="screen\edap.ico" --add-data "screen\edap.ico;screen" --add-data "screen\*.png;screen" --add-data "*.py;." EDAPGui.py
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
       with:
-        tag_name: v${{ github.run_number }}
-        release_name: Release v${{ github.run_number }}
-        draft: false
-        prerelease: false
-        
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dist/EDAPGui.exe
-        asset_name: EDAPGui.exe
-        asset_content_type: application/x-msdownload 
+        name: EDAPGui-executable
+        path: ./dist/EDAPGui.exe
+        retention-days: 90
