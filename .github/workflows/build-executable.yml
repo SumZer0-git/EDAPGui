@@ -25,9 +25,14 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
         
+    - name: List directory contents
+      run: |
+        dir
+        dir screen
+
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed --icon=EDAPGui.ico --add-data "EDAPGui.ico;." --add-data "config.json;." --add-data "ships.json;." --add-data "waypoints.json;." --add-data "*.py;." EDAPGui.py
+        pyinstaller --onefile --windowed --icon="screen\edap.ico" --add-data "screen\edap.ico;screen" --add-data "config.json;." --add-data "ships.json;." --add-data "waypoints.json;." --add-data "*.py;." EDAPGui.py
         
     - name: Create Release
       id: create_release
