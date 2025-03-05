@@ -53,9 +53,6 @@ jobs:
     - name: Create and use self-signed certificate (for testing)
       if: github.event_name == 'workflow_dispatch'  # Only run on manual trigger
       run: |
-        # Install Windows SDK for signing tools
-        choco install windows-sdk-10-version-2004-all -y
-        
         # Create a self-signed certificate (for testing only)
         $cert = New-SelfSignedCertificate -Subject "CN=EDAPGui Developer" -Type CodeSigning -CertStoreLocation Cert:\CurrentUser\My
         
@@ -63,16 +60,12 @@ jobs:
         $password = ConvertTo-SecureString -String "test123" -Force -AsPlainText
         Export-PfxCertificate -Cert $cert -FilePath certificate.pfx -Password $password
         
-        # Define path to signtool from Windows SDK
-        $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe"
-        if (-not (Test-Path $signtool)) {
-          Write-Host "Searching for signtool..."
-          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "signtool.exe" | Select-Object -First 1 -ExpandProperty FullName
-          Write-Host "Found signtool at: $signtool"
-        }
+        # Sign the executable
+        # Install signtool from Windows SDK
+        Invoke-WebRequest -Uri "https://aka.ms/signtool64" -OutFile "signtool.exe"
         
-        # Sign the executable with timestamp
-        & $signtool sign /f certificate.pfx /p test123 /tr http://timestamp.digicert.com /td sha256 /fd sha256 /d "EDAP GUI Application" .\dist\EDAPGui.exe
+        # Sign the executable (requires Windows SDK or SignTool)
+        .\signtool.exe sign /f certificate.pfx /p test123 /t http://timestamp.digicert.com /d "EDAP GUI Application" /du "https://github.com/yourusername/yourrepo" .\dist\EDAPGui.exe
         
         # Note: This self-signed certificate is for demonstration only and won't eliminate Windows Defender warnings
         # In production, use a certificate from a trusted certificate authority
