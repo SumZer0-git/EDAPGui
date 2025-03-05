@@ -25,6 +25,37 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
         
+    # Add version info file
+    - name: Create Version Info
+      run: |
+        echo "VSVersionInfo(
+          ffi=FixedFileInfo(
+            filevers=(1, 0, 0, 0),
+            prodvers=(1, 0, 0, 0),
+            mask=0x3f,
+            flags=0x0,
+            OS=0x40004,
+            fileType=0x1,
+            subtype=0x0,
+            date=(0, 0)
+          ),
+          kids=[
+            StringFileInfo([
+              StringTable(
+                u'040904B0',
+                [StringStruct(u'CompanyName', u'EDAP'),
+                 StringStruct(u'FileDescription', u'EDAP Autopilot'),
+                 StringStruct(u'FileVersion', u'1.0.0'),
+                 StringStruct(u'InternalName', u'EDAP_Autopilot'),
+                 StringStruct(u'LegalCopyright', u'Copyright (c) 2024'),
+                 StringStruct(u'OriginalFilename', u'EDAP-Autopilot.exe'),
+                 StringStruct(u'ProductName', u'EDAP Autopilot'),
+                 StringStruct(u'ProductVersion', u'1.0.0')])
+              ]),
+            VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
+          ]
+        )" > version_info.txt
+        
     - name: List directory contents for debugging
       run: |
         echo "Root directory:"
@@ -50,9 +81,6 @@ jobs:
         $buildDate = Get-Date -Format "yyyy-MM-dd"
         echo "Build date: $buildDate" > build_info.txt
         
-        # Use UPX to compress the executable (reduces false positives)
-        pip install upx-packer
-        
         # Run PyInstaller with options to reduce false positives
         pyinstaller --onefile --windowed --icon="screen\edap.ico" `
           --add-data "screen\edap.ico;screen" `
@@ -65,6 +93,7 @@ jobs:
           --hidden-import=PIL `
           --hidden-import=PIL._imagingtk `
           --hidden-import=PIL._tkinter_finder `
+          --version-file="version_info.txt" `
           --name "EDAP-Autopilot-$buildDate" `
           --clean `
           EDAPGui.py
