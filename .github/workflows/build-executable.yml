@@ -46,11 +46,42 @@ jobs:
           echo "{}" > config.json
         }
         
-        pyinstaller --onefile --windowed --icon="screen\edap.ico" --add-data "screen\edap.ico;screen" --add-data "screen\*.png;screen" --add-data "*.py;." --collect-data "paddle" --collect-all "paddleocr" EDAPGui.py
+        # Create version file for the build
+        $version = Get-Content -Path version.txt -Raw
+        $buildDate = Get-Date -Format "yyyy-MM-dd"
+        echo "Build date: $buildDate`nVersion: $version" > build_info.txt
+        
+        # Use UPX to compress the executable (reduces false positives)
+        pip install upx-packer
+        
+        # Run PyInstaller with options to reduce false positives
+        pyinstaller --onefile --windowed --icon="screen\edap.ico" `
+          --add-data "screen\edap.ico;screen" `
+          --add-data "screen\*.png;screen" `
+          --add-data "*.py;." `
+          --add-data "build_info.txt;." `
+          --add-data "config.json;." `
+          --collect-data "paddle" `
+          --collect-all "paddleocr" `
+          --hidden-import=PIL `
+          --hidden-import=PIL._imagingtk `
+          --hidden-import=PIL._tkinter_finder `
+          --name "EDAP-Autopilot" `
+          --clean `
+          EDAPGui.py
+          
+        # Rename the file to include version
+        $exePath = ".\dist\EDAP-Autopilot.exe"
+        if (Test-Path $exePath) {
+          $versionNumber = ($version -split "`n")[0].Trim()
+          $newName = ".\dist\EDAP-Autopilot-$versionNumber.exe"
+          Rename-Item -Path $exePath -NewName $newName
+          echo "Created: $newName"
+        }
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: EDAPGui-executable
-        path: ./dist/EDAPGui.exe
+        name: EDAP-Autopilot
+        path: ./dist/EDAP-Autopilot-*.exe
         retention-days: 90
