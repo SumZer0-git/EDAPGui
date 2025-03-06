@@ -212,10 +212,7 @@ class EDWayPoint:
     # This sequence for the Odyssey
  
     def set_waypoint_target_odyssey(self, ap, target_name, target_select_cb=None) -> bool:
-        
-        x = ap.scr.screen_width / 2
-        y = ap.scr.screen_height / 2
- 
+
         ap.keys.send('GalaxyMapOpen')
         sleep(2)
 
