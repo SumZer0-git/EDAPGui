@@ -293,12 +293,14 @@ class APGui():
         self.ed_ap.set_fsd_assist(True)
         self.FSD_A_running = True
         self.log_msg("FSD Route Assist start")
+        self.ed_ap.vce.say("FSD Route Assist On")
 
     def stop_fsd(self):
         logger.debug("Entered: stop_fsd")
         self.ed_ap.set_fsd_assist(False)
         self.FSD_A_running = False
         self.log_msg("FSD Route Assist stop")
+        self.ed_ap.vce.say("FSD Route Assist Off")
         self.update_statusline("Idle")
 
     def start_sc(self):
@@ -306,12 +308,14 @@ class APGui():
         self.ed_ap.set_sc_assist(True)
         self.SC_A_running = True
         self.log_msg("SC Assist start")
+        self.ed_ap.vce.say("Supercruise Assist On")
 
     def stop_sc(self):
         logger.debug("Entered: stop_sc")
         self.ed_ap.set_sc_assist(False)
         self.SC_A_running = False
         self.log_msg("SC Assist stop")
+        self.ed_ap.vce.say("Supercruise Assist Off")
         self.update_statusline("Idle")
 
     def start_waypoint(self):
@@ -319,12 +323,14 @@ class APGui():
         self.ed_ap.set_waypoint_assist(True)
         self.WP_A_running = True
         self.log_msg("Waypoint Assist start")
+        self.ed_ap.vce.say("Waypoint Assist On")
 
     def stop_waypoint(self):
         logger.debug("Entered: stop_waypoint")
         self.ed_ap.set_waypoint_assist(False)
         self.WP_A_running = False
         self.log_msg("Waypoint Assist stop")
+        self.ed_ap.vce.say("Waypoint Assist Off")
         self.update_statusline("Idle")
 
     def start_robigo(self):
@@ -332,12 +338,15 @@ class APGui():
         self.ed_ap.set_robigo_assist(True)
         self.RO_A_running = True
         self.log_msg("Robigo Assist start")
+        self.ed_ap.vce.say("Robigo Assist On")
 
     def stop_robigo(self):
         logger.debug("Entered: stop_robigo")
         self.ed_ap.set_robigo_assist(False)
         self.RO_A_running = False
         self.log_msg("Robigo Assist stop")
+        self.ed_ap.vce.say("Robigo Assist Off")
+        self.update_statusline("Idle")
         self.update_statusline("Idle")
 
     def about(self):

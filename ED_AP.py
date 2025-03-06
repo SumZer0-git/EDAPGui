@@ -1499,10 +1499,8 @@ class EDAutopilot:
         htime = deg / self.yawrate
         self.keys.send('YawRightButton', hold=htime)
 
-        # check if refueling needed, ensure correct start type
-
-    #
     def refuel(self, scr_reg):
+        """ Check if refueling needed, ensure correct start type. """
         # Check if we have a fuel scoop
         has_fuel_scoop = self.jn.ship_state()['has_fuel_scoop']
 
