@@ -70,13 +70,12 @@ class EDKeys:
             'IncreaseWeaponsPower',
             'IncreaseSystemsPower',
             'GalaxyMapOpen',
-            'CamYawLeft',
+            'CamZoomIn',  # Gal map zoom in
             'SystemMapOpen',
             'UseBoostJuice',
             'Supercruise',
             'UpThrustButton',
             'LandingGearToggle',
-            'CamZoomIn',  # Gal map zoom in
         ]
         self.keys = self.get_bindings()
         self.activate_window = False

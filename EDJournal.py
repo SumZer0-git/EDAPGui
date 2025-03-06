@@ -192,28 +192,26 @@ class EDJournal:
             if log_event == 'Fileheader':
                 #self.ship['odyssey'] = log['Odyssey']
                 self.ship['odyssey'] = True   # hardset to true for ED 4.0 since menus now same for Horizon
-                return   # No need to do further processing on this record, should use elif: all the way down
 
-            if log_event == 'ShieldState':
+            elif log_event == 'ShieldState':
                 if log['ShieldsUp'] == True:
                     self.ship['shieldsup'] = True
                 else:
                     self.ship['shieldsup'] = False
-                return   # No need to do further processing on this record
 
-            if  log_event == 'UnderAttack':
+            elif  log_event == 'UnderAttack':
                 self.ship['under_attack'] = True
 
-            if  log_event == 'FighterDestroyed':
+            elif  log_event == 'FighterDestroyed':
                 self.ship['fighter_destroyed'] = True
-                
-            if  log_event == 'MissionCompleted':
+
+            elif  log_event == 'MissionCompleted':
                 self.ship['mission_completed'] = self.ship['mission_completed'] + 1  
-                
-            if  log_event == 'MissionRedirected':
+
+            elif  log_event == 'MissionRedirected':
                 self.ship['mission_redirected'] = self.ship['mission_redirected'] + 1  
 
-            if log_event == 'StartJump':
+            elif log_event == 'StartJump':
                 self.ship['status'] = str('starting_'+log['JumpType']).lower()
                 self.ship['SupercruiseDestinationDrop_type'] = None
                 if log['JumpType'] == 'Hyperspace':
@@ -294,14 +292,14 @@ class EDJournal:
                 self.ship['interdicted'] = True
 
             # parse ship type
-            if log_event == 'LoadGame':
+            elif log_event == 'LoadGame':
                 self.ship['type'] = log['Ship'].lower()
                 self.ship['ship_size'] = get_ship_size(log['Ship'])
 
             # Parse Loadout
             # When written: at startup, when loading from main menu, or when switching ships,
             # or after changing the ship in Outfitting, or when docking SRV back in mothership
-            if log_event == 'Loadout':
+            elif log_event == 'Loadout':
                 self.ship['type'] = log['Ship'].lower()
                 self.ship['ship_size'] = get_ship_size(log['Ship'])
                 self.ship['cargo_capacity'] = log['CargoCapacity']
@@ -359,7 +357,7 @@ class EDJournal:
                 self.ship['dist_jumped'] = log["JumpDist"]
 
             # parse nav route clear
-            if log_event == 'NavRouteClear':
+            elif log_event == 'NavRouteClear':
                 self.ship['target'] = None
                 self.ship['jumps_remains'] = 0
 

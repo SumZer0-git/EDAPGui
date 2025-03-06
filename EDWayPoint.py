@@ -2,7 +2,7 @@ from time import sleep
 from EDlogger import logger
 import json
 from pyautogui import typewrite, keyUp, keyDown
-from  MousePt import MousePoint
+from MousePt import MousePoint
 from pathlib import Path
 
 
@@ -231,9 +231,9 @@ class EDWayPoint:
         sleep(0.05)
 
         # send enter key (removes focus out of input field)
-        ap.keys.send_key('Down', 'Key_Enter')
+        ap.keys.send_key('Down', 28)  # 28=ENTER
         sleep(0.05)
-        ap.keys.send_key('Up', 'Key_Enter')
+        ap.keys.send_key('Up', 28)  # 28=ENTER
         sleep(0.05)
 
         # navigate to and select: search button
@@ -241,11 +241,13 @@ class EDWayPoint:
         sleep(0.05)
         ap.keys.send('UI_Select')
 
-        # rotate camera, skips camera animation and sets focus on target
-        ap.keys.send('CamYawLeft')
+        # zoom camera which puts focus back on the map
+        ap.keys.send('CamZoomIn')
         sleep(0.05)
 
-        # plot route
+        # plot route. Not that once the system has been selected, as shown in the info panel
+        # and the gal map has focus, there is no need to wait for the map to bring the system
+        # to the center screen, the system can be selected while the map is moving.
         ap.keys.send('UI_Select', hold=0.75)
 
         sleep(0.05)

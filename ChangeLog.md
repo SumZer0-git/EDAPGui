@@ -1,3 +1,12 @@
+# 3/5/2025 Stumpii
+ - Fix to gal map send key that accepts hex values only, not string.
+ - Tweak to journal to remove all the if checks when only one type of event may occur at a time.
+ - Changed camyaw to cam zoom and added explaination why the shortcut works.
+ - Added alt, lat and longitude to status parser for future angle of approach calc.
+ - Added NavRouteParser for NavRoute.json files.
+ - Added CargoParser for Cargo.json files.
+ - Added MarketParser for Market.json files.
+
 # 3/4/205 SumZer0
  - Updated EDKeys.py to add back in the keyboard binding name to the autopilot.log file instead of just the keyboard scancode.  Also handle KeyError exception when dumping bindings to log file
 

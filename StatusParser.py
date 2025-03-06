@@ -231,6 +231,26 @@ class StatusParser:
             cleaned_data['cargo'] = data['Cargo']
         if 'LegalState' in data:
             cleaned_data['legalState'] = data['LegalState']
+        if 'Latitude' in data:
+            cleaned_data['Latitude'] = data['Latitude']
+        else:
+            cleaned_data['Latitude'] = None
+        if 'Longitude' in data:
+            cleaned_data['Longitude'] = data['Longitude']
+        else:
+            cleaned_data['Longitude'] = None
+        if 'Heading' in data:
+            cleaned_data['Heading'] = data['Heading']
+        else:
+            cleaned_data['Heading'] = None
+        if 'Altitude' in data:
+            cleaned_data['Altitude'] = data['Altitude']
+        else:
+            cleaned_data['Altitude'] = None
+        if 'PlanetRadius' in data:
+            cleaned_data['PlanetRadius'] = data['PlanetRadius']
+        else:
+            cleaned_data['PlanetRadius'] = None
         if 'Balance' in data:
             cleaned_data['balance'] = data['Balance']
         if 'Destination' in data:
