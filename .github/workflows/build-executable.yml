@@ -21,9 +21,10 @@ jobs:
         
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        
+        python -m pip install --upgrade pip setuptools
+        python -m pip install --force-reinstall -r requirements.txt
+        python -m pip install --force-reinstall paddleocr
+
     # Custom PyInstaller installation with bootloader recompilation
     - name: Install custom PyInstaller
       run: |
@@ -32,50 +33,6 @@ jobs:
         python -m pip install --force-reinstall --ignore-installed --no-binary :all: --no-cache pyinstaller@git+https://github.com/pyinstaller/pyinstaller.git@0d562b5
         $Env:CL = ""
         
-    # Add version info file
-    - name: Create Version Info
-      run: |
-        echo "VSVersionInfo(
-          ffi=FixedFileInfo(
-            filevers=(1, 0, 0, 0),
-            prodvers=(1, 0, 0, 0),
-            mask=0x3f,
-            flags=0x0,
-            OS=0x40004,
-            fileType=0x1,
-            subtype=0x0,
-            date=(0, 0)
-          ),
-          kids=[
-            StringFileInfo([
-              StringTable(
-                u'040904B0',
-                [StringStruct(u'CompanyName', u'EDAP'),
-                 StringStruct(u'FileDescription', u'EDAP Autopilot'),
-                 StringStruct(u'FileVersion', u'1.0.0'),
-                 StringStruct(u'InternalName', u'EDAP_Autopilot'),
-                 StringStruct(u'LegalCopyright', u'Copyright (c) 2024'),
-                 StringStruct(u'OriginalFilename', u'EDAP-Autopilot.exe'),
-                 StringStruct(u'ProductName', u'EDAP Autopilot'),
-                 StringStruct(u'ProductVersion', u'1.0.0')])
-              ]),
-            VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
-          ]
-        )" > version_info.txt
-        
-    - name: List directory contents for debugging
-      run: |
-        echo "Root directory:"
-        dir
-        echo "====================="
-        echo "Screen directory:"
-        dir screen
-        echo "====================="
-        echo "List all Python files:"
-        Get-ChildItem -Path . -Filter "*.py" -Recurse | Select-Object FullName
-        echo "====================="
-        echo "Recursive listing of all directories:"
-        Get-ChildItem -Path . -Directory -Recurse | Select-Object FullName
 
     - name: Build executable
       run: |
