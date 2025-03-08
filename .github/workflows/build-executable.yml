@@ -99,15 +99,15 @@ jobs:
           --hidden-import=PIL `
           --hidden-import=PIL._imagingtk `
           --hidden-import=PIL._tkinter_finder `
-          --name "EDAP-Autopilot-$buildDate" `
+          --name "EDAP-$buildDate" `
           --clean `
           --noupx `
           --noconfirm `
           EDAPGui.py
         
         # Check if build was successful
-        if (Test-Path ".\dist\EDAP-Autopilot-$buildDate") {
-          echo "Build successful: EDAP-Autopilot-$buildDate"
+        if (Test-Path ".\dist\EDAP-$buildDate") {
+          echo "Build successful: EDAP-$buildDate"
         } else {
           echo "Build failed or directory not found at expected location"
           exit 1
@@ -126,7 +126,7 @@ jobs:
         
         # Scan using direct command line tool
         $buildDate = Get-Date -Format "yyyy-MM-dd"
-        $buildPath = Resolve-Path ".\dist\EDAP-Autopilot-$buildDate"
+        $buildPath = Resolve-Path ".\dist\EDAP-$buildDate"
         
         echo "Scanning path: $buildPath"
         
@@ -153,6 +153,6 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: EDAP-Autopilot
-        path: ./dist/EDAP-Autopilot-*
+        name: EDAP
+        path: ./dist/EDAP-*
         retention-days: 90
