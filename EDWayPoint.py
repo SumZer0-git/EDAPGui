@@ -82,6 +82,18 @@ class EDWayPoint:
         self.waypoints[key]['Completed'] = True
         self.write_waypoints(data=None, fileName='./waypoints/' + Path(self.filename).name)  
 
+    def set_next_system(self, ap, target_system) -> bool:
+        """ Sets the next system to jump to, or the final system to jump to.
+        If the system is already selected or is selected correctly, returns True,
+        otherwise False.
+        """
+        # Call sequence to select route
+        if self.set_waypoint_target(ap, target_system, None):
+            return True
+        else:
+            # Error setting target
+            logger.warning("Error setting waypoint, breaking")
+            return False
 
     def waypoint_next(self, ap, target_select_cb=None) -> str:
         dest_key = "REPEAT"
