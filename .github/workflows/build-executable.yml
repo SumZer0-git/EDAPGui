@@ -17,35 +17,105 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
-        
+        python-version: '3.10'
+
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pyinstaller
+        python -m pip install --upgrade pip setuptools
+        python -m pip install --force-reinstall -r requirements.txt
+        python -m pip install --force-reinstall paddleocr
+
+    # Custom PyInstaller installation with bootloader recompilation
+    - name: Install custom PyInstaller
+      run: |
+        $Env:CL = "/Od"
+        $Env:PYINSTALLER_COMPILE_BOOTLOADER = "true"
+        python -m pip install --force-reinstall --ignore-installed --no-binary :all: --no-cache pyinstaller@git+https://github.com/pyinstaller/pyinstaller.git@0d562b5
+        $Env:CL = ""
         
+
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed --icon=EDAPGui.ico --add-data "EDAPGui.ico;." --add-data "config.json;." --add-data "ships.json;." --add-data "waypoints.json;." --add-data "*.py;." EDAPGui.py
+        # Create a default config.json if it doesn't exist
+        if (-not (Test-Path -Path "config.json")) {
+          echo "{}" > config.json
+        }
         
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: v${{ github.run_number }}
-        release_name: Release v${{ github.run_number }}
-        draft: false
-        prerelease: false
+        # Create build info file with just the date
+        $buildDate = Get-Date -Format "yyyy-MM-dd"
+        echo "Build date: $buildDate" > build_info.txt
         
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Run PyInstaller with options to reduce false positives
+        # Using --onedir instead of --onefile significantly reduces false positives
+        pyinstaller --onedir --windowed --icon="screen\edap.ico" `
+          --add-data "screen\edap.ico;screen" `
+          --add-data "screen\*.png;screen" `
+          --add-data "*.py;." `
+          --add-data "build_info.txt;." `
+          --add-data "config.json;." `
+          --collect-data "paddle" `
+          --collect-all "paddleocr" `
+          --hidden-import=PIL `
+          --hidden-import=PIL._imagingtk `
+          --hidden-import=PIL._tkinter_finder `
+          --version-file="version_info.txt" `
+          --name "EDAP-Autopilot-$buildDate" `
+          --clean `
+          --noupx `
+          --noconfirm `
+          EDAPGui.py
+        
+        # Create zip archive of the directory for distribution
+        Compress-Archive -Path ".\dist\EDAP-Autopilot-$buildDate" -DestinationPath ".\dist\EDAP-Autopilot-$buildDate.zip"
+        
+        # Check if build was successful
+        if (Test-Path ".\dist\EDAP-Autopilot-$buildDate.zip") {
+          echo "Build successful: EDAP-Autopilot-$buildDate.zip"
+        } else {
+          echo "Build failed or file not found at expected location"
+          exit 1
+        }
+
+    - name: Check build with Windows Defender
+      continue-on-error: true
+      run: |
+        # Try to enable Windows Defender if possible
+        try {
+          Set-MpPreference -DisableRealtimeMonitoring $false -ErrorAction SilentlyContinue
+          Set-MpPreference -DisableBehaviorMonitoring $false -ErrorAction SilentlyContinue
+        } catch {
+          echo "::warning::Cannot configure Windows Defender settings"
+        }
+        
+        # Scan using direct command line tool
+        $buildDate = Get-Date -Format "yyyy-MM-dd"
+        $buildPath = Resolve-Path ".\dist\EDAP-Autopilot-$buildDate"
+        
+        echo "Scanning path: $buildPath"
+        
+        # Run the scan and capture output
+        $scanOutput = & "C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File "$buildPath" 2>&1
+        
+        # Display the scan output
+        echo "Scan results:"
+        echo $scanOutput
+        
+        # Try to get threat detections (this may not work in GitHub Actions environment)
+        try {
+          $threats = Get-MpThreat -ErrorAction SilentlyContinue
+          if ($threats) {
+            echo "::warning::Windows Defender detected threats:"
+            $threats | Format-List
+          } else {
+            echo "No threats detected by Windows Defender."
+          }
+        } catch {
+          echo "Could not retrieve threat information."
+        }
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dist/EDAPGui.exe
-        asset_name: EDAPGui.exe
-        asset_content_type: application/x-msdownload 
+        name: EDAP-Autopilot
+        path: ./dist/EDAP-Autopilot-*.zip
+        retention-days: 90
