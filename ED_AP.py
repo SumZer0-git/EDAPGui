@@ -85,6 +85,8 @@ class EDAutopilot:
         self._sc_sco_active_loop_enable = False
         self.sc_sco_is_active = 0
         self._sc_sco_active_on_ls = 0
+        self._single_waypoint_station = None
+        self._single_waypoint_system = None
 
         # used this to write the self.config table to the json file
         # self.write_config(self.config)
@@ -143,6 +145,7 @@ class EDAutopilot:
         self.afk_combat_assist_enabled = False
         self.waypoint_assist_enabled = False
         self.robigo_assist_enabled = False
+        self.single_waypoint_enabled = False
 
         # Create instance of each of the needed Classes
         self.scr = Screen.Screen()
@@ -1499,10 +1502,8 @@ class EDAutopilot:
         htime = deg / self.yawrate
         self.keys.send('YawRightButton', hold=htime)
 
-        # check if refueling needed, ensure correct start type
-
-    #
     def refuel(self, scr_reg):
+        """ Check if refueling needed, ensure correct start type. """
         # Check if we have a fuel scoop
         has_fuel_scoop = self.jn.ship_state()['has_fuel_scoop']
 
@@ -1744,6 +1745,29 @@ class EDAutopilot:
         self.ap_ckb('log', "Waypoint Route Complete, total distance jumped: "+str(self.total_dist_jumped)+"LY")
         self.update_ap_status("Idle")
 
+    def jump_to_system(self, scr_reg, system_name: str) -> bool:
+        """ Jumps to the specified system. Returns True if in the system already,
+        or we successfully travel there, else False. """
+        self.update_ap_status(f"Targeting System: {system_name}")
+        ret = self.waypoint.set_next_system(self, system_name)
+        if not ret:
+            return False
+
+        # if we are starting the waypoint docked at a station, we need to undock first
+        if self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
+            self.waypoint_undock_seq()
+
+        # if we are in space but not in supercruise, get into supercruise
+        if self.jn.ship_state()['status'] != 'in_supercruise':
+            self.sc_engage()
+
+        # Route sent...  FSD Assist to that destination
+        reached_dest = self.fsd_assist(scr_reg)
+        if not reached_dest:
+            return False
+
+        return True
+
     def fsd_assist(self, scr_reg):
         """ FSD Route Assist. """
 
@@ -1838,6 +1862,7 @@ class EDAutopilot:
         self.jn.ship_state()['interdicted'] = False
 
         # Loop forever keeping tight align to target, until we get SC Disengage popup
+        self.vce.say("Target Align")
         while True:
             sleep(0.05)
             if self.jn.ship_state()['status'] == 'in_supercruise':
@@ -1923,6 +1948,21 @@ class EDAutopilot:
 
         self.vce.say("Terminating AFK Combat Assist")
 
+    def single_waypoint_assist(self):
+        """ Travel to a system or station or both."""
+        if self._single_waypoint_system == "" and self._single_waypoint_station == "":
+            return False
+
+        if self._single_waypoint_system != "":
+            res = self.jump_to_system(self.scrReg, self._single_waypoint_system)
+            if res is False:
+                return False
+
+        if self._single_waypoint_station != "":
+            res = self.supercruise_to_station(self.scrReg, self._single_waypoint_station)
+            if res is False:
+                return False
+
     # raising an exception to the engine loop thread, so we can terminate its execution
     #  if thread was in a sleep, the exception seems to not be delivered
     def ctype_async_raise(self, thread_obj, exception):
@@ -1976,6 +2016,13 @@ class EDAutopilot:
         if enable == False and self.afk_combat_assist_enabled == True:
             self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.afk_combat_assist_enabled = enable
+
+    def set_single_waypoint_assist(self, system: str, station: str, enable=True):
+        if enable == False and self.single_waypoint_enabled == True:
+            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+        self._single_waypoint_system = system
+        self._single_waypoint_station = station
+        self.single_waypoint_enabled = enable
 
     def set_cv_view(self, enable=True, x=0, y=0):
         self.cv_view = enable
@@ -2144,6 +2191,16 @@ class EDAutopilot:
                     logger.debug("Stopping afk_combat")
                 self.afk_combat_assist_enabled = False
                 self.ap_ckb('afk_stop')
+                self.update_overlay()
+
+            elif self.single_waypoint_enabled:
+                self.update_overlay()
+                try:
+                    self.single_waypoint_assist()
+                except EDAP_Interrupt:
+                    logger.debug("Stopping Single Waypoint Assist")
+                self.single_waypoint_enabled = False
+                self.ap_ckb('single_waypoint_stop')
                 self.update_overlay()
 
             # Check once EDAPGUI loaded to prevent errors logging to the listbox before loaded

@@ -113,11 +113,14 @@ class APGui():
         self.radiobuttonvar = {}
         self.entries = {}
         self.lab_ck = {}
+        self.single_waypoint_system = StringVar()
+        self.single_waypoint_station = StringVar()
 
         self.FSD_A_running = False
         self.SC_A_running = False
         self.WP_A_running = False
         self.RO_A_running = False
+        self.SWP_A_running = False
 
         self.cv_view = False
 
@@ -232,6 +235,10 @@ class APGui():
             logger.debug("Detected 'afk_stop' key")
             self.checkboxvar['AFK Combat Assist'].set(0)
             self.check_cb('AFK Combat Assist')
+        elif key == 'single_waypoint_stop':
+            logger.debug("Detected 'single_waypoint_stop'")
+            self.checkboxvar['Single Waypoint Assist'].set(0)
+            self.check_cb('Single Waypoint Assist')
         elif key == 'jumpcount':
             self.update_jumpcount(body)
         elif key == 'update_ship_cfg':
@@ -293,12 +300,14 @@ class APGui():
         self.ed_ap.set_fsd_assist(True)
         self.FSD_A_running = True
         self.log_msg("FSD Route Assist start")
+        self.ed_ap.vce.say("FSD Route Assist On")
 
     def stop_fsd(self):
         logger.debug("Entered: stop_fsd")
         self.ed_ap.set_fsd_assist(False)
         self.FSD_A_running = False
         self.log_msg("FSD Route Assist stop")
+        self.ed_ap.vce.say("FSD Route Assist Off")
         self.update_statusline("Idle")
 
     def start_sc(self):
@@ -306,12 +315,14 @@ class APGui():
         self.ed_ap.set_sc_assist(True)
         self.SC_A_running = True
         self.log_msg("SC Assist start")
+        self.ed_ap.vce.say("Supercruise Assist On")
 
     def stop_sc(self):
         logger.debug("Entered: stop_sc")
         self.ed_ap.set_sc_assist(False)
         self.SC_A_running = False
         self.log_msg("SC Assist stop")
+        self.ed_ap.vce.say("Supercruise Assist Off")
         self.update_statusline("Idle")
 
     def start_waypoint(self):
@@ -319,12 +330,14 @@ class APGui():
         self.ed_ap.set_waypoint_assist(True)
         self.WP_A_running = True
         self.log_msg("Waypoint Assist start")
+        self.ed_ap.vce.say("Waypoint Assist On")
 
     def stop_waypoint(self):
         logger.debug("Entered: stop_waypoint")
         self.ed_ap.set_waypoint_assist(False)
         self.WP_A_running = False
         self.log_msg("Waypoint Assist stop")
+        self.ed_ap.vce.say("Waypoint Assist Off")
         self.update_statusline("Idle")
 
     def start_robigo(self):
@@ -332,12 +345,35 @@ class APGui():
         self.ed_ap.set_robigo_assist(True)
         self.RO_A_running = True
         self.log_msg("Robigo Assist start")
+        self.ed_ap.vce.say("Robigo Assist On")
 
     def stop_robigo(self):
         logger.debug("Entered: stop_robigo")
         self.ed_ap.set_robigo_assist(False)
         self.RO_A_running = False
         self.log_msg("Robigo Assist stop")
+        self.ed_ap.vce.say("Robigo Assist Off")
+        self.update_statusline("Idle")
+
+    def start_single_waypoint_assist(self):
+        """ The debug command to go to a system or station or both."""
+        logger.debug("Entered: start_single_waypoint_assist")
+        system = self.single_waypoint_system.get()
+        station = self.single_waypoint_station.get()
+
+        if system != "" or station != "":
+            self.ed_ap.set_single_waypoint_assist(system, station, True)
+            self.SWP_A_running = True
+            self.log_msg("Single Waypoint Assist start")
+            self.ed_ap.vce.say("Single Waypoint Assist On")
+
+    def stop_single_waypoint_assist(self):
+        """ The debug command to go to a system or station or both."""
+        logger.debug("Entered: stop_single_waypoint_assist")
+        self.ed_ap.set_single_waypoint_assist("", "", False)
+        self.SWP_A_running = False
+        self.log_msg("Single Waypoint Assist stop")
+        self.ed_ap.vce.say("Single Waypoint Assist Off")
         self.update_statusline("Idle")
 
     def about(self):
@@ -598,6 +634,11 @@ class APGui():
         elif self.radiobuttonvar['debug_mode'].get() == "Info":
             self.ed_ap.set_log_info(True)
 
+        if field == 'Single Waypoint Assist':
+            if self.checkboxvar['Single Waypoint Assist'].get() == 1 and self.SWP_A_running == False:
+                self.start_single_waypoint_assist()
+            elif self.checkboxvar['Single Waypoint Assist'].get() == 0 and self.SWP_A_running == True:
+                self.stop_single_waypoint_assist()
 
     def makeform(self, win, ftype, fields, r=0, inc=1, rfrom=0, rto=1000):
         entries = {}
@@ -814,8 +855,24 @@ class APGui():
         blk_debug_buttons = tk.Frame(page2)
         blk_debug_buttons.grid(row=3, column=0, padx=10, pady=5, columnspan=2, sticky=(N, S, E, W))
         blk_debug_buttons.columnconfigure([0, 1], weight=1, minsize=100)
+
+        # debug settings block
+        blk_debug_buttons_settings = LabelFrame(blk_debug, text="Single Waypoint Assist")
+        blk_debug_buttons_settings.grid(row=1, column=0, padx=2, pady=2, columnspan=2, sticky=(N, S, E, W))
+
+        lbl_system = tk.Label(blk_debug_buttons_settings, text='System:')
+        lbl_system.grid(row=0, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+        txt_system = Entry(blk_debug_buttons_settings, textvariable=self.single_waypoint_system)
+        txt_system.grid(row=0, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+        lbl_station = tk.Label(blk_debug_buttons_settings, text='Station (future):')
+        lbl_station.grid(row=1, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+        txt_station = Entry(blk_debug_buttons_settings, textvariable=self.single_waypoint_station)
+        txt_station.grid(row=1, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+        self.checkboxvar['Single Waypoint Assist'] = BooleanVar()
+        cb_single_waypoint = Checkbutton(blk_debug_buttons_settings, text='Single Waypoint Assist', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['Single Waypoint Assist'], command=(lambda field='Single Waypoint Assist': self.check_cb(field)))
+        cb_single_waypoint.grid(row=2, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
         btn_save = Button(blk_debug_buttons, text='Save All Settings', command=self.save_settings)
-        btn_save.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        btn_save.grid(row=3, column=0, padx=2, pady=20, columnspan=2, sticky=(N, E, W, S))
 
         # Statusbar
         statusbar = Frame(win)
