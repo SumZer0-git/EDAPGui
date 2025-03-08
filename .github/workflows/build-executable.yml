@@ -154,5 +154,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: EDAP-Autopilot
-        path: ./dist/EDAP-Autopilot-*.zip
+        path: ./dist/EDAP-Autopilot-*
         retention-days: 90
