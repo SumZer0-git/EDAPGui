@@ -19,6 +19,10 @@ Additional information can be found [here](docs/Waypoint.md).
 The Robigo Assist performs the Robigo Mines passenger mission loop which includes mission selection, mission completetion, and the full loop to Sirius Atmospherics.<br>
 Additional information can be found [here](docs/Robigo.md). 
 ## AFK Combat escape assist
+## Single Waypoint assist
+Note: Currently available on the debug tab.
+
+With Single Waypoint Assist you define the target system in the text box (paste from Inara/Spansh etc.) and click the checkbox to plot a route and jump to that system.<br>
 
 ## Additional Features
 If Voice enabled, the autopilot will inform you of its actions
