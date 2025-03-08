@@ -22,8 +22,37 @@ Author: Stumpii
 class OCR:
     def __init__(self, screen):
         self.screen = screen
-        self.paddleocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False, use_dilation=True,
-                                   use_space_char=True)
+        try:
+            # Try importing the os module for path operations
+            import os
+            import sys
+            
+            # Check if we're running in a PyInstaller bundle
+            if getattr(sys, 'frozen', False):
+                # Create a models directory if it doesn't exist
+                # When frozen by PyInstaller, sys.executable points to the executable
+                executable_dir = os.path.dirname(sys.executable)
+                model_dir = os.path.join(executable_dir, 'paddleocr_models')
+                os.makedirs(model_dir, exist_ok=True)
+                
+                # Initialize PaddleOCR with specific model directory to prevent downloads
+                self.paddleocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False, 
+                                          use_dilation=True, use_space_char=True, 
+                                          det_model_dir=model_dir, rec_model_dir=model_dir, 
+                                          cls_model_dir=model_dir, download_progress=False)
+            else:
+                # Normal initialization for development environment
+                self.paddleocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False, 
+                                          use_dilation=True, use_space_char=True)
+        except Exception as e:
+            # Fallback if the above fails
+            import traceback
+            print(f"Error initializing PaddleOCR: {e}")
+            traceback.print_exc()
+            # Try a simpler initialization without progress bars
+            self.paddleocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False, 
+                                      use_dilation=True, use_space_char=True, download_progress=False)
+        
         # Class for text similarity metrics
         self.jarowinkler = JaroWinkler()
         self.sorensendice = SorensenDice()
@@ -234,6 +263,9 @@ class OCR:
                 # Next item
                 in_list = True
                 keys.send("UI_Down")
+        
+        # Fallback return in case the loop is broken
+        return False
 
     def wait_for_text(self, texts: list[str], region, timeout=30) -> bool:
         """ Wait for a screen to appear by checking for text to appear in the region.
