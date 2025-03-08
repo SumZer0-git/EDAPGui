@@ -81,6 +81,25 @@ jobs:
           echo "{}" > config.json
         }
         
+        # Create configs directory and default JSON files if they don't exist
+        $configsDir = "configs"
+        if (-not (Test-Path -Path $configsDir)) {
+          New-Item -Path $configsDir -ItemType Directory
+        }
+        
+        # Create default config files if they don't exist
+        if (-not (Test-Path -Path "$configsDir\AP.json")) {
+          echo "{}" > "$configsDir\AP.json"
+        }
+        
+        if (-not (Test-Path -Path "$configsDir\ship_configs.json")) {
+          echo "{}" > "$configsDir\ship_configs.json"
+        }
+        
+        if (-not (Test-Path -Path "$configsDir\resolution.json")) {
+          echo "{}" > "$configsDir\resolution.json"
+        }
+        
         # Create build info file with just the date
         $buildDate = Get-Date -Format "yyyy-MM-dd"
         echo "Build date: $buildDate" > build_info.txt
@@ -93,6 +112,7 @@ jobs:
           --add-data "*.py;." `
           --add-data "build_info.txt;." `
           --add-data "config.json;." `
+          --add-data "configs\*.json;configs" `
           --add-data "paddleocr_models;paddleocr_models" `
           --collect-data "paddle" `
           --collect-all "paddleocr" `
