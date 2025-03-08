@@ -17,13 +17,51 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.9'
         
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pyinstaller
+        
+    # Custom PyInstaller installation with bootloader recompilation
+    - name: Install custom PyInstaller
+      run: |
+        $Env:CL = "/Od"
+        $Env:PYINSTALLER_COMPILE_BOOTLOADER = "true"
+        python -m pip install --force-reinstall --ignore-installed --no-binary :all: --no-cache pyinstaller@git+https://github.com/pyinstaller/pyinstaller.git@0d562b5
+        $Env:CL = ""
+        
+    # Add version info file
+    - name: Create Version Info
+      run: |
+        echo "VSVersionInfo(
+          ffi=FixedFileInfo(
+            filevers=(1, 0, 0, 0),
+            prodvers=(1, 0, 0, 0),
+            mask=0x3f,
+            flags=0x0,
+            OS=0x40004,
+            fileType=0x1,
+            subtype=0x0,
+            date=(0, 0)
+          ),
+          kids=[
+            StringFileInfo([
+              StringTable(
+                u'040904B0',
+                [StringStruct(u'CompanyName', u'EDAP'),
+                 StringStruct(u'FileDescription', u'EDAP Autopilot'),
+                 StringStruct(u'FileVersion', u'1.0.0'),
+                 StringStruct(u'InternalName', u'EDAP_Autopilot'),
+                 StringStruct(u'LegalCopyright', u'Copyright (c) 2024'),
+                 StringStruct(u'OriginalFilename', u'EDAP-Autopilot.exe'),
+                 StringStruct(u'ProductName', u'EDAP Autopilot'),
+                 StringStruct(u'ProductVersion', u'1.0.0')])
+              ]),
+            VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
+          ]
+        )" > version_info.txt
         
     - name: List directory contents for debugging
       run: |
@@ -46,11 +84,81 @@ jobs:
           echo "{}" > config.json
         }
         
-        pyinstaller --onefile --windowed --icon="screen\edap.ico" --add-data "screen\edap.ico;screen" --add-data "screen\*.png;screen" --add-data "*.py;." EDAPGui.py
+        # Create build info file with just the date
+        $buildDate = Get-Date -Format "yyyy-MM-dd"
+        echo "Build date: $buildDate" > build_info.txt
+        
+        # Run PyInstaller with options to reduce false positives
+        # Using --onedir instead of --onefile significantly reduces false positives
+        pyinstaller --onedir --windowed --icon="screen\edap.ico" `
+          --add-data "screen\edap.ico;screen" `
+          --add-data "screen\*.png;screen" `
+          --add-data "*.py;." `
+          --add-data "build_info.txt;." `
+          --add-data "config.json;." `
+          --collect-data "paddle" `
+          --collect-all "paddleocr" `
+          --hidden-import=PIL `
+          --hidden-import=PIL._imagingtk `
+          --hidden-import=PIL._tkinter_finder `
+          --version-file="version_info.txt" `
+          --name "EDAP-Autopilot-$buildDate" `
+          --clean `
+          --noupx `
+          --noconfirm `
+          EDAPGui.py
+        
+        # Create zip archive of the directory for distribution
+        Compress-Archive -Path ".\dist\EDAP-Autopilot-$buildDate" -DestinationPath ".\dist\EDAP-Autopilot-$buildDate.zip"
+        
+        # Check if build was successful
+        if (Test-Path ".\dist\EDAP-Autopilot-$buildDate.zip") {
+          echo "Build successful: EDAP-Autopilot-$buildDate.zip"
+        } else {
+          echo "Build failed or file not found at expected location"
+          exit 1
+        }
+
+    - name: Check build with Windows Defender
+      continue-on-error: true
+      run: |
+        # Try to enable Windows Defender if possible
+        try {
+          Set-MpPreference -DisableRealtimeMonitoring $false -ErrorAction SilentlyContinue
+          Set-MpPreference -DisableBehaviorMonitoring $false -ErrorAction SilentlyContinue
+        } catch {
+          echo "::warning::Cannot configure Windows Defender settings"
+        }
+        
+        # Scan using direct command line tool
+        $buildDate = Get-Date -Format "yyyy-MM-dd"
+        $buildPath = Resolve-Path ".\dist\EDAP-Autopilot-$buildDate"
+        
+        echo "Scanning path: $buildPath"
+        
+        # Run the scan and capture output
+        $scanOutput = & "C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File "$buildPath" 2>&1
+        
+        # Display the scan output
+        echo "Scan results:"
+        echo $scanOutput
+        
+        # Try to get threat detections (this may not work in GitHub Actions environment)
+        try {
+          $threats = Get-MpThreat -ErrorAction SilentlyContinue
+          if ($threats) {
+            echo "::warning::Windows Defender detected threats:"
+            $threats | Format-List
+          } else {
+            echo "No threats detected by Windows Defender."
+          }
+        } catch {
+          echo "Could not retrieve threat information."
+        }
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: EDAPGui-executable
-        path: ./dist/EDAPGui.exe
+        name: EDAP-Autopilot
+        path: ./dist/EDAP-Autopilot-*.zip
         retention-days: 90
