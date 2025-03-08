@@ -25,6 +25,46 @@ jobs:
         python -m pip install -r requirements.txt
         python -m pip install --force-reinstall paddlepaddle paddleocr
 
+    # Pre-download PaddleOCR models to include in the package
+    - name: Pre-download PaddleOCR models
+      run: |
+        # Create a Python script to download models line by line
+        echo "import os" > download_models.py
+        echo "from paddleocr import PaddleOCR" >> download_models.py
+        echo "" >> download_models.py
+        echo "# Create models directory" >> download_models.py
+        echo "models_dir = os.path.join(os.getcwd(), 'paddleocr_models')" >> download_models.py
+        echo "os.makedirs(models_dir, exist_ok=True)" >> download_models.py
+        echo "" >> download_models.py
+        echo "# Initialize PaddleOCR to force model download" >> download_models.py
+        echo "# The models will be cached in the .paddleocr directory" >> download_models.py
+        echo "ocr = PaddleOCR(lang='en', use_gpu=False, show_log=True)" >> download_models.py
+        echo "" >> download_models.py
+        echo "# List downloaded model files to verify" >> download_models.py
+        echo "print('Downloaded models:')" >> download_models.py
+        echo "for root, dirs, files in os.walk(os.path.expanduser('~/.paddleocr')):" >> download_models.py
+        echo "    for file in files:" >> download_models.py
+        echo "        print(os.path.join(root, file))" >> download_models.py
+        echo "" >> download_models.py
+        echo "# Copy models to our custom directory that will be included in the package" >> download_models.py
+        echo "import shutil" >> download_models.py
+        echo "paddle_dir = os.path.expanduser('~/.paddleocr')" >> download_models.py
+        echo "for root, dirs, files in os.walk(paddle_dir):" >> download_models.py
+        echo "    for file in files:" >> download_models.py
+        echo "        src_path = os.path.join(root, file)" >> download_models.py
+        echo "        rel_path = os.path.relpath(src_path, paddle_dir)" >> download_models.py
+        echo "        dst_path = os.path.join(models_dir, rel_path)" >> download_models.py
+        echo "        os.makedirs(os.path.dirname(dst_path), exist_ok=True)" >> download_models.py
+        echo "        shutil.copy2(src_path, dst_path)" >> download_models.py
+        echo "        print(f'Copied {src_path} to {dst_path}')" >> download_models.py
+        
+        # Run the script to download models
+        python download_models.py
+        
+        # Verify models were downloaded and copied
+        echo "Checking models directory:"
+        dir paddleocr_models
+
     # Custom PyInstaller installation with bootloader recompilation
     - name: Install custom PyInstaller
       run: |
@@ -53,6 +93,7 @@ jobs:
           --add-data "*.py;." `
           --add-data "build_info.txt;." `
           --add-data "config.json;." `
+          --add-data "paddleocr_models;paddleocr_models" `
           --collect-data "paddle" `
           --collect-all "paddleocr" `
           --hidden-import=PIL `
@@ -113,5 +154,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: EDAP-Autopilot
-        path: ./dist/EDAP-Autopilot-*
+        path: ./dist/EDAP-Autopilot-*.zip
         retention-days: 90
