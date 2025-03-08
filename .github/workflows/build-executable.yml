@@ -58,7 +58,6 @@ jobs:
           --hidden-import=PIL `
           --hidden-import=PIL._imagingtk `
           --hidden-import=PIL._tkinter_finder `
-          --version-file="version_info.txt" `
           --name "EDAP-Autopilot-$buildDate" `
           --clean `
           --noupx `
