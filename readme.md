@@ -2,7 +2,7 @@ See [ChangeLog](/ChangeLog.md) for latest updates<br>
 Join discord if need support or wish to provide inputs on new features:  https://discord.gg/HCgkfSc
 <br>
 
-# ED Autopilot - Gui
+# ED Autopilot Main Features
 This Elite Dangerous (ED) Autopilot supports the following main features:
 ## FSD Route assist
 For the FSD Route Assist, you select your destination in the GalaxyMap and then enable this assistant and it will perform all the jumps to get you to your destination, AFK.  Furthermore while
@@ -24,8 +24,13 @@ Note: Currently available on the debug tab.
 
 With Single Waypoint Assist you define the target system in the text box (paste from Inara/Spansh etc.) and click the checkbox to plot a route and jump to that system.<br>
 
-## Additional Features
-If Voice enabled, the autopilot will inform you of its actions
+# Additional Features
+## Voice
+If Voice enabled, the autopilot will inform you of its actions.
+
+## TCE (Trade Computer Extension) Integration
+Basic integration with TCE. The current TCE destination may be loaded as a Single Waypoint Assist target with the Load TCE Destination button on the Debug tab. 
+Refer to [TCE on Frontiers Forums](https://forums.frontier.co.uk/threads/trade-computer-extension-mk-ii.223056/) for info on TCE.
 
 This autopilot uses Computer Vision (grabs screens and performs template matching) and issues keystrokes.  It does not perform any runtime modifications 
 of Elite Dangerous, it is an external-ED construct (similar to us commanders) 
@@ -43,7 +48,7 @@ Note: this autopilot is based on https://github.com/skai2/EDAutopilot , some of 
  
 Also Note: This repository is provided for educational purposes as a in depth programming example of interacting with file based data, computer vision processing, user feedback via voice, win32 integration using python, threading interaction, and python classes.  
 
-# Constraints:
+# Limitations:
 * Will only work with Windows (not Linux)
 * Default HUD colors must be used, if you changed those colors, this autopilot will not work
 * Borderless Elite Dangerous (ED) configuration required,  Windowed does not work due to how the screen is grabbed
@@ -80,6 +85,7 @@ Also Note: This repository is provided for educational purposes as a in depth pr
   * With Elite Dangerous (ED) running, start EDAPGui.py
     * python EDAPGui.py
 
+# Getting Started:
 Once ED_AP has started there are few steps to complete the first time ED AP is run. These will help avoid common issues.
 1. Perform screen calibration, detailed [here](docs/Calibration.md). This will configure ED_AP for your screen resolution. Many issues can be avoided with correct calibration.
 2. Check and if necessary, change keybinding options, detailed below. Pay special attention that the Ins, Home, End and Pg Up are not used by ED as these are used by EDAP.

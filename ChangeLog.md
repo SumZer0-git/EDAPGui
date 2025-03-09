@@ -1,3 +1,9 @@
+# 3/8/2025 Stumpii
+ - Added button to load TCE (Trade Computer Extension) destination.
+ - Added hyperlink to TCE for those that do not know of it.
+ - Moved Honk to start when entering a system instead of when leaving to allow commanders to cancel FSD Assist if there is something interesting in the system.
+ - Updated requirements text to include Pillow 10.4.
+
 # 3/5/2025 Stumpii
  - Added single waypoint assist feature. A couple of text boxes and checkbox on the debug screen allow you to enter the system name to go to and then check the box to start your travels to that system.
  - Fix to gal map send key that accepts hex values only, not string.
