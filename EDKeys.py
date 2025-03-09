@@ -83,17 +83,17 @@ class EDKeys:
         self.missing_keys = []
         # We want to log the keyboard name instead of just the key number so we build a reverse dictionary
         # so we can look up the name also
-        reversed_dict = {value: key for key, value in SCANCODE.items()}
+        self.reversed_dict = {value: key for key, value in SCANCODE.items()}
  
         # dump config to log
         for key in self.keys_to_obtain:
             try:
                 # lookup the keyname in the SCANCODE reverse dictionary and output that key name
-                keyname = reversed_dict.get(self.keys[key]['key'], "Key not found") 
+                keyname = self.reversed_dict.get(self.keys[key]['key'], "Key not found")
                 keymod = " "
                 #if key modifier, then look up that modifier name also
                 if len(self.keys[key]['mods']) != 0:
-                    keymod  = reversed_dict.get(self.keys[key]['mods'][0], " ")  
+                    keymod = self.reversed_dict.get(self.keys[key]['mods'][0], " ")
         
                 logger.info('get_bindings_<{}>={} Key: <{}> Mod: <{}>'.format(key, self.keys[key], keyname, keymod))
                 if key not in self.keys:
@@ -183,14 +183,15 @@ class EDKeys:
         else:
             PressKey(key)
 
-    def send(self, key_name, hold=None, repeat=1, repeat_delay=None, state=None):
-        key = self.keys.get(key_name)
+    def send(self, key_binding, hold=None, repeat=1, repeat_delay=None, state=None):
+        key = self.keys.get(key_binding)
         if key is None:
             logger.warning('SEND=NONE !!!!!!!!')
             raise Exception(
-                f"Unable to retrieve keybinding for {key_name}. Advise user to check game settings for keyboard bindings.")
+                f"Unable to retrieve keybinding for {key_binding}. Advise user to check game settings for keyboard bindings.")
 
-        logger.debug('send=' + key_name + ',key:' + str(key) + ',hold:' + str(hold) + ',repeat:' + str(
+        key_name = self.reversed_dict.get(key['key'], "Key not found")
+        logger.debug('send=' + key_binding + ',key:' + str(key) + ',key_name:' + key_name + ',hold:' + str(hold) + ',repeat:' + str(
             repeat) + ',repeat_delay:' + str(repeat_delay) + ',state:' + str(state))
 
         for i in range(repeat):
