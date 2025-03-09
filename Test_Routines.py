@@ -1,6 +1,8 @@
 import logging
 import cv2
 import os
+
+from ED_AP import EDAutopilot
 from Screen_Regions import *
 from Overlay import *
 from Screen import *
@@ -111,8 +113,10 @@ def draw_match_rect(img, pt1, pt2, color, thick):
 
 def compass_test():
     """ Performs a compass test. """
-    scr = Screen()
-    templ = Image_Templates(scr.scaleX, scr.scaleY)
+    ed_ap = EDAutopilot(cb=None)
+    scr = ed_ap.scr
+
+    templ = Image_Templates(scr.scaleX, scr.scaleY, ed_ap.compass_scale)
     scr_reg = Screen_Regions(scr, templ)
 
     while True:
@@ -138,8 +142,11 @@ def template_matching_test(region_name, template):
     """ To test the template matching. Using the provided region and template.
     :param region_name: The name of the region with the required filter to apply to the image.
     :param template: The name of the template to find in each file being tested. """
-    scr = Screen()
-    templ = Image_Templates(scr.scaleX, scr.scaleY)
+    ed_ap = EDAutopilot(cb=None)
+    scr = ed_ap.scr
+
+    templ = Image_Templates(scr.scaleX, scr.scaleY, ed_ap.compass_scale)
+
     scr_reg = Screen_Regions(scr, templ)
 
     while True:
@@ -158,8 +165,10 @@ def show_regions(region_names):
     """ Draw a rectangle indicating the given region on the Elite Dangerous window.
         :param region_names: An array names of the regions to indicate on screen (i.e. ["compass", "target"])."""
     ov = Overlay("", 1)
-    scr = Screen()
-    templ = Image_Templates(scr.scaleX, scr.scaleY)
+    ed_ap = EDAutopilot(cb=None)
+    scr = ed_ap.scr
+
+    templ = Image_Templates(scr.scaleX, scr.scaleY, ed_ap.compass_scale)
     scrReg = Screen_Regions(scr, templ)
 
     overlay_colors = [
