@@ -1,12 +1,14 @@
+# 3/9/2025 Stumpii
+ - Added logging of key name (key_a) to send log.
+ - Modified FSD Jump logic to better handle Braben Tunnels.
+ - Changed logging of callbacks to stop assists.
+ - Added timestamp to autopilot log.
+
 # 3/8/2025 Stumpii
  - Added button to load TCE (Trade Computer Extension) destination.
  - Added hyperlink to TCE for those that do not know of it.
  - Moved Honk to start when entering a system instead of when leaving to allow commanders to cancel FSD Assist if there is something interesting in the system.
  - Updated requirements text to include Pillow 10.4.
- - Added logging of key name (key_a) to send log.
- - Modified FSD Jump logic to better handle Braben Tunnels.
- - Changed logging of callbacks to stop assists.
- - Added timestamp to autopilot log.
 
 # 3/5/2025 Stumpii
  - Added single waypoint assist feature. A couple of text boxes and checkbox on the debug screen allow you to enter the system name to go to and then check the box to start your travels to that system.
