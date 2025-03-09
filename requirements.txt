@@ -8,7 +8,7 @@ numpy==1.25.1 # <2.0 # Specific version required for paddleOCR.
 opencv_python==4.5.5.62
 paddleocr
 paddlepaddle
-Pillow==9.0.1
+Pillow==10.4.0
 PyAutoGUI==0.9.53
 pynput==1.7.6
 pyttsx3==2.90
