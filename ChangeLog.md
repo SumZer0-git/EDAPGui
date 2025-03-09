@@ -1,3 +1,9 @@
+# 3/9/2025 Stumpii
+ - Added logging of key name (key_a) to send log.
+ - Modified FSD Jump logic to better handle Braben Tunnels.
+ - Changed logging of callbacks to stop assists.
+ - Added timestamp to autopilot log.
+
 # 3/8/2025 Stumpii
  - Added button to load TCE (Trade Computer Extension) destination.
  - Added hyperlink to TCE for those that do not know of it.

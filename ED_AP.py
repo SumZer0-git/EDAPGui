@@ -972,7 +972,7 @@ class EDAutopilot:
 
         if ocr_textlist is not None:
             sim = self.ocr.string_similarity(f"SUPERCRUISE OVERCHARGE ACTIVE", str(ocr_textlist))
-            logger.info(f"SCO similarity with {str(ocr_textlist)} is {sim}")
+            #logger.info(f"SCO similarity with {str(ocr_textlist)} is {sim}")
 
         if self.cv_view:
             image = cv2.rectangle(image, (0, 0), (1000, 30), (0, 0, 0), -1)
@@ -1168,7 +1168,7 @@ class EDAutopilot:
 
         close = 10  # in degrees
         if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
-            logger.error('align=err1')
+            logger.error('align=err1, nav_align not in super or space')
             raise Exception('nav_align not in super or space')
 
         self.vce.say("Navigation Align")
@@ -1326,7 +1326,7 @@ class EDAutopilot:
             self.ap_ckb('log', 'Target not found, terminating SC Assist')
             return False
 
-        logger.debug("sc_target_align x: "+str(off['x'])+" y:"+str(off['y']))
+        #logger.debug("sc_target_align x: "+str(off['x'])+" y:"+str(off['y']))
 
         while (abs(off['x']) > close) or \
                 (abs(off['y']) > close):
@@ -1341,7 +1341,7 @@ class EDAutopilot:
             else:
                 hold_pitch = 0.075
 
-            logger.debug("  sc_target_align x: "+str(off['x'])+" y:"+str(off['y']))
+            #logger.debug("  sc_target_align x: "+str(off['x'])+" y:"+str(off['y']))
 
             if off['x'] > close:
                 self.keys.send('YawRightButton', hold=hold_yaw)
@@ -1461,20 +1461,31 @@ class EDAutopilot:
             logger.debug('jump= start fsd')
             
             self.keys.send('HyperSuperCombination', hold=1)
-            sleep(16)
 
-            if self.jn.ship_state()['status'] != 'starting_hyperspace':
+            res = self.status.wait_for_flag_on(FlagsFsdCharging, 5)
+            if not res:
+                logger.error('FSD failed to charge.')
+                continue
+
+            res = self.status.wait_for_flag_on(FlagsFsdJump, 30)
+            if not res:
+                logger.warning('FSD failure to start jump timeout.')
                 self.mnvr_to_target(scr_reg)  # attempt realign to target
-            else:
-                logger.debug('jump= in jump')
-                while self.jn.ship_state()['status'] != 'in_supercruise':
-                    sleep(1)
-                logger.debug('jump= speed 0')
-                self.jump_cnt = self.jump_cnt+1
-                self.keys.send('SetSpeedZero', repeat=3)  # Let's be triply sure that we set speed to 0% :)
-                sleep(1)  # wait 1 sec after jump to allow graphics to stablize and accept inputs
-                logger.debug('jump=complete')
-                return True
+                continue
+
+            logger.debug('jump= in jump')
+            # Wait for jump to complete. Should never err
+            res = self.status.wait_for_flag_off(FlagsFsdJump, 60)
+            if not res:
+                logger.error('FSD failure to complete jump timeout.')
+                continue
+
+            logger.debug('jump= speed 0')
+            self.jump_cnt = self.jump_cnt+1
+            self.keys.send('SetSpeedZero', repeat=3)  # Let's be triply sure that we set speed to 0% :)
+            sleep(1)  # wait 1 sec after jump to allow graphics to stablize and accept inputs
+            logger.debug('jump=complete')
+            return True
 
         logger.error(f'FSD Jump failed {jump_tries} times. jump=err2')
         raise Exception("FSD Jump failure")

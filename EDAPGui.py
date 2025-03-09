@@ -206,50 +206,72 @@ class APGui():
         self.ed_ap.gui_loaded = True
 
     # callback from the EDAP, to configure GUI items
-    def callback(self, key, body=None):
-        if key == 'log':
+    def callback(self, msg, body=None):
+        if msg == 'log':
             self.log_msg(body)
-        elif key == 'log+vce':
+        elif msg == 'log+vce':
             self.log_msg(body)
             self.ed_ap.vce.say(body)
-        elif key == 'statusline':
+        elif msg == 'statusline':
             self.update_statusline(body)
-        elif key == 'fsd_stop':
-            logger.debug("Detected 'fsd_stop' key")
+        elif msg == 'fsd_stop':
+            logger.debug("Detected 'fsd_stop' callback msg")
             self.checkboxvar['FSD Route Assist'].set(0)
             self.check_cb('FSD Route Assist')
-        elif key == 'fsd_start':
+        elif msg == 'fsd_start':
             self.checkboxvar['FSD Route Assist'].set(1)
             self.check_cb('FSD Route Assist')
-        elif key == 'sc_stop':
-            logger.debug("Detected 'sc_stop' key")
+        elif msg == 'sc_stop':
+            logger.debug("Detected 'sc_stop' callback msg")
             self.checkboxvar['Supercruise Assist'].set(0)
             self.check_cb('Supercruise Assist')
-        elif key == 'sc_start':
+        elif msg == 'sc_start':
             self.checkboxvar['Supercruise Assist'].set(1)
             self.check_cb('Supercruise Assist')
-        elif key == 'waypoint_stop':
-            logger.debug("Detected 'waypoint_stop' key")
+        elif msg == 'waypoint_stop':
+            logger.debug("Detected 'waypoint_stop' callback msg")
             self.checkboxvar['Waypoint Assist'].set(0)
             self.check_cb('Waypoint Assist')
-        elif key == 'robigo_stop':
-            logger.debug("Detected 'robigo_stop' key")
+        elif msg == 'robigo_stop':
+            logger.debug("Detected 'robigo_stop' callback msg")
             self.checkboxvar['Robigo Assist'].set(0)
             self.check_cb('Robigo Assist')
-        elif key == 'robigo_start':
+        elif msg == 'robigo_start':
             self.checkboxvar['Robigo Assist'].set(1)
             self.check_cb('Robigo Assist')
-        elif key == 'afk_stop':
-            logger.debug("Detected 'afk_stop' key")
+        elif msg == 'afk_stop':
+            logger.debug("Detected 'afk_stop' callback msg")
             self.checkboxvar['AFK Combat Assist'].set(0)
             self.check_cb('AFK Combat Assist')
-        elif key == 'single_waypoint_stop':
-            logger.debug("Detected 'single_waypoint_stop'")
+        elif msg == 'single_waypoint_stop':
+            logger.debug("Detected 'single_waypoint_stop' callback msg")
             self.checkboxvar['Single Waypoint Assist'].set(0)
             self.check_cb('Single Waypoint Assist')
-        elif key == 'jumpcount':
+
+        elif msg == 'stop_all_assists':
+            logger.debug("Detected 'stop_all_assists' callback msg")
+
+            self.checkboxvar['FSD Route Assist'].set(0)
+            self.check_cb('FSD Route Assist')
+
+            self.checkboxvar['Supercruise Assist'].set(0)
+            self.check_cb('Supercruise Assist')
+
+            self.checkboxvar['Waypoint Assist'].set(0)
+            self.check_cb('Waypoint Assist')
+
+            self.checkboxvar['Robigo Assist'].set(0)
+            self.check_cb('Robigo Assist')
+
+            self.checkboxvar['AFK Combat Assist'].set(0)
+            self.check_cb('AFK Combat Assist')
+
+            self.checkboxvar['Single Waypoint Assist'].set(0)
+            self.check_cb('Single Waypoint Assist')
+
+        elif msg == 'jumpcount':
             self.update_jumpcount(body)
-        elif key == 'update_ship_cfg':
+        elif msg == 'update_ship_cfg':
             self.update_ship_cfg()
 
     def update_ship_cfg(self):
@@ -297,11 +319,7 @@ class APGui():
     # this routine is to stop any current autopilot activity
     def stop_all_assists(self):
         logger.debug("Entered: stop_all_assists")
-        self.callback('fsd_stop')
-        self.callback('sc_stop')
-        self.callback('afk_stop')
-        self.callback('waypoint_stop')
-        self.callback('robigo_stop')
+        self.callback('stop_all_assists')
 
     def start_fsd(self):
         logger.debug("Entered: start_fsd")

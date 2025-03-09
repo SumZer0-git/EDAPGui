@@ -1,6 +1,5 @@
-{ 
-    "Ninabin":   {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, 
-    "Wailaroju": {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false},
-    "Enayex":    {"DockWithStation": "Watt Port", "StationCoord": [1977,509], "StationBookmark": -1, "SellNumDown": 12, "BuyNumDown": 5, "Completed": false}, 
-    "Eurybia":   {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false} 
-    }
+{
+    "ICZ DV-Y b3": {"DockWithStation": "System Colonisation Ship", "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, 
+    "Yab Yum":     {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false},
+    "Autrimpe":    {"DockWithStation": "Leberecht Tempel Vision", "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": 18, "Completed": false}
+}
