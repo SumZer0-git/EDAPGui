@@ -145,33 +145,58 @@ class EDWayPoint:
             bookmark = self.waypoints[dest]['StationBookmark']
         else:
             bookmark = -1
-               
-        ap.keys.send('SystemMapOpen')
-        sleep(3.5)
-        if self.is_odyssey and bookmark != -1:
-            ap.keys.send('UI_Left')
-            sleep(1)
-            ap.keys.send('UI_Select')
-            sleep(.5)
-            ap.keys.send('UI_Down', repeat=2)
-            sleep(.5)
-            ap.keys.send('UI_Right')
-            sleep(.5)
-            ap.keys.send('UI_Down', repeat=bookmark)
-            sleep(.5)
-            ap.keys.send('UI_Select', hold=4.0)
-        else:
-            self.mouse.do_click(x, y)
-            self.mouse.do_click(x, y, 1.25)
 
-            # for horizons we need to select it
-            if self.is_odyssey == False:
-                ap.keys.send('UI_Select')            
-        
-        ap.keys.send('SystemMapOpen')
-        sleep(0.5)
-        
-    
+        # Check if this is a normal station
+        if self.waypoints[dest]['DockWithStation'] != "System Colonisation Ship":
+            ap.keys.send('SystemMapOpen')
+            sleep(3.5)
+            if self.is_odyssey and bookmark != -1:
+                ap.keys.send('UI_Left')
+                sleep(1)
+                ap.keys.send('UI_Select')
+                sleep(.5)
+                ap.keys.send('UI_Right')
+                sleep(.5)
+                ap.keys.send('UI_Down', repeat=2)
+                sleep(.5)
+                ap.keys.send('UI_Right')
+                sleep(.5)
+                ap.keys.send('UI_Down', repeat=bookmark)
+                sleep(.5)
+                ap.keys.send('UI_Select', hold=4.0)
+            else:
+                self.mouse.do_click(x, y)
+                self.mouse.do_click(x, y, 1.25)
+
+                # for horizons we need to select it
+                if self.is_odyssey == False:
+                    ap.keys.send('UI_Select')
+
+            ap.keys.send('SystemMapOpen')
+            sleep(0.5)
+
+        elif self.waypoints[dest]['DockWithStation'] == "System Colonisation Ship":
+            # Colonisation ships are bookmarked on the galaxy map WHY!?!?!?
+            ap.keys.send('GalaxyMapOpen')
+            sleep(2)
+            if self.is_odyssey and bookmark != -1:
+                ap.keys.send('UI_Left')  # Go to BOOKMARKS
+                sleep(1)
+                ap.keys.send('UI_Select')  # Select BOOKMARKS
+                sleep(.5)
+                ap.keys.send('UI_Right')  # Go to FAVORITES
+                sleep(.5)
+                ap.keys.send('UI_Down')  # Go to SYSTEMS
+                sleep(.5)
+                ap.keys.send('UI_Select')  # Select SYSTEMS
+                sleep(.5)
+                ap.keys.send('UI_Down', repeat=bookmark)
+                sleep(.5)
+                ap.keys.send('UI_Select', hold=4.0)
+
+            ap.keys.send('GalaxyMapOpen')
+            sleep(0.5)
+
     # Call either the Odyssey or Horizons version of the Galatic Map sequence
     def set_waypoint_target(self, ap, target_name, target_select_cb=None) -> bool:
         # No waypoints defined, then return False
@@ -270,79 +295,106 @@ class EDWayPoint:
         ap.keys.send('GalaxyMapOpen')
         
         return True
-    
- 
-        
+
     def execute_trade(self, ap, dest):
         sell_down = self.waypoints[dest]['SellNumDown']
         buy_down = self.waypoints[dest]['BuyNumDown']  
         
         if sell_down == -1 and buy_down == -1:
             return
-            
-        # We start off on the Main Menu in the Station
-        ap.keys.send('UI_Up', repeat=3)  # make sure at the top
-        ap.keys.send('UI_Down')
-        ap.keys.send('UI_Select')  # Select StarPort Services
-                
-        sleep(8)   # wait for new menu to finish rendering
 
-        ap.keys.send('UI_Down')
-        ap.keys.send('UI_Select')  # Select Commodities
-                    
-        sleep(2.5)   
-        
-        # --------- SELL ----------
-        if sell_down != -1:
+        # Check if a regular station/fleet carrier (not a colonisation ship)
+        if self.waypoints[dest]['DockWithStation'] != "System Colonisation Ship":
+            # We start off on the Main Menu in the Station
+            ap.keys.send('UI_Up', repeat=3)  # make sure at the top
             ap.keys.send('UI_Down')
-            ap.keys.send('UI_Select')  # Select Sell
-            
-            sleep(1.5)   # give time to bring up, if needed
-            ap.keys.send('UI_Right')   # Go to top of commodities list
-            ap.keys.send('UI_Up', repeat=10)  # go up 10x in case were not on top of list
-            ap.keys.send('UI_Down', repeat=sell_down)  # go down # of times user specified
-            ap.keys.send('UI_Select')  # Select that commodity
-    
-            sleep(3)  # give time for popup
-            ap.keys.send('UI_Up', repeat=3)  # make sure at top
-            ap.keys.send('UI_Down')    # Down to the Sell button (already assume sell all)     
-            ap.keys.send('UI_Select')  # Select to Sell all
-        
-        # TODO: Note, if the waypoint plan has sell_down != -1, then we are assuming we have
-        # cargo to sell, if not we are in limbo here as the Sell button not selectable
-        #  Could look at the ship_status['MarketSel'] == True (to be added), to see that we sold
-        #  and if not, go down 1 and select cancel
-                   
-        # --------- BUY ----------
-        if buy_down != -1:
-            sleep(3)  # give time to popdown
+            ap.keys.send('UI_Select')  # Select StarPort Services
+
+            sleep(8)   # wait for new menu to finish rendering
+
+            ap.keys.send('UI_Down')
+            ap.keys.send('UI_Select')  # Select Commodities
+
+            sleep(2.5)
+
+            # --------- SELL ----------
+            if sell_down != -1:
+                ap.keys.send('UI_Down')
+                ap.keys.send('UI_Select')  # Select Sell
+
+                sleep(1.5)   # give time to bring up, if needed
+                ap.keys.send('UI_Right')   # Go to top of commodities list
+                ap.keys.send('UI_Up', repeat=10)  # go up 10x in case were not on top of list
+                ap.keys.send('UI_Down', repeat=sell_down)  # go down # of times user specified
+                ap.keys.send('UI_Select')  # Select that commodity
+
+                sleep(3)  # give time for popup
+                ap.keys.send('UI_Up', repeat=3)  # make sure at top
+                ap.keys.send('UI_Down')    # Down to the Sell button (already assume sell all)
+                ap.keys.send('UI_Select')  # Select to Sell all
+
+            # TODO: Note, if the waypoint plan has sell_down != -1, then we are assuming we have
+            # cargo to sell, if not we are in limbo here as the Sell button not selectable
+            #  Could look at the ship_status['MarketSel'] == True (to be added), to see that we sold
+            #  and if not, go down 1 and select cancel
+
+            # --------- BUY ----------
+            if buy_down != -1:
+                sleep(3)  # give time to popdown
+                ap.keys.send('UI_Left')    # back to left menu
+                sleep(0.5)
+                ap.keys.send('UI_Up', repeat=2)      # go up to Buy
+                ap.keys.send('UI_Select')  # Select Buy
+
+                sleep(1.5) # give time to bring up list
+                ap.keys.send('UI_Right')   # Go to top of commodities list
+                ap.keys.send('UI_Up', repeat=sell_down+5)  # go up sell_down times in case were not on top of list (+5 for pad)
+                ap.keys.send('UI_Down', repeat=buy_down)  # go down # of times user specified
+                ap.keys.send('UI_Select')  # Select that commodity
+
+                sleep(2) # give time to popup
+                ap.keys.send('UI_Up', repeat=3)      # go up to quantity to buy (may not default to this)
+                ap.keys.send('UI_Right', hold=4.0)   # Hold down Right key to buy will fill cargo
+                ap.keys.send('UI_Down')
+                ap.keys.send('UI_Select')  # Select Buy
+
+            sleep(1.5)  # give time to popdown
             ap.keys.send('UI_Left')    # back to left menu
-            sleep(0.5)
-            ap.keys.send('UI_Up', repeat=2)      # go up to Buy
-            ap.keys.send('UI_Select')  # Select Buy               
-            
-            sleep(1.5) # give time to bring up list
-            ap.keys.send('UI_Right')   # Go to top of commodities list
-            ap.keys.send('UI_Up', repeat=sell_down+5)  # go up sell_down times in case were not on top of list (+5 for pad)
-            ap.keys.send('UI_Down', repeat=buy_down)  # go down # of times user specified
-            ap.keys.send('UI_Select')  # Select that commodity     
-            
-            sleep(2) # give time to popup
-            ap.keys.send('UI_Up', repeat=3)      # go up to quantity to buy (may not default to this)
-            ap.keys.send('UI_Right', hold=4.0)   # Hold down Right key to buy will fill cargo
-            ap.keys.send('UI_Down')
-            ap.keys.send('UI_Select')  # Select Buy             
+            ap.keys.send('UI_Down', repeat=8)    # go down 4x to highlight Exit
+            ap.keys.send('UI_Select')  # Select Exit, back to StartPort Menu
+            sleep(1) # give time to get back to menu
+            if self.is_odyssey == True:
+                ap.keys.send('UI_Down', repeat=4)    # go down 4x to highlight Exit
 
-        sleep(1.5)  # give time to popdown
-        ap.keys.send('UI_Left')    # back to left menu
-        ap.keys.send('UI_Down', repeat=8)    # go down 4x to highlight Exit
-        ap.keys.send('UI_Select')  # Select Exit, back to StartPort Menu
-        sleep(1) # give time to get back to menu
-        if self.is_odyssey == True:
-            ap.keys.send('UI_Down', repeat=4)    # go down 4x to highlight Exit
-            
-        ap.keys.send('UI_Select')  # Select Exit, back to top menu
-        sleep(2)  # give time to popdown menu    
+            ap.keys.send('UI_Select')  # Select Exit, back to top menu
+            sleep(2)  # give time to popdown menu
+
+        elif self.waypoints[dest]['DockWithStation'] == "System Colonisation Ship":
+            # We start off on the Main Menu in the Station
+            ap.keys.send('UI_Up', repeat=3)  # make sure at the top
+            ap.keys.send('UI_Down')
+            ap.keys.send('UI_Select')  # Select StarPort Services
+
+            sleep(5)  # wait for new menu to finish rendering
+
+            # --------- SELL ----------
+            if sell_down != -1:
+                ap.keys.send('UI_Left', repeat=3)  # Go to table
+                ap.keys.send('UI_Down', hold=2)  # Go to bottom
+                ap.keys.send('UI_Up')  # Select RESET/CONFIRM TRANSFER/TRANSFER ALL
+                ap.keys.send('UI_Left', repeat=2)  # Go to RESET
+                ap.keys.send('UI_Right', repeat=2)  # Go to TRANSFER ALL
+                ap.keys.send('UI_Select')  # Select TRANSFER ALL
+                sleep(0.5)
+
+                ap.keys.send('UI_Left')  # Go to CONFIRM TRANSFER
+                ap.keys.send('UI_Select')  # Select CONFIRM TRANSFER
+                sleep(2)
+
+                ap.keys.send('UI_Down')  # Go to EXIT
+                ap.keys.send('UI_Select')  # Select EXIT
+
+                sleep(2)  # give time to popdown menu
 
 
 # this import the temp class needed for unit testing
