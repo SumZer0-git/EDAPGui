@@ -59,7 +59,15 @@ When entering a System via Waypoint Assist, if the DockWithStation is **'System 
 Upon arriving at the station, the SC Assist (which is acting on behalf of the Waypoint Assist), will drop your ship
 out of Supercruise and attempt docking.  Once docked, the fuel and repair will automatically be commanded.
 
-Note for trading: If **'SellNumDown'** is not **'-1'**, upon docking with a System Colonisation Ship, EDAP will sell all commodities that can be sold, regardless of the value of **'SellNumDown'**. **'BuyNumDown'** is ignored as there are no commodities that can be bought from a System Colonisation Ship. 
+Note for trading: If **'SellNumDown'** is not **'-1'**, upon docking with a System Colonisation Ship, EDAP will sell all commodities that can be sold, regardless of the value of **'SellNumDown'**. **'BuyNumDown'** is ignored as there are no commodities that can be bought from a System Colonisation Ship.
+
+Example below:
+```py
+{
+    "HIP 112113": {"DockWithStation": "Nomen Vision", "StationCoord": [0,0], "StationBookmark": 0, "SellNumDown": -1, "BuyNumDown": 19, "Completed": true},
+    "Shui Wei Sector AL-O b6-3": {"DockWithStation": "System Colonisation Ship", "StationCoord": [0,0], "StationBookmark": 0, "SellNumDown": 9999, "BuyNumDown": -1, "Completed": true}
+}
+```
 
 ## Trading
 The SellNumDown and BuyNumDown fields are associated with auto-trading.  If either of those number are *not* -1, the 
