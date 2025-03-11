@@ -1475,7 +1475,7 @@ class EDAutopilot:
 
             logger.debug('jump= in jump')
             # Wait for jump to complete. Should never err
-            res = self.status.wait_for_flag_off(FlagsFsdJump, 60)
+            res = self.status.wait_for_flag_off(FlagsFsdJump, 360)
             if not res:
                 logger.error('FSD failure to complete jump timeout.')
                 continue
