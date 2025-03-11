@@ -1,3 +1,8 @@
+# 3/10/2025 Stumpii: Added System Colonisation Ship support into waypoint system
+ - Added System Colonisation Ship support into waypoint system.
+ - Updated waypoints doc with new feature.
+ - Add compass scaling to test routines.
+
 # 3/9/2025 Stumpii
  - Added logging of key name (key_a) to send log.
  - Modified FSD Jump logic to better handle Braben Tunnels.
