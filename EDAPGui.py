@@ -139,6 +139,7 @@ class APGui():
 
         self.checkboxvar['Enable Randomness'].set(self.ed_ap.config['EnableRandomness'])
         self.checkboxvar['Activate Elite for each key'].set(self.ed_ap.config['ActivateEliteEachKey'])
+        self.checkboxvar['Automatic logout'].set(self.ed_ap.config['AutomaticLogout'])
         self.checkboxvar['Enable Overlay'].set(self.ed_ap.config['OverlayTextEnable'])
         self.checkboxvar['Enable Voice'].set(self.ed_ap.config['VoiceEnable'])
 
@@ -692,6 +693,11 @@ class APGui():
             self.ed_ap.set_activate_elite_eachkey(False)
             self.ed_ap.keys.activate_window = False
 
+        if self.checkboxvar['Automatic logout'].get():
+            self.ed_ap.set_automatic_logout(True)
+        else:
+            self.ed_ap.set_automatic_logout(False)
+
         if self.checkboxvar['Enable Overlay'].get():
             self.ed_ap.set_overlay(True)
         else:
@@ -874,8 +880,11 @@ class APGui():
         cb_random = Checkbutton(blk_ap, text='Enable Randomness', anchor='w', pady=3, justify=LEFT, onvalue=1, offvalue=0, variable=self.checkboxvar['Enable Randomness'], command=(lambda field='Enable Randomness': self.check_cb(field)))
         cb_random.grid(row=4, column=0, columnspan=2, sticky=(W))
         self.checkboxvar['Activate Elite for each key'] = BooleanVar()
-        cb_random = Checkbutton(blk_ap, text='Activate Elite for each key', anchor='w', pady=3, justify=LEFT, onvalue=1, offvalue=0, variable=self.checkboxvar['Activate Elite for each key'], command=(lambda field='Activate Elite for each key': self.check_cb(field)))
-        cb_random.grid(row=5, column=0, columnspan=2, sticky=(W))
+        cb_activate_elite = Checkbutton(blk_ap, text='Activate Elite for each key', anchor='w', pady=3, justify=LEFT, onvalue=1, offvalue=0, variable=self.checkboxvar['Activate Elite for each key'], command=(lambda field='Activate Elite for each key': self.check_cb(field)))
+        cb_activate_elite.grid(row=5, column=0, columnspan=2, sticky=(W))
+        self.checkboxvar['Automatic logout'] = BooleanVar()
+        cb_logout = Checkbutton(blk_ap, text='Automatic logout', anchor='w', pady=3, justify=LEFT, onvalue=1, offvalue=0, variable=self.checkboxvar['Automatic logout'], command=(lambda field='Automatic logout': self.check_cb(field)))
+        cb_logout.grid(row=6, column=0, columnspan=2, sticky=(W))
 
         # buttons settings block
         blk_buttons = LabelFrame(blk_settings, text="BUTTONS")

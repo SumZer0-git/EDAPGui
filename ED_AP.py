@@ -60,6 +60,7 @@ class EDAutopilot:
             "Robigo_Single_Loop": False,   # True means only 1 loop will executed and then terminate the Robigo, will not perform mission processing
             "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
             "ActivateEliteEachKey": False, # Activate Elite window before each key or group of keys
+            "AutomaticLogout": False,      # Logout when we are done with the mission
             "OverlayTextEnable": False,    # Experimental at this stage
             "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
             "OverlayTextXOffset": 50,      # offset left the screen to start place overlay text
@@ -1416,6 +1417,21 @@ class EDAutopilot:
         else:
             self.ap_ckb('log', 'Not in analysis mode. Skipping discovery scan (honk).')
 
+    def logout(self):
+        """ Performs menu action to log out of game """
+        self.update_ap_status("Logout")
+        self.keys.send_key('Down', SCANCODE["Key_Escape"])
+        sleep(0.5)
+        self.keys.send_key('Up', SCANCODE["Key_Escape"])
+        sleep(0.5)
+        self.keys.send('UI_Up')
+        sleep(0.5)
+        self.keys.send('UI_Select')
+        sleep(0.5)
+        self.keys.send('UI_Select')
+        sleep(0.5)
+        self.update_ap_status("Idle")
+
     # position() happens after a refuel and performs
     #   - accelerate past sun
     #   - perform Discovery scan
@@ -1849,6 +1865,9 @@ class EDAutopilot:
         if self.have_destination(scr_reg) == False:
             self.keys.send('SetSpeedZero')
             self.vce.say("Destination Reached, distance jumped:"+str(int(self.total_dist_jumped))+" lightyears")
+            if self.config["AutomaticLogout"] == True:
+                sleep(5)
+                self.logout()
             return True
         # else there is a destination in System, so let jump over to SC Assist
         else:
@@ -2083,6 +2102,9 @@ class EDAutopilot:
 
     def set_activate_elite_eachkey(self, enable=False):
         self.config["ActivateEliteEachKey"] = enable
+
+    def set_automatic_logout(self, enable=False):
+        self.config["AutomaticLogout"] = enable
 
     def set_overlay(self, enable=False):
         # TODO: apply the change without restarting the program
