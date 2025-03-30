@@ -34,14 +34,14 @@ from EDlogger import logger
 
 
 """
-File:EDAPGui.py    
+File:EDAPGui.py
 
 Description:
 User interface for controlling the ED Autopilot
 
 Note:
 Ideas taken from:  https://github.com/skai2/EDAutopilot
- 
+
  HotKeys:
     Home - Start FSD Assist
     INS  - Start SC Assist
@@ -82,6 +82,8 @@ class APGui():
             'Supercruise Assist': "Will keep your ship pointed to target, \nyou target can only be a station for the autodocking to work.",
             'Waypoint Assist': "When selected, will prompt for the waypoint file. \nThe waypoint file contains System names that \nwill be entered into Galaxy Map and route plotted.",
             'Robigo Assist': "",
+            'DSS Assist': "When selected, will perform DSS scans while you are traveling between stars.",
+            'Single Waypoint Assist': "",
             'ELW Scanner': "Will perform FSS scans while FSD Assist is traveling between stars. \nIf the FSS shows a signal in the region of Earth, \nWater or Ammonia type worlds, it will announce that discovery.",
             'AFK Combat Assist': "Used with a AFK Combat ship in a Rez Zone.",
             'RollRate': "Roll rate your ship has in deg/sec. Higher the number the more maneuverable the ship.",
@@ -126,6 +128,7 @@ class APGui():
         self.SC_A_running = False
         self.WP_A_running = False
         self.RO_A_running = False
+        self.DSS_A_running = False
         self.SWP_A_running = False
 
         self.cv_view = False
@@ -243,6 +246,14 @@ class APGui():
             logger.debug("Detected 'afk_stop' callback msg")
             self.checkboxvar['AFK Combat Assist'].set(0)
             self.check_cb('AFK Combat Assist')
+        elif msg == 'dss_start':
+            logger.debug("Detected 'dss_start' callback msg")
+            self.checkboxvar['DSS Assist'].set(1)
+            self.check_cb('DSS Assist')
+        elif msg == 'dss_stop':
+            logger.debug("Detected 'dss_stop' callback msg")
+            self.checkboxvar['DSS Assist'].set(0)
+            self.check_cb('DSS Assist')
         elif msg == 'single_waypoint_stop':
             logger.debug("Detected 'single_waypoint_stop' callback msg")
             self.checkboxvar['Single Waypoint Assist'].set(0)
@@ -265,6 +276,9 @@ class APGui():
 
             self.checkboxvar['AFK Combat Assist'].set(0)
             self.check_cb('AFK Combat Assist')
+
+            self.checkboxvar['DSS Assist'].set(0)
+            self.check_cb('DSS Assist')
 
             self.checkboxvar['Single Waypoint Assist'].set(0)
             self.check_cb('Single Waypoint Assist')
@@ -379,6 +393,21 @@ class APGui():
         self.RO_A_running = False
         self.log_msg("Robigo Assist stop")
         self.ed_ap.vce.say("Robigo Assist Off")
+        self.update_statusline("Idle")
+
+    def start_dss(self):
+        logger.debug("Entered: start_dss")
+        self.ed_ap.set_dss_assist(True)
+        self.DSS_A_running = True
+        self.log_msg("DSS Assist start")
+        self.ed_ap.vce.say("DSS Assist On")
+
+    def stop_dss(self):
+        logger.debug("Entered: stop_dss")
+        self.ed_ap.set_dss_assist(False)
+        self.DSS_A_running = False
+        self.log_msg("DSS Assist stop")
+        self.ed_ap.vce.say("DSS Assist Off")
         self.update_statusline("Idle")
 
     def start_single_waypoint_assist(self):
@@ -553,6 +582,7 @@ class APGui():
                 self.lab_ck['Supercruise Assist'].config(state='disabled')
                 self.lab_ck['Waypoint Assist'].config(state='disabled')
                 self.lab_ck['Robigo Assist'].config(state='disabled')
+                self.lab_ck['DSS Assist'].config(state='disabled')
                 self.start_fsd()
 
             elif self.checkboxvar['FSD Route Assist'].get() == 0 and self.FSD_A_running == True:
@@ -561,6 +591,7 @@ class APGui():
                 self.lab_ck['AFK Combat Assist'].config(state='active')
                 self.lab_ck['Waypoint Assist'].config(state='active')
                 self.lab_ck['Robigo Assist'].config(state='active')
+                self.lab_ck['DSS Assist'].config(state='active')
 
         if field == 'Supercruise Assist':
             if self.checkboxvar['Supercruise Assist'].get() == 1 and self.SC_A_running == False:
@@ -568,6 +599,7 @@ class APGui():
                 self.lab_ck['AFK Combat Assist'].config(state='disabled')
                 self.lab_ck['Waypoint Assist'].config(state='disabled')
                 self.lab_ck['Robigo Assist'].config(state='disabled')
+                self.lab_ck['DSS Assist'].config(state='disabled')
                 self.start_sc()
 
             elif self.checkboxvar['Supercruise Assist'].get() == 0 and self.SC_A_running == True:
@@ -576,6 +608,7 @@ class APGui():
                 self.lab_ck['AFK Combat Assist'].config(state='active')
                 self.lab_ck['Waypoint Assist'].config(state='active')
                 self.lab_ck['Robigo Assist'].config(state='active')
+                self.lab_ck['DSS Assist'].config(state='active')
 
         if field == 'Waypoint Assist':
             if self.checkboxvar['Waypoint Assist'].get() == 1 and self.WP_A_running == False:
@@ -583,6 +616,7 @@ class APGui():
                 self.lab_ck['Supercruise Assist'].config(state='disabled')
                 self.lab_ck['AFK Combat Assist'].config(state='disabled')
                 self.lab_ck['Robigo Assist'].config(state='disabled')
+                self.lab_ck['DSS Assist'].config(state='disabled')
                 self.start_waypoint()
 
             elif self.checkboxvar['Waypoint Assist'].get() == 0 and self.WP_A_running == True:
@@ -591,6 +625,7 @@ class APGui():
                 self.lab_ck['Supercruise Assist'].config(state='active')
                 self.lab_ck['AFK Combat Assist'].config(state='active')
                 self.lab_ck['Robigo Assist'].config(state='active')
+                self.lab_ck['DSS Assist'].config(state='active')
 
         if field == 'Robigo Assist':
             if self.checkboxvar['Robigo Assist'].get() == 1 and self.RO_A_running == False:
@@ -598,6 +633,7 @@ class APGui():
                 self.lab_ck['Supercruise Assist'].config(state='disabled')
                 self.lab_ck['AFK Combat Assist'].config(state='disabled')
                 self.lab_ck['Waypoint Assist'].config(state='disabled')
+                self.lab_ck['DSS Assist'].config(state='disabled')
                 self.start_robigo()
 
             elif self.checkboxvar['Robigo Assist'].get() == 0 and self.RO_A_running == True:
@@ -606,6 +642,7 @@ class APGui():
                 self.lab_ck['Supercruise Assist'].config(state='active')
                 self.lab_ck['AFK Combat Assist'].config(state='active')
                 self.lab_ck['Waypoint Assist'].config(state='active')
+                self.lab_ck['DSS Assist'].config(state='active')
 
         if field == 'AFK Combat Assist':
             if self.checkboxvar['AFK Combat Assist'].get() == 1:
@@ -615,12 +652,31 @@ class APGui():
                 self.lab_ck['Supercruise Assist'].config(state='disabled')
                 self.lab_ck['Waypoint Assist'].config(state='disabled')
                 self.lab_ck['Robigo Assist'].config(state='disabled')
+                self.lab_ck['DSS Assist'].config(state='disabled')
 
             elif self.checkboxvar['AFK Combat Assist'].get() == 0:
                 self.ed_ap.set_afk_combat_assist(False)
                 self.log_msg("AFK Combat Assist stop")
                 self.lab_ck['FSD Route Assist'].config(state='active')
                 self.lab_ck['Supercruise Assist'].config(state='active')
+                self.lab_ck['Waypoint Assist'].config(state='active')
+                self.lab_ck['Robigo Assist'].config(state='active')
+                self.lab_ck['DSS Assist'].config(state='active')
+
+        if field == 'DSS Assist':
+            if self.checkboxvar['DSS Assist'].get() == 1:
+                self.lab_ck['FSD Route Assist'].config(state='disabled')
+                self.lab_ck['AFK Combat Assist'].config(state='disabled')
+                self.lab_ck['Supercruise Assist'].config(state='disabled')
+                self.lab_ck['Waypoint Assist'].config(state='disabled')
+                self.lab_ck['Robigo Assist'].config(state='disabled')
+                self.start_dss()
+
+            elif self.checkboxvar['DSS Assist'].get() == 0:
+                self.stop_dss()
+                self.lab_ck['FSD Route Assist'].config(state='active')
+                self.lab_ck['Supercruise Assist'].config(state='active')
+                self.lab_ck['AFK Combat Assist'].config(state='active')
                 self.lab_ck['Waypoint Assist'].config(state='active')
                 self.lab_ck['Robigo Assist'].config(state='active')
 
@@ -707,7 +763,7 @@ class APGui():
 
     def gui_gen(self, win):
 
-        modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'Robigo Assist', 'AFK Combat Assist')
+        modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'Robigo Assist', 'AFK Combat Assist', 'DSS Assist')
         ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time')
         autopilot_entry_fields = ('Sun Bright Threshold', 'Nav Align Tries', 'Jump Tries', 'Wait For Autodock')
         buttons_entry_fields = ('Start FSD', 'Start SC', 'Start Robigo', 'Stop All')

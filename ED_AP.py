@@ -45,7 +45,7 @@ class EDAutopilot:
 
         self.config = {
             "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS
-            "JumpTries": 3,                # 
+            "JumpTries": 3,                #
             "NavAlignTries": 3,            #
             "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel
             "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
@@ -55,7 +55,7 @@ class EDAutopilot:
             "DockingRetries": 30,          # number of time to attempt docking
             "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
             "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
-            "HotKey_StartRobigo": "pgup",  # 
+            "HotKey_StartRobigo": "pgup",  #
             "HotKey_StopAllAssists": "end",
             "Robigo_Single_Loop": False,   # True means only 1 loop will executed and then terminate the Robigo, will not perform mission processing
             "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
@@ -63,8 +63,8 @@ class EDAutopilot:
             "OverlayTextEnable": False,    # Experimental at this stage
             "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
             "OverlayTextXOffset": 50,      # offset left the screen to start place overlay text
-            "OverlayTextFont": "Eurostyle", 
-            "OverlayTextFontSize": 14, 
+            "OverlayTextFont": "Eurostyle",
+            "OverlayTextFontSize": 14,
             "OverlayGraphicEnable": False, # not implemented yet
             "DiscordWebhook": False,       # discord not implemented yet
             "DiscordWebhookURL": "",
@@ -88,6 +88,7 @@ class EDAutopilot:
         self._sc_sco_active_on_ls = 0
         self._single_waypoint_station = None
         self._single_waypoint_system = None
+        self._prev_star_system = None
 
         # used this to write the self.config table to the json file
         # self.write_config(self.config)
@@ -148,6 +149,7 @@ class EDAutopilot:
         self.afk_combat_assist_enabled = False
         self.waypoint_assist_enabled = False
         self.robigo_assist_enabled = False
+        self.dss_assist_enabled = False
         self.single_waypoint_enabled = False
 
         # Create instance of each of the needed Classes
@@ -279,7 +281,9 @@ class EDAutopilot:
                 ap_mode = "Waypoint Assist"
             elif self.afk_combat_assist_enabled == True:
                 ap_mode = "AFK Combat Assist"
-                
+            elif self.dss_assist_enabled == True:
+                ap_mode = "DSS Assist"
+
             ship_state = self.jn.ship_state()['status']
             if ship_state == None:
                 ship_state = '<init>'
@@ -553,19 +557,19 @@ class EDAutopilot:
         # dvide the region in thirds.  Earth, then Water, then Ammonio
         wid_div3 = scr_reg.reg['fss']['width']/3
 
-        # Exit out of FSS, we got the images we need to process 
+        # Exit out of FSS, we got the images we need to process
         self.keys.send('ExplorationFSSQuit')
 
-        # Uncomment this to show on the ED Window where the region is define.  Must run this file as an App, so uncomment out 
+        # Uncomment this to show on the ED Window where the region is define.  Must run this file as an App, so uncomment out
         # the main at the bottom of file
         #self.overlay.overlay_rect('fss', (scr_reg.reg['fss']['rect'][0], scr_reg.reg['fss']['rect'][1]),
-        #                (scr_reg.reg['fss']['rect'][2],  scr_reg.reg['fss']['rect'][3]), (120, 255, 0),2)    
-        #self.overlay.overlay_paint()           
+        #                (scr_reg.reg['fss']['rect'][2],  scr_reg.reg['fss']['rect'][3]), (120, 255, 0),2)
+        #self.overlay.overlay_paint()
 
         if self.cv_view:
             elw_image_d = elw_image.copy()
             elw_image_d = cv2.cvtColor(elw_image_d, cv2.COLOR_GRAY2RGB)
-            #self.draw_match_rect(elw_image_d, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1) 
+            #self.draw_match_rect(elw_image_d, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1)
             self.draw_match_rect(elw_image_d, maxLoc1, (maxLoc1[0]+15, maxLoc1[1]+25), (0, 0, 255), 1)
             cv2.putText(elw_image_d, f'{maxVal1:5.2f}> .70', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.30, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('fss', elw_image_d)
@@ -667,13 +671,13 @@ class EDAutopilot:
 
         pt = maxLoc
 
-        # get wid/hgt of templates  
+        # get wid/hgt of templates
         c_wid = scr_reg.templates.template['compass']['width']
         c_hgt = scr_reg.templates.template['compass']['height']
         wid = scr_reg.templates.template['navpoint']['width']
         hgt = scr_reg.templates.template['navpoint']['height']
 
-        # cut out the compass from the region          
+        # cut out the compass from the region
         pad = 5
         compass_image = icompass_image[abs(pt[1]-pad): pt[1]+c_hgt+pad, abs(pt[0]-pad): pt[0]+c_wid+pad].copy()
 
@@ -745,13 +749,13 @@ class EDAutopilot:
             icompass_image_d = cv2.cvtColor(icompass_image, cv2.COLOR_GRAY2RGB)
             self.draw_match_rect(icompass_image_d, pt, (pt[0]+c_wid, pt[1]+c_hgt), (0, 0, 255), 2)
             #cv2.rectangle(icompass_image_display, pt, (pt[0]+c_wid, pt[1]+c_hgt), (0, 0, 255), 2)
-            #self.draw_match_rect(compass_image, n_pt, (n_pt[0] + wid, n_pt[1] + hgt), (255,255,255), 2)   
+            #self.draw_match_rect(compass_image, n_pt, (n_pt[0] + wid, n_pt[1] + hgt), (255,255,255), 2)
             self.draw_match_rect(icompass_image_d, (pt[0]+n_pt[0]-pad, pt[1]+n_pt[1]-pad), (pt[0]+n_pt[0]+wid-pad, pt[1]+n_pt[1]+hgt-pad), (0, 255, 0), 1)
             #cv2.rectangle(icompass_image_display, (pt[0]+n_pt[0]-pad, pt[1]+n_pt[1]-pad), (pt[0]+n_pt[0] + wid-pad, pt[1]+n_pt[1] + hgt-pad), (0, 0, 255), 2)
 
             #   dim = (int(destination_width/3), int(destination_height/3))
 
-            #   img = cv2.resize(dst_image, dim, interpolation =cv2.INTER_AREA) 
+            #   img = cv2.resize(dst_image, dim, interpolation =cv2.INTER_AREA)
             icompass_image_d = cv2.rectangle(icompass_image_d, (0, 0), (1000, 60), (0, 0, 0), -1)
             cv2.putText(icompass_image_d, f'Compass: {maxVal:5.4f} > {scr_reg.compass_match_thresh:5.2f}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.putText(icompass_image_d, f'Nav Point: {n_maxVal:5.4f} > {scr_reg.navpoint_match_thresh:5.2f}', (1, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
@@ -768,7 +772,7 @@ class EDAutopilot:
         return result
 
     # Looks to see if the 'dashed' line of the target is present indicating the target is occluded by the planet
-    #  return True if meets threshold 
+    #  return True if meets threshold
     #
     def is_destination_occluded(self, scr_reg) -> bool:
         dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('target_occluded', 'target_occluded')
@@ -1128,20 +1132,20 @@ class EDAutopilot:
 
     # use to orient the ship to not be pointing right at the Sun
     # Checks brightness in the region in front of us, if brightness exceeds a threshold
-    # then will pitch up until below threshold. 
+    # then will pitch up until below threshold.
     #
     def sun_avoid(self, scr_reg):
         logger.debug('align= avoid sun')
-        
+
         sleep(0.5)
 
         # close to core the 'sky' is very bright with close stars, if we are pitch due to a non-scoopable star
         #  which is dull red, the star field is 'brighter' than the sun, so our sun avoidance could pitch up
         #  endlessly. So we will have a fail_safe_timeout to kick us out of pitch up if we've pitch past 110 degrees, but
-        #  we'll add 3 more second for pad in case the user has a higher pitch rate than the vehicle can do   
+        #  we'll add 3 more second for pad in case the user has a higher pitch rate than the vehicle can do
         fail_safe_timeout = (120/self.pitchrate)+3
-        starttime = time.time()  
-        
+        starttime = time.time()
+
         # if sun in front of us, then keep pitching up until it is below us
         while self.is_sun_dead_ahead(scr_reg):
             self.keys.send('PitchUpButton', state=1)
@@ -1157,11 +1161,11 @@ class EDAutopilot:
                 logger.debug('sun avoid failsafe timeout')
                 print("sun avoid failsafe timeout")
                 break
-                
+
         sleep(0.35)                 # up slightly so not to overheat when scooping
         sleep(self.sunpitchuptime)  # some ships heat up too much and need pitch up a little further
         self.keys.send('PitchUpButton', state=0)
-        
+
     def nav_align(self, scr_reg):
         """ Use the compass to find the nav point position.  Will then perform rotation and pitching
         to put the nav point in the middle of the compass, i.e. target right in front of us """
@@ -1257,13 +1261,13 @@ class EDAutopilot:
             else:
                 logger.debug('  out of fine -not off-'+'\n')
                 return
-        # 
+        #
         while (off['x'] > close) or \
               (off['x'] < -close) or \
               (off['y'] > close) or \
               (off['y'] < -close):
 
-            #print("off:"+str(new))  
+            #print("off:"+str(new))
             if off['x'] > close:
                 self.keys.send('YawRightButton', hold=hold_yaw)
             if off['x'] < -close:
@@ -1300,7 +1304,7 @@ class EDAutopilot:
         self.keys.send('SetSpeed100')
 
         self.fsd_target_align(scr_reg)
-        
+
 
     def sc_target_align(self, scr_reg) -> bool:
         """ Stays tight on the target, monitors for disengage and obscured.
@@ -1376,7 +1380,7 @@ class EDAutopilot:
     # Reposition is use when the target is obscured by a world
     #   We pitch 90 up for a bit, then down 90, this should make the target underneath us
     #   this is important because when we do nav_align() if it does not see the Nav Point
-    #   in the compass (because it is a hollow circle), then it will pitch down, this will 
+    #   in the compass (because it is a hollow circle), then it will pitch down, this will
     #   bring the target into view quickly
     #
     def reposition(self, scr_reg):
@@ -1415,7 +1419,7 @@ class EDAutopilot:
     # position() happens after a refuel and performs
     #   - accelerate past sun
     #   - perform Discovery scan
-    #   - perform fss (if enabled) 
+    #   - perform fss (if enabled)
     def position(self, scr_reg, did_refuel=True):
         logger.debug('position')
         add_time = 5
@@ -1459,7 +1463,7 @@ class EDAutopilot:
                 raise Exception('not ready to jump')
             sleep(0.5)
             logger.debug('jump= start fsd')
-            
+
             self.keys.send('HyperSuperCombination', hold=1)
 
             res = self.status.wait_for_flag_on(FlagsFsdCharging, 5)
@@ -1524,23 +1528,23 @@ class EDAutopilot:
 
         logger.debug('refuel')
         scoopable_stars = ['F', 'O', 'G', 'K', 'B', 'A', 'M']
-        
+
         if self.jn.ship_state()['status'] != 'in_supercruise':
             logger.error('refuel=err1')
             return False
             raise Exception('not ready to refuel')
-        
+
         is_star_scoopable = self.jn.ship_state()['star_class'] in scoopable_stars
 
         # if the sun is not scoopable, then set a low low threshold so we can pick up the dull red
         # sun types.  Since we won't scoop it doesn't matter how much we pitch up
-        # if scoopable we know white/yellow stars are bright, so set higher threshold, this will allow us to 
+        # if scoopable we know white/yellow stars are bright, so set higher threshold, this will allow us to
         #  mast out the galaxy edge (which is bright) and not pitch up too much and avoid scooping
         if is_star_scoopable == False or not has_fuel_scoop:
             scr_reg.set_sun_threshold(25)
         else:
             scr_reg.set_sun_threshold(self.config['SunBrightThreshold'])
-                    
+
         # Lets avoid the sun, shall we
         self.vce.say("Avoiding star")
         self.update_ap_status("Avoiding star")
@@ -1552,14 +1556,14 @@ class EDAutopilot:
             self.vce.say("Refueling")
             self.ap_ckb('log', 'Refueling')
             self.update_ap_status("Refueling")
-            
+
             # mnvr into position
             self.keys.send('SetSpeed100')
             sleep(5)
             self.keys.send('SetSpeed50')
             sleep(1.7)
             self.keys.send('SetSpeedZero', repeat=3)
-            
+
             self.refuel_cnt += 1
 
             # The log will not reflect a FuelScoop until first 5 tons filled, then every 5 tons until complete
@@ -1577,7 +1581,7 @@ class EDAutopilot:
                     return False
 
             logger.debug('refuel= wait for refuel')
-            
+
             # We started fueling, so lets give it another timeout period to fuel up
             startime = time.time()
             while not self.jn.ship_state()['fuel_percent'] == 100:
@@ -1590,8 +1594,8 @@ class EDAutopilot:
                 if ((time.time()-startime) > int(self.config['FuelScoopTimeOut'])):
                     self.vce.say("Refueling abort, insufficient scooping")
                     return True
-                sleep(1)              
-                
+                sleep(1)
+
             logger.debug('refuel=complete')
             return True
 
@@ -1812,7 +1816,7 @@ class EDAutopilot:
                 # update jump counters
                 self.total_dist_jumped += self.jn.ship_state()['dist_jumped']
                 self.total_jumps = self.jump_cnt+self.jn.ship_state()['jumps_remains']
-                
+
                 # reset, upon next Jump the Journal will be updated again, unless last jump, so we need to clear this out
                 self.jn.ship_state()['jumps_remains'] = 0
 
@@ -1941,7 +1945,7 @@ class EDAutopilot:
                 self.update_ap_status("Docking Complete")
         else:
             self.vce.say("Exiting Supercruise, setting throttle to zero")
-            self.keys.send('SetSpeedZero')  # make sure we don't continue to land   
+            self.keys.send('SetSpeedZero')  # make sure we don't continue to land
             self.ap_ckb('log', "Supercruise dropped, terminating SC Assist")
 
         self.vce.say("Supercruise Assist complete")
@@ -1967,6 +1971,19 @@ class EDAutopilot:
                 self.afk_combat.launch_fighter()  # assuming two fighter bays
 
         self.vce.say("Terminating AFK Combat Assist")
+
+    def dss_assist(self):
+        while True:
+            sleep(0.5)
+            if self.jn.ship_state()['status'] == 'in_supercruise':
+                cur_star_system = self.jn.ship_state()['cur_star_system']
+                if cur_star_system != self._prev_star_system:
+                    self.update_ap_status("DSS Scan")
+                    self.ap_ckb('log', 'DSS Scan: '+cur_star_system)
+                    self.set_focus_elite_window()
+                    self.honk()
+                    self._prev_star_system = cur_star_system
+                    self.update_ap_status("Idle")
 
     def single_waypoint_assist(self):
         """ Travel to a system or station or both."""
@@ -2037,6 +2054,11 @@ class EDAutopilot:
         if enable == False and self.afk_combat_assist_enabled == True:
             self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.afk_combat_assist_enabled = enable
+
+    def set_dss_assist(self, enable=True):
+        if enable == False and self.dss_assist_enabled == True:
+            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+        self.dss_assist_enabled = enable
 
     def set_single_waypoint_assist(self, system: str, station: str, enable=True):
         if enable == False and self.single_waypoint_enabled == True:
@@ -2212,6 +2234,18 @@ class EDAutopilot:
                     logger.debug("Stopping afk_combat")
                 self.afk_combat_assist_enabled = False
                 self.ap_ckb('afk_stop')
+                self.update_overlay()
+
+            elif self.dss_assist_enabled == True:
+                logger.debug("Running dss_assist")
+                self.set_focus_elite_window()
+                self.update_overlay()
+                try:
+                    self.dss_assist()
+                except EDAP_Interrupt:
+                    logger.debug("Stopping DSS Assist")
+                self.dss_assist_enabled = False
+                self.ap_ckb('dss_stop')
                 self.update_overlay()
 
             elif self.single_waypoint_enabled:
