@@ -1,3 +1,10 @@
+# 3/30/2025 Stumpii: Minor updates.
+ - SCO without OCR, using Status.json
+ - Made honk global to prevent premature disabling in fast ships (Dolphin)
+ - Added FSD SCO Active flag to status parser.
+ - Added time delta and destination data to status parser and simplified general code.
+ - Added glide detection for SC Assist to planet surface.
+
 # 3/10/2025 Stumpii: Added System Colonisation Ship support into waypoint system
  - Added System Colonisation Ship support into waypoint system.
  - Updated waypoints doc with new feature.
