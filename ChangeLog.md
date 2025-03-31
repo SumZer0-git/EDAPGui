@@ -1,5 +1,6 @@
 # 3/31/2025 Stumpii: Flags2 bug fix.
  - Added None check for Flags2 giving error when ED is not running.
+ - Moved new auto property to the end of the config. Set default value.
  
 # 3/30/2025 DopeEx
  - Added DSS Assist mode - activates DSS scanner when changing system with manual jump
