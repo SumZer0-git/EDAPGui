@@ -1,3 +1,6 @@
+# 3/31/2025 Stumpii: Flags2 bug fix.
+ - Added None check for Flags2 giving error when ED is not running.
+ 
 # 3/30/2025 DopeEx
  - Added DSS Assist mode - activates DSS scanner when changing system with manual jump
  - Added automatic logout to the main menu option when the FSD assist has arrived at the destination and the destination is in space
