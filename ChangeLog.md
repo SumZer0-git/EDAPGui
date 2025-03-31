@@ -1,3 +1,7 @@
+# 3/30/2025 DopeEx
+ - Added DSS Assist mode - activates DSS scanner when changing system with manual jump
+ - Added automatic logout to the main menu option when the FSD assist has arrived at the destination and the destination is in space
+
 # 3/30/2025 Stumpii: Minor updates.
  - SCO without OCR, using Status.json
  - Made honk global to prevent premature disabling in fast ships (Dolphin)
@@ -57,7 +61,7 @@
  - Add hold key, add multiple buttons, add Support for all buttons on all keyboard layouts
 
 # 1/6/2025 Stumpii: Undock from planetary surface
- - Added undocking from planetary surface (i.e. takeoff when not at a docking station). Ship will thrust up, toggle landing gear, rotate roughly 90 deg, boost and SCO out of orbit. 
+ - Added undocking from planetary surface (i.e. takeoff when not at a docking station). Ship will thrust up, toggle landing gear, rotate roughly 90 deg, boost and SCO out of orbit.
  - Added extra key bindings for undocking.
 
 # 1/6/2025 Stumpii: OCR for SCO detection
@@ -133,7 +137,7 @@
  - Force module into updates by going to the interior panel before undocking.
  - Updated screen region to use the correct monitor.
  - Added code to allow Python 3.9 and maybe earlier to run correctly with a workaround for the changes that use new features.
- 
+
 # 9/30/2024 Stumpii: Various changes:
  - Added ship type and ship size to the journal and ship status.
  - Added ED_data file for constants.
@@ -204,7 +208,7 @@ also autoformatting (removed trailing whitespaces)
 
 # 05/12/2022 Update
 - Added a statemachine to Robigo Mines loop.  Will now determine where your ship is at in the loop and start from there.
-  You can then stop the Robigo Assist to handle a Interiction and simply restart it to continue with the loop (it will 
+  You can then stop the Robigo Assist to handle a Interiction and simply restart it to continue with the loop (it will
   pick up where you left off).  No need to start at Robigo Mines.  See docs/Robigo.md for details
 
 # 05/11/2022 Update
@@ -261,7 +265,7 @@ Also, the overlay was sometimes very hard to read, so the default font was chang
   Must perform:  pip install mss
 - The disengage popup "PRESS [J] TO DISENGAGE" image now only looks for "TO DISENGAGE" so user can have any key binding
   they want for that function
-- Restructure folder.  Subdirectories now includes:  ships/  configs/  and waypoints/ 
+- Restructure folder.  Subdirectories now includes:  ships/  configs/  and waypoints/
 - Fix issue when Saved Games has been moved out of C:
 - Add more useful error for unrecognised key
 - Add colour to debug images
@@ -288,26 +292,26 @@ Also, the overlay was sometimes very hard to read, so the default font was chang
 ## Autopilot
   - Added Waypoint Assist  (works both in Odyssey and Horisons)
     - Jumps to Systems defined in waypoints.json (or user selected) file
-      - Can dock with a station that is defined in the file also (requires X, Y of mouse to select the 
+      - Can dock with a station that is defined in the file also (requires X, Y of mouse to select the
         station from the System Map, this too is a little more complex so see separate HowTo)
-        - Added GUI Button "Get X, Y Mouse" to help with determining the StationCoord 
+        - Added GUI Button "Get X, Y Mouse" to help with determining the StationCoord
       - Once docked can perform trades (somewhat complex to setup, will need separate HowTo), Sells first
         then Buys
       - Auto undock to take you to next waypoint system
       - If last line in the waypoint file is "REPEAT", it will loop to top and do it again, forever, otherwise
         Waypoint assist terminates at the end
   - GUI, in statusline, how shows: Distance Jumped, Jumps/Total Jumps, #Refuels, Sec/Jump
-  - GUI, added text field for SunPitchUP+Time (in seconds) which adds this number of seconds after 
+  - GUI, added text field for SunPitchUP+Time (in seconds) which adds this number of seconds after
     sun avoidance to continue pitching up.  If your ship heats up easy (like my Cutter), then you will want
     to add a second or two to be pitch away from the Sun
   - While in SC, check for being interdicted, if so take action (submit, booster away), [initial approach]
   - Optimized number of seconds per jump.   Average just under 60 sec/jump, with fuel scooping once in a while at 70 s/j
   - Added Target Occlusion detection.  As you approach the Station it might suddenly show that
-    it is behind the Planet.  This will now be detected and repositioning will occurs to go 
+    it is behind the Planet.  This will now be detected and repositioning will occurs to go
     around the planet
   - Tuned color ranges for masking the region for better image template matching.  If using anything other
     than default ED HUD color scheme, this AP will not work at all
-  - Handled non FGB FOAM star avoidance when jumping into those Systems (for dim red suns), 
+  - Handled non FGB FOAM star avoidance when jumping into those Systems (for dim red suns),
     so now won't crashed into those
   - Added journal catch to check if game odyssey, capture distance jumped, jumps remaining
   - Added Galaxy and System Map Open for key binding lookup
@@ -317,7 +321,3 @@ Also, the overlay was sometimes very hard to read, so the default font was chang
 
 ## Update requirements.txt file
   - One new packages is required to be installed, pynput==1.7.6, to support mouse click
-
-
-
-
