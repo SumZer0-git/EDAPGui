@@ -122,7 +122,7 @@ class StatusParser:
             "Telepresence Multicrew": bool(flags2_value & 131072),
             "Physical Multicrew": bool(flags2_value & 262144),
             "Fsd hyperdrive charging": bool(flags2_value & 524288),
-            "Flags2Future20": bool(flags2_value & 1048576),
+            "FSD SCO Active": bool(flags2_value & 1048576),
             "Flags2Future21": bool(flags2_value & 2097152),
             "Flags2Future22": bool(flags2_value & 4194304),
             "Flags2Future23": bool(flags2_value & 8388608),
@@ -217,8 +217,29 @@ class StatusParser:
             #'status': combined_flags,
             'time': (datetime.now() + timedelta(days=469711)).isoformat(),
             'timestamp': datetime.strptime(data['timestamp'], "%Y-%m-%dT%H:%M:%SZ"),
-            'Flags': data['Flags']
+            'timestamp_delta': 0.0,  # Diff in seconds from the previous timestamp in file
+            'Flags': data['Flags'],
+            'Flags2': None,
+            'Pips': None,
+            'GuiFocus': None,
+            'Cargo': None,
+            'LegalState': None,
+            'Latitude': None,
+            'Longitude': None,
+            'Heading': None,
+            'Altitude': None,
+            'PlanetRadius': None,
+            'Balance': None,
+            'Destination_System': None,
+            'Destination_Body': None,
+            'Destination_Name': None,
+            'FuelMain': None,
+            'FuelReservoir': None,
         }
+
+        # Determine the time difference between this log and the last
+        if self.current_data is not None:
+            cleaned_data['timestamp_delta'] = (cleaned_data['timestamp'] - self.current_data['timestamp']).total_seconds()
 
         # Add optional status flags
         if 'Flags2' in data:
@@ -228,35 +249,29 @@ class StatusParser:
         if 'GuiFocus' in data:
             cleaned_data['GuiFocus'] = data['GuiFocus']
         if 'Cargo' in data:
-            cleaned_data['cargo'] = data['Cargo']
+            cleaned_data['Cargo'] = data['Cargo']
         if 'LegalState' in data:
             cleaned_data['legalState'] = data['LegalState']
         if 'Latitude' in data:
             cleaned_data['Latitude'] = data['Latitude']
-        else:
-            cleaned_data['Latitude'] = None
         if 'Longitude' in data:
             cleaned_data['Longitude'] = data['Longitude']
-        else:
-            cleaned_data['Longitude'] = None
         if 'Heading' in data:
             cleaned_data['Heading'] = data['Heading']
-        else:
-            cleaned_data['Heading'] = None
         if 'Altitude' in data:
             cleaned_data['Altitude'] = data['Altitude']
-        else:
-            cleaned_data['Altitude'] = None
         if 'PlanetRadius' in data:
             cleaned_data['PlanetRadius'] = data['PlanetRadius']
-        else:
-            cleaned_data['PlanetRadius'] = None
         if 'Balance' in data:
             cleaned_data['balance'] = data['Balance']
         if 'Destination' in data:
-            cleaned_data['Destination'] = data['Destination']
-        else:
-            cleaned_data['Destination'] = None
+            # Destination is the current destination, NOT the final destination.
+            cleaned_data['Destination_System'] = data['Destination']['System']  # System ID of next system.
+            cleaned_data['Destination_Body'] = data['Destination']['Body']  # Body number. '0' if the main star.
+            cleaned_data['Destination_Name'] = data['Destination']['Name']  # System, planet or station name.
+        if 'Fuel' in data:
+            cleaned_data['FuelMain'] = data['Fuel']['FuelMain']
+            cleaned_data['FuelReservoir'] = data['Fuel']['FuelReservoir']
 
         # Store data
         self.last_data = self.current_data

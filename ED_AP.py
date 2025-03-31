@@ -43,6 +43,7 @@ class EDAutopilot:
 
     def __init__(self, cb, doThread=True):
 
+        self.honk_thread = None
         self.config = {
             "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS
             "JumpTries": 3,                #
@@ -582,7 +583,7 @@ class EDAutopilot:
         # check if the circle or the signal meets probability number, if so, determine which type by its region
         #if (maxVal > 0.65 or (maxVal1 > 0.60 and maxLoc1[1] < 30) ):
         # only check for singal
-        if (maxVal1 > 0.70 and maxLoc1[1] < 30):
+        if maxVal1 > 0.70 and maxLoc1[1] < 30:
             if maxLoc1[0] < wid_div3:
                 sstr = "Earth"
             elif maxLoc1[0] > (wid_div3*2):
@@ -594,7 +595,7 @@ class EDAutopilot:
             f.write(self.jn.ship_state()["location"]+", Type: "+sstr+
                     ", Probabilty: {0:3.0f}% ".format((maxVal1*100))+
                     ", Date: "+str(datetime.now())+str("\n"))
-            f.close
+            f.close()
             self.vce.say(sstr+" like world detected ")
             self.fss_detected = sstr+" like world detected "
             logger.info(sstr+" world at: "+str(self.jn.ship_state()["location"]))
@@ -647,6 +648,9 @@ class EDAutopilot:
 
         # Cooldown over, get us out of here.
         self.keys.send('Supercruise')
+
+        # Start SCO monitoring
+        self.start_sco_monitoring()
 
         # Wait for jump to supercruise, keep boosting.
         while not self.status.get_flag(FlagsFsdJump):
@@ -851,7 +855,7 @@ class EDAutopilot:
 
         return result
 
-    def sc_disengage_sco_label_up(self, scr_reg) -> bool:
+    def sc_disengage_label_up(self, scr_reg) -> bool:
         """ look for messages like "PRESS [J] TO DISENGAGE" or "SUPERCRUISE OVERCHARGE ACTIVE",
          if in this region then return true.
         The aim of this function is to return that a message is there, and then use OCR to determine
@@ -934,90 +938,51 @@ class EDAutopilot:
 
         return False
 
+    def start_sco_monitoring(self):
+        """ Start Supercruise Overcharge Monitoring. This starts a parallel thread used to detect SCO
+        until stop_sco_monitoring if called. """
+        self._sc_sco_active_loop_enable = True
+
+        if self._sc_sco_active_loop_thread is None or not self._sc_sco_active_loop_thread.is_alive():
+            self._sc_sco_active_loop_thread = threading.Thread(target=self._sc_sco_active_loop, daemon=True)
+            self._sc_sco_active_loop_thread.start()
+
+    def stop_sco_monitoring(self):
+        """ Stop Supercruise Overcharge Monitoring. """
+        self._sc_sco_active_loop_enable = False
+
     def _sc_sco_active_loop(self):
         """ A loop to determine is Supercruise Overcharge is active.
-        This runs on a separate thread monitoring the screen in the background. """
+        This runs on a separate thread monitoring the status in the background. """
         while self._sc_sco_active_loop_enable:
             # Try to determine if the disengage/sco text is there
             sc_sco_is_active_ls = self.sc_sco_is_active
 
-            msg_up = self.sc_disengage_sco_label_up(self.scrReg)
-            if msg_up:
-                # Check if this is SCO
-                self.sc_sco_is_active = self.sc_sco_active(self.scrReg)
+            # Check if SCO active in flags
+            self.sc_sco_is_active = self.status.get_flag2(Flags2FsdScoActive)
 
-                if self.sc_sco_is_active and not sc_sco_is_active_ls:
-                    self.ap_ckb('log+vce', "Supercruise Overcharge activated")
-                # if sc_sco_is_active_ls and not self.sc_sco_is_active:
-                #     self.ap_ckb('log+vce', "Supercruise Overcharge deactivated")
-            else:
-                self.sc_sco_is_active = False
-                if sc_sco_is_active_ls and not self.sc_sco_is_active:
-                    self.ap_ckb('log+vce', "Supercruise Overcharge deactivated")
+            if self.sc_sco_is_active and not sc_sco_is_active_ls:
+                self.ap_ckb('log+vce', "Supercruise Overcharge activated")
+            if sc_sco_is_active_ls and not self.sc_sco_is_active:
+                self.ap_ckb('log+vce', "Supercruise Overcharge deactivated")
 
+            # Protection if SCO is active
+            if self.sc_sco_is_active:
+                if self.status.get_flag(FlagsOverHeating):
+                    logger.info("SCO Aborting, overheating")
+                    self.ap_ckb('log+vce', "SCO Aborting, overheating")
+                    self.keys.send('UseBoostJuice')
+                elif self.status.get_flag(FlagsLowFuel):
+                    logger.info("SCO Aborting, < 25% fuel")
+                    self.ap_ckb('log+vce', "SCO Aborting, < 25% fuel")
+                    self.keys.send('UseBoostJuice')
+                elif self.jn.ship_state()['fuel_percent'] < self.config['FuelThreasholdAbortAP']:
+                    logger.info("SCO Aborting, < users low fuel threshold")
+                    self.ap_ckb('log+vce', "SCO Aborting, < users low fuel threshold")
+                    self.keys.send('UseBoostJuice')
+
+            # Check again in a bit
             sleep(1)
-
-    def sc_sco_active(self, scr_reg) -> bool:
-        """ Determine if Supercruise Overcharge is active.
-        @param scr_reg: The screen regions dictionary.
-        @return: True if SCO is active, else False.
-        """
-        image = self.scr.get_screen_region(scr_reg.reg['sco']['rect'])
-        # TODO delete this line when COLOR_RGB2BGR is removed from get_screen()
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        mask = scr_reg.capture_region_filtered(self.scr, 'sco')
-        masked_image = cv2.bitwise_and(image, image, mask=mask)
-        image = masked_image
-
-        # OCR the selected item
-        sim_match = 0.35  # Similarity match 0.0 - 1.0 for 0% - 100%)
-        sim = 0.0
-        ocr_textlist = self.ocr.image_simple_ocr(image)
-        #print(ocr_textlist)
-
-        if ocr_textlist is not None:
-            sim = self.ocr.string_similarity(f"SUPERCRUISE OVERCHARGE ACTIVE", str(ocr_textlist))
-            #logger.info(f"SCO similarity with {str(ocr_textlist)} is {sim}")
-
-        if self.cv_view:
-            image = cv2.rectangle(image, (0, 0), (1000, 30), (0, 0, 0), -1)
-            cv2.putText(image, f'Text: {str(ocr_textlist)}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.putText(image, f'Similarity: {sim:5.4f} > {sim_match}', (1, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.imshow('sco_active', image)
-            cv2.moveWindow('sco_active', self.cv_view_x - 460, self.cv_view_y + 850)
-            cv2.waitKey(1)
-
-        if sim > sim_match:
-            #logger.info("Supercruise Overcharge (SCO) is active")
-            #cv2.imwrite(f'test/sco.png', image)
-            return True
-
-        return False
-
-    def sc_sco_check(self) -> bool:
-        """ Checks if Supercruise Overcharge is active.
-        @return: True if SCO is active, else False.
-        """
-        if self.sc_sco_is_active:
-            if self.status.get_flag(FlagsOverHeating):
-                logger.info("SCO Aborting, overheating")
-                self.ap_ckb('log+vce', "SCO Aborting, overheating")
-                self.keys.send('UseBoostJuice')
-                return False
-            elif self.status.get_flag(FlagsLowFuel):
-                logger.info("SCO Aborting, < 25% fuel")
-                self.ap_ckb('log+vce', "SCO Aborting, < 25% fuel")
-                self.keys.send('UseBoostJuice')
-                return False
-            elif self.jn.ship_state()['fuel_percent'] < self.config['FuelThreasholdAbortAP']:
-                logger.info("SCO Aborting, < users low fuel threshold")
-                self.ap_ckb('log+vce', "SCO Aborting, < users low fuel threshold")
-                self.keys.send('UseBoostJuice')
-                return False
-
-            return True
-        else:
-            return False
 
     def undock(self):
         """ Performs menu action to undock from Station """
@@ -1363,9 +1328,6 @@ class EDAutopilot:
             if self.is_destination_occluded(scr_reg) == True:
                 self.reposition(scr_reg)
 
-            # Check if SCO active
-            self.sc_sco_check()
-
             new = self.get_destination_offset(scr_reg)
             if new:
                 off = new
@@ -1481,6 +1443,9 @@ class EDAutopilot:
             logger.debug('jump= start fsd')
 
             self.keys.send('HyperSuperCombination', hold=1)
+
+            # Start SCO monitoring ready when we drop back to SC.
+            self.start_sco_monitoring()
 
             res = self.status.wait_for_flag_on(FlagsFsdCharging, 5)
             if not res:
@@ -1691,6 +1656,9 @@ class EDAutopilot:
             # Enter supercruise
             self.keys.send('Supercruise')
 
+            # Start SCO monitoring
+            self.start_sco_monitoring()
+
             # Wait for SC
             res = self.status.wait_for_flag_on(FlagsSupercruise, timeout=30)
 
@@ -1709,7 +1677,11 @@ class EDAutopilot:
         """ Engages supercruise, then returns us to 50% speed """
         self.keys.send('SetSpeed100')
         self.keys.send('Supercruise', hold=0.001)
+        # Start SCO monitoring
+        self.start_sco_monitoring()
+        # TODO - check if we actually go into supercruise
         sleep(12)
+
         self.keys.send('SetSpeed50')
 
     # processes the waypoints, performing jumps and sc assist if going to a station
@@ -1832,8 +1804,10 @@ class EDAutopilot:
                 # update jump counters
                 self.total_dist_jumped += self.jn.ship_state()['dist_jumped']
                 self.total_jumps = self.jump_cnt+self.jn.ship_state()['jumps_remains']
-
-                # reset, upon next Jump the Journal will be updated again, unless last jump, so we need to clear this out
+                
+                # reset, upon next Jump the Journal will be updated again, unless last jump,
+                # so we need to clear this out
+                
                 self.jn.ship_state()['jumps_remains'] = 0
 
                 self.update_overlay()
@@ -1844,8 +1818,8 @@ class EDAutopilot:
                             "  Fu#: "+str(self.refuel_cnt))
 
                 # Do the Discovery Scan (Honk)
-                honk_thread = threading.Thread(target=self.honk, daemon=True)
-                honk_thread.start()
+                self.honk_thread = threading.Thread(target=self.honk, daemon=True)
+                self.honk_thread.start()
 
                 # Refuel
                 refueled = self.refuel(scr_reg)
@@ -1854,7 +1828,7 @@ class EDAutopilot:
 
                 self.position(scr_reg, refueled)
 
-                if (self.jn.ship_state()['fuel_percent'] < self.config['FuelThreasholdAbortAP']):
+                if self.jn.ship_state()['fuel_percent'] < self.config['FuelThreasholdAbortAP']:
                     self.ap_ckb('log', "AP Aborting, low fuel")
                     self.vce.say("AP Aborting, low fuel")
                     break
@@ -1862,7 +1836,7 @@ class EDAutopilot:
         sleep(2)  # wait until screen stabilizes from possible last positioning
 
         # if there is no destination defined, we are done
-        if self.have_destination(scr_reg) == False:
+        if not self.have_destination(scr_reg):
             self.keys.send('SetSpeedZero')
             self.vce.say("Destination Reached, distance jumped:"+str(int(self.total_dist_jumped))+" lightyears")
             if self.config["AutomaticLogout"] == True:
@@ -1917,8 +1891,13 @@ class EDAutopilot:
                     sleep(10)
                     self.keys.send('SetSpeed50')
                     self.nav_align(scr_reg) # Align to target
+            elif self.status.get_flag2(Flags2GlideMode):
+                # Gliding - wait to complete
+                self.status.wait_for_flag2_off(Flags2GlideMode, 30)
+                break
             else:
                 # if we dropped from SC, then we rammed into planet
+                logger.debug("No longer in supercruise")
                 align_failed = True
                 break
 
@@ -1929,18 +1908,16 @@ class EDAutopilot:
                 self.keys.send('SetSpeed50')
                 self.nav_align(scr_reg)  # realign with station
 
-            # Check if SCO active
-            self.sc_sco_check()
-
             # check for SC Disengage
-            if self.sc_disengage_sco_label_up(scr_reg):
+            if self.sc_disengage_label_up(scr_reg):
                 if self.sc_disengage_active(scr_reg):
                     self.ap_ckb('log+vce', 'Disengage Supercruise')
                     self.keys.send('HyperSuperCombination')
+                    self.stop_sco_monitoring()
                     break
 
         # if no error, we must have gotten disengage
-        if align_failed == False and do_docking == True:
+        if not align_failed and do_docking:
             sleep(4)  # wait for the journal to catch up
 
             # Check if this is a target we cannot dock at
