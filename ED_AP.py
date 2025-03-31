@@ -44,6 +44,8 @@ class EDAutopilot:
     def __init__(self, cb, doThread=True):
 
         self.honk_thread = None
+        # NOTE!!! When adding a new config value below, add the same after read_config() to set
+        # a default value or an error will occur reading the new value!
         self.config = {
             "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS
             "JumpTries": 3,                #
@@ -61,7 +63,6 @@ class EDAutopilot:
             "Robigo_Single_Loop": False,   # True means only 1 loop will executed and then terminate the Robigo, will not perform mission processing
             "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
             "ActivateEliteEachKey": False, # Activate Elite window before each key or group of keys
-            "AutomaticLogout": False,      # Logout when we are done with the mission
             "OverlayTextEnable": False,    # Experimental at this stage
             "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
             "OverlayTextXOffset": 50,      # offset left the screen to start place overlay text
@@ -80,7 +81,11 @@ class EDAutopilot:
             "ShipConfigFile": None,        # Ship config to load on start - deprecated
             "TargetScale": 1.0,            # Scaling of the target when a system is selected
             "TCEDestinationFilepath": "C:\\TCE\\DUMP\\Destination.json",  # Destination file for TCE
+            "AutomaticLogout": False,  # Logout when we are done with the mission
         }
+        # NOTE!!! When adding a new config value above, add the same after read_config() to set
+        # a default value or an error will occur reading the new value!
+
         self.ship_configs = {
             "Ship_Configs": {},  # Dictionary of ship types with additional settings
         }
@@ -108,6 +113,8 @@ class EDAutopilot:
                     cnf['TargetScale'] = 1.0
                 if 'TCEDestinationFilepath' not in cnf:
                     cnf['TCEDestinationFilepath'] = "C:\\TCE\\DUMP\\Destination.json"
+                if 'AutomaticLogout' not in cnf:
+                    cnf['AutomaticLogout'] = False
                 self.config = cnf
                 logger.debug("read AP json:"+str(cnf))
             else:
