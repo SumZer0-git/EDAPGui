@@ -17,6 +17,7 @@ Description:
 Author: sumzer0@yahoo.com
 """
 
+
 class EDWayPoint:
     def __init__(self, is_odyssey=True):
         
@@ -47,7 +48,7 @@ class EDWayPoint:
      
      
     def load_waypoint_file(self, filename=None):
-        if filename == None:
+        if filename is None:
             return
         
         ss = self.read_waypoints(filename)
