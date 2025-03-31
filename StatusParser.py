@@ -420,7 +420,9 @@ class StatusParser:
         self.get_cleaned_data()
 
         if 'Flags2' in self.current_data:
-            return bool(self.current_data['Flags2'] & flag)
+            if self.current_data['Flags2'] is not None:
+                return bool(self.current_data['Flags2'] & flag)
+            return False
         else:
             return False
 
