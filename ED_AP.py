@@ -577,7 +577,7 @@ class EDAutopilot:
         # check if the circle or the signal meets probability number, if so, determine which type by its region
         #if (maxVal > 0.65 or (maxVal1 > 0.60 and maxLoc1[1] < 30) ):
         # only check for singal
-        if (maxVal1 > 0.70 and maxLoc1[1] < 30):
+        if maxVal1 > 0.70 and maxLoc1[1] < 30:
             if maxLoc1[0] < wid_div3:
                 sstr = "Earth"
             elif maxLoc1[0] > (wid_div3*2):
@@ -589,7 +589,7 @@ class EDAutopilot:
             f.write(self.jn.ship_state()["location"]+", Type: "+sstr+
                     ", Probabilty: {0:3.0f}% ".format((maxVal1*100))+
                     ", Date: "+str(datetime.now())+str("\n"))
-            f.close
+            f.close()
             self.vce.say(sstr+" like world detected ")
             self.fss_detected = sstr+" like world detected "
             logger.info(sstr+" world at: "+str(self.jn.ship_state()["location"]))
@@ -1813,7 +1813,8 @@ class EDAutopilot:
                 self.total_dist_jumped += self.jn.ship_state()['dist_jumped']
                 self.total_jumps = self.jump_cnt+self.jn.ship_state()['jumps_remains']
                 
-                # reset, upon next Jump the Journal will be updated again, unless last jump, so we need to clear this out
+                # reset, upon next Jump the Journal will be updated again, unless last jump,
+                # so we need to clear this out
                 self.jn.ship_state()['jumps_remains'] = 0
 
                 self.update_overlay()
@@ -1834,7 +1835,7 @@ class EDAutopilot:
 
                 self.position(scr_reg, refueled)
 
-                if (self.jn.ship_state()['fuel_percent'] < self.config['FuelThreasholdAbortAP']):
+                if self.jn.ship_state()['fuel_percent'] < self.config['FuelThreasholdAbortAP']:
                     self.ap_ckb('log', "AP Aborting, low fuel")
                     self.vce.say("AP Aborting, low fuel")
                     break
@@ -1842,7 +1843,7 @@ class EDAutopilot:
         sleep(2)  # wait until screen stabilizes from possible last positioning
 
         # if there is no destination defined, we are done
-        if self.have_destination(scr_reg) == False:
+        if not self.have_destination(scr_reg):
             self.keys.send('SetSpeedZero')
             self.vce.say("Destination Reached, distance jumped:"+str(int(self.total_dist_jumped))+" lightyears")
             return True
@@ -1894,8 +1895,13 @@ class EDAutopilot:
                     sleep(10)
                     self.keys.send('SetSpeed50')
                     self.nav_align(scr_reg) # Align to target
+            elif self.status.get_flag2(Flags2GlideMode):
+                # Gliding - wait to complete
+                self.status.wait_for_flag2_off(Flags2GlideMode, 30)
+                break
             else:
                 # if we dropped from SC, then we rammed into planet
+                logger.debug("No longer in supercruise")
                 align_failed = True
                 break
 
@@ -1917,7 +1923,7 @@ class EDAutopilot:
                     break
 
         # if no error, we must have gotten disengage
-        if align_failed == False and do_docking == True:
+        if not align_failed and do_docking:
             sleep(4)  # wait for the journal to catch up
 
             # Check if this is a target we cannot dock at
