@@ -1407,7 +1407,7 @@ class EDAutopilot:
     #   - perform fss (if enabled)
     def position(self, scr_reg, did_refuel=True):
         logger.debug('position')
-        add_time = 5
+        add_time = 12
 
         self.vce.say("Maneuvering")
 
