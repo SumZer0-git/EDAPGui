@@ -1,3 +1,6 @@
+# 4/8/2025 Stumpii: Added Corsair.
+ - Added Corsair to ED_Data and ship config.
+ - 
 # 3/31/2025 Stumpii: Flags2 bug fix.
  - Added None check for Flags2 giving error when ED is not running.
  - Moved new auto property to the end of the config. Set default value.
