@@ -96,9 +96,9 @@ class MarketParser:
                     data = json.load(file)
                     break
             except Exception as e:
-                logger.debug('An error occurred when reading Market.json file')
+                logger.debug('An error occurred reading Market.json file. File may be open.')
                 sleep(backoff)
-                logger.debug('Attempting to restart status file reader after failure')
+                logger.debug('Attempting to re-read Market.json file after delay.')
                 backoff *= 2
 
         # Store data

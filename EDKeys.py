@@ -191,7 +191,7 @@ class EDKeys:
                 f"Unable to retrieve keybinding for {key_binding}. Advise user to check game settings for keyboard bindings.")
 
         key_name = self.reversed_dict.get(key['key'], "Key not found")
-        logger.debug('send=' + key_binding + ',key:' + str(key) + ',key_name:' + key_name + ',hold:' + str(hold) + ',repeat:' + str(
+        logger.debug('\tsend=' + key_binding + ',key:' + str(key) + ',key_name:' + key_name + ',hold:' + str(hold) + ',repeat:' + str(
             repeat) + ',repeat_delay:' + str(repeat_delay) + ',state:' + str(state))
 
         for i in range(repeat):

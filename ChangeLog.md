@@ -1,3 +1,9 @@
+# 4/26/2025 Stumpii: Minor updates.
+- Added support for negative sunpitch times.
+- Added docking retries to GUI.
+- Added better logging for docking and return to nav tab.
+- Added reload of templates after calibration.
+
 # 4/8/2025 Stumpii: Added Corsair.
  - Added Corsair to ED_Data and ship config.
  - 

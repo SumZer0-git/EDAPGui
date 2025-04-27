@@ -48,6 +48,8 @@ class OCR:
         else:
             ocr_textlist = []
             for res in ocr_data:
+                if res is None:
+                    return None, None
                 for line in res:
                     ocr_textlist.append(line[1][0])
 

@@ -199,9 +199,9 @@ class StatusParser:
                     data = json.load(file)
                     break
             except Exception as e:
-                logger.debug('An error occurred when reading Status.json file')
+                logger.debug('An error occurred reading Status.json file. File may be open.')
                 sleep(backoff)
-                logger.debug('Attempting to restart status file reader after failure')
+                logger.debug('Attempting to re-read Status.json file after delay.')
                 backoff *= 2
 
         # Combine flags from Flags and Flags2 into a single dictionary
