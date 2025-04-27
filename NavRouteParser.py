@@ -83,9 +83,9 @@ class NavRouteParser:
                     data = json.load(file)
                     break
             except Exception as e:
-                logger.debug('An error occurred when reading NavRoute.json file')
+                logger.debug('An error occurred reading NavRoute.json file. File may be open.')
                 sleep(backoff)
-                logger.debug('Attempting to restart status file reader after failure')
+                logger.debug('Attempting to re-read NavRoute.json file after delay.')
                 backoff *= 2
 
         # Store data
@@ -95,18 +95,18 @@ class NavRouteParser:
         # print(json.dumps(data, indent=4))
         return data
 
-    def get_last_system(self) -> str | None:
-        """ Gets the final destination (system name) or None.
+    def get_last_system(self) -> str:
+        """ Gets the final destination (system name) or empty string.
         """
         # Get latest data
         self.get_nav_route_data()
 
         # Check if there is a route
         if self.current_data['event'] == "NavRouteClear":
-            return None
+            return ''
 
         if self.current_data['Route'] is None:
-            return None
+            return ''
 
         # Find last system in route
         last_system = self.current_data['Route'][-1]

@@ -56,19 +56,9 @@ class CargoParser:
 
     def get_cargo_data(self):
         """Loads data from the JSON file and returns the data.
-        {
-            "timestamp": "2024-09-22T15:23:23Z",
-            "event": "Cargo",
-            "Vessel": "Ship",
-            "Count": 356,
-            "Inventory": [
-                {
-                    "Name": "tritium",
-                    "Count": 356,
-                    "Stolen": 0
-                },
-                { etc. } ]
-        }
+        { "timestamp":"2025-04-20T23:23:25Z", "event":"Cargo", "Vessel":"Ship", "Count":0, "Inventory":[
+
+         ] }
         """
         # Check if file changed
         if self.get_file_modified_time() == self.last_mod_time:
@@ -83,9 +73,9 @@ class CargoParser:
                     data = json.load(file)
                     break
             except Exception as e:
-                logger.debug('An error occurred when reading Cargo.json file')
+                logger.debug('An error occurred reading Cargo.json file. File may be open.')
                 sleep(backoff)
-                logger.debug('Attempting to restart status file reader after failure')
+                logger.debug('Attempting to re-read Cargo.json file after delay.')
                 backoff *= 2
 
         # Store data
@@ -114,8 +104,8 @@ class CargoParser:
 
 # Usage Example
 if __name__ == "__main__":
-    parser = CargoParser()
+    cargo_parser = CargoParser()
     while True:
-        cleaned_data = parser.get_cargo_data()
-        item = parser.get_item('Tritium')
+        cleaned_data = cargo_parser.get_cargo_data()
+        item = cargo_parser.get_item('Tritium')
         time.sleep(1)

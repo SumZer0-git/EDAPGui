@@ -35,15 +35,16 @@ Ideas taken from: https://github.com/skai2/EDAutopilot
 Author: sumzer0@yahoo.com
 """
 
+
 # Exception class used to unroll the call tree to to stop execution
 class EDAP_Interrupt(Exception):
     pass
+
 
 class EDAutopilot:
 
     def __init__(self, cb, doThread=True):
 
-        self.honk_thread = None
         # NOTE!!! When adding a new config value below, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
         self.config = {
@@ -96,6 +97,7 @@ class EDAutopilot:
         self._single_waypoint_station = None
         self._single_waypoint_system = None
         self._prev_star_system = None
+        self.honk_thread = None
 
         # used this to write the self.config table to the json file
         # self.write_config(self.config)
@@ -514,6 +516,8 @@ class EDAutopilot:
             self.ap_ckb('log',
                         f'Target Cal: Insufficient matching to meet reliability, max % match: {max_val * 100:5.2f}%')
 
+        # reload the templates with the new (or previous value)
+        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale)
 
     def calibrate_ship_compass(self):
         """ Calibrate Compass """
@@ -543,10 +547,15 @@ class EDAutopilot:
             c_scaleX = float(scale_max / 100)
             self.ap_ckb('log',
                         f'Compass Cal: Max best match: {max_val * 100:5.2f}% with scale: {c_scaleX:5.4f}')
+            # Keep new value
             self.compass_scale = c_scaleX
+
         else:
             self.ap_ckb('log',
                         f'Compass Cal: Insufficient matching to meet reliability, max % match: {max_val * 100:5.2f}%')
+
+        # reload the templates with the new (or previous value)
+        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale)
 
     # Go into FSS, check to see if we have a signal waveform in the Earth, Water or Ammonia zone
     #  if so, announce finding and log the type of world found
@@ -1032,11 +1041,11 @@ class EDAutopilot:
         self.keys.send('UI_Back')
         self.keys.send('HeadLookReset')
 
-    # Docking sequence.  Assumes in normal space, will get closer to the Station
-    # then zero the velocity and execute menu commands to request docking, when granted
-    # will wait a configurable time for dock.  Perform Refueling and Repair
-    #
     def dock(self):
+        """ Docking sequence.  Assumes in normal space, will get closer to the Station
+        then zero the velocity and execute menu commands to request docking, when granted
+        will wait a configurable time for dock.  Perform Refueling and Repair.
+        """
         # if not in normal space, give a few more sections as at times it will take a little bit
         if self.jn.ship_state()['status'] != "in_space":
             sleep(3)  # sleep a little longer
@@ -1050,13 +1059,14 @@ class EDAutopilot:
         if self.jn.ship_state()['status'] != "in_space":
             self.keys.send('SetSpeedZero')
             logger.error('In dock(), after long wait, but still not in_space')
-            raise Exception('Docking error')
+            raise Exception('Docking failed (not in space)')
 
         sleep(12)
         # At this point (of sleep()) we should be < 7.5km from the station.  Go 0 speed
         # if we get docking granted ED's docking computer will take over
         self.keys.send('SetSpeedZero', repeat=2)
 
+        self.ap_ckb('log+vce', "Initiating Docking Procedure")
         self.request_docking(1)
         sleep(1)
 
@@ -1064,6 +1074,8 @@ class EDAutopilot:
         granted = False
         if self.jn.ship_state()['status'] == "dockinggranted":
             granted = True
+            # Go back to navigation tab
+            self.request_docking_cleanup()
         else:
             for i in range(tries):
                 if self.jn.ship_state()['no_dock_reason'] == "Distance":
@@ -1075,6 +1087,8 @@ class EDAutopilot:
                 sleep(1.5)
                 if self.jn.ship_state()['status'] == "dockinggranted":
                     granted = True
+                    # Go back to navigation tab
+                    self.request_docking_cleanup()
                     break
                 if self.jn.ship_state()['status'] == "dockingdenied":
                     pass
@@ -1082,6 +1096,7 @@ class EDAutopilot:
         if not granted:
             self.ap_ckb('log', 'Docking denied: '+str(self.jn.ship_state()['no_dock_reason']))
             logger.warning('Did not get docking authorization, reason:'+str(self.jn.ship_state()['no_dock_reason']))
+            raise Exception('Docking failed (Did not get docking authorization)')
         else:
             # allow auto dock to take over
             for i in range(self.config['WaitForAutoDockTimer']):
@@ -1098,7 +1113,28 @@ class EDAutopilot:
                     self.keys.send('UI_Select')
                     sleep(0.5)
                     self.keys.send("UI_Left", repeat=2)  # back to fuel
-                    break
+                    return
+
+            self.ap_ckb('log', 'Auto dock timer timed out.')
+            logger.warning('Auto dock timer timed out. Aborting Docking.')
+            raise Exception('Docking failed (Auto dock timer timed out)')
+
+    def request_docking_cleanup(self):
+        """ After request docking, go back to NAVIGATION tab in Nav Panel from the CONTACTS tab. """
+        self.keys.send('UI_Back', repeat=10)
+        self.keys.send('HeadLookReset')
+        self.keys.send('UIFocus', state=1)
+        self.keys.send('UI_Left')
+        self.keys.send('UIFocus', state=0)
+        sleep(0.5)
+
+        self.keys.send('CycleNextPanel', hold=0.2)  # STATS tab
+        sleep(0.2)
+        self.keys.send('CycleNextPanel', hold=0.2)  # NAVIGATION tab
+
+        sleep(0.3)
+        self.keys.send('UI_Back')
+        self.keys.send('HeadLookReset')
 
     def is_sun_dead_ahead(self, scr_reg):
         return scr_reg.sun_percent(scr_reg.screen) > 5
@@ -1136,8 +1172,16 @@ class EDAutopilot:
                 break
 
         sleep(0.35)                 # up slightly so not to overheat when scooping
-        sleep(self.sunpitchuptime)  # some ships heat up too much and need pitch up a little further
+        # Some ships heat up too much and need pitch up a little further
+        if self.sunpitchuptime > 0.0:
+            sleep(self.sunpitchuptime)
         self.keys.send('PitchUpButton', state=0)
+
+        # Some ships run cool so need to pitch down a little
+        if self.sunpitchuptime < 0.0:
+            self.keys.send('PitchDownButton', state=1)
+            sleep(-1.0 * self.sunpitchuptime)
+            self.keys.send('PitchDownButton', state=0)
 
     def nav_align(self, scr_reg):
         """ Use the compass to find the nav point position.  Will then perform rotation and pitching
@@ -1890,16 +1934,16 @@ class EDAutopilot:
         while True:
             sleep(0.05)
             if self.jn.ship_state()['status'] == 'in_supercruise':
-
                 # Align and stay on target. If false is returned, we have lost the target behind us.
                 if not self.sc_target_align(scr_reg):
                     # Continue ahead before aligning to prevent us circling the target
-                    #self.keys.send('SetSpeed100')
+                    # self.keys.send('SetSpeed100')
                     sleep(10)
                     self.keys.send('SetSpeed50')
-                    self.nav_align(scr_reg) # Align to target
+                    self.nav_align(scr_reg)  # Align to target
             elif self.status.get_flag2(Flags2GlideMode):
                 # Gliding - wait to complete
+                logger.debug("Gliding")
                 self.status.wait_for_flag2_off(Flags2GlideMode, 30)
                 break
             else:
@@ -1942,16 +1986,16 @@ class EDAutopilot:
                     skip_docking = True
 
             if not skip_docking:
-                self.update_ap_status("Initiating Docking Procedure")
-                self.dock()  # go into docking sequence
-                self.vce.say("Docking complete, Refueled")
+                # go into docking sequence
+                self.dock()
+                self.ap_ckb('log+vce', "Docking complete, refueled, repaired and re-armed")
                 self.update_ap_status("Docking Complete")
         else:
             self.vce.say("Exiting Supercruise, setting throttle to zero")
             self.keys.send('SetSpeedZero')  # make sure we don't continue to land
             self.ap_ckb('log', "Supercruise dropped, terminating SC Assist")
 
-        self.vce.say("Supercruise Assist complete")
+        self.ap_ckb('log+vce', "Supercruise Assist complete")
 
     def robigo_assist(self):
         self.robigo.loop(self)

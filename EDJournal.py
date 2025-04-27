@@ -148,6 +148,7 @@ class EDJournal:
             'SupercruiseDestinationDrop_type': None,
             'has_adv_dock_comp': None,
             'has_sco_fsd': None,
+            'StationServices': None,
         }
         self.ship_state()    # load up from file
         self.reset_items()
@@ -278,6 +279,7 @@ class EDJournal:
                 self.ship['cur_star_system'] = log['StarSystem']
                 self.ship['cur_station'] = log['StationName']
                 self.ship['cur_station_type'] = log['StationType']
+                self.ship['StationServices'] = log['StationServices']
 
                 # parse location
             elif log_event == 'Location':
