@@ -1,18 +1,22 @@
 colorlog==6.5.0
-httpcore<0.14 # Specific version required for paddlepaddle.
+httpcore<0.14 # Specific version required for paddlepaddle (OCR).
 keyboard==0.13.5
 kthread==0.2.2
 logger==1.4
 mss==8.0.3
-numpy==1.25.1 # <2.0 # Specific version required for paddleOCR.
+numpy~=1.26.4 # <2.0 # Specific version required for paddleOCR.
 opencv_python==4.5.5.62
-paddleocr
+paddleocr~=2.9.1
 paddlepaddle
 Pillow==10.4.0
 PyAutoGUI==0.9.53
+pydantic>=2.9.1 # For EDMesg
 pynput==1.7.6
 pyttsx3==2.90
 pywin32==303
-protobuf<=3.20.2 # Specific version required for paddlepaddle.
-requests
-strsimpy
+pyzmq>=26.2.0 # For EDMesg
+protobuf<=3.20.2 # Specific version required for paddlepaddle (OCR).
+requests~=2.32.3
+simple_localization
+strsimpy~=0.2.1
+xmltodict~=0.14.2

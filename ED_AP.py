@@ -1,16 +1,20 @@
 import math
 import traceback
 from math import atan, degrees
-import json
 import random
 from tkinter import messagebox
 
 import cv2
-from PIL import Image
-from pathlib import Path
+from simple_localization import LocalizationManager
 
+from EDAP_EDMesg_Server import EDMesgServer
 from EDAP_data import *
-from EDlogger import logger, logging
+from EDGalaxyMap import EDGalaxyMap
+from EDGraphicsSettings import EDGraphicsSettings
+from EDShipControl import EDShipControl
+from EDStationServicesInShip import EDStationServicesInShip
+from EDSystemMap import EDSystemMap
+from EDlogger import logging
 import Image_Templates
 import Screen
 import Screen_Regions
@@ -18,6 +22,8 @@ from EDWayPoint import *
 from EDJournal import *
 from EDKeys import *
 from EDafk_combat import AFK_Combat
+from EDInternalStatusPanel import EDInternalStatusPanel
+from NavRouteParser import NavRouteParser
 from OCR import OCR
 from Overlay import *
 from StatusParser import StatusParser
@@ -82,7 +88,12 @@ class EDAutopilot:
             "ShipConfigFile": None,        # Ship config to load on start - deprecated
             "TargetScale": 1.0,            # Scaling of the target when a system is selected
             "TCEDestinationFilepath": "C:\\TCE\\DUMP\\Destination.json",  # Destination file for TCE
-            "AutomaticLogout": False,  # Logout when we are done with the mission
+            "AutomaticLogout": False,      # Logout when we are done with the mission
+            "FCDepartureTime": 5.0,        # Extra time to fly away from a Fleet Carrier
+            "Language": 'en',              # Language (matching ./locales/xx.json file)
+            "EnableEDMesg": False,
+            "EDMesgActionsPort": 15570,
+            "EDMesgEventsPort": 15571,
         }
         # NOTE!!! When adding a new config value above, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
@@ -117,6 +128,14 @@ class EDAutopilot:
                     cnf['TCEDestinationFilepath'] = "C:\\TCE\\DUMP\\Destination.json"
                 if 'AutomaticLogout' not in cnf:
                     cnf['AutomaticLogout'] = False
+                if 'FCDepartureTime' not in cnf:
+                    cnf['FCDepartureTime'] = 5.0
+                if 'Language' not in cnf:
+                    cnf['Language'] = 'en'
+                if 'EnableEDMesg' not in cnf:
+                    cnf['EnableEDMesg'] = False
+                    cnf['EDMesgActionsPort'] = 15570
+                    cnf['EDMesgEventsPort'] = 15571
                 self.config = cnf
                 logger.debug("read AP json:"+str(cnf))
             else:
@@ -124,6 +143,9 @@ class EDAutopilot:
                 logger.debug("read AP json:"+str(cnf))
         else:
             self.write_config(self.config)
+
+        # Load selected language
+        self.locale = LocalizationManager('locales', self.config['Language'])
 
         shp_cnf = self.read_ship_configs()
         # if we read it then point to it, otherwise use the default table above
@@ -164,7 +186,9 @@ class EDAutopilot:
         self.single_waypoint_enabled = False
 
         # Create instance of each of the needed Classes
-        self.scr = Screen.Screen()
+        self.gfx_settings = EDGraphicsSettings()
+
+        self.scr = Screen.Screen(cb)
         self.scr.scaleX = self.config['TargetScale']
         self.scr.scaleY = self.config['TargetScale']
 
@@ -172,14 +196,26 @@ class EDAutopilot:
         self.templ = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
         self.scrReg = Screen_Regions.Screen_Regions(self.scr, self.templ)
         self.jn = EDJournal()
-        self.keys = EDKeys()
+        self.keys = EDKeys(cb)
         self.keys.activate_window = self.config['ActivateEliteEachKey']
         self.afk_combat = AFK_Combat(self.keys, self.jn, self.vce)
-        self.waypoint = EDWayPoint(self.jn.ship_state()['odyssey'])
+        self.waypoint = EDWayPoint(self, self.jn.ship_state()['odyssey'])
         self.robigo = Robigo(self)
         self.status = StatusParser()
+        self.nav_route = NavRouteParser()
+        self.ship_control = EDShipControl(self.scr, self.keys, cb)
+        self.internal_panel = EDInternalStatusPanel(self, self.scr, self.keys, cb)
+        self.galaxy_map = EDGalaxyMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
+        self.system_map = EDSystemMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
+        self.stn_svcs_in_ship = EDStationServicesInShip(self, self.scr, self.keys, cb)
 
-        # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
+        self.mesg_server = EDMesgServer(self, cb)
+        self.mesg_server.actions_port = self.config['EDMesgActionsPort']
+        self.mesg_server.events_port = self.config['EDMesgEventsPort']
+        if self.config['EnableEDMesg']:
+            self.mesg_server.start_server()
+
+        # rate as ship dependent. Can be found on the outfitting page for the ship. However, it looks like supercruise
         # has worse performance for these rates
         # see:  https://forums.frontier.co.uk/threads/supercruise-handling-of-ships.396845/
         #
@@ -783,20 +819,19 @@ class EDAutopilot:
             #cv2.putText(icompass_image_d, f'Result: {result}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.putText(icompass_image_d, f'x: {final_x_pct:5.2f} y: {final_y_pct:5.2f} z: {final_z_pct:5.2f}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.putText(icompass_image_d, f'r: {final_roll_deg:5.2f}deg p: {final_pit_deg:5.2f}deg y: {final_yaw_deg:5.2f}deg', (1, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
-            #cv2.circle(icompass_image_display, (pt[0]+n_pt[0], pt[1]+n_pt[1]), 5, (0, 255, 0), 3)
             cv2.imshow('compass', icompass_image_d)
-            #cv2.imshow('nav', navpt_image)
             cv2.moveWindow('compass', self.cv_view_x - 400, self.cv_view_y + 600)
-            #cv2.moveWindow('nav', self.cv_view_x, self.cv_view_y)
             cv2.waitKey(30)
 
         return result
 
-    # Looks to see if the 'dashed' line of the target is present indicating the target is occluded by the planet
-    #  return True if meets threshold
-    #
     def is_destination_occluded(self, scr_reg) -> bool:
-        dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('target_occluded', 'target_occluded')
+        """ Looks to see if the 'dashed' line of the target is present indicating the target
+        is occluded by the planet.
+        @param scr_reg: The screen region to check.
+        @return: True if target occluded (meets threshold), else False.
+        """
+        dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('target_occluded', 'target_occluded', inv_col=False)
 
         pt = maxLoc
 
@@ -821,8 +856,10 @@ class EDAutopilot:
             cv2.waitKey(30)
 
         if maxVal > scr_reg.target_occluded_thresh:
+            logger.debug(f"Target is occluded ({maxVal:5.4f} > {scr_reg.target_occluded_thresh:5.2f})")
             return True
         else:
+            #logger.debug(f"Target is not occluded ({maxVal:5.4f} < {scr_reg.target_occluded_thresh:5.2f})")
             return False
 
     def get_destination_offset(self, scr_reg):
@@ -936,7 +973,7 @@ class EDAutopilot:
         sim = 0.0
         ocr_textlist = self.ocr.image_simple_ocr(image)
         if ocr_textlist is not None:
-            sim = self.ocr.string_similarity(f"PRESS TO DISENGAGE", str(ocr_textlist))
+            sim = self.ocr.string_similarity(self.locale["PRESS_TO_DISENGAGE_MSG"], str(ocr_textlist))
             logger.info(f"Disengage similarity with {str(ocr_textlist)} is {sim}")
 
         if self.cv_view:
@@ -1002,7 +1039,9 @@ class EDAutopilot:
 
     def undock(self):
         """ Performs menu action to undock from Station """
-        # Assume we are in Star Port Services
+        # Go to cockpit view
+        self.ship_control.goto_cockpit_view()
+
         # Now we are on initial menu, we go up to top (which is Refuel)
         self.keys.send('UI_Up', repeat=3)
 
@@ -1337,8 +1376,8 @@ class EDAutopilot:
             if new:
                 off = new
                 break
-            if self.is_destination_occluded(scr_reg) == True:
-                self.reposition(scr_reg)
+            if self.is_destination_occluded(scr_reg):
+                self.occluded_reposition(scr_reg)
             sleep(0.1)
 
         # Could not be found, return
@@ -1375,9 +1414,9 @@ class EDAutopilot:
 
             sleep(.02)  # time for image to catch up
 
-            # this checks if suddenly the target show up behind the planete
-            if self.is_destination_occluded(scr_reg) == True:
-                self.reposition(scr_reg)
+            # this checks if suddenly the target show up behind the planet
+            if self.is_destination_occluded(scr_reg):
+                self.occluded_reposition(scr_reg)
 
             new = self.get_destination_offset(scr_reg)
             if new:
@@ -1391,18 +1430,22 @@ class EDAutopilot:
 
         return True
 
-    # Reposition is use when the target is obscured by a world
-    #   We pitch 90 up for a bit, then down 90, this should make the target underneath us
-    #   this is important because when we do nav_align() if it does not see the Nav Point
-    #   in the compass (because it is a hollow circle), then it will pitch down, this will
-    #   bring the target into view quickly
-    #
-    def reposition(self, scr_reg):
-        self.vce.say("Target obscured, repositioning")
-        self.pitchUp(90)
+    def occluded_reposition(self, scr_reg):
+        """ Reposition is use when the target is occluded by a planet or other.
+        We pitch 90 deg down for a bit, then up 90, this should make the target underneath us
+        this is important because when we do nav_align() if it does not see the Nav Point
+        in the compass (because it is a hollow circle), then it will pitch down, this will
+        bring the target into view quickly. """
+        self.ap_ckb('log+vce', 'Target occluded, repositioning.')
+        self.keys.send('SetSpeed50')
+        self.pitchDown(90)
+
+        # Speed away
         self.keys.send('SetSpeed100')
         sleep(15)
-        self.pitchDown(90)
+
+        self.keys.send('SetSpeed50')
+        self.pitchUp(90)
         sleep(5)
         self.nav_align(scr_reg)
         self.keys.send('SetSpeed50')
@@ -1661,43 +1704,100 @@ class EDAutopilot:
             win32gui.SetForegroundWindow(handle)  # give focus to ED
 
     def waypoint_undock_seq(self):
-        self.update_ap_status("Executing Undocking")
+        self.update_ap_status("Executing Undocking/Launch")
 
         # Store current location (on planet or in space)
         on_planet = self.status.get_flag(FlagsHasLatLong)
+        on_orbital_construction_site = self.jn.ship_state()['cur_station_type'].upper() == "SpaceConstructionDepot".upper()
+        fleet_carrier = self.jn.ship_state()['cur_station_type'].upper() == "FleetCarrier".upper()
 
-        # Check if we are on a landing pad in space or planet, or landed on a planet
-        if self.status.get_flag(FlagsDocked):
-            # We are on a landing pad in space or planet
-            # Undock from station
-            self.undock()
 
-            # need to wait until undock complete, that is when we are back in_space
-            while self.jn.ship_state()['status'] != 'in_space':
-                sleep(1)
 
-            self.update_ap_status("Undock Complete, accelerating")
-        elif self.status.get_flag(FlagsLanded):
-            # We are on planet surface (not planet landing pad)
-            # Hold UP for takeoff
-            self.keys.send('UpThrustButton', hold=6)
-            self.keys.send('LandingGearToggle')
-
-            self.update_ap_status("Takeoff Complete, accelerating")
-
-        # move away from station
+        # Leave starport or planetary port
         if not on_planet:
-            # In space (launch from starport or outpost etc.)
-            sleep(1.5)
-            self.keys.send('SetSpeed100')
-            sleep(1)
-            self.keys.send('UseBoostJuice')
-            sleep(13)  # get away from Station
+            # Check that we are docked
+            if self.status.get_flag(FlagsDocked):
+                # Check if we have an advanced docking computer
+                if not self.jn.ship_state()['has_adv_dock_comp']:
+                    self.ap_ckb('log', "Unable to undock. Advanced Docking Computer not fitted.")
+                    logger.warning('Unable to undock. Advanced Docking Computer not fitted.')
+                    raise Exception('Unable to undock. Advanced Docking Computer not fitted.')
+
+                # Undock from station
+                self.undock()
+
+                # need to wait until undock complete, that is when we are back in_space
+                while self.jn.ship_state()['status'] != 'in_space':
+                    sleep(1)
+
+                # If we are on an Orbital Construction Site we will need to pitch up 90 deg to avoid crashes
+                if on_orbital_construction_site:
+                    self.ap_ckb('log+vce', 'Maneuvering')
+                    # The pitch rates are defined in SC, not normal flights, so bump this up a bit
+                    self.pitchUp(90 * 1.25)
+
+                # If we are on a Fleet Carrier we will pitch up 90 deg and fly away to avoid planet
+                elif fleet_carrier:
+                    self.ap_ckb('log+vce', 'Maneuvering')
+                    # The pitch rates are defined in SC, not normal flights, so bump this up a bit
+                    self.pitchUp(90 * 1.25)
+
+                    self.keys.send('SetSpeed100')
+
+                    # While Mass Locked, keep boosting.
+                    while not self.status.wait_for_flag_off(FlagsFsdMassLocked, timeout=2):
+                        self.keys.send('UseBoostJuice')
+
+                    # Enter supercruise to get away from the Fleet Carrier
+                    self.keys.send('Supercruise')
+
+                    # Start SCO monitoring
+                    self.start_sco_monitoring()
+
+                    # Wait the configured time before continuing
+                    self.ap_ckb('log', 'Flying for configured FC departure time.')
+                    sleep(self.config['FCDepartureTime'])
+                    self.keys.send('SetSpeed50')
+
+                if not fleet_carrier:
+                    # In space (launched from starport or outpost etc.)
+                    sleep(1.5)
+                    self.update_ap_status("Undock Complete, accelerating")
+                    self.keys.send('SetSpeed100')
+                    sleep(1)
+                    self.keys.send('UseBoostJuice')
+                    sleep(13)  # get away from Station
+                    self.keys.send('SetSpeed50')
+
+        elif on_planet:
+            # Check if we are on a landing pad (docked), or landed on the planet surface
+            if self.status.get_flag(FlagsDocked):
+                # We are on a landing pad (docked)
+                # Check if we have an advanced docking computer
+                if not self.jn.ship_state()['has_adv_dock_comp']:
+                    self.ap_ckb('log', "Unable to undock. Advanced Docking Computer not fitted.")
+                    logger.warning('Unable to undock. Advanced Docking Computer not fitted.')
+                    raise Exception('Unable to undock. Advanced Docking Computer not fitted.')
+
+                # Undock from port
+                self.undock()
+
+                # need to wait until undock complete, that is when we are back in_space
+                while self.jn.ship_state()['status'] != 'in_space':
+                    sleep(1)
+                self.update_ap_status("Undock Complete, accelerating")
+
+            elif self.status.get_flag(FlagsLanded):
+                # We are on planet surface (not docked at planet landing pad)
+                # Hold UP for takeoff
+                self.keys.send('UpThrustButton', hold=6)
+                self.keys.send('LandingGearToggle')
+                self.update_ap_status("Takeoff Complete, accelerating")
+
+            # Undocked or off the surface, so leave planet
             self.keys.send('SetSpeed50')
-        else:
-            # From planetary settlement
-            self.keys.send('SetSpeed50')
-            self.pitchUp(90)  # The pitch rates are defined in SC, not normal flights, so this will be approximate.
+            # The pitch rates are defined in SC, not normal flights, so bump this up a bit
+            self.pitchUp(90 * 1.25)
             self.keys.send('SetSpeed100')
 
             # While Mass Locked, keep boosting.
@@ -1735,81 +1835,18 @@ class EDAutopilot:
 
         self.keys.send('SetSpeed50')
 
-    # processes the waypoints, performing jumps and sc assist if going to a station
-    # also can then perform trades if specific in the waypoints file
-    #
-    def waypoint_assist(self, scr_reg):
-        self.waypoint.step = 0  #start at first waypoint
-        docked_at_station = False
-
-        self.ap_ckb('log', "Waypoint file: "+str(Path(self.waypoint.filename).name))
-
-        self.jn.ship_state()['target'] = None  # clear last target
-
-        # Set the Route for the waypoint
-        dest = self.waypoint.waypoint_next(self, self.jn.ship_state)
-
-        # if we are starting the waypoint docked at a station, we need to undock first
-        if dest != "" and (self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded)):
-            self.waypoint_undock_seq()
-
-        # if we are in space but not in supercruise, get into supercruise
-        if self.jn.ship_state()['status'] != 'in_supercruise':
-            self.sc_engage()
-
-        # keep looping while we have a destination defined
-        while dest != "":
-            self.ap_ckb('log', "Waypoint: "+dest)
-            docked_at_station = False
-            # Route sent...  FSD Assist to that destination
-            reached_dest = self.fsd_assist(scr_reg)
-
-            # If waypoint file has a Station Name associated then attempt targeting it
-            if self.waypoint.is_station_targeted(dest) != None:
-
-                self.update_ap_status("Targeting Station")
-                self.waypoint.set_station_target(self, dest)
-
-                # Successful targeting of Station, lets go to it
-                if self.have_destination(scr_reg) == True:
-                    self.ap_ckb('log', " - Station: "+self.waypoint.waypoints[dest]['DockWithStation'])
-                    self.update_ap_status("SC to Station")
-                    self.sc_assist(scr_reg)
-
-                    #
-                    # Successful dock, let do trade, if a seq exists
-                    if self.jn.ship_state()['status'] == 'in_station':
-                        self.waypoint.execute_trade(self, dest)
-                        docked_at_station = True
-                    else:
-                        logger.warning("Waypoint: Did not dock with station in limbo")
-                else:
-                    self.ap_ckb('log', " - Could not target station: "+self.waypoint.waypoints[dest]['DockWithStation'])
-
-            # Mark this waypoint as completed
-            self.waypoint.mark_waypoint_complete(dest)
-
-            self.update_ap_status("Setting route to next waypoint")
-            self.jn.ship_state()['target'] = None  # clear last target
-
-            # set target to next waypoint and loop)
-            dest = self.waypoint.waypoint_next(self, self.jn.ship_state)
-
-            # if we have another waypoint and we're docked, then undock first before moving on
-            if dest != "" and self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
-                self.waypoint_undock_seq()
-
-                # Done with waypoints
-        self.ap_ckb('log', "Waypoint Route Complete, total distance jumped: "+str(self.total_dist_jumped)+"LY")
-        self.update_ap_status("Idle")
+    def waypoint_assist(self, keys, scr_reg):
+        """ Processes the waypoints, performing jumps and sc assist if going to a station
+        also can then perform trades if specific in the waypoints file."""
+        self.waypoint.waypoint_assist(keys, scr_reg)
 
     def jump_to_system(self, scr_reg, system_name: str) -> bool:
         """ Jumps to the specified system. Returns True if in the system already,
         or we successfully travel there, else False. """
-        self.update_ap_status(f"Targeting System: {system_name}")
-        ret = self.waypoint.set_next_system(self, system_name)
-        if not ret:
-            return False
+        # self.update_ap_status(f"Targeting System: {system_name}")
+        # ret = self.waypoint.set_next_system(self, system_name)
+        # if not ret:
+        #     return False
 
         # if we are starting the waypoint docked at a station, we need to undock first
         if self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
@@ -1822,6 +1859,35 @@ class EDAutopilot:
         # Route sent...  FSD Assist to that destination
         reached_dest = self.fsd_assist(scr_reg)
         if not reached_dest:
+            return False
+
+        return True
+
+    def supercruise_to_station(self, scr_reg, station_name: str) -> bool:
+        """ Supercruise to the specified target, which may be a station, FC, body, signal source, etc.
+        Returns True if we travel successfully travel there, else False. """
+        # If waypoint file has a Station Name associated then attempt targeting it
+        self.update_ap_status(f"Targeting Station: {station_name}")
+        #res = self.nav_panel.lock_destination(station_name)
+        #if not res:
+        #    return False
+
+        # if we are starting the waypoint docked at a station, we need to undock first
+        if self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
+            self.waypoint_undock_seq()
+
+        # if we are in space but not in supercruise, get into supercruise
+        if self.jn.ship_state()['status'] != 'in_supercruise':
+            self.sc_engage()
+
+        # Successful targeting of Station, lets go to it
+        sleep(3)  # Wait for compass to stop flashing blue!
+        if self.have_destination(scr_reg):
+            self.ap_ckb('log', " - Station: " + station_name)
+            self.update_ap_status(f"SC to Station: {station_name}")
+            self.sc_assist(scr_reg)
+        else:
+            self.ap_ckb('log', f" - Could not target station: {station_name}")
             return False
 
         return True
@@ -1905,6 +1971,10 @@ class EDAutopilot:
     #
     def sc_assist(self, scr_reg, do_docking=True):
         logger.debug("Entered sc_assist")
+
+        # Goto cockpit view
+        self.ship_control.goto_cockpit_view()
+
         align_failed = False
         # see if we have a compass up, if so then we have a target
         if not self.have_destination(scr_reg):
@@ -1973,6 +2043,10 @@ class EDAutopilot:
 
             # Check if this is a target we cannot dock at
             skip_docking = False
+            if not self.jn.ship_state()['has_adv_dock_comp'] and not self.jn.ship_state()['has_std_dock_comp']:
+                self.ap_ckb('log', "Skipping docking. No Docking Computer fitted.")
+                skip_docking = True
+
             if not self.jn.ship_state()['SupercruiseDestinationDrop_type'] is None:
                 if (self.jn.ship_state()['SupercruiseDestinationDrop_type'].startswith("$USS_Type")
                         # Bulk Cruisers
@@ -1983,6 +2057,7 @@ class EDAutopilot:
                         or "-class Surveyor" in self.jn.ship_state()['SupercruiseDestinationDrop_type']
                         or "-class Traveller" in self.jn.ship_state()['SupercruiseDestinationDrop_type']
                         or "-class Tanker" in self.jn.ship_state()['SupercruiseDestinationDrop_type']):
+                    self.ap_ckb('log', "Skipping docking. No docking privilege at MegaShips.")
                     skip_docking = True
 
             if not skip_docking:
@@ -1990,6 +2065,8 @@ class EDAutopilot:
                 self.dock()
                 self.ap_ckb('log+vce', "Docking complete, refueled, repaired and re-armed")
                 self.update_ap_status("Docking Complete")
+            else:
+                self.keys.send('SetSpeedZero')
         else:
             self.vce.say("Exiting Supercruise, setting throttle to zero")
             self.keys.send('SetSpeedZero')  # make sure we don't continue to land
@@ -2249,7 +2326,7 @@ class EDAutopilot:
                 self.total_dist_jumped = 0
                 self.total_jumps = 0
                 try:
-                    self.waypoint_assist(self.scrReg)
+                    self.waypoint_assist(self.keys, self.scrReg)
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
                 except Exception as e:
@@ -2332,6 +2409,8 @@ class EDAutopilot:
                             self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is not fitted with a Fuel Scoop.")
                         if not self.jn.ship_state()['has_adv_dock_comp']:
                             self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is not fitted with an Advanced Docking Computer.")
+                        if self.jn.ship_state()['has_std_dock_comp']:
+                            self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is fitted with a Standard Docking Computer.")
 
                         # Add ship to ship configs if missing
                         if ship is not None:
@@ -2421,7 +2500,7 @@ def main():
     #if handle != None:
     #    win32gui.SetForegroundWindow(handle)  # put the window in foreground
 
-    ed_ap = EDAutopilot(False)
+    ed_ap = EDAutopilot(cb=None, doThread=False)
     ed_ap.cv_view = True
     ed_ap.cv_view_x = 4000
     ed_ap.cv_view_y = 100

@@ -85,7 +85,7 @@ class CargoParser:
         # print(json.dumps(data, indent=4))
         return data
 
-    def get_item(self, item_name) -> dict[any] | None:
+    def get_item(self, item_name: str) -> dict[any] | None:
         """ Get details of one item. Returns the item detail as below, or None if item does not exist.
             Will not trigger a read of the json file.
         {
@@ -93,6 +93,8 @@ class CargoParser:
             "Count":356,
             "Stolen":0
         }
+        @param item_name: The commodity name.
+        @return: Details on the commodity if in hold, else None.
         """
         for good in self.current_data['Inventory']:
             if good['Name'].upper() == item_name.upper():

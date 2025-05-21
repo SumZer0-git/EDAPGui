@@ -28,7 +28,8 @@ elite_dangerous_window = "Elite - Dangerous (CLIENT)"
 
 
 class Screen:
-    def __init__(self):
+    def __init__(self, cb):
+        self.ap_ckb = cb
         self.mss = mss.mss()
         self.using_screen = True  # True to use screen, false to use an image. Set screen_image to the image
         self._screen_image = None  # Screen image captured from screen, or loaded by user for testing.
@@ -36,6 +37,7 @@ class Screen:
         # Find ED window position to determine which monitor it is on
         ed_rect = self.get_elite_window_rect()
         if ed_rect is None:
+            self.ap_ckb('log', f"ERROR: Could not find window {elite_dangerous_window}.")
             logger.error(f'Could not find window {elite_dangerous_window}.')
         else:
             logger.debug(f'Found Elite Dangerous window position: {ed_rect}')
@@ -154,11 +156,11 @@ class Screen:
         return s
 
     # reg defines a box as a percentage of screen width and height
-    def get_screen_region(self, reg):
-        image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]))
+    def get_screen_region(self, reg, inv_col=True):
+        image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]), inv_col)
         return image
 
-    def get_screen(self, x_left, y_top, x_right, y_bot):    # if absolute need to scale??
+    def get_screen(self, x_left, y_top, x_right, y_bot, inv_col=True):    # if absolute need to scale??
         monitor = {
             "top": self.mon["top"] + y_top,
             "left": self.mon["left"] + x_left,
@@ -167,7 +169,9 @@ class Screen:
             "mon": self.monitor_number,
         }
         image = array(self.mss.grab(monitor))
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        # TODO - mss.grab returns the image in BGR format, so no need to convert to RGB2BGR
+        if inv_col:
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         return image
         
     def get_screen_region_pct(self, region):

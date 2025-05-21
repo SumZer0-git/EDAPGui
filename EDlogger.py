@@ -4,7 +4,7 @@ import colorlog
 # what level for root logger
 logging.basicConfig(filename='autopilot.log', level=logging.ERROR,
                     format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S')
+                    datefmt='%H:%M:%S')
 
 logger = colorlog.getLogger('ed_log')
 

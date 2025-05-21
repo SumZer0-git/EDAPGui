@@ -5,6 +5,7 @@ import os
 import time
 from datetime import datetime, timedelta
 import queue
+from operator import itemgetter
 from sys import platform
 import threading
 from time import sleep
@@ -108,7 +109,7 @@ class MarketParser:
         # print(json.dumps(data, indent=4))
         return data
 
-    def get_sellable_items(self):
+    def get_sellable_items(self, cargo_parser) -> list:
         """ Get a list of items that can be sold to the station.
         Will trigger a read of the json file.
         {
@@ -128,11 +129,27 @@ class MarketParser:
             "Producer": false,
             "Rare": false
         }
+        @param cargo_parser: Current cargo to check if rare or demand=1 items exist in hold.
+        @return: A list of commodities that can be sold.
         """
         data = self.get_market_data()
-        sellable_items = [x for x in data['Items'] if x['Consumer'] or x['Demand'] > 0]
+        sellable_items = [x for x in data['Items'] if x['Consumer'] or
+                          ((x['Demand'] > 1 or x['Demand']) and cargo_parser.get_item(x['Name_Localised']) is not None)]
+        # DemandBracket: 0=Not listed, 1=Low Demand, 2=Medium Demand, 3=High Demand
+        # sellable_items = [x for x in data['Items'] if x['DemandBracket'] > 0]
+        #sellable_items = [x for x in data['Items'] if self.can_sell_item(x['Name_Localised'])]
         # print(json.dumps(newlist, indent=4))
-        return sellable_items
+
+        # Sort by name, then category
+        sorted_list1 = sorted(sellable_items, key=lambda x: x['Name_Localised'].lower())
+        sorted_list2 = sorted(sorted_list1, key=lambda x: x['Category_Localised'].lower())
+
+        logger.debug("Listing sellable commodities in market order")
+        for x in sorted_list2:
+            logger.debug(f"\t{x}")
+        logger.debug("Finished listing sellable commodities in market order")
+
+        return sorted_list2
 
     def get_buyable_items(self):
         """ Get a list of items that can be bought from the station.
@@ -156,9 +173,22 @@ class MarketParser:
         }
         """
         data = self.get_market_data()
-        buyable_items = [x for x in data['Items'] if x['Producer'] and x['Stock'] > 0]
+        # buyable_items = [x for x in data['Items'] if x['Producer'] and x['Stock'] > 0]
+        # StockBracket: 0=Not listed, 1=Low Stock, 2=Medium Stock, 3=High Stock
+        # buyable_items = [x for x in data['Items'] if x['StockBracket'] > 0]
+        buyable_items = [x for x in data['Items'] if self.can_buy_item(x['Name_Localised'])]
         # print(json.dumps(newlist, indent=4))
-        return buyable_items
+
+        # Sort by name, then category
+        sorted_list1 = sorted(buyable_items, key=lambda x: x['Name_Localised'].lower())
+        sorted_list2 = sorted(sorted_list1, key=lambda x: x['Category_Localised'].lower())
+
+        logger.debug("Listing buyable commodities in market order")
+        for x in sorted_list2:
+            logger.debug(f"\t{x}")
+        logger.debug("Finished listing buyable commodities in market order")
+
+        return sorted_list2
 
     def get_market_name(self) -> str:
         """ Gets the current market (station) name.
@@ -223,11 +253,19 @@ if __name__ == "__main__":
         cleaned_data = parser.get_market_data()
 
         #item = parser.get_item('water')
-        sell = parser.can_sell_item('water')
+        #sell = parser.can_sell_item('water')
         #buy = parser.can_buy_item('water')
 
-        print(f"Curr Time: {time.time()}")
-        print(f"Sell water: {sell}")
+        items = parser.get_buyable_items()
+        #items = parser.get_sellable_items()
+        sorted_list = sorted(items, key=itemgetter('Name_Localised'))
+        sorted_list = sorted(sorted_list, key=itemgetter('Category_Localised'))
+        for item in sorted_list:
+            print(f"Item: {item['Name_Localised']} ({item['Category_Localised']}) DemandBracket:{item['DemandBracket']} StockBracket:{item['StockBracket']}")
+
+        #print(f"Curr Time: {time.time()}")
+        #print(f"Sell water: {sell}")
         # print(json.dumps(cleaned_data, indent=4))
 
         time.sleep(1)
+        break
