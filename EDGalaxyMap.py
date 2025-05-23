@@ -63,7 +63,6 @@ class EDGalaxyMap:
 
     def set_gal_map_destination_text(self, ap, target_name, target_select_cb=None) -> bool:
         """ Call either the Odyssey or Horizons version of the Galactic Map sequence. """
-        # TODO - Move this to Gal Map class
         if not self.is_odyssey:
             return ap.galaxy_map.set_gal_map_destination_text_horizons(ap, target_name, target_select_cb)
         else:
@@ -188,7 +187,6 @@ class EDGalaxyMap:
         If the system is already selected or is selected correctly, returns True,
         otherwise False.
         """
-        # TODO - Move to ED_AP.py
         # Call sequence to select route
         if self.set_gal_map_destination_text(ap, target_system, None):
             return True

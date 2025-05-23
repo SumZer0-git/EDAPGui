@@ -1361,7 +1361,6 @@ class EDAutopilot:
 
         self.fsd_target_align(scr_reg)
 
-
     def sc_target_align(self, scr_reg) -> bool:
         """ Stays tight on the target, monitors for disengage and obscured.
         If target could not be found, return false."""
