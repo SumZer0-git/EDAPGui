@@ -1,3 +1,11 @@
+# 5/20/2025 Stumpii: Waypoints
+ - Added new waypoint system. NOTE: This breaks compatibility with the old waypoints, so needs any existing waypoint to be remade.
+ - Added EDMesg system.
+ - Enabled target occlusion.
+ - Added localisation for OCR.
+ - A whole slew of other changes. Too many to mention.
+ - This has a number of new modules added, so update python modules.
+
 # 4/26/2025 Stumpii: Minor updates.
 - Added support for negative sunpitch times.
 - Added docking retries to GUI.

@@ -1,0 +1,15 @@
+{
+    "PRESS_TO_DISENGAGE_MSG": "?",
+
+    "INT_PNL_TAB_MODULES": "?",
+    "INT_PNL_TAB_FIRE_GROUPS": "?",
+    "INT_PNL_TAB_SHIP": "?",
+    "INT_PNL_TAB_INVENTORY": "?",
+    "INT_PNL_TAB_STORAGE": "?",
+    "INT_PNL_TAB_STATUS": "?",
+
+    "NAV_PNL_TAB_NAVIGATION": "?",
+    "NAV_PNL_TAB_TRANSACTIONS": "?",
+    "NAV_PNL_TAB_CONTACTS": "?",
+    "NAV_PNL_TAB_TARGET": "?"
+}

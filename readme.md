@@ -215,7 +215,21 @@ Hot keys are now configurable in the config-AP.json file, so you can remap them.
 https://pythonhosted.org/pynput/keyboard.html
 
 ## Config File: config-AP.json
-  Note: the below is from the code, the real .json file will have the True/False values as lower case, as in true/false<br>
+The following settings from the AP.json file are **not** available through the GUI and must be changed directly within AP.json:
+  ```py
+    "Robigo_Single_Loop": False,   # True means only 1 loop will execute and then terminate upon docking, will not perform mission processing
+    "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
+    "OverlayTextFont": "Eurostyle", 
+    "OverlayGraphicEnable": False, # not implemented yet
+    "DiscordWebhook": False,       # discord not implemented yet
+    "DiscordWebhookURL": "",
+    "DiscordUserID": "",
+    "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
+    "FCDepartureTime": 30.0,       # When leaving a Fleet Carrier, this is the amount of time in Secs to fly away before enabling SC.
+    "Language": "en"               # Language for OCR checks (i.e. 'en', 'fr', 'de')
+```
+The following are available through the GUI and are included here for reference.
+Note: the below is from the code, the real .json file will have the True/False values as lower case, as in true/false<br>
   ```py
        self.config = {  
             "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS
