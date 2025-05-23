@@ -1437,6 +1437,7 @@ class EDAutopilot:
         bring the target into view quickly. """
         self.ap_ckb('log+vce', 'Target occluded, repositioning.')
         self.keys.send('SetSpeed50')
+        sleep(5)
         self.pitchDown(90)
 
         # Speed away
@@ -1444,8 +1445,8 @@ class EDAutopilot:
         sleep(15)
 
         self.keys.send('SetSpeed50')
-        self.pitchUp(90)
         sleep(5)
+        self.pitchUp(90)
         self.nav_align(scr_reg)
         self.keys.send('SetSpeed50')
 
