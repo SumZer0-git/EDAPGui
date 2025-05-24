@@ -25,6 +25,9 @@ row in this waypoint file.  The waypoint file is read in when selecting Waypoint
 waypoint, the Autopilot will go idle.  The Waypoint Assist writes to waypoints.json file, marking which Systems have
 been reached by setting the Completed entity to true.
 
+## Waypoint Editor
+The simplest way to configure a waypoint file is to use the Waypoint Editor tool (with installer) written in C#, available here: [EDAP-Waypoint-Editor](https://github.com/Stumpii/EDAP-Waypoint-Editor). At some point, the features will be added to ED_AP.
+
 ## Repeating Waypoints
 A set of waypoints can be endlessly repeated by using a special row at the end of the waypoint file with the system name as **'REPEAT'**. When hitting this record and as long as **Skip** is not ture, the Waypoint Assist will start from the top jumping through the defined Systems until the user ends the Waypoint Assist.
 
