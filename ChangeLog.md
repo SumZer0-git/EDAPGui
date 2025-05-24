@@ -1,3 +1,7 @@
+# 5/24/2025 Stumpii: Check update crash
+ - Fix crash when checking for updates.
+ - Updated version.
+
 # 5/20/2025 Stumpii: Waypoints
  - Added new waypoint system. NOTE: This breaks compatibility with the old waypoints, so needs any existing waypoint to be remade.
  - Added EDMesg system.
