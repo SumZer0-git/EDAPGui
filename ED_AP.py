@@ -1437,6 +1437,7 @@ class EDAutopilot:
         bring the target into view quickly. """
         self.ap_ckb('log+vce', 'Target occluded, repositioning.')
         self.keys.send('SetSpeed50')
+        sleep(5)
         self.pitchDown(90)
 
         # Speed away
@@ -1444,8 +1445,8 @@ class EDAutopilot:
         sleep(15)
 
         self.keys.send('SetSpeed50')
-        self.pitchUp(90)
         sleep(5)
+        self.pitchUp(90)
         self.nav_align(scr_reg)
         self.keys.send('SetSpeed50')
 
@@ -1842,10 +1843,10 @@ class EDAutopilot:
     def jump_to_system(self, scr_reg, system_name: str) -> bool:
         """ Jumps to the specified system. Returns True if in the system already,
         or we successfully travel there, else False. """
-        # self.update_ap_status(f"Targeting System: {system_name}")
-        # ret = self.waypoint.set_next_system(self, system_name)
-        # if not ret:
-        #     return False
+        self.update_ap_status(f"Targeting System: {system_name}")
+        ret = self.galaxy_map.set_next_system(self, system_name)
+        if not ret:
+            return False
 
         # if we are starting the waypoint docked at a station, we need to undock first
         if self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
