@@ -2000,7 +2000,7 @@ class EDAutopilot:
         self.jn.ship_state()['interdicted'] = False
 
         # Loop forever keeping tight align to target, until we get SC Disengage popup
-        self.vce.say("Target Align")
+        self.ap_ckb('log+vce', 'Target Align')
         while True:
             sleep(0.05)
             if self.jn.ship_state()['status'] == 'in_supercruise':
@@ -2010,7 +2010,7 @@ class EDAutopilot:
                     # self.keys.send('SetSpeed100')
                     sleep(10)
                     self.keys.send('SetSpeed50')
-                    self.nav_align(scr_reg)  # Align to target
+                    self.nav_align(scr_reg)  # Compass Align
             elif self.status.get_flag2(Flags2GlideMode):
                 # Gliding - wait to complete
                 logger.debug("Gliding")
