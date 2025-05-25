@@ -17,13 +17,54 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
-        
+        python-version: '3.10'
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        python -m pip install -r requirements.txt
+        python -m pip install --force-reinstall paddlepaddle paddleocr
+
+    # Pre-download PaddleOCR models to include in the package
+    - name: Pre-download PaddleOCR models
+      run: |
+        # Create a Python script to download models line by line
+        echo "import os" > download_models.py
+        echo "from paddleocr import PaddleOCR" >> download_models.py
+        echo "" >> download_models.py
+        echo "# Create models directory" >> download_models.py
+        echo "models_dir = os.path.join(os.getcwd(), 'paddleocr_models')" >> download_models.py
+        echo "os.makedirs(models_dir, exist_ok=True)" >> download_models.py
+        echo "" >> download_models.py
+        echo "# Initialize PaddleOCR to force model download" >> download_models.py
+        echo "# The models will be cached in the .paddleocr directory" >> download_models.py
+        echo "ocr = PaddleOCR(lang='en', use_gpu=False, show_log=True)" >> download_models.py
+        echo "" >> download_models.py
+        echo "# List downloaded model files to verify" >> download_models.py
+        echo "print('Downloaded models:')" >> download_models.py
+        echo "for root, dirs, files in os.walk(os.path.expanduser('~/.paddleocr')):" >> download_models.py
+        echo "    for file in files:" >> download_models.py
+        echo "        print(os.path.join(root, file))" >> download_models.py
+        echo "" >> download_models.py
+        echo "# Copy models to our custom directory that will be included in the package" >> download_models.py
+        echo "import shutil" >> download_models.py
+        echo "paddle_dir = os.path.expanduser('~/.paddleocr')" >> download_models.py
+        echo "for root, dirs, files in os.walk(paddle_dir):" >> download_models.py
+        echo "    for file in files:" >> download_models.py
+        echo "        src_path = os.path.join(root, file)" >> download_models.py
+        echo "        rel_path = os.path.relpath(src_path, paddle_dir)" >> download_models.py
+        echo "        dst_path = os.path.join(models_dir, rel_path)" >> download_models.py
+        echo "        os.makedirs(os.path.dirname(dst_path), exist_ok=True)" >> download_models.py
+        echo "        shutil.copy2(src_path, dst_path)" >> download_models.py
+        echo "        print(f'Copied {src_path} to {dst_path}')" >> download_models.py
         
+        # Run the script to download models
+        python download_models.py
+        
+        # Verify models were downloaded and copied
+        echo "Checking models directory:"
+        dir paddleocr_models
+
     # Custom PyInstaller installation with bootloader recompilation
     - name: Install custom PyInstaller
       run: |
@@ -32,56 +73,31 @@ jobs:
         python -m pip install --force-reinstall --ignore-installed --no-binary :all: --no-cache pyinstaller@git+https://github.com/pyinstaller/pyinstaller.git@0d562b5
         $Env:CL = ""
         
-    # Add version info file
-    - name: Create Version Info
-      run: |
-        echo "VSVersionInfo(
-          ffi=FixedFileInfo(
-            filevers=(1, 0, 0, 0),
-            prodvers=(1, 0, 0, 0),
-            mask=0x3f,
-            flags=0x0,
-            OS=0x40004,
-            fileType=0x1,
-            subtype=0x0,
-            date=(0, 0)
-          ),
-          kids=[
-            StringFileInfo([
-              StringTable(
-                u'040904B0',
-                [StringStruct(u'CompanyName', u'EDAP'),
-                 StringStruct(u'FileDescription', u'EDAP Autopilot'),
-                 StringStruct(u'FileVersion', u'1.0.0'),
-                 StringStruct(u'InternalName', u'EDAP_Autopilot'),
-                 StringStruct(u'LegalCopyright', u'Copyright (c) 2024'),
-                 StringStruct(u'OriginalFilename', u'EDAP-Autopilot.exe'),
-                 StringStruct(u'ProductName', u'EDAP Autopilot'),
-                 StringStruct(u'ProductVersion', u'1.0.0')])
-              ]),
-            VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
-          ]
-        )" > version_info.txt
-        
-    - name: List directory contents for debugging
-      run: |
-        echo "Root directory:"
-        dir
-        echo "====================="
-        echo "Screen directory:"
-        dir screen
-        echo "====================="
-        echo "List all Python files:"
-        Get-ChildItem -Path . -Filter "*.py" -Recurse | Select-Object FullName
-        echo "====================="
-        echo "Recursive listing of all directories:"
-        Get-ChildItem -Path . -Directory -Recurse | Select-Object FullName
 
     - name: Build executable
       run: |
         # Create a default config.json if it doesn't exist
         if (-not (Test-Path -Path "config.json")) {
           echo "{}" > config.json
+        }
+        
+        # Create configs directory and default JSON files if they don't exist
+        $configsDir = "configs"
+        if (-not (Test-Path -Path $configsDir)) {
+          New-Item -Path $configsDir -ItemType Directory
+        }
+        
+        # Create default config files if they don't exist
+        if (-not (Test-Path -Path "$configsDir\AP.json")) {
+          echo "{}" > "$configsDir\AP.json"
+        }
+        
+        if (-not (Test-Path -Path "$configsDir\ship_configs.json")) {
+          echo "{}" > "$configsDir\ship_configs.json"
+        }
+        
+        if (-not (Test-Path -Path "$configsDir\resolution.json")) {
+          echo "{}" > "$configsDir\resolution.json"
         }
         
         # Create build info file with just the date
@@ -96,26 +112,24 @@ jobs:
           --add-data "*.py;." `
           --add-data "build_info.txt;." `
           --add-data "config.json;." `
+          --add-data "configs\*.json;configs" `
+          --add-data "paddleocr_models;paddleocr_models" `
           --collect-data "paddle" `
           --collect-all "paddleocr" `
           --hidden-import=PIL `
           --hidden-import=PIL._imagingtk `
           --hidden-import=PIL._tkinter_finder `
-          --version-file="version_info.txt" `
-          --name "EDAP-Autopilot-$buildDate" `
+          --name "EDAP-$buildDate" `
           --clean `
           --noupx `
           --noconfirm `
           EDAPGui.py
         
-        # Create zip archive of the directory for distribution
-        Compress-Archive -Path ".\dist\EDAP-Autopilot-$buildDate" -DestinationPath ".\dist\EDAP-Autopilot-$buildDate.zip"
-        
         # Check if build was successful
-        if (Test-Path ".\dist\EDAP-Autopilot-$buildDate.zip") {
-          echo "Build successful: EDAP-Autopilot-$buildDate.zip"
+        if (Test-Path ".\dist\EDAP-$buildDate") {
+          echo "Build successful: EDAP-$buildDate"
         } else {
-          echo "Build failed or file not found at expected location"
+          echo "Build failed or directory not found at expected location"
           exit 1
         }
 
@@ -132,7 +146,7 @@ jobs:
         
         # Scan using direct command line tool
         $buildDate = Get-Date -Format "yyyy-MM-dd"
-        $buildPath = Resolve-Path ".\dist\EDAP-Autopilot-$buildDate"
+        $buildPath = Resolve-Path ".\dist\EDAP-$buildDate"
         
         echo "Scanning path: $buildPath"
         
@@ -159,6 +173,6 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: EDAP-Autopilot
-        path: ./dist/EDAP-Autopilot-*.zip
+        name: EDAP
+        path: ./dist/EDAP-*
         retention-days: 90
