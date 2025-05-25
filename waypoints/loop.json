@@ -1,5 +1,0 @@
-{ 
-    "Oochosy LV-I b56-2":         {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, 
-    "Flyeia Dryoae IJ-K b28-2":   {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false},         
-    "Cubeo":                      {"DockWithStation": "Medupe City", "StationCoord": [2064,807], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}  
-}

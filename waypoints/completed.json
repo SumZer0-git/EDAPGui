@@ -1,24 +1,62 @@
 {
-    "Ninabin": {
-        "DockWithStation": null,
-        "StationCoord": [
-            0,
-            0
-        ],
-        "StationBookmark": -1,
-        "SellNumDown": -1,
-        "BuyNumDown": -1,
-        "Completed": true
-    },
-    "Wailaroju": {
-        "DockWithStation": null,
-        "StationCoord": [
-            0,
-            0
-        ],
-        "StationBookmark": -1,
-        "SellNumDown": -1,
-        "BuyNumDown": -1,
-        "Completed": true
-    }
+  "GlobalShoppingList": {
+    "SystemName": "",
+    "StationName": "",
+    "GalaxyBookmarkType": "",
+    "GalaxyBookmarkNumber": 0,
+    "SystemBookmarkType": "",
+    "SystemBookmarkNumber": 0,
+    "SellCommodities": {},
+    "BuyCommodities": {},
+    "Comment": null,
+    "UpdateCommodityCount": false,
+    "FleetCarrierTransfer": false,
+    "Skip": true,
+    "Completed": false
+  },
+  "1": {
+    "SystemName": "Ninabin",
+    "StationName": "",
+    "GalaxyBookmarkType": "",
+    "GalaxyBookmarkNumber": 0,
+    "SystemBookmarkType": "",
+    "SystemBookmarkNumber": 0,
+    "SellCommodities": {},
+    "BuyCommodities": {},
+    "Comment": null,
+    "UpdateCommodityCount": false,
+    "FleetCarrierTransfer": false,
+    "Skip": false,
+    "Completed": false
+  },
+  "2": {
+    "SystemName": "Wailaroju",
+    "StationName": "Watt Port",
+    "GalaxyBookmarkType": "",
+    "GalaxyBookmarkNumber": 0,
+    "SystemBookmarkType": "Station",
+    "SystemBookmarkNumber": 1,
+    "SellCommodities": {},
+    "BuyCommodities": {},
+    "Comment": "gfgh",
+    "UpdateCommodityCount": false,
+    "FleetCarrierTransfer": false,
+    "Skip": false,
+    "Completed": false
+  },
+  "3": {
+    "SystemName": "Enayex",
+    "StationName": "",
+    "GalaxyBookmarkType": "",
+    "GalaxyBookmarkNumber": 0,
+    "SystemBookmarkType": "",
+    "SystemBookmarkNumber": 0,
+    "SellCommodities": {},
+    "BuyCommodities": {},
+    "Comment": null,
+    "UpdateCommodityCount": false,
+    "FleetCarrierTransfer": false,
+    "Skip": false,
+    "Completed": false
+  }
 }
