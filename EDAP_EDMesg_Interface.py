@@ -23,6 +23,20 @@ class LaunchAction(EDMesgAction):
     pass
 
 
+class SystemMapTargetStationByBookmarkAction(EDMesgAction):
+    type: str
+    number: int
+
+
+class GalaxyMapTargetStationByBookmarkAction(EDMesgAction):
+    type: str
+    number: int
+
+
+class GalaxyMapTargetSystemByNameAction(EDMesgAction):
+    name: str
+
+
 class EDAPLocationEvent(EDMesgEvent):
     path: str
 
@@ -39,6 +53,9 @@ actions: list[type[EDMesgAction]] = [
     LaunchAction,
     StartWaypointAssistAction,
     StopAllAssistsAction,
+    SystemMapTargetStationByBookmarkAction,
+    GalaxyMapTargetStationByBookmarkAction,
+    GalaxyMapTargetSystemByNameAction,
 ]
 events: list[type[EDMesgEvent]] = [
     EDAPLocationEvent,
