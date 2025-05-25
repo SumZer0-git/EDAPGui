@@ -1,4 +1,6 @@
-See [ChangeLog](/ChangeLog.md) for latest updates<br>
+**NOTE!!! Do NOT download from Releases. The last release is very old at this point. Instead, download the source code from this page (the green 'Code' button, then 'Download Zip'), or clone the repo locally and run APGUI.**
+
+See [ChangeLog](/ChangeLog.md) for latest updates.<br>
 Join discord if need support or wish to provide inputs on new features:  https://discord.gg/HCgkfSc
 <br>
 
@@ -80,10 +82,11 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * See https://github.com/skai2/EDAutopilot for other constraints that probably apply
 
 # How to run:
-* ./EDAPGui.exe  The EPAPGui.exe must live in the folder where the templates, configs, ships, waypoints folder reside.   
-* Otherwise run the main EDAPGui.py script
+* Run the main EDAPGui.py script.
   * With Elite Dangerous (ED) running, start EDAPGui.py
     * python EDAPGui.py
+* Run the released exe file. **NOTE!!! Do NOT download from Releases at this time. The last release is very old at this point. So ignore this option and download the source code!**
+  * ./EDAPGui.exe  The EPAPGui.exe must live in the folder where the templates, configs, ships, waypoints folder reside.   
 
 # Getting Started:
 Once ED_AP has started there are few steps to complete the first time ED AP is run. These will help avoid common issues.
