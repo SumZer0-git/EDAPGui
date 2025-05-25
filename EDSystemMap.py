@@ -18,7 +18,7 @@ class EDSystemMap:
         self.status_parser = StatusParser()
         self.ap_ckb = cb
 
-    def set_sys_map_dest_bookmark(self, ap, bookmark_type, bookmark_position) -> bool:
+    def set_sys_map_dest_bookmark(self, ap, bookmark_type: str, bookmark_position: int) -> bool:
         """ Set the System Map destination using a bookmark.
         @param ap: ED_AP reference.
         @param bookmark_type: The bookmark type (Favorite, Body, Station, Settlement or Navigation), Favorite
