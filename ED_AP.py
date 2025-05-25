@@ -1231,7 +1231,7 @@ class EDAutopilot:
             logger.error('align=err1, nav_align not in super or space')
             raise Exception('nav_align not in super or space')
 
-        self.vce.say("Navigation Align")
+        self.ap_ckb('log+vce', 'Compass Align')
 
         # try multiple times to get aligned.  If the sun is shining on console, this it will be hard to match
         # the vehicle should be positioned with the sun below us via the sun_avoid() routine after a jump
@@ -1241,7 +1241,7 @@ class EDAutopilot:
             if abs(off['yaw']) < close and abs(off['pit']) < close:
                 break
 
-            for i in range(3):
+            for i in range(20):
                 # Calc roll time based on nav point location
                 if abs(off['roll']) > close and (180 - abs(off['roll']) > close):
                     # first roll to get the nav point at the vertical position
@@ -1262,7 +1262,7 @@ class EDAutopilot:
                 else:
                     break
 
-            for i in range(3):
+            for i in range(20):
                 # Calc pitch time based on nav point location
                 if abs(off['pit']) > close:
                     if off['pit'] < 0:
@@ -1274,7 +1274,7 @@ class EDAutopilot:
                 else:
                     break
 
-            for i in range(3):
+            for i in range(20):
                 # Calc yaw time based on nav point location
                 if abs(off['yaw']) > close:
                     if off['yaw'] < 0:
