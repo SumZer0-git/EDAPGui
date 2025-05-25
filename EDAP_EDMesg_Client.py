@@ -14,7 +14,10 @@ class EDMesgClient:
     def __init__(self, ed_ap, cb):
         self.ap = ed_ap
         self.ap_ckb = cb
-        self.client = create_edap_client()  # Factory method for EDCoPilot
+
+        self.actions_port = 15570
+        self.events_port = 15571
+        self.client = create_edap_client(self.actions_port, self.events_port)  # Factory method for EDCoPilot
         print("Server starting.")
 
         self._client_loop_thread = threading.Thread(target=self._client_loop, daemon=True)
@@ -24,7 +27,9 @@ class EDMesgClient:
         """ A loop for the client.
         This runs on a separate thread monitoring communications in the background. """
         try:
+            print("Starting client loop.")
             while True:
+                print("In client loop.")
                 # Check if we received any events from EDAP
                 if not self.client.pending_events.empty():
                     event = self.client.pending_events.get()
@@ -69,8 +74,8 @@ class EDMesgClient:
 
 def main():
     edmesg_client = EDMesgClient(ed_ap=None, cb=None)
-    # while not edmesg_client.stop:
-    #     sleep(1)
+    while 1:  # not edmesg_client.stop:
+         sleep(1)
 
 
 if __name__ == "__main__":
