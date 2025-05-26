@@ -119,7 +119,7 @@ class EDInternalStatusPanel:
         # Try this 'n' times before giving up
         for i in range(10):
             # Is open, so proceed
-            image = self.ocr.capture_region(self.reg['right_panel'])
+            image = self.ocr.capture_region_pct(self.reg['right_panel'])
             # tab_bar = self.capture_tab_bar()
             # if tab_bar is None:
             #     return None

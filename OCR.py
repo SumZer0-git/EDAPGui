@@ -152,7 +152,7 @@ class OCR:
         # No good matches, then return None
         return None, 0, 0
 
-    def capture_region(self, region):
+    def capture_region_pct(self, region):
         """ Grab the image based on the region name/rect.
         Returns an unfiltered image, either from screenshot or provided image.
         @param region: The region to check in % (0.0 - 1.0).
@@ -194,7 +194,7 @@ class OCR:
         @param region: The region to check in % (0.0 - 1.0).
         """
 
-        img = self.capture_region(region)
+        img = self.capture_region_pct(region)
 
         ocr_textlist = self.image_simple_ocr(img)
         # print(str(ocr_textlist))
@@ -218,7 +218,7 @@ class OCR:
 
         in_list = False  # Have we seen one item yet? Prevents quiting if we have not selected the first item.
         while 1:
-            img = self.capture_region(region)
+            img = self.capture_region_pct(region)
             if img is None:
                 return False
 
