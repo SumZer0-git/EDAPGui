@@ -505,7 +505,7 @@ class EDWayPoint:
                     # No need to target system
                     self.ap.ap_ckb('log+vce', f"System already targeted.")
                 else:
-                    self.ap.ap_ckb('log+vce', f"Targeting system.")
+                    self.ap.ap_ckb('log+vce', f"Targeting system {next_wp_system}.")
                     # Select destination in galaxy map based on name
                     res = self.ap.galaxy_map.set_gal_map_destination_text(self.ap, next_wp_system,
                                                                           self.ap.jn.ship_state)
