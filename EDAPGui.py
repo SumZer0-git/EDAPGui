@@ -459,7 +459,7 @@ class APGui():
         if not self.gui_loaded:
             # Store message in queue
             self.log_buffer.put(message)
-            logger.info(f"Log Msg: {message}")
+            logger.info(msg)
         else:
             # Add queued messages to the list
             while not self.log_buffer.empty():
@@ -467,7 +467,7 @@ class APGui():
 
             self.msgList.insert(END, message)
             self.msgList.yview(END)
-            logger.info(f"Log Msg: {message}")
+            logger.info(msg)
 
     def set_statusbar(self, txt):
         self.statusbar.configure(text=txt)
