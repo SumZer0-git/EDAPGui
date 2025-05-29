@@ -163,13 +163,16 @@ class Overlay:
         floating_text.clear()
 
     def overlay_remove_rect(self, key):
-        lines.pop(key)
+        if key in lines:
+            lines.pop(key)
 
     def overlay_remove_text(self, key):
-        text.pop(key)
+        if key in text:
+            text.pop(key)
 
     def overlay_remove_floating_text(self, key):
-        floating_text.pop(key)
+        if key in floating_text:
+            floating_text.pop(key)
 
     def overlay_quit(self):
         win32gui.PostMessage(self.hWindow, win32con.WM_CLOSE, 0, 0)  
