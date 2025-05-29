@@ -1,3 +1,12 @@
+# 5/28/2025 Stumpii: Various minor updates.
+ - Added cobra-mk5 config file.
+ - Added galaxy and system map selection to EDMesg server.
+ - Allow more target align tires.
+ - Updated waypoints to new format. Removed some no longer required.
+ - Renamed capture_region as there was a duplicate.
+ - Added debug and improvment to gal map.
+ - Changed log message to avoid double timestamp and unnecessary text. Cleans up log file.
+
 # 5/24/2025 Stumpii: Check update crash
  - Fix crash when checking for updates.
  - Updated version.

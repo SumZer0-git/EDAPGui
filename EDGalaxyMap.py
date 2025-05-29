@@ -120,6 +120,7 @@ class EDGalaxyMap:
 
         # type in the System name
         typewrite(target_name, interval=0.25)
+        logger.debug(f"Entered system name: {target_name}")
         sleep(0.05)
 
         # send enter key (removes focus out of input field)
@@ -143,9 +144,11 @@ class EDGalaxyMap:
         while not correct_route:
             # Store the current nav route system
             last_nav_route_sys = ap.nav_route.get_last_system()
+            logger.debug(f"Previous Nav Route dest: {last_nav_route_sys}.")
 
             # Select first (or next) system
             ap.keys.send('UI_Select')  # Select >| button
+            sleep(0.05)
 
             # zoom camera which puts focus back on the map
             ap.keys.send('CamZoomIn')
@@ -161,21 +164,26 @@ class EDGalaxyMap:
             # if got passed through the ship() object, lets call it to see if a target has been
             # selected yet... otherwise we wait.  If long route, it may take a few seconds
             if ap.nav_route is not None:
+                logger.debug(f"Waiting for Nav Route to update.")
                 while 1:
                     curr_nav_route_sys = ap.nav_route.get_last_system()
                     # Check if the nav route has been changed (right or wrong)
                     if curr_nav_route_sys.upper() != last_nav_route_sys.upper():
+                        logger.debug(f"Current Nav Route dest: {last_nav_route_sys}.")
                         # Check if this nav route is correct
                         if curr_nav_route_sys.upper() == target_name.upper():
+                            logger.debug(f"Nav Route updated correctly.")
                             # Break loop and exit
                             correct_route = True
                             break
                         else:
                             # Try the next system, go back to the search bar
+                            logger.debug(f"Nav Route updated with wrong target. Select next target.")
                             ap.keys.send('UI_Up')
                             break
             else:
                 # Cannot check route, so assume right
+                logger.debug(f"Unable to check Nav Route, so assuming it is correct.")
                 correct_route = True
 
         # Close Galaxy map

@@ -55,7 +55,7 @@ Author: sumzer0@yahoo.com
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
 # contains the names of the release.
-EDAP_VERSION = "V1.2.0"
+EDAP_VERSION = "V1.3.0"
 # depending on how release versions are best marked you could also change it to the release tag, see function check_update.
 # ---------------------------------------------------------------------------
 
@@ -459,7 +459,7 @@ class APGui():
         if not self.gui_loaded:
             # Store message in queue
             self.log_buffer.put(message)
-            logger.info(f"Log Msg: {message}")
+            logger.info(msg)
         else:
             # Add queued messages to the list
             while not self.log_buffer.empty():
@@ -467,7 +467,7 @@ class APGui():
 
             self.msgList.insert(END, message)
             self.msgList.yview(END)
-            logger.info(f"Log Msg: {message}")
+            logger.info(msg)
 
     def set_statusbar(self, txt):
         self.statusbar.configure(text=txt)

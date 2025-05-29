@@ -10,6 +10,9 @@ from EDAP_EDMesg_Interface import (
     StartWaypointAssistAction,
     StopAllAssistsAction,
     LaunchAction,
+    SystemMapTargetStationByBookmarkAction,
+    GalaxyMapTargetStationByBookmarkAction,
+    GalaxyMapTargetSystemByNameAction,
 
     EDAPLocationEvent,
     LaunchCompleteEvent,
@@ -61,6 +64,12 @@ class EDMesgServer:
                         self._start_waypoint_assist()
                     if isinstance(action, StopAllAssistsAction):
                         self._stop_all_assists()
+                    if isinstance(action, SystemMapTargetStationByBookmarkAction):
+                        self._system_map_target_station_by_bookmark(action.type, action.number)
+                    if isinstance(action, GalaxyMapTargetStationByBookmarkAction):
+                        self._galaxy_map_target_station_by_bookmark(action.type, action.number)
+                    if isinstance(action, GalaxyMapTargetSystemByNameAction):
+                        self._galaxy_map_target_system_by_name(action.name)
                     if isinstance(action, LaunchAction):
                         self._launch(self._provider)
 
@@ -114,6 +123,21 @@ class EDMesgServer:
         provider.publish(
             LaunchCompleteEvent()
         )
+
+    def _system_map_target_station_by_bookmark(self, bm_type: str, number: int):
+        self.ap_ckb('log', "Received EDMesg Action: SystemMapTargetStationByBookmarkAction")
+        self.ap.system_map.goto_system_map()
+        self.ap.system_map.set_sys_map_dest_bookmark(self.ap, bm_type, number)
+
+    def _galaxy_map_target_station_by_bookmark(self, bm_type: str, number: int):
+        self.ap_ckb('log', "Received EDMesg Action: GalaxyMapTargetStationByBookmarkAction")
+        self.ap.galaxy_map.goto_galaxy_map()
+        self.ap.galaxy_map.set_gal_map_dest_bookmark(self.ap, bm_type, number)
+
+    def _galaxy_map_target_system_by_name(self, name: str):
+        self.ap_ckb('log', "Received EDMesg Action: GalaxyMapTargetSystemByNameAction")
+        self.ap.galaxy_map.goto_galaxy_map()
+        self.ap.galaxy_map.set_gal_map_destination_text(self.ap, name, target_select_cb=None)
 
 
 def main():
