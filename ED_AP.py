@@ -934,9 +934,10 @@ class EDAutopilot:
         else:
             return False
 
-    @deprecated("Replaced with 'sc_disengage_label_up' and 'sc_disengage_active' using OCR.")
     def sc_disengage(self, scr_reg) -> bool:
-        """ look for the "PRESS [J] TO DISENGAGE" image, if in this region then return true """
+        """ DEPRECATED - Replaced with 'sc_disengage_label_up' and 'sc_disengage_active' using OCR.
+        look for the "PRESS [J] TO DISENGAGE" image, if in this region then return true
+        """
         dis_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('disengage', 'disengage')
 
         pt = maxLoc
