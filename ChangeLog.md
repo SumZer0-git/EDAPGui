@@ -1,3 +1,9 @@
+# 5/30/2025 Stumpii: Various minor updates. 
+ - Added check for disengage while in target align.
+ - Log new file on each startup of EDAP. Store previous runs.
+ - Increase scroll up time for buy/sell to make sure at top of list.
+ - Attempt to improve status.json file reading that sometimes results in a file error.
+
 # 5/28/2025 Stumpii: Various minor updates.
  - Added cobra-mk5 config file.
  - Added galaxy and system map selection to EDMesg server.

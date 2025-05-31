@@ -169,7 +169,7 @@ class EDGalaxyMap:
                     curr_nav_route_sys = ap.nav_route.get_last_system()
                     # Check if the nav route has been changed (right or wrong)
                     if curr_nav_route_sys.upper() != last_nav_route_sys.upper():
-                        logger.debug(f"Current Nav Route dest: {last_nav_route_sys}.")
+                        logger.debug(f"Current Nav Route dest: {curr_nav_route_sys}.")
                         # Check if this nav route is correct
                         if curr_nav_route_sys.upper() == target_name.upper():
                             logger.debug(f"Nav Route updated correctly.")

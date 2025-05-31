@@ -98,7 +98,7 @@ class EDStationServicesInShip:
                     self.market_parser.current_data['Items'][i]['StockBracket'] = 0
 
         if index > -1:
-            keys.send('UI_Up', hold=2.0)  # go up 10x in case were not on top of list
+            keys.send('UI_Up', hold=3.0)  # go up to top of list
             keys.send('UI_Down', hold=0.05, repeat=index)  # go down # of times user specified
             sleep(0.5)
             keys.send('UI_Select')  # Select that commodity
@@ -157,8 +157,7 @@ class EDStationServicesInShip:
         act_qty = qty
 
         if index > -1:
-            keys.send('UI_Up', hold=2.0)  # go up 10x in case were not on top of list
-            # ap.keys.send('UI_Up', repeat=10)  # go up 10x in case were not on top of list
+            keys.send('UI_Up', hold=3.0)  # go up to top of list
             keys.send('UI_Down', hold=0.05, repeat=index)  # go down # of times user specified
             sleep(0.5)
             keys.send('UI_Select')  # Select that commodity

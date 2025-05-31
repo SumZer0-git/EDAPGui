@@ -192,17 +192,22 @@ class StatusParser:
             return self.current_data
 
         # Read file
-        backoff = 1
+        attempt = 1
+        backoff = 0.1
         while True:
-            try:
-                with open(self.file_path, 'r') as file:
-                    data = json.load(file)
-                    break
-            except Exception as e:
-                logger.debug('An error occurred reading Status.json file. File may be open.')
-                sleep(backoff)
-                logger.debug('Attempting to re-read Status.json file after delay.')
-                backoff *= 2
+            if os.access(self.file_path, os.R_OK):
+                try:
+                    with open(self.file_path, 'r') as file:
+                        data = json.load(file)
+                        if attempt > 1:
+                            print(f"Status file attempt: {attempt}")
+                        break
+                except Exception as e:
+                    logger.debug('An error occurred reading Status.json file. File may be open.')
+                    sleep(backoff)
+                    logger.debug('Attempting to re-read Status.json file after delay.')
+                    backoff *= 2
+                    attempt = attempt + 1
 
         # Combine flags from Flags and Flags2 into a single dictionary
         # combined_flags = {**self.translate_flags(data['Flags'])}
