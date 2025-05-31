@@ -3,13 +3,11 @@ import traceback
 from math import atan, degrees
 import random
 from tkinter import messagebox
-from warnings import deprecated
 
 import cv2
 from simple_localization import LocalizationManager
 
 from EDAP_EDMesg_Server import EDMesgServer
-from EDAP_data import *
 from EDGalaxyMap import EDGalaxyMap
 from EDGraphicsSettings import EDGraphicsSettings
 from EDShipControl import EDShipControl
@@ -26,6 +24,7 @@ from EDafk_combat import AFK_Combat
 from EDInternalStatusPanel import EDInternalStatusPanel
 from NavRouteParser import NavRouteParser
 from OCR import OCR
+from EDNavigationPanel import EDNavigationPanel
 from Overlay import *
 from StatusParser import StatusParser
 from Voice import *
@@ -209,6 +208,7 @@ class EDAutopilot:
         self.galaxy_map = EDGalaxyMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
         self.system_map = EDSystemMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
         self.stn_svcs_in_ship = EDStationServicesInShip(self, self.scr, self.keys, cb)
+        self.nav_panel = EDNavigationPanel(self, self.scr, self.keys, cb)
 
         self.mesg_server = EDMesgServer(self, cb)
         self.mesg_server.actions_port = self.config['EDMesgActionsPort']
@@ -1058,30 +1058,7 @@ class EDAutopilot:
 
     def request_docking(self, toCONTACT):
         """ Request docking from Nav Panel. """
-        self.keys.send('UI_Back', repeat=10)
-        self.keys.send('HeadLookReset')
-        self.keys.send('UIFocus', state=1)
-        self.keys.send('UI_Left')
-        self.keys.send('UIFocus', state=0)
-        sleep(0.5)
-
-        # we start with the Left Panel having "NAVIGATION" highlighted, we then need to right
-        # right twice to "CONTACTS".  Notice of a FSD run, the LEFT panel is reset to "NAVIGATION"
-        # otherwise it is on the last tab you selected.  Thus must start AP with "NAVIGATION" selected
-        if (toCONTACT == 1):
-            self.keys.send('CycleNextPanel', hold=0.2)
-            sleep(0.2)
-            self.keys.send('CycleNextPanel', hold=0.2)
-
-        # On the CONTACT TAB, go to top selection, do this 4 seconds to ensure at top
-        # then go right, which will be "REQUEST DOCKING" and select it
-        self.keys.send('UI_Up', hold=4)
-        self.keys.send('UI_Right')
-        self.keys.send('UI_Select')
-
-        sleep(0.3)
-        self.keys.send('UI_Back')
-        self.keys.send('HeadLookReset')
+        self.nav_panel.request_docking(toCONTACT)
 
     def dock(self):
         """ Docking sequence.  Assumes in normal space, will get closer to the Station
@@ -1907,19 +1884,20 @@ class EDAutopilot:
 
     def fsd_assist(self, scr_reg):
         """ FSD Route Assist. """
-
-        logger.debug('self.jn.ship_state='+str(self.jn.ship_state()))
+        nav_route_parser = NavRouteParser()
+        #logger.debug('self.jn.ship_state='+str(self.jn.ship_state()))
 
         starttime = time.time()
         starttime -= 20  # to account for first instance not doing positioning
 
-        if self.jn.ship_state()['target']:
+        if nav_route_parser.get_last_system() is not None:
             # if we are starting the waypoint docked at a station, we need to undock first
             if self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
                 self.update_overlay()
                 self.waypoint_undock_seq()
 
-        while self.jn.ship_state()['target']:
+        # Keep jumping as long as there is a system to jump to.
+        while nav_route_parser.get_last_system() is not None:
             self.update_overlay()
 
             if self.jn.ship_state()['status'] == 'in_space' or self.jn.ship_state()['status'] == 'in_supercruise':

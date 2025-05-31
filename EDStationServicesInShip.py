@@ -6,6 +6,14 @@ from StatusParser import StatusParser
 from time import sleep
 from EDlogger import logger
 
+"""
+File:StationServicesInShip.py    
+
+Description:
+  TBD 
+
+Author: Stumpii
+"""
 
 class EDStationServicesInShip:
     """ Handles Station Services In Ship. """
@@ -14,8 +22,8 @@ class EDStationServicesInShip:
         self.screen = screen
         self.ocr = OCR(screen)
         self.keys = keys
-        self.status_parser = StatusParser()
         self.ap_ckb = cb
+        self.status_parser = StatusParser()
         self.market_parser = MarketParser()
 
     def goto_station_services(self) -> bool:

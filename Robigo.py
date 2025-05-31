@@ -306,7 +306,7 @@ class Robigo:
         while True:
        
             if self.state == STATE_MISSIONS:
-                if self.do_single_loop == False:  # if looping, then do mission processing
+                if not self.do_single_loop:  # if looping, then do mission processing
                     ap.update_ap_status("Completing missions")
                     
                     # Complete Missions, if we have any
