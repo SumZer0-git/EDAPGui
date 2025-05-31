@@ -1084,7 +1084,7 @@ class EDAutopilot:
         # At this point (of sleep()) we should be < 7.5km from the station.  Go 0 speed
         # if we get docking granted ED's docking computer will take over
         self.keys.send('SetSpeedZero', repeat=2)
-
+        sleep(3)  # Wait for ship to come to stop
         self.ap_ckb('log+vce', "Initiating Docking Procedure")
         self.request_docking(1)
         sleep(1)
@@ -1101,6 +1101,7 @@ class EDAutopilot:
                     self.keys.send('SetSpeed50')
                     sleep(5)
                     self.keys.send('SetSpeedZero', repeat=2)
+                sleep(3)  # Wait for ship to come to stop
                 self.request_docking(0)
                 self.keys.send('SetSpeedZero', repeat=2)
                 sleep(1.5)
