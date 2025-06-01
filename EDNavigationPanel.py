@@ -20,6 +20,7 @@ class EDNavigationPanel:
     """ The Navigation (Left hand) Ship Status Panel. """
     def __init__(self, ed_ap, screen, keys, cb):
         self.ap = ed_ap
+        self.locale = self.ap.locale
         self.screen = screen
         self.ocr = OCR(screen)
         self.keys = keys

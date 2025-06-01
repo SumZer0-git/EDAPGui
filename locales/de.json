@@ -11,5 +11,7 @@
     "NAV_PNL_TAB_NAVIGATION": "?",
     "NAV_PNL_TAB_TRANSACTIONS": "?",
     "NAV_PNL_TAB_CONTACTS": "?",
-    "NAV_PNL_TAB_TARGET": "?"
+    "NAV_PNL_TAB_TARGET": "?",
+
+    "STN_SVCS_CONNECTED_TO": "?"
 }

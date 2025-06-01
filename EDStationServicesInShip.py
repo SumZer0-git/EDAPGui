@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import cv2
+
+import ED_AP
 from MarketParser import MarketParser
 from OCR import OCR
 from StatusParser import StatusParser
 from time import sleep
 from EDlogger import logger
+from Screen_Regions import reg_scale_for_station, size_scale_for_station
 
 """
 File:StationServicesInShip.py    
@@ -15,16 +19,23 @@ Description:
 Author: Stumpii
 """
 
+
 class EDStationServicesInShip:
     """ Handles Station Services In Ship. """
     def __init__(self, ed_ap, screen, keys, cb):
         self.ap = ed_ap
+        self.locale = self.ap.locale
         self.screen = screen
-        self.ocr = OCR(screen)
+        self.ocr = self.ap.ocr
         self.keys = keys
         self.ap_ckb = cb
         self.status_parser = StatusParser()
         self.market_parser = MarketParser()
+        # The rect is top left x, y, and bottom right x, y in fraction of screen resolution
+        self.reg = {'connected_to': {'rect': [0.0, 0.0, 0.25, 0.25]},
+                    'stn_svc_layout': {'rect': [0.05, 0.40, 0.60, 0.76]},
+                    'commodities_market': {'rect': [0.0, 0.0, 0.25, 0.25]},
+                    }
 
     def goto_station_services(self) -> bool:
         """ Goto Station Services. """
@@ -36,9 +47,34 @@ class EDStationServicesInShip:
         self.keys.send("UI_Select")  # station services
 
         # TODO - replace with OCR from OCR branch
-        sleep(5)  # wait for new menu to finish rendering
+        # sleep(5)  # wait for new menu to finish rendering
+        # return True
 
-        return True
+        # Scale the regions based on the target resolution.
+        scl_reg_rect = reg_scale_for_station(self.reg['connected_to'], self.screen.screen_width, self.screen.screen_height)
+
+        abs_rect = self.screen.screen_pct_to_abs(scl_reg_rect['rect'])
+
+        # Draw box around region
+        self.ap.overlay.overlay_rect('conn_to_ovr', (abs_rect[0], abs_rect[1]), (abs_rect[2], abs_rect[3]), (0, 255, 0), 2)
+        #self.ap.overlay.overlay_floating_text('conn_to_ovr', f'Match: {maxVal:5.4f}', left, top - 25, (0, 255, 0))
+        self.ap.overlay.overlay_paint()
+
+        # Wait for screen to appear
+        res = self.ocr.wait_for_text([self.locale["STN_SVCS_CONNECTED_TO"]], scl_reg_rect)
+
+        # Store image
+        # image = self.screen.get_screen_full()
+        #reg = self.rect_to_region(scl_reg_rect)
+        image = self.screen.get_screen_region_pct(scl_reg_rect['rect'])
+        cv2.imwrite(f'test/station-services/station-services.png', image)
+
+        # Clean up screen
+        self.ap.overlay.overlay_remove_rect('conn_to_ovr')
+        #self.ap.overlay.overlay_remove_floating_text('conn_to_ovr')
+        self.ap.overlay.overlay_paint()
+
+        return res
 
     def select_buy(self, keys) -> bool:
         """ Select Buy. Assumes on Commodities Market screen. """
@@ -190,4 +226,21 @@ class EDStationServicesInShip:
             # keys.send('UI_Back')  # Back to commodities list
 
         return True, act_qty
+
+    # @staticmethod
+    # def rect_to_region(rect):
+    #     return {'reg': {'rect': [rect[0], rect[1], rect[2], rect[3]]}}
+
+def dummy_cb(msg, body=None):
+    pass
+
+
+# Usage Example
+if __name__ == "__main__":
+    test_ed_ap = ED_AP.EDAutopilot(cb=dummy_cb)
+    test_ed_ap.keys.activate_window = True
+    svcs = EDStationServicesInShip(test_ed_ap, test_ed_ap.scr, test_ed_ap.keys, test_ed_ap.ap_ckb)
+    svcs.goto_station_services()
+
+
 

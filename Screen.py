@@ -177,6 +177,7 @@ class Screen:
     def get_screen_region_pct(self, region):
         """ Grabs a screenshot and returns the selected region as an image.
         @param region: The region to check in % (0.0 - 1.0).
+        @return: An image defined by the region.
         """
         if self.using_screen:
             abs_rect = self.screen_pct_to_abs(region)
