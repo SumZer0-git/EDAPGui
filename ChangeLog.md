@@ -1,3 +1,6 @@
+# 6/1/2025 Stumpii: Bug fix.
+ - Removed 'deprecated' warning that does not work in old python versions.
+
 # 5/30/2025 Stumpii: Various minor updates. 
  - Added check for disengage while in target align.
  - Log new file on each startup of EDAP. Store previous runs.
