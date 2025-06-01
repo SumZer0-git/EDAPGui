@@ -3,7 +3,6 @@ import traceback
 from math import atan, degrees
 import random
 from tkinter import messagebox
-from warnings import deprecated
 
 import cv2
 from simple_localization import LocalizationManager
