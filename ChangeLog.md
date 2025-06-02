@@ -1,3 +1,10 @@
+# 6/1/2025 Stumpii: Small improvements.
+ - Added localisation to nav panel.
+ - Added OCR to station services screen check.
+ - Added region scaling for stations.
+ - Added EDNavigationPanel.py
+ - Disabled build-executable.yml as it always fails.
+
 # 6/1/2025 Stumpii: Bug fix.
  - Removed 'deprecated' warning that does not work in old python versions.
 
