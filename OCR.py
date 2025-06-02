@@ -158,7 +158,7 @@ class OCR:
         @param region: The region to check in % (0.0 - 1.0).
         """
         rect = region['rect']
-        image = self.screen.get_screen_region_pct(rect)
+        image = self.screen.get_screen_rect_pct(rect)
         return image
 
     def is_text_in_selected_item_in_image(self, img, text, min_w, min_h):
@@ -185,7 +185,7 @@ class OCR:
             logger.debug(f"Did not find '{text}' text in item text '{str(ocr_textlist)}'.")
             return False
 
-    def is_text_in_region(self, text, region):
+    def is_text_in_region(self, text, region) -> (bool, str):
         """ Does the region include the text being checked for. The region does not need
         to include highlighted areas.
         Checks if text exists in a region using OCR.
@@ -201,10 +201,10 @@ class OCR:
 
         if text.upper() in str(ocr_textlist):
             logger.debug(f"Found '{text}' text in item text '{str(ocr_textlist)}'.")
-            return True
+            return True, str(ocr_textlist)
         else:
             logger.debug(f"Did not find '{text}' text in item text '{str(ocr_textlist)}'.")
-            return False
+            return False, str(ocr_textlist)
 
     def select_item_in_list(self, text, region, keys, min_w, min_h) -> bool:
         """ Attempt to find the item by text in a list defined by the region.
@@ -237,22 +237,48 @@ class OCR:
                 in_list = True
                 keys.send("UI_Down")
 
-    def wait_for_text(self, texts: list[str], region, timeout=30) -> bool:
+    def wait_for_text(self, ap, texts: list[str], region, timeout=30) -> bool:
         """ Wait for a screen to appear by checking for text to appear in the region.
+        @param ap: ED_AP instance.
         @param texts: List of text to check for. Success occurs if any in the list is found.
         @param region: The region to check in % (0.0 - 1.0).
         @param timeout: Time to wait for screen in seconds
         """
+        abs_rect = self.screen.screen_rect_to_abs(region['rect'])
+
+        # Draw box around region
+        if ap.debug_overlay:
+            ap.overlay.overlay_rect1('wait_for_text', abs_rect, (0, 255, 0), 2)
+            ap.overlay.overlay_paint()
+
         start_time = time.time()
+        text_found = False
         while True:
             # Check for timeout.
             if time.time() > (start_time + timeout):
-                return False
+                break
 
             # Check if screen has appeared.
             for text in texts:
-                res = self.is_text_in_region(text, region)
-                if res:
-                    return True
+                text_found, ocr_text = self.is_text_in_region(text, region)
+
+                if ap.debug_overlay:
+                    ap.overlay.overlay_floating_text('wait_for_text', f'{ocr_text}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
+                    ap.overlay.overlay_paint()
+
+                if text_found:
+                    break
+
+            if text_found:
+                break
 
             time.sleep(0.25)
+
+        # Clean up screen
+        if ap.debug_overlay:
+            time.sleep(2)
+            ap.overlay.overlay_remove_rect('wait_for_text')
+            ap.overlay.overlay_remove_floating_text('wait_for_text')
+            ap.overlay.overlay_paint()
+
+        return text_found

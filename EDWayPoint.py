@@ -508,9 +508,9 @@ class EDWayPoint:
                 # TODO should this be in before every jump?
                 keys.send('TargetNextRouteSystem')
 
-                # Jump to the system
+                # Jump to the destination system
                 self.ap.ap_ckb('log+vce', f"Jumping to {next_wp_system}.")
-                res = self.ap.jump_to_system(scr_reg, next_wp_system)
+                res = self.ap.jump_to_system(scr_reg)
                 if not res:
                     self.ap.ap_ckb('log', f"Failed to jump to {next_wp_system}.")
                     _abort = True

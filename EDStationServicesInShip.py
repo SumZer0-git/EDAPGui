@@ -46,35 +46,18 @@ class EDStationServicesInShip:
         self.keys.send("UI_Down")  # station services
         self.keys.send("UI_Select")  # station services
 
-        # TODO - replace with OCR from OCR branch
-        # sleep(5)  # wait for new menu to finish rendering
-        # return True
-
         # Scale the regions based on the target resolution.
-        scl_reg_rect = reg_scale_for_station(self.reg['connected_to'], self.screen.screen_width, self.screen.screen_height)
-
-        abs_rect = self.screen.screen_pct_to_abs(scl_reg_rect['rect'])
-
-        # Draw box around region
-        self.ap.overlay.overlay_rect('conn_to_ovr', (abs_rect[0], abs_rect[1]), (abs_rect[2], abs_rect[3]), (0, 255, 0), 2)
-        #self.ap.overlay.overlay_floating_text('conn_to_ovr', f'Match: {maxVal:5.4f}', left, top - 25, (0, 255, 0))
-        self.ap.overlay.overlay_paint()
+        scl_reg = reg_scale_for_station(self.reg['connected_to'], self.screen.screen_width, self.screen.screen_height)
 
         # Wait for screen to appear
-        res = self.ocr.wait_for_text([self.locale["STN_SVCS_CONNECTED_TO"]], scl_reg_rect)
+        res = self.ocr.wait_for_text(self.ap, [self.locale["STN_SVCS_CONNECTED_TO"]], scl_reg)
 
         # Store image
-        # image = self.screen.get_screen_full()
-        #reg = self.rect_to_region(scl_reg_rect)
-        image = self.screen.get_screen_region_pct(scl_reg_rect['rect'])
-        cv2.imwrite(f'test/station-services/station-services.png', image)
+        # image = self.screen.get_screen_rect_pct(scl_reg['rect'])
+        # cv2.imwrite(f'test/station-services/station-services.png', image)
 
-        # Clean up screen
-        self.ap.overlay.overlay_remove_rect('conn_to_ovr')
-        #self.ap.overlay.overlay_remove_floating_text('conn_to_ovr')
-        self.ap.overlay.overlay_paint()
-
-        return res
+        # After the OCR timeout, station services will have appeared, to return true anyway.
+        return True
 
     def select_buy(self, keys) -> bool:
         """ Select Buy. Assumes on Commodities Market screen. """
@@ -227,9 +210,6 @@ class EDStationServicesInShip:
 
         return True, act_qty
 
-    # @staticmethod
-    # def rect_to_region(rect):
-    #     return {'reg': {'rect': [rect[0], rect[1], rect[2], rect[3]]}}
 
 def dummy_cb(msg, body=None):
     pass

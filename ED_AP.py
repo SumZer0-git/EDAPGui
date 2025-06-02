@@ -94,6 +94,7 @@ class EDAutopilot:
             "EnableEDMesg": False,
             "EDMesgActionsPort": 15570,
             "EDMesgEventsPort": 15571,
+            "DebugOverlay": False,
         }
         # NOTE!!! When adding a new config value above, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
@@ -136,6 +137,8 @@ class EDAutopilot:
                     cnf['EnableEDMesg'] = False
                     cnf['EDMesgActionsPort'] = 15570
                     cnf['EDMesgEventsPort'] = 15571
+                if 'DebugOverlay' not in cnf:
+                    cnf['DebugOverlay'] = False
                 self.config = cnf
                 logger.debug("read AP json:"+str(cnf))
             else:
@@ -248,6 +251,8 @@ class EDAutopilot:
         self.overlay.overlay_set_pos(self.config['OverlayTextXOffset'], self.config['OverlayTextYOffset'])
         # must be called after we initialized the objects above
         self.update_overlay()
+
+        self.debug_overlay = self.config['DebugOverlay']
 
         # debug window
         self.cv_view = self.config['Enable_CV_View']
@@ -921,6 +926,15 @@ class EDAutopilot:
         width = scr_reg.templates.template['disengage']['width']
         height = scr_reg.templates.template['disengage']['height']
 
+        reg_rect = scr_reg.reg['disengage']['rect']
+
+        # Draw box around region
+        if self.debug_overlay:
+            abs_rect = [pt[0] + reg_rect[0], pt[1] + reg_rect[1], pt[0] + reg_rect[0] + width, pt[1] + reg_rect[1] + height]
+            self.overlay.overlay_rect1('sc_disengage_label_up', abs_rect, (0, 255, 0), 2)
+            self.overlay.overlay_floating_text('sc_disengage_label_up', f'Match: {maxVal:5.4f} > {scr_reg.disengage_thresh}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
+            self.overlay.overlay_paint()
+
         if self.cv_view:
             self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
             dis_image = cv2.rectangle(dis_image, (0, 0), (1000, 25), (0, 0, 0), -1)
@@ -978,6 +992,13 @@ class EDAutopilot:
         if ocr_textlist is not None:
             sim = self.ocr.string_similarity(self.locale["PRESS_TO_DISENGAGE_MSG"], str(ocr_textlist))
             logger.info(f"Disengage similarity with {str(ocr_textlist)} is {sim}")
+
+        # Draw box around region
+        if self.debug_overlay:
+            abs_rect = scr_reg.reg['disengage']['rect']
+            self.overlay.overlay_rect1('sc_disengage_active', abs_rect, (0, 255, 0), 2)
+            self.overlay.overlay_floating_text('sc_disengage_active', f'{str(ocr_textlist)}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
+            self.overlay.overlay_paint()
 
         if self.cv_view:
             image = cv2.rectangle(image, (0, 0), (1000, 30), (0, 0, 0), -1)
@@ -1403,9 +1424,7 @@ class EDAutopilot:
             # check for SC Disengage
             if self.sc_disengage_label_up(scr_reg):
                 if self.sc_disengage_active(scr_reg):
-                    self.ap_ckb('log+vce', 'Disengage Supercruise')
-                    self.keys.send('HyperSuperCombination')
-                    self.stop_sco_monitoring()
+                    # Break so that the calling routine can detect the disengage
                     break
 
             new = self.get_destination_offset(scr_reg)
@@ -1417,6 +1436,15 @@ class EDAutopilot:
                 logger.debug("sc_target_align lost target")
                 self.ap_ckb('log', 'Target lost, attempting re-alignment.')
                 return False
+
+        # TODO - find a better way to clear these
+        if self.debug_overlay:
+            sleep(2)
+            self.overlay.overlay_remove_rect('sc_disengage_label_up')
+            self.overlay.overlay_remove_floating_text('sc_disengage_label_up')
+            self.overlay.overlay_remove_rect('sc_disengage_active')
+            self.overlay.overlay_remove_floating_text('sc_disengage_active')
+            self.overlay.overlay_paint()
 
         return True
 
@@ -1831,12 +1859,17 @@ class EDAutopilot:
         also can then perform trades if specific in the waypoints file."""
         self.waypoint.waypoint_assist(keys, scr_reg)
 
-    def jump_to_system(self, scr_reg, system_name: str) -> bool:
-        """ Jumps to the specified system. Returns True if in the system already,
-        or we successfully travel there, else False. """
-        self.update_ap_status(f"Targeting System: {system_name}")
-        ret = self.galaxy_map.set_next_system(self, system_name)
-        if not ret:
+    def jump_to_system(self, scr_reg) -> bool:
+        """ Jumps to the currently targeted system. Returns True if we successfully travel there, else False. """
+        # Current in game destination
+        status = self.status.get_cleaned_data()
+        destination_body = status['Destination_Body']  # The body number (0 for prim star)
+        destination_name = status['Destination_Name']  # The system/body/station/settlement name
+
+        # Check we have a route and that we have a destination to a star (body 0).
+        # We can have one without the other.
+        if destination_body != 0 or destination_name == "":
+            self.ap_ckb('log', "A valid destination system is not selected.")
             return False
 
         # if we are starting the waypoint docked at a station, we need to undock first
@@ -1885,20 +1918,25 @@ class EDAutopilot:
 
     def fsd_assist(self, scr_reg):
         """ FSD Route Assist. """
-        nav_route_parser = NavRouteParser()
-        #logger.debug('self.jn.ship_state='+str(self.jn.ship_state()))
+        # TODO - can we enable this? Seems like a better way
+        # nav_route_parser = NavRouteParser()
+        logger.debug('self.jn.ship_state='+str(self.jn.ship_state()))
 
         starttime = time.time()
         starttime -= 20  # to account for first instance not doing positioning
 
-        if nav_route_parser.get_last_system() is not None:
+        # TODO - can we enable this? Seems like a better way
+        # if nav_route_parser.get_last_system() is not None:
+        if self.jn.ship_state()['target']:
             # if we are starting the waypoint docked at a station, we need to undock first
             if self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
                 self.update_overlay()
                 self.waypoint_undock_seq()
 
         # Keep jumping as long as there is a system to jump to.
-        while nav_route_parser.get_last_system() is not None:
+        # TODO - can we enable this? Seems like a better way
+        # while nav_route_parser.get_last_system() is not None:
+        while self.jn.ship_state()['target']:
             self.update_overlay()
 
             if self.jn.ship_state()['status'] == 'in_space' or self.jn.ship_state()['status'] == 'in_supercruise':
@@ -2029,6 +2067,15 @@ class EDAutopilot:
                     self.stop_sco_monitoring()
                     break
 
+        # TODO - find a better way to clear these
+        if self.debug_overlay:
+            sleep(2)
+            self.overlay.overlay_remove_rect('sc_disengage_label_up')
+            self.overlay.overlay_remove_floating_text('sc_disengage_label_up')
+            self.overlay.overlay_remove_rect('sc_disengage_active')
+            self.overlay.overlay_remove_floating_text('sc_disengage_active')
+            self.overlay.overlay_paint()
+
         # if no error, we must have gotten disengage
         if not align_failed and do_docking:
             sleep(4)  # wait for the journal to catch up
@@ -2107,7 +2154,17 @@ class EDAutopilot:
             return False
 
         if self._single_waypoint_system != "":
-            res = self.jump_to_system(self.scrReg, self._single_waypoint_system)
+            self.ap_ckb('log+vce', f"Targeting system {self._single_waypoint_system}.")
+            # Select destination in galaxy map based on name
+            res = self.galaxy_map.set_gal_map_destination_text(self, self._single_waypoint_system, self.jn.ship_state)
+            if res:
+                self.ap_ckb('log', f"System has been targeted.")
+            else:
+                self.ap_ckb('log+vce', f"Unable to target {self._single_waypoint_system} in Galaxy Map.")
+                return False
+
+            # Jump to destination
+            res = self.jump_to_system(self.scrReg)
             if res is False:
                 return False
 
