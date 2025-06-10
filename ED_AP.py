@@ -29,6 +29,7 @@ from Overlay import *
 from StatusParser import StatusParser
 from Voice import *
 from Robigo import *
+from file_utils import detect_encoding, read_json_file
 
 """
 File:EDAP.py    EDAutopilot
@@ -50,6 +51,9 @@ class EDAP_Interrupt(Exception):
 class EDAutopilot:
 
     def __init__(self, cb, doThread=True):
+        
+        # Detect encoding for Elite Dangerous JSON files early in startup
+        detect_encoding()
 
         # NOTE!!! When adding a new config value below, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
@@ -97,6 +101,10 @@ class EDAutopilot:
         }
         # NOTE!!! When adding a new config value above, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
+        
+        #   When you add a new config key to the self.config dictionary
+        #   You MUST also add the same key after the read_config() call
+        #   This prevents KeyError crashes when accessing new config values on existing installs
 
         self.ship_configs = {
             "Ship_Configs": {},  # Dictionary of ship types with additional settings
@@ -264,8 +272,7 @@ class EDAutopilot:
     def read_config(self, fileName='./configs/AP.json'):
         s = None
         try:
-            with open(fileName, "r") as fp:
-                s = json.load(fp)
+            s = read_json_file(fileName)
         except  Exception as e:
             logger.warning("EDAPGui.py read_config error :"+str(e))
 
@@ -285,8 +292,7 @@ class EDAutopilot:
         """ Read the user's ship configuration file."""
         s = None
         try:
-            with open(filename, "r") as fp:
-                s = json.load(fp)
+            s = read_json_file(filename)
         except  Exception as e:
             logger.warning("EDAPGui.py read_ship_configs error :"+str(e))
 

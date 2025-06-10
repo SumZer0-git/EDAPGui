@@ -3,6 +3,7 @@ from os.path import isfile
 from EDlogger import logger
 import xmltodict
 from os import environ
+from file_utils import read_text_file
 
 
 class EDGraphicsSettings:
@@ -69,10 +70,9 @@ class EDGraphicsSettings:
     def read_settings(filename) -> dict:
         """ Reads an XML settings file to a Dict and returns the dict. """
         try:
-            with open(filename, 'r', encoding='utf-8') as file:
-                my_xml = file.read()
-                my_dict = xmltodict.parse(my_xml)
-                return my_dict
+            my_xml = read_text_file(filename)
+            my_dict = xmltodict.parse(my_xml)
+            return my_dict
         except OSError as e:
             logger.error(f"OS Error reading Elite Dangerous display settings file: {filename}.")
             raise Exception(f"OS Error reading Elite Dangerous display settings file: {filename}.")

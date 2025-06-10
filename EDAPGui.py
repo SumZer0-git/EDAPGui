@@ -25,6 +25,7 @@ from Voice import *
 from MousePt import MousePoint
 
 from Image_Templates import *
+from file_utils import read_json_file
 from Screen import *
 from Screen_Regions import *
 from EDKeys import *
@@ -504,8 +505,7 @@ class APGui():
         if not filename:
             return
 
-        with open(filename, 'r', encoding='utf-8') as json_file:
-            f_details = json.load(json_file)
+        f_details = read_json_file(filename)
 
         # load up the display with what we read, the pass it along to AP
         self.entries['ship']['PitchRate'].delete(0, END)
@@ -555,8 +555,7 @@ class APGui():
     def load_tce_dest(self):
         filename = self.ed_ap.config['TCEDestinationFilepath']
         if os.path.exists(filename):
-            with open(filename, 'r', encoding='utf-8') as json_file:
-                f_details = json.load(json_file)
+            f_details = read_json_file(filename)
 
             self.single_waypoint_system.set(f_details['StarSystem'])
             self.single_waypoint_station.set(f_details['Station'])

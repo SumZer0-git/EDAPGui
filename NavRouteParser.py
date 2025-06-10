@@ -6,6 +6,7 @@ import time
 from sys import platform
 from time import sleep
 from EDlogger import logger
+from file_utils import read_json_file
 
 
 class NavRouteParser:
@@ -79,9 +80,8 @@ class NavRouteParser:
         backoff = 1
         while True:
             try:
-                with open(self.file_path, 'r', encoding='utf-8') as file:
-                    data = json.load(file)
-                    break
+                data = read_json_file(self.file_path)
+                break
             except Exception as e:
                 logger.debug('An error occurred reading NavRoute.json file. File may be open.')
                 sleep(backoff)

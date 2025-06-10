@@ -13,6 +13,7 @@ import xmltodict
 
 from directinput import *
 from EDlogger import logger
+from file_utils import read_text_file
 
 """
 Description:  Pulls the keybindings for specific controls from the ED Key Bindings file, this class also
@@ -236,10 +237,9 @@ class EDKeys:
             return {}
 
         try:
-            with open(latest_bindings, 'r', encoding='utf-8') as file:
-                my_xml = file.read()
-                my_dict = xmltodict.parse(my_xml)
-                return my_dict
+            my_xml = read_text_file(latest_bindings)
+            my_dict = xmltodict.parse(my_xml)
+            return my_dict
 
         except OSError as e:
             logger.error(f"OS Error reading Elite Dangerous bindings file: {latest_bindings}.")

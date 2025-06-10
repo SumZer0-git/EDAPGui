@@ -11,6 +11,7 @@ import threading
 from time import sleep
 from EDlogger import logger
 from WindowsKnownPaths import *
+from file_utils import read_json_file
 
 
 class MarketParser:
@@ -25,23 +26,6 @@ class MarketParser:
             'Items': []
         }
     
-    def _read_json_file(self, file_path):
-        """Try common encodings in order of likelihood for international character support."""
-        encodings = ['utf-8', 'utf-8-sig', 'windows-1252']  # Most common first
-        
-        for encoding in encodings:
-            try:
-                with open(file_path, 'r', encoding=encoding) as file:
-                    return json.load(file)
-            except (UnicodeDecodeError, UnicodeError):
-                logger.debug(f"Failed to read {file_path} with {encoding}, trying next...")
-                continue
-            except json.JSONDecodeError:
-                # JSON error - not encoding issue, re-raise to be handled by caller
-                raise
-        
-        # All encodings failed
-        raise UnicodeDecodeError(f"Could not decode {file_path} with any common encoding")
     
     def __init__(self, file_path=None):
         if platform != "win32":
@@ -139,7 +123,7 @@ class MarketParser:
         attempt = 0
         while attempt < max_attempts:
             try:
-                data = self._read_json_file(self.file_path)
+                data = read_json_file(self.file_path)
                 # Validate required fields
                 if 'StationName' not in data:
                     logger.warning('Market.json missing StationName field, using default')

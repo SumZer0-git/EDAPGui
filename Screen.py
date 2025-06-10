@@ -7,6 +7,7 @@ import mss
 import json
 
 from EDlogger import logger
+from file_utils import read_json_file
 
 
 """
@@ -148,8 +149,7 @@ class Screen:
     def read_config(self, fileName='./configs/resolution.json'):
         s = None
         try:
-            with open(fileName,"r") as fp:
-                s = json.load(fp)
+            s = read_json_file(fileName)
         except  Exception as e:
             logger.warning("Screen.py read_config error :"+str(e))
 

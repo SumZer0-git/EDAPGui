@@ -11,6 +11,7 @@ from EDAP_data import *
 from EDlogger import logger
 from Voice import Voice
 from WindowsKnownPaths import *
+from file_utils import read_json_file
 
 
 class StatusParser:
@@ -197,11 +198,10 @@ class StatusParser:
         while True:
             if os.access(self.file_path, os.R_OK):
                 try:
-                    with open(self.file_path, 'r', encoding='utf-8') as file:
-                        data = json.load(file)
-                        if attempt > 1:
-                            print(f"Status file attempt: {attempt}")
-                        break
+                    data = read_json_file(self.file_path)
+                    if attempt > 1:
+                        print(f"Status file attempt: {attempt}")
+                    break
                 except Exception as e:
                     logger.debug('An error occurred reading Status.json file. File may be open.')
                     sleep(backoff)
