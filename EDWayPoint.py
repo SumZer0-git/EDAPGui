@@ -56,18 +56,41 @@ class EDWayPoint:
     def market_parser(self):
         """Lazy-loaded MarketParser to avoid startup issues with locked market.json files."""
         if self._market_parser is None:
+            logger.debug("Lazy loading MarketParser...")
             try:
+                logger.debug("Attempting to create real MarketParser...")
                 self._market_parser = MarketParser()
-                logger.debug("MarketParser loaded successfully for trading operations")
+                logger.debug("Real MarketParser loaded successfully for trading operations")
             except Exception as e:
-                logger.warning(f"Failed to load MarketParser: {e}. Trading features will be unavailable.")
-                # Create a dummy parser that returns safe defaults
-                self._market_parser = self._create_dummy_market_parser()
+                logger.warning(f"Failed to load real MarketParser: {e}. Attempting to generate market.json...")
+                # Try to generate market.json by accessing the commodities market
+                if self._try_generate_market_json():
+                    try:
+                        self._market_parser = MarketParser()
+                        logger.debug("MarketParser loaded successfully after generating market.json")
+                    except Exception as e2:
+                        logger.warning(f"Still failed to load MarketParser after generation: {e2}. Using dummy parser.")
+                        self._market_parser = self._create_dummy_market_parser()
+                else:
+                    logger.warning("Could not generate market.json. Using dummy parser.")
+                    self._market_parser = self._create_dummy_market_parser()
+        
+        logger.debug(f"Returning market_parser: {type(self._market_parser)}")
         return self._market_parser
 
     def _create_dummy_market_parser(self):
         """Creates a dummy MarketParser that returns safe defaults when market.json is unavailable."""
         class DummyMarketParser:
+            def __init__(self):
+                self.current_data = {
+                    'timestamp': '2000-01-01T00:00:00Z',
+                    'StationName': 'Market Unavailable',
+                    'Items': []
+                }
+            
+            def get_market_data(self):
+                return self.current_data
+                
             def get_market_name(self):
                 return 'Market Unavailable'
             
@@ -79,8 +102,61 @@ class EDWayPoint:
                 
             def get_item(self, item_name):
                 return None
+                
+            def can_buy_item(self, item_name):
+                return False
+                
+            def can_sell_item(self, item_name):
+                return False
         
         return DummyMarketParser()
+
+    def _try_generate_market_json(self):
+        """Attempts to generate market.json by accessing the commodities market in-game."""
+        try:
+            from time import sleep
+            import os
+            
+            # Check if we're docked (required for market access)
+            ship_status = self.ap.jn.ship_state()
+            if not ship_status.get('docked', False):
+                logger.info("Cannot generate market.json: not docked at a station")
+                return False
+            
+            logger.info("Attempting to generate market.json by accessing commodities market...")
+            
+            # Save current state and navigate to commodities market
+            self.ap.ap_ckb('log+vce', "Accessing commodities market to generate market data...")
+            
+            # Navigate to Station Services -> Commodities Market
+            # This will trigger Elite Dangerous to create/update market.json
+            self.ap.stn_svcs_in_ship.goto_station_services()
+            sleep(2)  # Wait for menu to load
+            
+            # Navigate to commodities market
+            self.ap.keys.send('UI_Down')  # Move to Commodities Market
+            sleep(0.5)
+            self.ap.keys.send('UI_Select')  # Select Commodities Market
+            sleep(3)  # Wait for market data to load and file to be created
+            
+            # Exit back to main menu
+            self.ap.keys.send('UI_Back')  # Back from commodities
+            sleep(0.5)
+            self.ap.keys.send('UI_Back')  # Back from station services
+            sleep(0.5)
+            
+            # Check if market.json was created
+            market_path = self.ap.status.file_path.replace('Status.json', 'Market.json')
+            if os.path.exists(market_path):
+                logger.info("Successfully generated market.json")
+                return True
+            else:
+                logger.warning("market.json was not created after accessing commodities market")
+                return False
+                
+        except Exception as e:
+            logger.warning(f"Error while trying to generate market.json: {e}")
+            return False
 
     @property
     def cargo_parser(self):
@@ -90,9 +166,18 @@ class EDWayPoint:
                 self._cargo_parser = CargoParser()
                 logger.debug("CargoParser loaded successfully for trading operations")
             except Exception as e:
-                logger.warning(f"Failed to load CargoParser: {e}. Cargo-related features will be unavailable.")
-                # Create a dummy parser that returns safe defaults
-                self._cargo_parser = self._create_dummy_cargo_parser()
+                logger.warning(f"Failed to load CargoParser: {e}. Attempting to generate cargo.json...")
+                # Try to generate cargo.json by accessing the cargo hold
+                if self._try_generate_cargo_json():
+                    try:
+                        self._cargo_parser = CargoParser()
+                        logger.info("CargoParser loaded successfully after generating cargo.json")
+                    except Exception as e2:
+                        logger.warning(f"Still failed to load CargoParser after generation: {e2}. Cargo-related features will be unavailable.")
+                        self._cargo_parser = self._create_dummy_cargo_parser()
+                else:
+                    logger.warning("Could not generate cargo.json. Cargo-related features will be unavailable.")
+                    self._cargo_parser = self._create_dummy_cargo_parser()
         return self._cargo_parser
 
     def _create_dummy_cargo_parser(self):
@@ -111,6 +196,49 @@ class EDWayPoint:
                 return None
         
         return DummyCargoParser()
+
+    def _try_generate_cargo_json(self):
+        """Attempts to generate cargo.json by accessing the cargo hold in-game."""
+        try:
+            from time import sleep
+            import os
+            
+            logger.info("Attempting to generate cargo.json by accessing cargo hold...")
+            
+            # Navigate to cargo hold - this will trigger Elite Dangerous to create/update cargo.json
+            self.ap.ap_ckb('log+vce', "Accessing cargo hold to generate cargo data...")
+            
+            # Open the right panel (cargo/inventory)
+            self.ap.keys.send('UI_Right')  # Move to right panel
+            sleep(1)
+            
+            # Navigate to cargo tab if not already there
+            # Different key sequences depending on whether we're docked or not
+            ship_status = self.ap.jn.ship_state()
+            if ship_status.get('docked', False):
+                # When docked, cargo might be in different position
+                self.ap.keys.send('UI_Right')  # Navigate through panels
+                sleep(0.5)
+            
+            # The act of opening the right panel with cargo should trigger cargo.json creation
+            sleep(2)  # Wait for cargo data to load and file to be created
+            
+            # Return to main view
+            self.ap.keys.send('UI_Back')  # Back to main view
+            sleep(0.5)
+            
+            # Check if cargo.json was created
+            cargo_path = self.ap.status.file_path.replace('Status.json', 'Cargo.json')
+            if os.path.exists(cargo_path):
+                logger.info("Successfully generated cargo.json")
+                return True
+            else:
+                logger.warning("cargo.json was not created after accessing cargo hold")
+                return False
+                
+        except Exception as e:
+            logger.warning(f"Error while trying to generate cargo.json: {e}")
+            return False
 
     def load_waypoint_file(self, filename=None) -> bool:
         if filename is None:
@@ -283,15 +411,27 @@ class EDWayPoint:
         fleetcarrier_transfer = self.waypoints[dest_key]['FleetCarrierTransfer']
         global_buy_commodities = self.waypoints['GlobalShoppingList']['BuyCommodities']
 
+        # Debug logging for trading
+        logger.debug(f"execute_trade for {dest_key}:")
+        logger.debug(f"  sell_commodities: {sell_commodities}")
+        logger.debug(f"  buy_commodities: {buy_commodities}")
+        logger.debug(f"  global_buy_commodities: {global_buy_commodities}")
+
         if len(sell_commodities) == 0 and len(buy_commodities) == 0 and len(global_buy_commodities) == 0:
+            self.ap.ap_ckb('log', f"No trading operations defined for {dest_key}. Skipping trade.")
             return
 
         # Does this place have commodities service?
         # From the journal, this works for stations (incl. outpost), colonisation ship and megaships
-        if ap.jn.ship_state()['StationServices'] is not None:
-            if 'commodities' not in ap.jn.ship_state()['StationServices']:
+        station_services = ap.jn.ship_state()['StationServices']
+        logger.debug(f"Station services: {station_services}")
+        
+        if station_services is not None:
+            if 'commodities' not in station_services:
                 self.ap.ap_ckb('log', f"No commodities market at docked location.")
                 return
+            else:
+                logger.debug("Commodities market available - proceeding with trade")
         else:
             self.ap.ap_ckb('log', f"No station services at docked location.")
             return
@@ -340,8 +480,21 @@ class EDWayPoint:
             logger.debug(f"Execute Trade: On Regular Station")
             self.stats_log['Station'] = self.stats_log['Station'] + 1
 
-            self.market_parser.get_market_data()
-            market_time_old = self.market_parser.current_data['timestamp']
+            logger.debug("About to access market_parser (lazy loading will trigger here)")
+            try:
+                logger.debug("Calling market_parser.get_market_data()...")
+                market_data = self.market_parser.get_market_data()
+                logger.debug(f"get_market_data() returned: {market_data}")
+                logger.debug(f"market_parser.current_data = {self.market_parser.current_data}")
+                logger.debug("About to access timestamp...")
+                market_time_old = self.market_parser.current_data['timestamp']
+                logger.debug(f"Market data accessed successfully, timestamp: {market_time_old}")
+            except Exception as e:
+                logger.error(f"Failed to access market data: {e}")
+                import traceback
+                logger.error(f"Full traceback: {traceback.format_exc()}")
+                self.ap.ap_ckb('log', f"Trading failed: Could not access market data.")
+                return
 
             # We start off on the Main Menu in the Station
             self.ap.stn_svcs_in_ship.goto_station_services()
@@ -374,7 +527,7 @@ class EDWayPoint:
                 sleep(1)  # wait for new menu to finish rendering
 
             cargo_capacity = ap.jn.ship_state()['cargo_capacity']
-            logger.info(f"Execute trade: Current cargo capacity: {cargo_capacity}")
+            logger.debug(f"Execute trade: Current cargo capacity: {cargo_capacity}")
 
             # --------- SELL ----------
             if len(sell_commodities) > 0:
@@ -386,7 +539,7 @@ class EDWayPoint:
                     self.cargo_parser.get_cargo_data()
                     cargo_item = self.cargo_parser.get_item(key)
                     if cargo_item is None:
-                        logger.info(f"Unable to sell {key}. None in cargo hold.")
+                        logger.debug(f"Unable to sell {key}. None in cargo hold.")
                         continue
 
                     # Sell the commodity
@@ -407,20 +560,45 @@ class EDWayPoint:
                 # Select the BUY option
                 self.ap.stn_svcs_in_ship.select_buy(ap.keys)
 
-                # Go through buy commodities list
-                for i, key in enumerate(buy_commodities):
+                # Merge waypoint-specific and global shopping lists, avoiding duplicates
+                # Waypoint-specific commodities take priority over global ones
+                merged_buy_list = {}
+                
+                # Add global commodities first
+                for key, qty in global_buy_commodities.items():
+                    if qty > 0:  # Only include items with positive quantities
+                        merged_buy_list[key] = {
+                            'qty': qty,
+                            'source': 'global',
+                            'update_global': self.waypoints['GlobalShoppingList']['UpdateCommodityCount']
+                        }
+                
+                # Add waypoint-specific commodities (these override global ones)
+                for key, qty in buy_commodities.items():
+                    if qty > 0:  # Only include items with positive quantities
+                        if key in merged_buy_list:
+                            logger.info(f"Execute trade: Waypoint-specific {key} ({qty}) overrides global ({merged_buy_list[key]['qty']})")
+                        merged_buy_list[key] = {
+                            'qty': qty,
+                            'source': 'waypoint',
+                            'update_waypoint': self.waypoints[dest_key]['UpdateCommodityCount']
+                        }
+
+                # Go through merged buy commodities list
+                for key, item_info in merged_buy_list.items():
                     curr_cargo_qty = int(ap.status.get_cleaned_data()['Cargo'])
                     cargo_timestamp = ap.status.current_data['timestamp']
 
                     free_cargo = cargo_capacity - curr_cargo_qty
-                    logger.info(f"Execute trade: Free cargo space: {free_cargo}")
+                    logger.debug(f"Execute trade: Free cargo space: {free_cargo}")
 
                     if free_cargo == 0:
                         logger.info(f"Execute trade: No space for additional cargo")
                         break
 
-                    qty_to_buy = buy_commodities[key]
-                    logger.info(f"Execute trade: Shopping list requests {qty_to_buy} units of {key}")
+                    qty_to_buy = item_info['qty']
+                    source = item_info['source']
+                    logger.info(f"Execute trade: {source.capitalize()} shopping list requests {qty_to_buy} units of {key}")
 
                     # Attempt to buy the commodity
                     result, qty = self.ap.stn_svcs_in_ship.buy_commodity(ap.keys, key, qty_to_buy, free_cargo)
@@ -432,36 +610,11 @@ class EDWayPoint:
                         ap.status.wait_for_file_change(cargo_timestamp, 5)
 
                     # Update counts if necessary
-                    if qty > 0 and self.waypoints[dest_key]['UpdateCommodityCount']:
-                        buy_commodities[key] = qty_to_buy - qty
-
-                # Go through global buy commodities list
-                for i, key in enumerate(global_buy_commodities):
-                    curr_cargo_qty = int(ap.status.get_cleaned_data()['Cargo'])
-                    cargo_timestamp = ap.status.current_data['timestamp']
-
-                    free_cargo = cargo_capacity - curr_cargo_qty
-                    logger.info(f"Execute trade: Free cargo space: {free_cargo}")
-
-                    if free_cargo == 0:
-                        logger.info(f"Execute trade: No space for additional cargo")
-                        break
-
-                    qty_to_buy = global_buy_commodities[key]
-                    logger.info(f"Execute trade: Global shopping list requests {qty_to_buy} units of {key}")
-
-                    # Attempt to buy the commodity
-                    result, qty = self.ap.stn_svcs_in_ship.buy_commodity(ap.keys, key, qty_to_buy, free_cargo)
-                    logger.info(f"Execute trade: Bought {qty} units of {key}")
-
-                    # If we bought any goods, wait for status file to update with
-                    # new cargo count for next commodity
                     if qty > 0:
-                        ap.status.wait_for_file_change(cargo_timestamp, 5)
-
-                    # Update counts if necessary
-                    if qty > 0 and self.waypoints['GlobalShoppingList']['UpdateCommodityCount']:
-                        global_buy_commodities[key] = qty_to_buy - qty
+                        if source == 'waypoint' and item_info.get('update_waypoint', False):
+                            buy_commodities[key] = qty_to_buy - qty
+                        elif source == 'global' and item_info.get('update_global', False):
+                            global_buy_commodities[key] = qty_to_buy - qty
 
                 # Save changes
                 self.write_waypoints(data=None, filename='./waypoints/' + Path(self.filename).name)
@@ -566,25 +719,18 @@ class EDWayPoint:
                     self.ap.ap_ckb('log+vce', f"System already targeted.")
                 else:
                     self.ap.ap_ckb('log+vce', f"Targeting system {next_wp_system}.")
-                    # Select destination in galaxy map based on name
-                    res = self.ap.galaxy_map.set_gal_map_destination_text(self.ap, next_wp_system,
-                                                                          self.ap.jn.ship_state)
-                    if res:
-                        self.ap.ap_ckb('log', f"System has been targeted.")
-                    else:
-                        self.ap.ap_ckb('log+vce', f"Unable to target {next_wp_system} in Galaxy Map.")
-                        _abort = True
-                        break
 
                 # Select next target system
                 # TODO should this be in before every jump?
                 keys.send('TargetNextRouteSystem')
 
-                # Jump to the system
+                # Jump to the system (this will handle galaxy map targeting internally)
                 self.ap.ap_ckb('log+vce', f"Jumping to {next_wp_system}.")
                 res = self.ap.jump_to_system(scr_reg, next_wp_system)
-                if not res:
-                    self.ap.ap_ckb('log', f"Failed to jump to {next_wp_system}.")
+                if res:
+                    self.ap.ap_ckb('log', f"System has been targeted.")
+                else:
+                    self.ap.ap_ckb('log+vce', f"Failed to jump to {next_wp_system}.")
                     _abort = True
                     break
 

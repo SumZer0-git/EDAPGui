@@ -30,7 +30,11 @@ class MarketParser:
             self.current_data = self.get_market_data()
         except Exception as e:
             logger.warning(f'Failed to initialize market data: {e}')
-            self.current_data = {'StationName': 'Unknown Station', 'Items': []}
+            self.current_data = {
+                'timestamp': '2000-01-01T00:00:00Z',
+                'StationName': 'Unknown Station', 
+                'Items': []
+            }
 
         # self.watch_thread = threading.Thread(target=self._watch_file_thread, daemon=True)
         # self.watch_thread.start()
@@ -98,7 +102,11 @@ class MarketParser:
         # Check if file exists
         if not os.path.exists(self.file_path):
             logger.debug(f'Market.json file not found at {self.file_path}')
-            return {'StationName': 'Unknown Station', 'Items': []}
+            return {
+                'timestamp': '2000-01-01T00:00:00Z',
+                'StationName': 'Unknown Station', 
+                'Items': []
+            }
 
         # Check if file changed
         if self.get_file_modified_time() == self.last_mod_time:
@@ -123,13 +131,21 @@ class MarketParser:
                     break
             except json.JSONDecodeError as e:
                 logger.warning(f'Market.json contains invalid JSON: {e}')
-                return {'StationName': 'Unknown Station', 'Items': []}
+                return {
+                    'timestamp': '2000-01-01T00:00:00Z',
+                    'StationName': 'Unknown Station', 
+                    'Items': []
+                }
             except Exception as e:
                 attempt += 1
                 logger.debug(f'An error occurred reading Market.json file (attempt {attempt}): {e}')
                 if attempt >= max_attempts:
                     logger.warning(f'Failed to read Market.json after {max_attempts} attempts, using defaults')
-                    return {'StationName': 'Unknown Station', 'Items': []}
+                    return {
+                        'timestamp': '2000-01-01T00:00:00Z',
+                        'StationName': 'Unknown Station', 
+                        'Items': []
+                    }
                 sleep(backoff)
                 logger.debug('Attempting to re-read Market.json file after delay.')
                 backoff *= 2
