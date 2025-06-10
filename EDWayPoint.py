@@ -49,8 +49,68 @@ class EDWayPoint:
         self.step = 0
 
         self.mouse = MousePoint()
-        self.market_parser = MarketParser()
-        self.cargo_parser = CargoParser()
+        self._market_parser = None
+        self._cargo_parser = None
+
+    @property
+    def market_parser(self):
+        """Lazy-loaded MarketParser to avoid startup issues with locked market.json files."""
+        if self._market_parser is None:
+            try:
+                self._market_parser = MarketParser()
+                logger.debug("MarketParser loaded successfully for trading operations")
+            except Exception as e:
+                logger.warning(f"Failed to load MarketParser: {e}. Trading features will be unavailable.")
+                # Create a dummy parser that returns safe defaults
+                self._market_parser = self._create_dummy_market_parser()
+        return self._market_parser
+
+    def _create_dummy_market_parser(self):
+        """Creates a dummy MarketParser that returns safe defaults when market.json is unavailable."""
+        class DummyMarketParser:
+            def get_market_name(self):
+                return 'Market Unavailable'
+            
+            def get_sellable_items(self, cargo_parser):
+                return []
+            
+            def get_buyable_items(self):
+                return []
+                
+            def get_item(self, item_name):
+                return None
+        
+        return DummyMarketParser()
+
+    @property
+    def cargo_parser(self):
+        """Lazy-loaded CargoParser to avoid startup issues with locked cargo.json files."""
+        if self._cargo_parser is None:
+            try:
+                self._cargo_parser = CargoParser()
+                logger.debug("CargoParser loaded successfully for trading operations")
+            except Exception as e:
+                logger.warning(f"Failed to load CargoParser: {e}. Cargo-related features will be unavailable.")
+                # Create a dummy parser that returns safe defaults
+                self._cargo_parser = self._create_dummy_cargo_parser()
+        return self._cargo_parser
+
+    def _create_dummy_cargo_parser(self):
+        """Creates a dummy CargoParser that returns safe defaults when cargo.json is unavailable."""
+        class DummyCargoParser:
+            def get_cargo_count(self):
+                return 0
+            
+            def get_cargo_items(self):
+                return []
+                
+            def get_cargo_data(self):
+                return {'Items': []}
+                
+            def get_item(self, item_name):
+                return None
+        
+        return DummyCargoParser()
 
     def load_waypoint_file(self, filename=None) -> bool:
         if filename is None:

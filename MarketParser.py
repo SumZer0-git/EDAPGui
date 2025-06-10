@@ -26,7 +26,11 @@ class MarketParser:
         self.last_mod_time = None
 
         # Read json file data
-        self.current_data = self.get_market_data()
+        try:
+            self.current_data = self.get_market_data()
+        except Exception as e:
+            logger.warning(f'Failed to initialize market data: {e}')
+            self.current_data = {'StationName': 'Unknown Station', 'Items': []}
 
         # self.watch_thread = threading.Thread(target=self._watch_file_thread, daemon=True)
         # self.watch_thread.start()
@@ -53,7 +57,14 @@ class MarketParser:
     #         sleep(1)
 
     def get_file_modified_time(self) -> float:
-        return os.path.getmtime(self.file_path)
+        try:
+            if os.path.exists(self.file_path):
+                return os.path.getmtime(self.file_path)
+            else:
+                return 0.0
+        except Exception as e:
+            logger.debug(f'Error getting file modification time for {self.file_path}: {e}')
+            return 0.0
 
     def get_market_data(self):
         """Loads data from the JSON file and returns the data.
@@ -84,6 +95,11 @@ class MarketParser:
             }, { etc. } ]
         """
 
+        # Check if file exists
+        if not os.path.exists(self.file_path):
+            logger.debug(f'Market.json file not found at {self.file_path}')
+            return {'StationName': 'Unknown Station', 'Items': []}
+
         # Check if file changed
         if self.get_file_modified_time() == self.last_mod_time:
             #logger.debug(f'Market.json mod timestamp {self.last_mod_time} unchanged.')
@@ -91,13 +107,29 @@ class MarketParser:
 
         # Read file
         backoff = 1
-        while True:
+        max_attempts = 5
+        attempt = 0
+        while attempt < max_attempts:
             try:
-                with open(self.file_path, 'r') as file:
+                with open(self.file_path, 'r', encoding='utf-8') as file:
                     data = json.load(file)
+                    # Validate required fields
+                    if 'StationName' not in data:
+                        logger.warning('Market.json missing StationName field, using default')
+                        data['StationName'] = 'Unknown Station'
+                    if 'Items' not in data:
+                        logger.warning('Market.json missing Items field, using empty list')
+                        data['Items'] = []
                     break
+            except json.JSONDecodeError as e:
+                logger.warning(f'Market.json contains invalid JSON: {e}')
+                return {'StationName': 'Unknown Station', 'Items': []}
             except Exception as e:
-                logger.debug('An error occurred reading Market.json file. File may be open.')
+                attempt += 1
+                logger.debug(f'An error occurred reading Market.json file (attempt {attempt}): {e}')
+                if attempt >= max_attempts:
+                    logger.warning(f'Failed to read Market.json after {max_attempts} attempts, using defaults')
+                    return {'StationName': 'Unknown Station', 'Items': []}
                 sleep(backoff)
                 logger.debug('Attempting to re-read Market.json file after delay.')
                 backoff *= 2
@@ -194,7 +226,11 @@ class MarketParser:
         """ Gets the current market (station) name.
         Will not trigger a read of the json file.
         """
-        return self.current_data['StationName']
+        try:
+            return self.current_data.get('StationName', 'Unknown Station')
+        except Exception as e:
+            logger.debug(f'Error getting market name: {e}')
+            return 'Unknown Station'
 
     def get_item(self, item_name) -> dict[any] | None:
         """ Get details of one item. Returns the item detail as below, or None if item does not exist.

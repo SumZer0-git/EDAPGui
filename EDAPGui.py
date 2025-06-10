@@ -504,7 +504,7 @@ class APGui():
         if not filename:
             return
 
-        with open(filename, 'r') as json_file:
+        with open(filename, 'r', encoding='utf-8') as json_file:
             f_details = json.load(json_file)
 
         # load up the display with what we read, the pass it along to AP
@@ -555,7 +555,7 @@ class APGui():
     def load_tce_dest(self):
         filename = self.ed_ap.config['TCEDestinationFilepath']
         if os.path.exists(filename):
-            with open(filename, 'r') as json_file:
+            with open(filename, 'r', encoding='utf-8') as json_file:
                 f_details = json.load(json_file)
 
             self.single_waypoint_system.set(f_details['StarSystem'])

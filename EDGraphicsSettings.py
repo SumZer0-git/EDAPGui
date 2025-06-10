@@ -69,7 +69,7 @@ class EDGraphicsSettings:
     def read_settings(filename) -> dict:
         """ Reads an XML settings file to a Dict and returns the dict. """
         try:
-            with open(filename, 'r') as file:
+            with open(filename, 'r', encoding='utf-8') as file:
                 my_xml = file.read()
                 my_dict = xmltodict.parse(my_xml)
                 return my_dict

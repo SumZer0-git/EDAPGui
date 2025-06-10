@@ -15,3 +15,10 @@
 /configs/AP.json
 /EDAPGui.exe
 .idea/
+
+# New additions
+*.log
+/venv/
+./__pycache__
+.claude
+EDMesg
