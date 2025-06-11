@@ -56,26 +56,24 @@ class EDWayPoint:
     def market_parser(self):
         """Lazy-loaded MarketParser to avoid startup issues with locked market.json files."""
         if self._market_parser is None:
-            logger.debug("Lazy loading MarketParser...")
+            logger.debug("Initializing MarketParser...")
             try:
-                logger.debug("Attempting to create real MarketParser...")
                 self._market_parser = MarketParser()
-                logger.debug("Real MarketParser loaded successfully for trading operations")
+                logger.debug("MarketParser loaded successfully")
             except Exception as e:
-                logger.warning(f"Failed to load real MarketParser: {e}. Attempting to generate market.json...")
+                logger.debug(f"MarketParser initialization failed: {e}. Attempting fallback generation...")
                 # Try to generate market.json by accessing the commodities market
                 if self._try_generate_market_json():
                     try:
                         self._market_parser = MarketParser()
-                        logger.debug("MarketParser loaded successfully after generating market.json")
+                        logger.debug("MarketParser loaded after market.json generation")
                     except Exception as e2:
-                        logger.warning(f"Still failed to load MarketParser after generation: {e2}. Using dummy parser.")
+                        logger.debug(f"MarketParser still failed after generation: {e2}. Using fallback.")
                         self._market_parser = self._create_dummy_market_parser()
                 else:
-                    logger.warning("Could not generate market.json. Using dummy parser.")
+                    logger.debug("Market.json generation failed. Using fallback parser.")
                     self._market_parser = self._create_dummy_market_parser()
         
-        logger.debug(f"Returning market_parser: {type(self._market_parser)}")
         return self._market_parser
 
     def _create_dummy_market_parser(self):
@@ -495,6 +493,9 @@ class EDWayPoint:
                 logger.error(f"Full traceback: {traceback.format_exc()}")
                 self.ap.ap_ckb('log', f"Trading failed: Could not access market data.")
                 return
+            
+            # BUG(FIX)   Hypothesis: There might be an unknown issue where fleet carriers don't always update market.json        
+            #            immediately upon entering the commodities market... or there's a file locking issue specific to carrier trading?
 
             # We start off on the Main Menu in the Station
             self.ap.stn_svcs_in_ship.goto_station_services()
@@ -518,13 +519,51 @@ class EDWayPoint:
 
             self.ap.ap_ckb('log+vce', "Downloading commodities data from market.")
 
-            # Wait for market to update
+            # Wait for market to update (with timeout and retry mechanism)
             self.market_parser.get_market_data()
             market_time_new = self.market_parser.current_data['timestamp']
-            while market_time_new == market_time_old:
+            timeout_seconds = 30  # Maximum wait time for market data update
+            attempts = 0
+            max_attempts = timeout_seconds
+            retry_attempted = False
+            
+            while market_time_new == market_time_old and attempts < max_attempts:
                 self.market_parser.get_market_data()
                 market_time_new = self.market_parser.current_data['timestamp']
+                attempts += 1
                 sleep(1)  # wait for new menu to finish rendering
+                
+                # If we've waited half the timeout, try exiting and re-entering market
+                if attempts >= max_attempts // 2 and not retry_attempted:
+                    retry_attempted = True
+                    logger.info("Market data not updating, attempting to refresh by exiting and re-entering market")
+                    self.ap.ap_ckb('log', "Market data not updating, refreshing market interface...")
+                    
+                    # Exit to station services
+                    ap.keys.send('UI_Back', repeat=2)
+                    sleep(1)
+                    
+                    # Re-enter commodities market
+                    if fleet_carrier:
+                        ap.keys.send('UI_Right', repeat=2)
+                        ap.keys.send('UI_Select')  # Select Commodities
+                    elif outpost:
+                        ap.keys.send('UI_Right')
+                        ap.keys.send('UI_Select')  # Select Commodities
+                    else:
+                        # Orbital station COMMODITIES MARKET location bottom left
+                        ap.keys.send('UI_Down')
+                        ap.keys.send('UI_Select')  # Select Commodities
+                    
+                    sleep(2)  # Allow market to load
+                    self.market_parser.get_market_data()
+                    market_time_new = self.market_parser.current_data['timestamp']
+                    logger.info(f"After market refresh - Old: {market_time_old}, New: {market_time_new}")
+            
+            if attempts >= max_attempts:
+                logger.warning(f"Market data timestamp did not update after {timeout_seconds} seconds and retry attempt")
+                self.ap.ap_ckb('log+vce', f"Trading aborted: Unable to get fresh market data after retry.")
+                return  # Abort trading for this station
 
             cargo_capacity = ap.jn.ship_state()['cargo_capacity']
             logger.debug(f"Execute trade: Current cargo capacity: {cargo_capacity}")
@@ -768,37 +807,54 @@ class EDWayPoint:
                 # Check if we need to travel to a station, else we are done.
                 # This may be by 1) System bookmark, 2) Galaxy bookmark or 3) by Station Name text
                 if sys_bookmark or gal_bookmark or next_wp_station != "":
-                    # If waypoint file has a Station Name associated then attempt targeting it
-                    self.ap.ap_ckb('log+vce', f"Targeting Station: {next_wp_station}")
+                    # Check if we've already targeted this station to prevent repetitive targeting
+                    targeting_key = f"{dest_key}_targeting_attempted"
+                    if not hasattr(self, '_targeting_attempts'):
+                        self._targeting_attempts = set()
+                    
+                    # Check if we're already en route to this destination
+                    currently_targeted = (destination_name != "" and 
+                                         destination_name.upper() == next_wp_station)
+                    
+                    if targeting_key not in self._targeting_attempts and not currently_targeted:
+                        # If waypoint file has a Station Name associated then attempt targeting it
+                        self.ap.ap_ckb('log+vce', f"Targeting Station: {next_wp_station}")
+                        self._targeting_attempts.add(targeting_key)
 
-                    if gal_bookmark:
-                        # Set destination via gal bookmark, not system bookmark
-                        res = self.ap.galaxy_map.set_gal_map_dest_bookmark(self.ap, gal_bookmark_type, gal_bookmark_num)
-                        if not res:
-                            self.ap.ap_ckb('log+vce', f"Unable to set Galaxy Map bookmark.")
+                        if gal_bookmark:
+                            # Set destination via gal bookmark, not system bookmark
+                            res = self.ap.galaxy_map.set_gal_map_dest_bookmark(self.ap, gal_bookmark_type, gal_bookmark_num)
+                            if not res:
+                                self.ap.ap_ckb('log+vce', f"Unable to set Galaxy Map bookmark.")
+                                _abort = True
+                                break
+
+                        elif sys_bookmark:
+                            # Set destination via system bookmark
+                            res = self.ap.system_map.set_sys_map_dest_bookmark(self.ap, sys_bookmark_type, sys_bookmark_num)
+                            if not res:
+                                self.ap.ap_ckb('log+vce', f"Unable to set System Map bookmark.")
+                                _abort = True
+                                break
+
+                        elif next_wp_station != "":
+                            # Need OCR added in for this (WIP)
+                            need_ocr = True
+                            self.ap.ap_ckb('log+vce', f"No bookmark defined. Target by Station text not supported.")
+                            # res = self.nav_panel.lock_destination(station_name)
                             _abort = True
                             break
 
-                    elif sys_bookmark:
-                        # Set destination via system bookmark
-                        res = self.ap.system_map.set_sys_map_dest_bookmark(self.ap, sys_bookmark_type, sys_bookmark_num)
-                        if not res:
-                            self.ap.ap_ckb('log+vce', f"Unable to set System Map bookmark.")
-                            _abort = True
-                            break
-
-                    elif next_wp_station != "":
-                        # Need OCR added in for this (WIP)
-                        need_ocr = True
-                        self.ap.ap_ckb('log+vce', f"No bookmark defined. Target by Station text not supported.")
-                        # res = self.nav_panel.lock_destination(station_name)
-                        _abort = True
-                        break
-
-                    # Jump to the station by name
-                    res = self.ap.supercruise_to_station(scr_reg, next_wp_station)
-                    sleep(1)  # Allow status log to update
-                    continue
+                        # Jump to the station by name
+                        res = self.ap.supercruise_to_station(scr_reg, next_wp_station)
+                        sleep(1)  # Allow status log to update
+                        continue
+                    else:
+                        # Already attempted targeting or currently en route, continue to check if we need to dock
+                        if currently_targeted:
+                            self.ap.ap_ckb('log', f"Already en route to {next_wp_station}, proceeding to docking check.")
+                        else:
+                            self.ap.ap_ckb('log', f"Station targeting already attempted for {next_wp_station}, checking docking status.")
                 else:
                     self.ap.ap_ckb('log+vce', f"Arrived at target System: {next_wp_system}")
 
@@ -814,6 +870,10 @@ class EDWayPoint:
 
             # Mark this waypoint as completed
             self.mark_waypoint_complete(dest_key)
+            # Clear targeting attempt tracking for this waypoint to allow re-targeting on subsequent runs
+            if hasattr(self, '_targeting_attempts'):
+                targeting_key = f"{dest_key}_targeting_attempted"
+                self._targeting_attempts.discard(targeting_key)
             self.ap.ap_ckb('log+vce', f"Current Waypoint complete.")
 
         # Done with waypoints

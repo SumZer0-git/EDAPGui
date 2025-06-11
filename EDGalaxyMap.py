@@ -28,6 +28,10 @@ class EDGalaxyMap:
         @return: True if bookmark could be selected, else False
         """
         if self.is_odyssey and bookmark_position > 0:
+            # Validate bookmark position is reasonable (prevent excessive UI navigation)
+            if bookmark_position > 20:  # Reasonable upper limit for bookmark lists
+                logger.warning(f"Bookmark position {bookmark_position} seems unusually high, may cause navigation issues")
+                return False
             self.goto_galaxy_map()
 
             ap.keys.send('UI_Left')  # Go to BOOKMARKS
