@@ -270,53 +270,54 @@ class EDWayPoint:
 
             # Check the
             err = False
-            for key, value in s.items():
-                if key == 'GlobalShoppingList':
-                    # Special case
-                    if 'BuyCommodities' not in value:
-                        logger.warning(f"Waypoint file key '{key}' does not contain 'BuyCommodities'.")
-                        err = True
-                    if 'UpdateCommodityCount' not in value:
-                        logger.warning(f"Waypoint file key '{key}' does not contain 'UpdateCommodityCount'.")
-                        err = True
-                    if 'Skip' not in value:
-                        logger.warning(f"Waypoint file key '{key}' does not contain 'Skip'.")
-                        err = True
-                else:
-                    # All other cases
-                    if 'SystemName' not in value:
-                        logger.warning(f"Waypoint file key '{key}' does not contain 'SystemName'.")
-                        err = True
-                    if 'StationName' not in value:
-                        logger.warning(f"Waypoint file key '{key}' does not contain 'StationName'.")
-                        err = True
-                    if 'GalaxyBookmarkType' not in value:
-                        logger.warning(f"Waypoint file key '{key}' does not contain 'GalaxyBookmarkType'.")
-                        err = True
-                    if 'GalaxyBookmarkNumber' not in value:
-                        logger.warning(f"Waypoint file key '{key}' does not contain 'GalaxyBookmarkNumber'.")
-                        err = True
-                    if 'SystemBookmarkType' not in value:
-                        logger.warning(f"Waypoint file key '{key}' does not contain 'SystemBookmarkType'.")
-                        err = True
-                    if 'SystemBookmarkNumber' not in value:
-                        logger.warning(f"Waypoint file key '{key}' does not contain 'SystemBookmarkNumber'.")
-                        err = True
-                    if 'SellCommodities' not in value:
-                        logger.warning(f"Waypoint file key '{key}' does not contain 'SellCommodities'.")
-                        err = True
-                    if 'BuyCommodities' not in value:
-                        logger.warning(f"Waypoint file key '{key}' does not contain 'BuyCommodities'.")
-                        err = True
-                    if 'UpdateCommodityCount' not in value:
-                        logger.warning(f"Waypoint file key '{key}' does not contain 'UpdateCommodityCount'.")
-                        err = True
-                    if 'FleetCarrierTransfer' not in value:
-                        logger.warning(f"Waypoint file key '{key}' does not contain 'FleetCarrierTransfer'.")
-                        err = True
-                    if 'Skip' not in value:
-                        logger.warning(f"Waypoint file key '{key}' does not contain 'Skip'.")
-                        err = True
+            if s is not None:
+                for key, value in s.items():
+                    if key == 'GlobalShoppingList':
+                        # Special case
+                        if 'BuyCommodities' not in value:
+                            logger.warning(f"Waypoint file key '{key}' does not contain 'BuyCommodities'.")
+                            err = True
+                        if 'UpdateCommodityCount' not in value:
+                            logger.warning(f"Waypoint file key '{key}' does not contain 'UpdateCommodityCount'.")
+                            err = True
+                        if 'Skip' not in value:
+                            logger.warning(f"Waypoint file key '{key}' does not contain 'Skip'.")
+                            err = True
+                    else:
+                        # All other cases
+                        if 'SystemName' not in value:
+                            logger.warning(f"Waypoint file key '{key}' does not contain 'SystemName'.")
+                            err = True
+                        if 'StationName' not in value:
+                            logger.warning(f"Waypoint file key '{key}' does not contain 'StationName'.")
+                            err = True
+                        if 'GalaxyBookmarkType' not in value:
+                            logger.warning(f"Waypoint file key '{key}' does not contain 'GalaxyBookmarkType'.")
+                            err = True
+                        if 'GalaxyBookmarkNumber' not in value:
+                            logger.warning(f"Waypoint file key '{key}' does not contain 'GalaxyBookmarkNumber'.")
+                            err = True
+                        if 'SystemBookmarkType' not in value:
+                            logger.warning(f"Waypoint file key '{key}' does not contain 'SystemBookmarkType'.")
+                            err = True
+                        if 'SystemBookmarkNumber' not in value:
+                            logger.warning(f"Waypoint file key '{key}' does not contain 'SystemBookmarkNumber'.")
+                            err = True
+                        if 'SellCommodities' not in value:
+                            logger.warning(f"Waypoint file key '{key}' does not contain 'SellCommodities'.")
+                            err = True
+                        if 'BuyCommodities' not in value:
+                            logger.warning(f"Waypoint file key '{key}' does not contain 'BuyCommodities'.")
+                            err = True
+                        if 'UpdateCommodityCount' not in value:
+                            logger.warning(f"Waypoint file key '{key}' does not contain 'UpdateCommodityCount'.")
+                            err = True
+                        if 'FleetCarrierTransfer' not in value:
+                            logger.warning(f"Waypoint file key '{key}' does not contain 'FleetCarrierTransfer'.")
+                            err = True
+                        if 'Skip' not in value:
+                            logger.warning(f"Waypoint file key '{key}' does not contain 'Skip'.")
+                            err = True
                     if 'Completed' not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'Completed'.")
                         err = True
@@ -403,11 +404,14 @@ class EDWayPoint:
         sleep(max(calc1, calc2))
 
     def execute_trade(self, ap, dest_key):
-        # Get trade commodities from waypoint
-        sell_commodities = self.waypoints[dest_key]['SellCommodities']
-        buy_commodities = self.waypoints[dest_key]['BuyCommodities']
-        fleetcarrier_transfer = self.waypoints[dest_key]['FleetCarrierTransfer']
-        global_buy_commodities = self.waypoints['GlobalShoppingList']['BuyCommodities']
+        # Get trade commodities from waypoint with comprehensive null safety
+        waypoint = self.waypoints.get(dest_key) or {}
+        global_shopping = self.waypoints.get('GlobalShoppingList') or {}
+        
+        sell_commodities = waypoint.get('SellCommodities') or {}
+        buy_commodities = waypoint.get('BuyCommodities') or {}
+        fleetcarrier_transfer = waypoint.get('FleetCarrierTransfer', False)
+        global_buy_commodities = global_shopping.get('BuyCommodities') or {}
 
         # Debug logging for trading
         logger.debug(f"execute_trade for {dest_key}:")
@@ -586,7 +590,7 @@ class EDWayPoint:
                                                                           self.cargo_parser)
 
                     # Update counts if necessary
-                    if qty > 0 and self.waypoints[dest_key]['UpdateCommodityCount']:
+                    if qty > 0 and waypoint.get('UpdateCommodityCount', False):
                         sell_commodities[key] = sell_commodities[key] - qty
 
                 # Save changes
@@ -609,7 +613,7 @@ class EDWayPoint:
                         merged_buy_list[key] = {
                             'qty': qty,
                             'source': 'global',
-                            'update_global': self.waypoints['GlobalShoppingList']['UpdateCommodityCount']
+                            'update_global': global_shopping.get('UpdateCommodityCount', False)
                         }
                 
                 # Add waypoint-specific commodities (these override global ones)
@@ -620,7 +624,7 @@ class EDWayPoint:
                         merged_buy_list[key] = {
                             'qty': qty,
                             'source': 'waypoint',
-                            'update_waypoint': self.waypoints[dest_key]['UpdateCommodityCount']
+                            'update_waypoint': waypoint.get('UpdateCommodityCount', False)
                         }
 
                 # Go through merged buy commodities list
@@ -726,15 +730,15 @@ class EDWayPoint:
                 new_waypoint = False
 
             # Flag if we are using bookmarks
-            gal_bookmark = next_waypoint.get('GalaxyBookmarkNumber', -1) > 0
-            sys_bookmark = next_waypoint.get('SystemBookmarkNumber', -1) > 0
-            gal_bookmark_type = next_waypoint.get('GalaxyBookmarkType', '')
-            gal_bookmark_num = next_waypoint.get('GalaxyBookmarkNumber', 0)
-            sys_bookmark_type = next_waypoint.get('SystemBookmarkType', '')
-            sys_bookmark_num = next_waypoint.get('SystemBookmarkNumber', 0)
+            gal_bookmark = next_waypoint.get('GalaxyBookmarkNumber', -1) > 0 if next_waypoint else False
+            sys_bookmark = next_waypoint.get('SystemBookmarkNumber', -1) > 0 if next_waypoint else False
+            gal_bookmark_type = next_waypoint.get('GalaxyBookmarkType', '') if next_waypoint else ''
+            gal_bookmark_num = next_waypoint.get('GalaxyBookmarkNumber', 0) if next_waypoint else 0
+            sys_bookmark_type = next_waypoint.get('SystemBookmarkType', '') if next_waypoint else ''
+            sys_bookmark_num = next_waypoint.get('SystemBookmarkNumber', 0) if next_waypoint else 0
 
-            next_wp_system = next_waypoint.get('SystemName', '').upper()
-            next_wp_station = next_waypoint.get('StationName', '').upper()
+            next_wp_system = next_waypoint.get('SystemName', '').upper() if next_waypoint else ''
+            next_wp_station = next_waypoint.get('StationName', '').upper() if next_waypoint else ''
 
             if new_waypoint:
                 self.ap.ap_ckb('log+vce', f"Next Waypoint: {next_wp_station} in {next_wp_system}")
