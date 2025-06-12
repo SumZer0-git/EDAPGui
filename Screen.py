@@ -250,3 +250,16 @@ class Screen:
         self.screen_width = w
         self.screen_height = h
 
+    def close(self):
+        """Cleanup screen capture resources"""
+        if hasattr(self, 'mss') and self.mss:
+            try:
+                self.mss.close()
+                logger.debug("MSS screenshot context closed")
+            except Exception as e:
+                logger.warning(f"Error closing MSS: {e}")
+
+    def __del__(self):
+        """Cleanup when object is destroyed"""
+        self.close()
+

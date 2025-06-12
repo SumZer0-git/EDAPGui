@@ -70,7 +70,9 @@ class EDAutopilot:
             "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
             "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
             "HotKey_StartRobigo": "pgup",  #
+            "HotKey_StartWaypoint": "del",  # Hotkey to start waypoint assist
             "HotKey_StopAllAssists": "end",
+            "HotKey_PauseResume": "pause",  # Hotkey to pause/resume all running assists
             "Robigo_Single_Loop": False,   # True means only 1 loop will executed and then terminate the Robigo, will not perform mission processing
             "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
             "ActivateEliteEachKey": False, # Activate Elite window before each key or group of keys
@@ -142,8 +144,14 @@ class EDAutopilot:
                     cnf['Language'] = 'en'
                 if 'EnableEDMesg' not in cnf:
                     cnf['EnableEDMesg'] = False
+                if 'EDMesgActionsPort' not in cnf:
                     cnf['EDMesgActionsPort'] = 15570
+                if 'EDMesgEventsPort' not in cnf:
                     cnf['EDMesgEventsPort'] = 15571
+                if 'HotKey_PauseResume' not in cnf or cnf['HotKey_PauseResume'] == "":
+                    cnf['HotKey_PauseResume'] = "pause"
+                if 'HotKey_StartWaypoint' not in cnf:
+                    cnf['HotKey_StartWaypoint'] = "del"
                 self.config = cnf
                 logger.debug("read AP json:"+str(cnf))
             else:
@@ -206,6 +214,9 @@ class EDAutopilot:
         self.jn = EDJournal()
         self.keys = EDKeys(cb)
         self.keys.activate_window = self.config['ActivateEliteEachKey']
+        
+        # Check for conflicts between EDAP hotkeys and Elite Dangerous keybindings
+        self.keys.check_edap_hotkey_conflicts(self.config)
         self.afk_combat = AFK_Combat(self.keys, self.jn, self.vce)
         self.waypoint = EDWayPoint(self, self.jn.ship_state()['odyssey'])
         self.robigo = Robigo(self)
@@ -1309,6 +1320,9 @@ class EDAutopilot:
         # TODO: should use Pitch Rates to calculate, but this seems to work fine with all ships
         hold_pitch = 0.150
         hold_yaw = 0.300
+        new = None  # Initialize to avoid unbound variable
+        off = None  # Initialize to avoid unbound variable
+        
         for i in range(5):
             new = self.get_destination_offset(scr_reg)
             if new:
@@ -1325,7 +1339,12 @@ class EDAutopilot:
             else:
                 logger.debug('  out of fine -not off-'+'\n')
                 return
-        #
+        
+        # Safety check to ensure off is valid before using it
+        if off is None:
+            logger.debug('  off is None, cannot continue alignment')
+            return
+            
         while (off['x'] > close) or \
               (off['x'] < -close) or \
               (off['y'] > close) or \
@@ -1717,7 +1736,7 @@ class EDAutopilot:
     # set focus to the ED window, if ED does not have focus then the key strokes will go to the window
     # that does have focus
     def set_focus_elite_window(self):
-        handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
+        handle = win32gui.FindWindow(None, "Elite - Dangerous (CLIENT)")
         if handle != 0:
             win32gui.SetForegroundWindow(handle)  # give focus to ED
 
@@ -2132,7 +2151,7 @@ class EDAutopilot:
         if self._single_waypoint_system == "" and self._single_waypoint_station == "":
             return False
 
-        if self._single_waypoint_system != "":
+        if self._single_waypoint_system and self._single_waypoint_system != "":
             res = self.jump_to_system(self.scrReg, self._single_waypoint_system)
             if res is False:
                 return False
@@ -2148,14 +2167,17 @@ class EDAutopilot:
     def ctype_async_raise(self, thread_obj, exception):
         found = False
         target_tid = 0
-        for tid, tobj in threading._active.items():
+        for tobj in threading.enumerate():
             if tobj is thread_obj:
                 found = True
-                target_tid = tid
+                target_tid = tobj.ident
                 break
 
         if not found:
             raise ValueError("Invalid thread object")
+
+        if target_tid is None or target_tid == 0:
+            raise ValueError("Invalid thread ID")
 
         ret = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(target_tid),
                                                          ctypes.py_object(exception))
@@ -2264,11 +2286,84 @@ class EDAutopilot:
     # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
     # have then then kill python exec
     def quit(self):
+        logger.debug("Starting ED_AP shutdown sequence")
+        
+        # Stop voice system first
         if self.vce != None:
             self.vce.quit()
+            # Wait for voice thread to finish
+            try:
+                # Check if the voice system has a thread attribute (may vary by implementation)
+                if hasattr(self.vce, 'thread'):
+                    thread = getattr(self.vce, 'thread')
+                    if thread and hasattr(thread, 'is_alive') and thread.is_alive():
+                        thread.join(timeout=3.0)
+                        logger.debug("Voice thread terminated")
+            except Exception as e:
+                logger.warning(f"Error stopping voice thread: {e}")
+        
+        # Stop overlay system
         if self.overlay != None:
             self.overlay.overlay_quit()
+        
+        # Stop SCO monitoring
+        self._sc_sco_active_loop_enable = False
+        if hasattr(self, '_sc_sco_active_loop_thread') and self._sc_sco_active_loop_thread:
+            try:
+                self._sc_sco_active_loop_thread.join(timeout=2.0)
+                logger.debug("SCO monitoring thread terminated")
+            except Exception as e:
+                logger.warning(f"Error stopping SCO thread: {e}")
+        
+        # Stop EDMesg server if running
+        if hasattr(self, 'mesg_server') and self.mesg_server and self.mesg_server._server_loop_thread:
+            try:
+                if self.mesg_server._provider:
+                    self.mesg_server._provider.close()
+                    logger.debug("EDMesg server stopped")
+            except Exception as e:
+                logger.warning(f"Error stopping EDMesg server: {e}")
+        
+        # Signal main thread to terminate
         self.terminate = True
+        
+        # Wait for the main thread to finish
+        if hasattr(self, 'ap_thread') and self.ap_thread and self.ap_thread.is_alive():
+            try:
+                self.ap_thread.join(timeout=5.0)
+                if self.ap_thread.is_alive():
+                    logger.warning("Main autopilot thread did not terminate gracefully")
+                else:
+                    logger.debug("Main autopilot thread terminated successfully")
+            except Exception as e:
+                logger.warning(f"Error joining main thread: {e}")
+        
+        # Close journal file handles
+        if hasattr(self, 'jn') and self.jn:
+            try:
+                self.jn.close()
+                logger.debug("Journal file handles closed")
+            except Exception as e:
+                logger.warning(f"Error closing journal: {e}")
+        # Close screen capture resources  
+        if hasattr(self, 'scr') and self.scr:
+            try:
+                if hasattr(self.scr, 'close'):
+                    self.scr.close()
+                logger.debug("Screen capture resources closed")
+            except Exception as e:
+                logger.warning(f"Error closing screen: {e}")
+                logger.warning(f"Error closing screen: {e}")
+
+        # Ensure all OpenCV windows are closed
+        try:
+            import cv2
+            cv2.destroyAllWindows()
+            logger.debug("All OpenCV windows destroyed")
+        except Exception as e:
+            logger.warning(f"Error destroying OpenCV windows: {e}")
+        
+        logger.debug("ED_AP shutdown sequence completed")
 
     #
     # This function will execute in its own thread and will loop forever until

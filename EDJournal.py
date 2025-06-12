@@ -202,6 +202,20 @@ class EDJournal:
         self.log_file = open_text_file(log_name)
         self.last_mod_time = None
 
+    def close(self):
+        """Explicit cleanup method for journal file handle"""
+        if self.log_file is not None:
+            try:
+                self.log_file.close()
+                self.log_file = None
+                logger.debug("EDJournal file handle closed")
+            except Exception as e:
+                logger.warning(f"Error closing journal file: {e}")
+
+    def __del__(self):
+        """Cleanup when object is destroyed"""
+        self.close()
+
     def parse_line(self, log):
         # parse data
         try:
