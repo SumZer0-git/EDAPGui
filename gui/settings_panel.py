@@ -26,7 +26,19 @@ class SettingsPanel:
         self.ship_filelabel = StringVar()
         self.ship_filelabel.set("<no config loaded>")
         
+        # Dependencies injected later
+        self.config_manager = None
+        self.hotkey_capture_callback = None
+        
         self._create_settings_gui()
+    
+    def set_config_manager(self, config_manager):
+        """Inject the config manager dependency"""
+        self.config_manager = config_manager
+    
+    def set_hotkey_capture_callback(self, callback):
+        """Inject the hotkey capture callback"""
+        self.hotkey_capture_callback = callback
     
     def _create_settings_gui(self):
         """Create the settings panel GUI"""
@@ -300,14 +312,21 @@ class SettingsPanel:
         return entries
     
     def _open_ship_file(self):
-        """Open ship configuration file - placeholder for now"""
-        # This would need to be implemented with file dialog and loading logic
-        pass
+        """Open ship configuration file using the injected config manager"""
+        if self.config_manager:
+            return self.config_manager.open_ship_file()
+        else:
+            from EDlogger import logger
+            logger.warning("Config manager not available for ship file loading")
+            return False
     
     def _capture_hotkey(self, field_name):
-        """Capture hotkey for button - placeholder for now"""
-        # This would need to be implemented with hotkey capture logic
-        pass
+        """Capture hotkey for button using the injected callback"""
+        if self.hotkey_capture_callback:
+            self.hotkey_capture_callback(field_name)
+        else:
+            from EDlogger import logger
+            logger.warning("Hotkey capture callback not available")
     
     def _open_logfile(self):
         """Open log file"""
