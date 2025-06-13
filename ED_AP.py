@@ -2,6 +2,7 @@ import math
 import traceback
 from math import atan, degrees
 import random
+import json
 from tkinter import messagebox
 
 import cv2
@@ -14,7 +15,7 @@ from EDGraphicsSettings import EDGraphicsSettings
 from EDShipControl import EDShipControl
 from EDStationServicesInShip import EDStationServicesInShip
 from EDSystemMap import EDSystemMap
-from EDlogger import logging
+from EDlogger import logging, logger
 import Image_Templates
 import Screen
 import Screen_Regions
@@ -329,6 +330,21 @@ class EDAutopilot:
         except Exception as e:
             logger.warning("EDAPGui.py write_ship_configs error:"+str(e))
 
+    def save_to_ship_file(self, filename):
+        """Save current ship configuration to a specific ship file."""
+        try:
+            ship_data = {
+                'rollrate': self.rollrate,
+                'pitchrate': self.pitchrate, 
+                'yawrate': self.yawrate,
+                'SunPitchUp+Time': self.sunpitchuptime
+            }
+            with open(filename, 'w') as f:
+                json.dump(ship_data, f, indent=4)
+            logger.info(f"Ship configuration saved to {filename}")
+        except Exception as e:
+            logger.error(f"Error saving ship file {filename}: {e}")
+            raise
 
     # draw the overlay data on the ED Window
     #

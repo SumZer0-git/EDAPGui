@@ -189,14 +189,34 @@ class AssistPanel:
         self.btn_resume.config(state='disabled', bg='gray')
     
     def _open_wp_file(self):
-        """Open waypoint file - placeholder for now"""
-        # This would need to be implemented with file dialog logic
-        pass
+        """Open waypoint file"""
+        from tkinter import filedialog as fd
+        from pathlib import Path
+        
+        filetypes = (
+            ('json files', '*.json'),
+            ('All files', '*.*')
+        )
+        filename = fd.askopenfilename(title="Waypoint File", initialdir='./waypoints/', filetypes=filetypes)
+        if filename != "":
+            res = self.ed_ap.waypoint.load_waypoint_file(filename)
+            if res:
+                self.wp_filelabel.set("loaded: " + Path(filename).name)
+            else:
+                self.wp_filelabel.set("<no list loaded>")
     
     def _reset_wp_file(self):
-        """Reset waypoint file - placeholder for now"""
-        # This would need to be implemented with reset logic
-        pass
+        """Reset waypoint file"""
+        from tkinter import messagebox
+        
+        if not self.WP_A_running:
+            mb = messagebox.askokcancel("Waypoint List Reset", 
+                "After resetting the Waypoint List, the Waypoint Assist will start again from the first point in the list at the next start.")
+            if mb == True:
+                self.ed_ap.waypoint.mark_all_waypoints_not_complete()
+        else:
+            mb = messagebox.showerror("Waypoint List Error", 
+                "Waypoint Assist must be disabled before you can reset the list.")
     
     # Assist control methods - these would need to be connected to the main ED_AP instance
     def _start_fsd(self):
