@@ -155,7 +155,6 @@ class APGui():
         self.save_button = None  # Will be set when GUI is created
         self.revert_button = None  # Will be set when GUI is created
         self.original_values = {}  # Track original field values for change detection
-        self.loaded_ship_file = None  # Track which ship file was loaded for proper saving
 
         self.cv_view = False
 
@@ -196,7 +195,7 @@ class APGui():
         self.entries['ship']['PitchRate'].insert(0, float(self.ed_ap.pitchrate))
         self.entries['ship']['RollRate'].insert(0, float(self.ed_ap.rollrate))
         self.entries['ship']['YawRate'].insert(0, float(self.ed_ap.yawrate))
-        self.entries['ship']['SunPitchUp+Time'].insert(0, float(self.ed_ap.sunpitchuptime if self.ed_ap.sunpitchuptime is not None else 0.0))
+        self.entries['ship']['SunPitchUp+Time'].insert(0, float(self.ed_ap.sunpitchuptime))
 
         self.entries['autopilot']['Sun Bright Threshold'].insert(0, int(self.ed_ap.config['SunBrightThreshold']))
         self.entries['autopilot']['Nav Align Tries'].insert(0, int(self.ed_ap.config['NavAlignTries']))
@@ -250,23 +249,6 @@ class APGui():
         self.ed_ap.gui_loaded = True
         self.gui_loaded = True
         
-        # Set initial ship configuration values in GUI fields
-        self.entries['ship']['PitchRate'].delete(0, END)
-        self.entries['ship']['RollRate'].delete(0, END)
-        self.entries['ship']['YawRate'].delete(0, END)
-        self.entries['ship']['SunPitchUp+Time'].delete(0, END)
-        
-        self.entries['ship']['PitchRate'].insert(0, str(self.ed_ap.pitchrate))
-        self.entries['ship']['RollRate'].insert(0, str(self.ed_ap.rollrate))
-        self.entries['ship']['YawRate'].insert(0, str(self.ed_ap.yawrate))
-        self.entries['ship']['SunPitchUp+Time'].insert(0, str(self.ed_ap.sunpitchuptime))
-        
-        # Update ship file label to show auto-loaded status
-        if hasattr(self.ed_ap, 'current_ship') and self.ed_ap.current_ship:
-            self.ship_filelabel.set(f"Auto-loaded: {self.ed_ap.current_ship}")
-        else:
-            self.ship_filelabel.set("Auto-loaded: default")
-        
         # Store original values for change detection
         self.capture_original_values()
         
@@ -276,13 +258,6 @@ class APGui():
             
         logger.debug(f"Initialization complete. Original values captured: {len(self.original_values)} categories")
             
-        # Initialize waypoint editor if we have waypoint data
-        if hasattr(self, 'wp_tree'):
-            try:
-                self.wp_editor_refresh()
-            except Exception as e:
-                logger.warning(f"Could not initialize waypoint editor: {e}")
-        
         # Send a log entry which will flush out the buffer.
         self.callback('log', 'ED Autopilot loaded successfully.')
 
@@ -366,30 +341,20 @@ class APGui():
 
         elif msg == 'jumpcount':
             self.update_jumpcount(body)
-        elif msg == 'ship_config_changed':
-            self.update_ship_display()
+        elif msg == 'update_ship_cfg':
+            self.update_ship_cfg()
 
-    def update_ship_display(self):
-        """Update ship configuration display when ship changes"""
-        # Clear any manually loaded ship file - auto-detection takes precedence
-        self.loaded_ship_file = None
-        
-        # Clear and update ship rate fields
+    def update_ship_cfg(self):
+        # load up the display with what we read from ED_AP for the current ship
         self.entries['ship']['PitchRate'].delete(0, END)
         self.entries['ship']['RollRate'].delete(0, END)
         self.entries['ship']['YawRate'].delete(0, END)
         self.entries['ship']['SunPitchUp+Time'].delete(0, END)
-        
-        self.entries['ship']['PitchRate'].insert(0, str(self.ed_ap.pitchrate))
-        self.entries['ship']['RollRate'].insert(0, str(self.ed_ap.rollrate))
-        self.entries['ship']['YawRate'].insert(0, str(self.ed_ap.yawrate))
-        self.entries['ship']['SunPitchUp+Time'].insert(0, str(self.ed_ap.sunpitchuptime))
-        
-        # Update ship file label to show current ship
-        if hasattr(self.ed_ap, 'current_ship_type') and self.ed_ap.current_ship_type:
-            self.ship_filelabel.set(f"Auto-loaded: {self.ed_ap.current_ship_type}")
-        else:
-            self.ship_filelabel.set("Auto-loaded: default")
+
+        self.entries['ship']['PitchRate'].insert(0, self.ed_ap.pitchrate)
+        self.entries['ship']['RollRate'].insert(0, self.ed_ap.rollrate)
+        self.entries['ship']['YawRate'].insert(0, self.ed_ap.yawrate)
+        self.entries['ship']['SunPitchUp+Time'].insert(0, self.ed_ap.sunpitchuptime)
 
     def calibrate_callback(self):
         self.ed_ap.calibrate()
@@ -577,27 +542,19 @@ class APGui():
         """Mark that there are unsaved changes and highlight save button"""
         if not self.has_unsaved_changes:
             self.has_unsaved_changes = True
-            if hasattr(self, 'save_button') and self.save_button:
+            if self.save_button:
                 self.save_button.config(bg='orange', text='Save All Settings *')
-                logger.debug("Save button highlighted orange")
-            else:
-                logger.debug("Save button not found or not created yet")
-            if hasattr(self, 'revert_button') and self.revert_button:
+            if self.revert_button:
                 self.revert_button.config(state='normal', bg='lightcoral')
-                logger.debug("Revert button enabled and highlighted")
-            else:
-                logger.debug("Revert button not found or not created yet")
             logger.debug("Marked unsaved changes - buttons should be highlighted")
                 
     def clear_unsaved_changes(self):
         """Clear unsaved changes flag and restore normal save button"""
         self.has_unsaved_changes = False
-        if hasattr(self, 'save_button') and self.save_button:
+        if self.save_button:
             self.save_button.config(bg='SystemButtonFace', text='Save All Settings')
-            logger.debug("Save button restored to normal")
-        if hasattr(self, 'revert_button') and self.revert_button:
+        if self.revert_button:
             self.revert_button.config(state='disabled', bg='SystemButtonFace')
-            logger.debug("Revert button disabled and restored")
         # Refresh original values after saving
         self.capture_original_values()
 
@@ -1033,19 +990,18 @@ class APGui():
         self.entries['ship']['YawRate'].delete(0, END)
         self.entries['ship']['SunPitchUp+Time'].delete(0, END)
 
-        self.entries['ship']['PitchRate'].insert(0, str(f_details.get('pitchrate', 33.0)))
-        self.entries['ship']['RollRate'].insert(0, str(f_details.get('rollrate', 90.0)))
-        self.entries['ship']['YawRate'].insert(0, str(f_details.get('yawrate', 8.0)))
-        self.entries['ship']['SunPitchUp+Time'].insert(0, str(f_details.get('SunPitchUp+Time', 0.0)))
+        self.entries['ship']['PitchRate'].insert(0, f_details['pitchrate'])
+        self.entries['ship']['RollRate'].insert(0, f_details['rollrate'])
+        self.entries['ship']['YawRate'].insert(0, f_details['yawrate'])
+        self.entries['ship']['SunPitchUp+Time'].insert(0, f_details['SunPitchUp+Time'])
 
-        self.ed_ap.rollrate = float(f_details.get('rollrate', 90.0))
-        self.ed_ap.pitchrate = float(f_details.get('pitchrate', 33.0))
-        self.ed_ap.yawrate = float(f_details.get('yawrate', 8.0))
-        self.ed_ap.sunpitchuptime = float(f_details.get('SunPitchUp+Time', 0.0))
+        self.ed_ap.rollrate = float(f_details['rollrate'])
+        self.ed_ap.pitchrate = float(f_details['pitchrate'])
+        self.ed_ap.yawrate = float(f_details['yawrate'])
+        self.ed_ap.sunpitchuptime = float(f_details['SunPitchUp+Time'])
 
         self.ship_filelabel.set("loaded: " + Path(filename).name)
-        # Track the loaded ship file path for saving back to it
-        self.loaded_ship_file = filename
+        self.ed_ap.update_config()
 
     def open_wp_file(self):
         filetypes = (
@@ -1057,9 +1013,6 @@ class APGui():
             res = self.ed_ap.waypoint.load_waypoint_file(filename)
             if res:
                 self.wp_filelabel.set("loaded: " + Path(filename).name)
-                # Refresh waypoint editor display
-                if hasattr(self, 'wp_tree'):
-                    self.wp_editor_refresh()
             else:
                 self.wp_filelabel.set("<no list loaded>")
 
@@ -1071,423 +1024,14 @@ class APGui():
         else:
             mb = messagebox.showerror("Waypoint List Error", "Waypoint Assist must be disabled before you can reset the list.")
 
-    # ===== WAYPOINT EDITOR METHODS =====
-    
-    def wp_editor_refresh(self):
-        """Refresh the waypoint list display"""
-        # Clear existing items
-        for item in self.wp_tree.get_children():
-            self.wp_tree.delete(item)
-        
-        # Track which waypoints have unsaved changes
-        if not hasattr(self, 'changed_waypoints'):
-            self.changed_waypoints = set()
-        
-        # Load current waypoint data
-        try:
-            if hasattr(self.ed_ap, 'waypoint') and hasattr(self.ed_ap.waypoint, 'waypoints'):
-                waypoints = self.ed_ap.waypoint.waypoints
-                
-                # Debug: Check what type of data we have
-                logger.debug(f"Waypoints type: {type(waypoints)}")
-                
-                # Handle dictionary format (keys: 'GlobalShoppingList', '1', '2', '3', etc.)
-                if isinstance(waypoints, dict):
-                    # Get all numeric keys and sort them
-                    waypoint_keys = [k for k in waypoints.keys() if k.isdigit()]
-                    waypoint_keys.sort(key=int)
-                    
-                    logger.debug(f"Found waypoint keys: {waypoint_keys}")
-                    
-                    for key in waypoint_keys:
-                        waypoint = waypoints[key]
-                        if isinstance(waypoint, dict):
-                            # Standard dictionary format
-                            wp_num = key
-                            system = waypoint.get('SystemName', '')
-                            station = waypoint.get('StationName', '')
-                            
-                            # Summarize commodities with details
-                            sell_items = waypoint.get('SellCommodities', {})
-                            buy_items = waypoint.get('BuyCommodities', {})
-                            
-                            # Show first few commodities with quantities (formatted for readable display)
-                            if sell_items:
-                                sell_list = [f"{k}: {v}" for k, v in list(sell_items.items())[:3]]
-                                sell_text = " | ".join(sell_list)
-                                if len(sell_items) > 3:
-                                    sell_text += f" | (+{len(sell_items)-3} more)"
-                            else:
-                                sell_text = ""
-                                
-                            if buy_items:
-                                buy_list = [f"{k}: {v}" for k, v in list(buy_items.items())[:3]]
-                                buy_text = " | ".join(buy_list)
-                                if len(buy_items) > 3:
-                                    buy_text += f" | (+{len(buy_items)-3} more)"
-                            else:
-                                buy_text = ""
-                            
-                            fc_transfer = "Yes" if waypoint.get('FleetCarrierTransfer', False) else "No"
-                            skip = "Yes" if waypoint.get('Skip', False) else "No"
-                            
-                            # Insert into tree with change highlighting
-                            tags = ('changed',) if (hasattr(self, 'changed_waypoints') and key in self.changed_waypoints) else ()
-                            self.wp_tree.insert('', 'end', text=wp_num, values=(
-                                system, station, sell_text, buy_text, fc_transfer, skip
-                            ), tags=tags)
-                        else:
-                            # Unknown waypoint format
-                            self.wp_tree.insert('', 'end', text=key, values=(
-                                f"Unknown format: {type(waypoint)}", "", "", "", "No", "No"
-                            ))
-                
-                # Handle list format (just in case)
-                elif isinstance(waypoints, list):
-                    for i, waypoint in enumerate(waypoints):
-                        if isinstance(waypoint, dict):
-                            wp_num = str(i + 1)
-                            system = waypoint.get('SystemName', '')
-                            station = waypoint.get('StationName', '')
-                            
-                            # Summarize commodities with details
-                            sell_items = waypoint.get('SellCommodities', {})
-                            buy_items = waypoint.get('BuyCommodities', {})
-                            
-                            # Show first few commodities with quantities (formatted for readable display)
-                            if sell_items:
-                                sell_list = [f"{k}: {v}" for k, v in list(sell_items.items())[:3]]
-                                sell_text = " | ".join(sell_list)
-                                if len(sell_items) > 3:
-                                    sell_text += f" | (+{len(sell_items)-3} more)"
-                            else:
-                                sell_text = ""
-                                
-                            if buy_items:
-                                buy_list = [f"{k}: {v}" for k, v in list(buy_items.items())[:3]]
-                                buy_text = " | ".join(buy_list)
-                                if len(buy_items) > 3:
-                                    buy_text += f" | (+{len(buy_items)-3} more)"
-                            else:
-                                buy_text = ""
-                            
-                            fc_transfer = "Yes" if waypoint.get('FleetCarrierTransfer', False) else "No"
-                            skip = "Yes" if waypoint.get('Skip', False) else "No"
-                            
-                            # Insert into tree with change highlighting
-                            tags = ('changed',) if (hasattr(self, 'changed_waypoints') and key in self.changed_waypoints) else ()
-                            self.wp_tree.insert('', 'end', text=wp_num, values=(
-                                system, station, sell_text, buy_text, fc_transfer, skip
-                            ), tags=tags)
-                        else:
-                            # String or other format
-                            wp_num = str(i + 1)
-                            self.wp_tree.insert('', 'end', text=wp_num, values=(
-                                str(waypoint), "", "", "", "No", "No"
-                            ))
-        except Exception as e:
-            logger.error(f"Error refreshing waypoint editor: {e}")
-            # Add error row to show what went wrong
-            self.wp_tree.insert('', 'end', text="!", values=(
-                f"Error: {e}", "", "", "", "", ""
-            ))
-    
-    def wp_editor_new(self):
-        """Create a new waypoint"""
-        # Create new waypoint dialog
-        self.wp_editor_dialog(None)
-    
-    def wp_editor_edit(self):
-        """Edit selected waypoint"""
-        selection = self.wp_tree.selection()
-        if not selection:
-            messagebox.showwarning("No Selection", "Please select a waypoint to edit.")
-            return
-        
-        # Get the key of selected waypoint
-        item = selection[0]
-        wp_key = self.wp_tree.item(item, 'text')  # This is the actual key ('1', '2', '3', etc.)
-        
-        # Open edit dialog
-        self.wp_editor_dialog(wp_key)
-    
-    def wp_editor_delete(self):
-        """Delete selected waypoint"""
-        selection = self.wp_tree.selection()
-        if not selection:
-            messagebox.showwarning("No Selection", "Please select a waypoint to delete.")
-            return
-        
-        if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this waypoint?"):
-            item = selection[0]
-            wp_key = self.wp_tree.item(item, 'text')  # This is the actual key ('1', '2', '3', etc.)
-            
-            # Remove from waypoint data
-            if hasattr(self.ed_ap, 'waypoint') and hasattr(self.ed_ap.waypoint, 'waypoints'):
-                if wp_key in self.ed_ap.waypoint.waypoints:
-                    del self.ed_ap.waypoint.waypoints[wp_key]
-                    self.wp_editor_refresh()
-    
-    def update_wp_save_button(self):
-        """Update waypoint save button color based on changes"""
-        if hasattr(self, 'changed_waypoints') and self.changed_waypoints:
-            # There are unsaved changes
-            self.btn_wp_save.config(bg='orange', text='Save File *')
-        else:
-            # No unsaved changes
-            self.btn_wp_save.config(bg='SystemButtonFace', text='Save File')
-    
-    def wp_editor_save(self):
-        """Save waypoint file"""
-        if hasattr(self.ed_ap, 'waypoint'):
-            try:
-                self.ed_ap.waypoint.write_waypoints(data=None)
-                # Clear changed waypoints after successful save
-                if hasattr(self, 'changed_waypoints'):
-                    self.changed_waypoints.clear()
-                self.update_wp_save_button()
-                self.wp_editor_refresh()  # Refresh to remove highlighting
-                messagebox.showinfo("Success", "Waypoint file saved successfully.")
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to save waypoint file: {e}")
-    
-    def wp_editor_dialog(self, wp_key=None):
-        """Open waypoint edit dialog"""
-        # Create dialog window
-        dialog = Toplevel(self.root)
-        dialog.title("Edit Waypoint" if wp_key is not None else "New Waypoint")
-        dialog.geometry("500x400")
-        dialog.transient(self.root)
-        dialog.grab_set()
-        
-        # Get existing waypoint data
-        waypoint_data = {}
-        if wp_key is not None and hasattr(self.ed_ap, 'waypoint') and hasattr(self.ed_ap.waypoint, 'waypoints'):
-            if wp_key in self.ed_ap.waypoint.waypoints:
-                waypoint_data = self.ed_ap.waypoint.waypoints[wp_key].copy()
-        
-        # Create form fields
-        fields = {}
-        
-        # Basic info frame
-        basic_frame = LabelFrame(dialog, text="Basic Information")
-        basic_frame.grid(row=0, column=0, padx=10, pady=5, sticky="ew")
-        dialog.columnconfigure(0, weight=1)
-        basic_frame.columnconfigure(1, weight=1)
-        
-        # System name
-        Label(basic_frame, text="System Name:").grid(row=0, column=0, padx=5, pady=2, sticky="w")
-        fields['SystemName'] = Entry(basic_frame)
-        fields['SystemName'].grid(row=0, column=1, padx=5, pady=2, sticky="ew")
-        fields['SystemName'].insert(0, waypoint_data.get('SystemName', ''))
-        
-        # Station name
-        Label(basic_frame, text="Station Name:").grid(row=1, column=0, padx=5, pady=2, sticky="w")
-        fields['StationName'] = Entry(basic_frame)
-        fields['StationName'].grid(row=1, column=1, padx=5, pady=2, sticky="ew")
-        fields['StationName'].insert(0, waypoint_data.get('StationName', ''))
-        
-        # Fleet Carrier Transfer checkbox
-        fields['FleetCarrierTransfer'] = BooleanVar()
-        fields['FleetCarrierTransfer'].set(waypoint_data.get('FleetCarrierTransfer', False))
-        cb_fc = Checkbutton(basic_frame, text="Fleet Carrier Transfer", variable=fields['FleetCarrierTransfer'])
-        cb_fc.grid(row=2, column=0, columnspan=2, padx=5, pady=2, sticky="w")
-        
-        # Skip checkbox
-        fields['Skip'] = BooleanVar()
-        fields['Skip'].set(waypoint_data.get('Skip', False))
-        cb_skip = Checkbutton(basic_frame, text="Skip this waypoint", variable=fields['Skip'])
-        cb_skip.grid(row=3, column=0, columnspan=2, padx=5, pady=2, sticky="w")
-        
-        # Commodities frame
-        commodities_frame = LabelFrame(dialog, text="Commodities")
-        commodities_frame.grid(row=1, column=0, padx=10, pady=5, sticky="nsew")
-        dialog.rowconfigure(1, weight=1)
-        commodities_frame.columnconfigure(1, weight=1)
-        commodities_frame.columnconfigure(2, weight=0)  # Help text column
-        
-        # Sell commodities
-        Label(commodities_frame, text="Sell:").grid(row=0, column=0, padx=5, pady=2, sticky="nw")
-        fields['SellCommodities'] = tk.Text(commodities_frame, height=4, width=40)
-        fields['SellCommodities'].grid(row=0, column=1, padx=5, pady=2, sticky="ew")
-        
-        # Format sell commodities for display (with cleanup for malformed data)
-        sell_text = ""
-        sell_commodities = waypoint_data.get('SellCommodities', {})
-        
-        # Clean up malformed data where commodity names got merged with quantities
-        cleaned_sell = {}
-        for commodity, quantity in sell_commodities.items():
-            if isinstance(quantity, str) and ',' in quantity:
-                # This looks like malformed data "Cobalt": "5, Gold: 10"
-                # Parse it properly
-                temp_text = f"{commodity}: {quantity}"
-                for item in temp_text.split(','):
-                    item = item.strip()
-                    if ':' in item:
-                        c, q = item.split(':', 1)
-                        c, q = c.strip(), q.strip()
-                        if c and q:
-                            try:
-                                cleaned_sell[c] = int(q)
-                            except ValueError:
-                                cleaned_sell[c] = q
-            else:
-                cleaned_sell[commodity] = quantity
-        
-        for commodity, quantity in cleaned_sell.items():
-            sell_text += f"{commodity}: {quantity}\n"
-        fields['SellCommodities'].insert('1.0', sell_text)
-        
-        # Add help text for sell commodities
-        Label(commodities_frame, text="Format: CommodityName: Quantity\nExample: Cobalt: 5, Gold: 10\nOr one per line", 
-              font=('TkDefaultFont', 8), fg='gray').grid(row=0, column=2, padx=5, pady=2, sticky="nw")
-        
-        # Buy commodities
-        Label(commodities_frame, text="Buy:").grid(row=1, column=0, padx=5, pady=2, sticky="nw")
-        fields['BuyCommodities'] = tk.Text(commodities_frame, height=4, width=40)
-        fields['BuyCommodities'].grid(row=1, column=1, padx=5, pady=2, sticky="ew")
-        
-        # Format buy commodities for display (with cleanup for malformed data)
-        buy_text = ""
-        buy_commodities = waypoint_data.get('BuyCommodities', {})
-        
-        # Clean up malformed data where commodity names got merged with quantities
-        cleaned_buy = {}
-        for commodity, quantity in buy_commodities.items():
-            if isinstance(quantity, str) and ',' in quantity:
-                # This looks like malformed data "Cobalt": "5, Gold: 10"
-                # Parse it properly
-                temp_text = f"{commodity}: {quantity}"
-                for item in temp_text.split(','):
-                    item = item.strip()
-                    if ':' in item:
-                        c, q = item.split(':', 1)
-                        c, q = c.strip(), q.strip()
-                        if c and q:
-                            try:
-                                cleaned_buy[c] = int(q)
-                            except ValueError:
-                                cleaned_buy[c] = q
-            else:
-                cleaned_buy[commodity] = quantity
-        
-        for commodity, quantity in cleaned_buy.items():
-            buy_text += f"{commodity}: {quantity}\n"
-        fields['BuyCommodities'].insert('1.0', buy_text)
-        
-        # Add help text for buy commodities
-        Label(commodities_frame, text="Format: CommodityName: Quantity\nExample: Bertrandite: 100, Silver: 50\nOr one per line", 
-              font=('TkDefaultFont', 8), fg='gray').grid(row=1, column=2, padx=5, pady=2, sticky="nw")
-        
-        # Buttons frame
-        btn_frame = Frame(dialog)
-        btn_frame.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
-        btn_frame.columnconfigure(0, weight=1)
-        btn_frame.columnconfigure(1, weight=1)
-        
-        def save_waypoint():
-            try:
-                # Parse commodities
-                def parse_commodities(text_widget):
-                    commodities = {}
-                    text = text_widget.get('1.0', 'end-1c').strip()
-                    
-                    # Handle both line-by-line and comma-separated formats
-                    # Split by lines first, then by commas within each line
-                    for line in text.split('\n'):
-                        line = line.strip()
-                        if not line:
-                            continue
-                            
-                        # Split by commas to handle "Cobalt:5, Gold:10" format
-                        for item in line.split(','):
-                            item = item.strip()
-                            if ':' in item:
-                                commodity, quantity = item.split(':', 1)
-                                commodity = commodity.strip()
-                                quantity = quantity.strip()
-                                if commodity and quantity:
-                                    try:
-                                        commodities[commodity] = int(quantity)
-                                    except ValueError:
-                                        commodities[commodity] = quantity  # Keep as string for special values like "ALL"
-                    return commodities
-                
-                # Build waypoint data
-                new_waypoint = {
-                    'SystemName': fields['SystemName'].get(),
-                    'StationName': fields['StationName'].get(),
-                    'GalaxyBookmarkType': waypoint_data.get('GalaxyBookmarkType', ''),
-                    'GalaxyBookmarkNumber': waypoint_data.get('GalaxyBookmarkNumber', 0),
-                    'SystemBookmarkType': waypoint_data.get('SystemBookmarkType', ''),
-                    'SystemBookmarkNumber': waypoint_data.get('SystemBookmarkNumber', 0),
-                    'SellCommodities': parse_commodities(fields['SellCommodities']),
-                    'BuyCommodities': parse_commodities(fields['BuyCommodities']),
-                    'Comment': waypoint_data.get('Comment', None),
-                    'UpdateCommodityCount': waypoint_data.get('UpdateCommodityCount', False),
-                    'FleetCarrierTransfer': fields['FleetCarrierTransfer'].get(),
-                    'Skip': fields['Skip'].get(),
-                    'Completed': waypoint_data.get('Completed', False)
-                }
-                
-                # Save to waypoint list
-                if not hasattr(self.ed_ap, 'waypoint'):
-                    from EDWayPoint import EDWayPoint
-                    self.ed_ap.waypoint = EDWayPoint(self.ed_ap)
-                
-                if not hasattr(self.ed_ap.waypoint, 'waypoints'):
-                    self.ed_ap.waypoint.waypoints = {}
-                
-                if wp_key is not None:
-                    # Update existing
-                    self.ed_ap.waypoint.waypoints[wp_key] = new_waypoint
-                    # Mark as changed
-                    if not hasattr(self, 'changed_waypoints'):
-                        self.changed_waypoints = set()
-                    self.changed_waypoints.add(wp_key)
-                else:
-                    # Add new - find next available key
-                    if isinstance(self.ed_ap.waypoint.waypoints, dict):
-                        # Find highest numeric key and add 1
-                        numeric_keys = [int(k) for k in self.ed_ap.waypoint.waypoints.keys() if k.isdigit()]
-                        next_key = str(max(numeric_keys) + 1) if numeric_keys else "1"
-                        self.ed_ap.waypoint.waypoints[next_key] = new_waypoint
-                        # Mark new waypoint as changed
-                        if not hasattr(self, 'changed_waypoints'):
-                            self.changed_waypoints = set()
-                        self.changed_waypoints.add(next_key)
-                    else:
-                        # Fallback to list format
-                        self.ed_ap.waypoint.waypoints.append(new_waypoint)
-                
-                # Update save button color to indicate changes
-                self.update_wp_save_button()
-                self.wp_editor_refresh()
-                dialog.destroy()
-                
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to save waypoint: {e}")
-        
-        Button(btn_frame, text="Save", command=save_waypoint).grid(row=0, column=0, padx=5, pady=5)
-        Button(btn_frame, text="Cancel", command=dialog.destroy).grid(row=0, column=1, padx=5, pady=5)
-
     def save_settings(self):
         self._saving_settings = True  # Flag to prevent marking changes during save
         try:
             self.entry_update(mark_changes=False)  # Don't mark changes during save
             self.ed_ap.update_config()
-            
-            # Check if a ship file was loaded - save to that file instead of ship_configs.json
-            if self.loaded_ship_file:
-                self.ed_ap.save_to_ship_file(self.loaded_ship_file)
-                self.log_msg(f"Ship file saved: {Path(self.loaded_ship_file).name}")
-            else:
-                # No ship file loaded, save to ship_configs.json as usual
-                self.ed_ap.update_ship_configs()
-                self.log_msg("Settings saved successfully")
-                
+            self.ed_ap.update_ship_configs()
             self.clear_unsaved_changes()
+            self.log_msg("Settings saved successfully")
         finally:
             del self._saving_settings
 
@@ -2037,86 +1581,11 @@ class APGui():
         self.revert_button = Button(blk_settings_buttons, text='Revert Changes', command=self.revert_all_changes,
                                    state='disabled', bg='SystemButtonFace')
         self.revert_button.grid(row=0, column=1, padx=2, pady=2, sticky="news")
-        
-        # Initialize change tracking state
-        self.has_unsaved_changes = False
 
         # ===== WAYPOINTS TAB (CONTINUED) =====
-        # waypoint editor block
-        blk_waypoint_editor = LabelFrame(page_waypoints, text="WAYPOINT EDITOR")
-        blk_waypoint_editor.grid(row=0, column=0, padx=10, pady=5, columnspan=2, sticky="nsew")
-        blk_waypoint_editor.columnconfigure(0, weight=1)
-        blk_waypoint_editor.rowconfigure(1, weight=1)  # Make the list area expandable
-        
-        # Waypoint editor toolbar
-        toolbar_frame = Frame(blk_waypoint_editor)
-        toolbar_frame.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
-        toolbar_frame.columnconfigure(2, weight=1)  # Spacer column
-        
-        btn_wp_new = Button(toolbar_frame, text='New', command=self.wp_editor_new)
-        btn_wp_new.grid(row=0, column=0, padx=2, pady=2)
-        
-        btn_wp_edit = Button(toolbar_frame, text='Edit', command=self.wp_editor_edit)
-        btn_wp_edit.grid(row=0, column=1, padx=2, pady=2)
-        
-        btn_wp_delete = Button(toolbar_frame, text='Delete', command=self.wp_editor_delete)
-        btn_wp_delete.grid(row=0, column=3, padx=2, pady=2)
-        
-        btn_wp_load = Button(toolbar_frame, text='Load File', command=self.open_wp_file)
-        btn_wp_load.grid(row=0, column=4, padx=2, pady=2)
-        
-        self.btn_wp_save = Button(toolbar_frame, text='Save File', command=self.wp_editor_save)
-        self.btn_wp_save.grid(row=0, column=5, padx=2, pady=2)
-        
-        # Waypoint list with scrollbar
-        list_frame = Frame(blk_waypoint_editor)
-        list_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
-        list_frame.columnconfigure(0, weight=1)
-        list_frame.rowconfigure(0, weight=1)
-        
-        # Create Treeview for waypoint list
-        self.wp_tree = ttk.Treeview(list_frame, columns=('system', 'station', 'sell', 'buy', 'fc_transfer', 'skip'), show='tree headings', height=10)
-        self.wp_tree.grid(row=0, column=0, sticky="nsew")
-        
-        # Configure columns
-        self.wp_tree.heading('#0', text='#')
-        self.wp_tree.heading('system', text='System')
-        self.wp_tree.heading('station', text='Station')
-        self.wp_tree.heading('sell', text='Sell')
-        self.wp_tree.heading('buy', text='Buy')
-        self.wp_tree.heading('fc_transfer', text='FC Transfer')
-        self.wp_tree.heading('skip', text='Skip')
-        
-        self.wp_tree.column('#0', width=30, minwidth=30)
-        self.wp_tree.column('system', width=120, minwidth=80)
-        self.wp_tree.column('station', width=150, minwidth=100)
-        self.wp_tree.column('sell', width=120, minwidth=80)  # Wider for multi-line commodities
-        self.wp_tree.column('buy', width=120, minwidth=80)   # Wider for multi-line commodities
-        self.wp_tree.column('fc_transfer', width=80, minwidth=60)
-        self.wp_tree.column('skip', width=50, minwidth=40)
-        
-        # Configure row height and styling
-        style = ttk.Style()
-        style.configure("Treeview", rowheight=25)  # Standard row height
-        
-        # Configure tags for changed waypoints
-        self.wp_tree.tag_configure('changed', background='lightgreen')
-        
-        # Add scrollbar for waypoint list
-        wp_scrollbar = Scrollbar(list_frame, orient="vertical", command=self.wp_tree.yview)
-        wp_scrollbar.grid(row=0, column=1, sticky="ns")
-        self.wp_tree.configure(yscrollcommand=wp_scrollbar.set)
-        
-        # Bind double-click to edit
-        self.wp_tree.bind('<Double-1>', lambda e: self.wp_editor_edit())
-        
-        # Configure waypoints tab grid weights
-        page_waypoints.columnconfigure(0, weight=1)
-        page_waypoints.rowconfigure(0, weight=1)  # Waypoint editor gets priority
-        
         # single waypoint assist block (moved to waypoints tab)
         blk_single_waypoint_asst = LabelFrame(page_waypoints, text="SINGLE WAYPOINT ASSIST")
-        blk_single_waypoint_asst.grid(row=1, column=0, padx=10, pady=5, columnspan=2, sticky="nsew")
+        blk_single_waypoint_asst.grid(row=0, column=0, padx=10, pady=5, columnspan=2, sticky="nsew")
         blk_single_waypoint_asst.columnconfigure(0, weight=1, minsize=10, uniform="group1")
         blk_single_waypoint_asst.columnconfigure(1, weight=3, minsize=10, uniform="group1")
 
