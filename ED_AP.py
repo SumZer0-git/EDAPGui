@@ -2,6 +2,7 @@ import math
 import traceback
 from math import atan, degrees
 import random
+import json
 from tkinter import messagebox
 
 import cv2
@@ -163,22 +164,8 @@ class EDAutopilot:
         # Load selected language
         self.locale = LocalizationManager('locales', self.config['Language'])
 
-        shp_cnf = self.read_ship_configs()
-        # if we read it then point to it, otherwise use the default table above
-        if shp_cnf is not None:
-            if len(shp_cnf) != len(self.ship_configs):
-                # If configs of different lengths, then a new parameter was added.
-                # self.write_config(self.config)
-                # Add default values for new entries
-                if 'Ship_Configs' not in shp_cnf:
-                    shp_cnf['Ship_Configs'] = dict()
-                self.ship_configs = shp_cnf
-                logger.debug("read Ships Config json:" + str(shp_cnf))
-            else:
-                self.ship_configs = shp_cnf
-                logger.debug("read Ships Config json:" + str(shp_cnf))
-        else:
-            self.write_ship_configs(self.ship_configs)
+        # Load ship configurations - this is now the authoritative source for ship control rates
+        self.load_ship_configs_with_defaults()
 
         # config the voice interface
         self.vce = Voice()
@@ -239,13 +226,11 @@ class EDAutopilot:
         # see:  https://forums.frontier.co.uk/threads/supercruise-handling-of-ships.396845/
         #
         # If you find that you are overshoot in pitch or roll, need to adjust these numbers.
+        # Ship control rates - will be loaded from ship_configs.json
         # Algorithm will roll the vehicle for the nav point to be north or south and then pitch to get the nave point
         # to center
-        self.compass_scale = 0.0
-        self.yawrate   = 8.0
-        self.rollrate  = 80.0
-        self.pitchrate = 33.0
-        self.sunpitchuptime = 0.0
+        # NOTE: compass_scale, yawrate, rollrate, pitchrate, sunpitchuptime are already loaded from config above
+        # Do not reset them here as it would overwrite the loaded values
 
         self.jump_cnt = 0
         self.total_dist_jumped = 0
@@ -303,29 +288,111 @@ class EDAutopilot:
         """ Read the user's ship configuration file."""
         s = None
         try:
-            s = read_json_file(filename)
+            # Temporarily bypass read_json_file to test
+            import json
+            with open(filename, 'r') as f:
+                s = json.load(f)
+            logger.debug(f"TRACE: Successfully read ship configs: {s}")
         except  Exception as e:
             logger.warning("EDAPGui.py read_ship_configs error :"+str(e))
 
         return s
 
+    def load_ship_configs_with_defaults(self):
+        """Load ship configurations, creating defaults if needed. This is the authoritative source for ship control rates."""
+        try:
+            logger.debug("Starting load_ship_configs_with_defaults()")
+            
+            # Try to load existing config file
+            shp_cnf = self.read_ship_configs()
+            
+            if shp_cnf is not None and 'Ship_Configs' in shp_cnf:
+                self.ship_configs = shp_cnf
+                logger.debug("Loaded ship configs from file: " + str(shp_cnf))
+            else:
+                logger.error("Could not load ship configs file")
+                raise Exception("Ship configs file not found or invalid")
+            
+            # Load the default values from file (file is the single source of truth)
+            if 'default' not in self.ship_configs['Ship_Configs']:
+                logger.error("No 'default' ship config found in file")
+                raise Exception("Default ship config missing from file")
+                
+            default_cfg = self.ship_configs['Ship_Configs']['default']
+            self.compass_scale = default_cfg['compass_scale']
+            self.rollrate = default_cfg['RollRate']
+            self.pitchrate = default_cfg['PitchRate']
+            self.yawrate = default_cfg['YawRate']
+            self.sunpitchuptime = default_cfg['SunPitchUp+Time']
+            
+            logger.debug(f"TRACE: File loaded rollrate = {default_cfg['RollRate']}")
+            logger.debug(f"TRACE: Set self.rollrate = {self.rollrate}")
+            logger.debug(f"Successfully loaded ship control rates: PitchRate={self.pitchrate}, RollRate={self.rollrate}, YawRate={self.yawrate}")
+            
+            # GUI will be updated during initialization
+                
+        except Exception as e:
+            logger.error(f"TRACE: Exception in load_ship_configs_with_defaults: {e}")
+            logger.error("TRACE: Setting emergency defaults - something went wrong with file loading")
+            # Set emergency defaults and continue - use same values as default config
+            self.compass_scale = 0.0
+            self.rollrate = 90.0    # Matches default config
+            self.pitchrate = 33.0   # Matches default config
+            self.yawrate = 8.0      # Matches default config  
+            self.sunpitchuptime = 0.0
+            logger.debug(f"TRACE: Emergency defaults set: PitchRate={self.pitchrate}, RollRate={self.rollrate}, YawRate={self.yawrate}")
+
     def update_ship_configs(self):
         """ Update the user's ship configuration file."""
-        # Check if a ship and not a suit (on foot)
-        if self.current_ship_type in ship_size_map:
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['compass_scale'] = round(self.compass_scale, 4)
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['PitchRate'] = self.pitchrate
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['RollRate'] = self.rollrate
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['YawRate'] = self.yawrate
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['SunPitchUp+Time'] = self.sunpitchuptime
+        logger.debug(f"update_ship_configs called: current_ship_type={self.current_ship_type}")
+        logger.debug(f"Available ships in ship_configs: {list(self.ship_configs.get('Ship_Configs', {}).keys())}")
+        
+        # Save to ship-specific config if available, otherwise use 'default'
+        ship_key = self.current_ship_type if self.current_ship_type else 'default'
+        logger.debug(f"Saving ship config to '{ship_key}': PitchRate={self.pitchrate}, RollRate={self.rollrate}, YawRate={self.yawrate}")
+        
+        # Ensure ship config entry exists
+        if ship_key not in self.ship_configs['Ship_Configs']:
+            logger.debug(f"Creating new ship config entry for {ship_key}")
+            self.ship_configs['Ship_Configs'][ship_key] = {}
+        
+        # Save current values to ship config
+        self.ship_configs['Ship_Configs'][ship_key]['compass_scale'] = round(self.compass_scale, 4)
+        self.ship_configs['Ship_Configs'][ship_key]['PitchRate'] = self.pitchrate
+        self.ship_configs['Ship_Configs'][ship_key]['RollRate'] = self.rollrate
+        self.ship_configs['Ship_Configs'][ship_key]['YawRate'] = self.yawrate
+        self.ship_configs['Ship_Configs'][ship_key]['SunPitchUp+Time'] = self.sunpitchuptime
 
-            self.write_ship_configs(self.ship_configs)
+        self.write_ship_configs(self.ship_configs)
+        logger.debug(f"Ship configs saved successfully to '{ship_key}'")
+
+    def save_to_ship_file(self, filename):
+        """Save current ship configuration to a specific ship file."""
+        try:
+            # Create ship file format (simple JSON with lowercase keys)
+            ship_data = {
+                'rollrate': self.rollrate,
+                'pitchrate': self.pitchrate, 
+                'yawrate': self.yawrate,
+                'SunPitchUp+Time': self.sunpitchuptime
+            }
+            
+            with open(filename, 'w') as f:
+                json.dump(ship_data, f, indent=4)
+            
+            logger.debug(f"Ship config saved to file: {filename}")
+            logger.debug(f"Saved values: PitchRate={self.pitchrate}, RollRate={self.rollrate}, YawRate={self.yawrate}")
+            
+        except Exception as e:
+            logger.error(f"Failed to save ship config to {filename}: {e}")
+            raise
 
     def write_ship_configs(self, data, filename='./configs/ship_configs.json'):
         """ Write the user's ship configuration file."""
         try:
             with open(filename, "w") as fp:
                 json.dump(data, fp, indent=4)
+            logger.debug(f"Successfully wrote ship configs to {filename}")
         except Exception as e:
             logger.warning("EDAPGui.py write_ship_configs error:"+str(e))
 
@@ -2531,14 +2598,18 @@ class EDAutopilot:
                                 self.ship_configs['Ship_Configs'][ship] = dict()
 
                             current_ship_cfg = self.ship_configs['Ship_Configs'][ship]
-                            self.compass_scale = current_ship_cfg.get('compass_scale', self.scr.scaleX)
-                            self.rollrate = current_ship_cfg.get('RollRate', 80.0)
-                            self.pitchrate = current_ship_cfg.get('PitchRate', 33.0)
-                            self.yawrate = current_ship_cfg.get('YawRate', 8.0)
-                            self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
+                            # Use default ship config as fallback instead of hardcoded values
+                            default_cfg = self.ship_configs['Ship_Configs'].get('default', {})
+                            self.compass_scale = current_ship_cfg.get('compass_scale', default_cfg.get('compass_scale', self.scr.scaleX))
+                            self.rollrate = current_ship_cfg.get('RollRate', default_cfg['RollRate'])
+                            logger.debug(f"TRACE: Ship-specific loading set rollrate = {self.rollrate}")
+                            self.pitchrate = current_ship_cfg.get('PitchRate', default_cfg['PitchRate'])
+                            self.yawrate = current_ship_cfg.get('YawRate', default_cfg['YawRate'])
+                            self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', default_cfg['SunPitchUp+Time'])
 
-                            # Update GUI
-                            self.ap_ckb('update_ship_cfg')
+                            # Update GUI to reflect ship-specific configuration
+                            if hasattr(self, 'ap_ckb') and self.ap_ckb:
+                                self.ap_ckb('ship_config_changed')
 
                         # Store ship for change detection
                         self.current_ship_type = ship
