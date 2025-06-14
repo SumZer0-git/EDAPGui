@@ -144,6 +144,9 @@ class APGui():
 
         # Initialize component values
         self._initialize_all_components()
+        
+        # Update ship display after components are initialized
+        self.update_ship_display()
 
         # Set up configuration management
         self._setup_config_management()

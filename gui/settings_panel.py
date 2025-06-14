@@ -21,10 +21,9 @@ class SettingsPanel:
         self.checkboxvar = {}
         self.radiobuttonvar = {}
         
-        # Track ship file for proper saving
-        self.loaded_ship_file = None
+        # Display current active ship
         self.ship_filelabel = StringVar()
-        self.ship_filelabel.set("<no config loaded>")
+        self.ship_filelabel.set("Active Ship: <detecting...>")
         
         # Dependencies injected later
         self.config_manager = None
@@ -91,10 +90,13 @@ class SettingsPanel:
         btn_tst_yaw = Button(blk_ship, text='Test', command=self.ed_ap.ship_tst_yaw)
         btn_tst_yaw.grid(row=2, column=2, padx=2, pady=2, sticky="news")
 
-        # Ship config file loading
-        btn_ship_file = Button(blk_ship, textvariable=self.ship_filelabel, 
-                              command=self._open_ship_file)
-        btn_ship_file.grid(row=4, column=0, padx=2, pady=5, columnspan=3, sticky="news")
+        # Active ship display and ship config file loading
+        lbl_active_ship = Label(blk_ship, textvariable=self.ship_filelabel, 
+                               relief="sunken", bg="lightgray")
+        lbl_active_ship.grid(row=4, column=0, padx=2, pady=2, columnspan=2, sticky="news")
+        
+        btn_ship_file = Button(blk_ship, text="Load Ship File", command=self._open_ship_file)
+        btn_ship_file.grid(row=4, column=2, padx=2, pady=2, sticky="news")
         tip_ship_file = Hovertip(btn_ship_file, self.tooltips['Ship Config Button'], hover_delay=1000)
     
     def _create_additional_settings_block(self, parent):
@@ -354,6 +356,14 @@ class SettingsPanel:
         self.entries['ship']['RollRate'].insert(0, self.ed_ap.rollrate)
         self.entries['ship']['YawRate'].insert(0, self.ed_ap.yawrate)
         self.entries['ship']['SunPitchUp+Time'].insert(0, self.ed_ap.sunpitchuptime)
+        
+        # Update active ship display with Default/Custom status
+        if hasattr(self.ed_ap, 'current_ship_type') and self.ed_ap.current_ship_type:
+            ship_name = self.ed_ap.current_ship_type
+            config_type = "Custom" if getattr(self.ed_ap, 'using_custom_ship_config', False) else "Default"
+            self.ship_filelabel.set(f"Active Ship: {ship_name} ({config_type})")
+        else:
+            self.ship_filelabel.set("Active Ship: <detecting...>")
     
     def initialize_values(self):
         """Initialize field values from configuration"""
@@ -367,6 +377,14 @@ class SettingsPanel:
         self.entries['ship']['RollRate'].insert(0, float(self.ed_ap.rollrate))
         self.entries['ship']['YawRate'].insert(0, float(self.ed_ap.yawrate))
         self.entries['ship']['SunPitchUp+Time'].insert(0, float(self.ed_ap.sunpitchuptime))
+        
+        # Update ship display with Default/Custom status
+        if hasattr(self.ed_ap, 'current_ship_type') and self.ed_ap.current_ship_type:
+            ship_name = self.ed_ap.current_ship_type
+            config_type = "Custom" if getattr(self.ed_ap, 'using_custom_ship_config', False) else "Default"
+            self.ship_filelabel.set(f"Active Ship: {ship_name} ({config_type})")
+        else:
+            self.ship_filelabel.set("Active Ship: <detecting...>")
 
         # Autopilot settings
         self.entries['autopilot']['Sun Bright Threshold'].delete(0, END)

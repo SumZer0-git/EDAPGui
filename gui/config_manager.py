@@ -13,7 +13,6 @@ class ConfigManager:
         self.ed_ap = ed_ap
         self.has_unsaved_changes = False
         self.original_values = {}
-        self.loaded_ship_file = None
         
         # GUI element references (set by main GUI)
         self.save_button = None
@@ -154,13 +153,9 @@ class ConfigManager:
             self._update_internal_values()
             self.ed_ap.update_config()
             
-            # Handle ship-specific saving
-            if self.loaded_ship_file:
-                self.ed_ap.save_to_ship_file(self.loaded_ship_file)
-                logger.info(f"Ship file saved: {Path(self.loaded_ship_file).name}")
-            else:
-                self.ed_ap.update_ship_configs()
-                logger.info("Settings saved successfully")
+            # Always save ship configs to ship_configs.json, never to individual ship files
+            self.ed_ap.update_ship_configs()
+            logger.info("Settings saved successfully")
                 
             self.clear_unsaved_changes()
             return True
@@ -291,10 +286,15 @@ class ConfigManager:
             self.ed_ap.yawrate = float(f_details['yawrate'])
             self.ed_ap.sunpitchuptime = float(f_details['SunPitchUp+Time'])
 
-            # Track loaded ship file for proper saving
-            self.loaded_ship_file = filename
+            # When manually loading a ship file, it becomes a "Custom" config
+            # Update the flag and ship display
+            self.ed_ap.using_custom_ship_config = True
             if settings_panel:
-                settings_panel.ship_filelabel.set("loaded: " + Path(filename).name)
+                if hasattr(self.ed_ap, 'current_ship_type') and self.ed_ap.current_ship_type:
+                    ship_name = self.ed_ap.current_ship_type
+                    settings_panel.ship_filelabel.set(f"Active Ship: {ship_name} (Custom - from file)")
+                else:
+                    settings_panel.ship_filelabel.set(f"Loaded from: {Path(filename).name}")
             
             self.ed_ap.update_config()
             return True
