@@ -20,21 +20,23 @@
         "Completed": false
     },
     "1": {
-        "SystemName": "Musca Dark Region JS-S b4-8",
-        "StationName": "* CITADEL OF AASA *",
-        "GalaxyBookmarkType": "",
-        "GalaxyBookmarkNumber": 0,
-        "SystemBookmarkType": "Navigation Panel",
-        "SystemBookmarkNumber": 2,
+        "SystemName": "Musca Dark Region JS-S b3-6",
+        "StationName": "Oberon Orbital",
         "SellCommodities": {},
         "BuyCommodities": {
-            "Cobalt": 5
+            "Cobalt": 5,
+            "Gold": 10,
+            "Silver": 5
         },
-        "Comment": null,
-        "UpdateCommodityCount": true,
         "FleetCarrierTransfer": false,
         "Skip": false,
-        "Completed": true
+        "GalaxyBookmarkType": "",
+        "GalaxyBookmarkNumber": 0,
+        "SystemBookmarkType": "",
+        "SystemBookmarkNumber": 0,
+        "Comment": null,
+        "UpdateCommodityCount": true,
+        "Completed": false
     },
     "2": {
         "SystemName": "Synuefe LO-G c27-25",
