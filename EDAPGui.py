@@ -17,7 +17,7 @@ import tkinter as tk
 from tkinter import (
     BooleanVar, Button, Checkbutton, Entry, Frame, IntVar, Label, LabelFrame, 
     Listbox, Menu, Radiobutton, Scrollbar, Spinbox, StringVar, Toplevel,
-    ACTIVE, DISABLED, END, LEFT, SUNKEN, BOTH, Y, RIGHT
+    ACTIVE, DISABLED, END, LEFT, SUNKEN, BOTH, X, Y, RIGHT
 )
 from tkinter import filedialog as fd
 from tkinter import messagebox
@@ -28,6 +28,7 @@ from Voice import *
 from MousePt import MousePoint
 
 from Image_Templates import *
+import importlib
 from file_utils import read_json_file
 from Screen import *
 from Screen_Regions import *
@@ -173,15 +174,8 @@ class APGui():
         # Send a log entry which will flush out the buffer.
         self.callback('log', 'ED Autopilot loaded successfully.')
         
-        # Store original values for change detection after a delay to ensure all initialization is complete
-        self.root.after(500, self._delayed_baseline_capture)
-
-    def _delayed_baseline_capture(self):
-        """Capture baseline values after initialization is completely finished"""
-        logger.debug("Capturing initial baseline values after initialization delay")
-        # Clear any unsaved changes that might have been marked during initialization
-        self.config_manager.clear_unsaved_changes()
-        logger.debug("Cleared any false unsaved changes from initialization")
+        # Store original values for change detection
+        self.config_manager.capture_original_values()
 
     def programmatic_update(self):
         """Context manager to prevent change detection during programmatic GUI updates"""
@@ -264,6 +258,10 @@ class APGui():
         help.add_command(label="Join Discord", command=self.open_discord)
         help.add_command(label="About", command=self.about)
         menubar.add_cascade(label="Help", menu=help)
+        
+        # Add dev menu if in development mode
+        if self._is_dev_mode():
+            self._create_dev_menu(menubar)
 
         root.config(menu=menubar)
 
@@ -460,7 +458,7 @@ class APGui():
             )
 
     def _setup_hotkeys(self):
-        """Set up global hotkeys"""
+        # Set up global hotkeys
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StopAllAssists'], self.stop_all_assists)
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartFSD'], self.callback, args=('fsd_start', None))
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartSC'], self.callback, args=('sc_start', None))
@@ -1097,6 +1095,413 @@ class APGui():
 
         import os
         os.execv(sys.executable, ['python'] + sys.argv)
+
+    # ===== DEVELOPMENT MODE METHODS =====
+    
+    def _is_dev_mode(self):
+        """Check if we're in development mode"""
+        return (
+            os.path.exists('.git') or                    # Git repository
+            '--dev' in sys.argv or                       # Command line flag
+            os.getenv('EDAP_DEV_MODE') == '1' or        # Environment variable
+            os.path.exists('dev_mode.txt')              # Dev mode file
+        )
+    
+    def _create_dev_menu(self, menubar):
+        """Create development menu"""
+        dev_menu = Menu(menubar, tearoff=0)
+        
+        # Panel reloading
+        dev_menu.add_command(label="🔄 Reload Waypoint Panel", command=self._reload_waypoint_panel)
+        dev_menu.add_command(label="🔄 Reload Settings Panel", command=self._reload_settings_panel)
+        dev_menu.add_command(label="🔄 Reload Assist Panel", command=self._reload_assist_panel)
+        dev_menu.add_separator()
+        
+        # Debug tools
+        dev_menu.add_command(label="🐛 Toggle Debug Logging", command=self._toggle_debug_logging)
+        dev_menu.add_command(label="📊 Show Panel State", command=self._show_panel_state)
+        dev_menu.add_command(label="🧪 Open Dev Console", command=self._open_dev_console)
+        dev_menu.add_separator()
+        
+        # File operations
+        dev_menu.add_command(label="💾 Force Save All", command=self._force_save_all)
+        dev_menu.add_command(label="🔍 Validate Config Files", command=self._validate_config_files)
+        
+        menubar.add_cascade(label="🔧 Dev", menu=dev_menu)
+        
+        # Log that dev mode is active
+        logger.info("🔧 Development mode enabled - Dev menu available")
+    
+    def _reload_waypoint_panel(self):
+        """Hot reload the waypoint panel"""
+        try:
+            logger.info("🔄 Reloading waypoint panel...")
+            
+            # Save current state
+            state = self._save_waypoint_panel_state()
+            
+            # Reload the module
+            import gui.waypoint_panel
+            importlib.reload(gui.waypoint_panel)
+            
+            # Recreate the panel
+            if self.waypoint_panel:
+                parent = self.waypoint_panel.parent
+                
+                # Destroy old panel
+                for widget in parent.winfo_children():
+                    widget.destroy()
+                
+                # Create new panel
+                self.waypoint_panel = gui.waypoint_panel.WaypointPanel(
+                    parent, self.ed_ap, self._entry_update, self._check_cb
+                )
+                
+                # Restore state
+                self._restore_waypoint_panel_state(state)
+                
+            logger.info("✅ Waypoint panel reloaded successfully")
+            self.log_msg("Dev: Waypoint panel reloaded")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to reload waypoint panel: {e}")
+            messagebox.showerror("Reload Error", f"Failed to reload waypoint panel:\n{e}")
+    
+    def _reload_settings_panel(self):
+        """Hot reload the settings panel"""
+        try:
+            logger.info("🔄 Reloading settings panel...")
+            
+            # Save current state
+            state = self._save_settings_panel_state()
+            
+            # Reload the module
+            import gui.settings_panel
+            importlib.reload(gui.settings_panel)
+            
+            # Recreate the panel
+            if self.settings_panel:
+                parent = self.settings_panel.parent
+                
+                # Destroy old panel
+                for widget in parent.winfo_children():
+                    widget.destroy()
+                
+                # Create new panel
+                self.settings_panel = gui.settings_panel.SettingsPanel(
+                    parent, self.ed_ap, self._entry_update, self._check_cb
+                )
+                
+                # Re-inject dependencies
+                self.settings_panel.set_config_manager(self.config_manager)
+                self.settings_panel.set_hotkey_capture_callback(self._capture_hotkey)
+                self.settings_panel.set_button_commands(
+                    self.config_manager.save_all_settings,
+                    self.config_manager.revert_all_changes
+                )
+                
+                # Update config manager references
+                gui_elements = self.config_manager.gui_elements
+                gui_elements['settings_panel'] = self.settings_panel
+                gui_elements['save_button'] = self.settings_panel.save_button
+                gui_elements['revert_button'] = self.settings_panel.revert_button
+                self.config_manager.set_gui_elements(gui_elements)
+                
+                # Restore state
+                self._restore_settings_panel_state(state)
+                
+            logger.info("✅ Settings panel reloaded successfully")
+            self.log_msg("Dev: Settings panel reloaded")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to reload settings panel: {e}")
+            messagebox.showerror("Reload Error", f"Failed to reload settings panel:\n{e}")
+    
+    def _reload_assist_panel(self):
+        """Hot reload the assist panel"""
+        try:
+            logger.info("🔄 Reloading assist panel...")
+            
+            # Save current state
+            state = self._save_assist_panel_state()
+            
+            # Reload the module
+            import gui.assist_panel
+            importlib.reload(gui.assist_panel)
+            
+            # Recreate the panel
+            if self.assist_panel:
+                parent = self.assist_panel.parent
+                
+                # Destroy old panel
+                for widget in parent.winfo_children():
+                    widget.destroy()
+                
+                # Create new panel
+                self.assist_panel = gui.assist_panel.AssistPanel(
+                    parent, self.ed_ap, self._check_cb
+                )
+                
+                # Restore state
+                self._restore_assist_panel_state(state)
+                
+            logger.info("✅ Assist panel reloaded successfully")
+            self.log_msg("Dev: Assist panel reloaded")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to reload assist panel: {e}")
+            messagebox.showerror("Reload Error", f"Failed to reload assist panel:\n{e}")
+    
+    def _save_waypoint_panel_state(self):
+        """Save current waypoint panel state"""
+        if not self.waypoint_panel:
+            return {}
+        
+        return {
+            'wp_filelabel': getattr(self.waypoint_panel, 'wp_filelabel', StringVar()).get(),
+            'changed_waypoints': getattr(self.waypoint_panel, 'changed_waypoints', set()).copy(),
+            'global_shopping_enabled': getattr(self.waypoint_panel, 'global_shopping_enabled', BooleanVar()).get(),
+            'TCE_Destination_Filepath': getattr(self.waypoint_panel, 'TCE_Destination_Filepath', StringVar()).get(),
+            'single_waypoint_system': getattr(self.waypoint_panel, 'single_waypoint_system', StringVar()).get(),
+            'single_waypoint_station': getattr(self.waypoint_panel, 'single_waypoint_station', StringVar()).get(),
+        }
+    
+    def _restore_waypoint_panel_state(self, state):
+        """Restore waypoint panel state after reload"""
+        if not self.waypoint_panel or not state:
+            return
+        
+        try:
+            # Restore file label
+            if 'wp_filelabel' in state and hasattr(self.waypoint_panel, 'wp_filelabel'):
+                self.waypoint_panel.wp_filelabel.set(state['wp_filelabel'])
+            
+            # Restore changed waypoints
+            if 'changed_waypoints' in state and hasattr(self.waypoint_panel, 'changed_waypoints'):
+                self.waypoint_panel.changed_waypoints = state['changed_waypoints']
+            
+            # Restore global shopping state
+            if 'global_shopping_enabled' in state and hasattr(self.waypoint_panel, 'global_shopping_enabled'):
+                self.waypoint_panel.global_shopping_enabled.set(state['global_shopping_enabled'])
+            
+            # Restore TCE and single waypoint fields
+            for field in ['TCE_Destination_Filepath', 'single_waypoint_system', 'single_waypoint_station']:
+                if field in state and hasattr(self.waypoint_panel, field):
+                    getattr(self.waypoint_panel, field).set(state[field])
+            
+            # Refresh the panel
+            if hasattr(self.waypoint_panel, '_wp_editor_refresh'):
+                self.waypoint_panel._wp_editor_refresh()
+            if hasattr(self.waypoint_panel, '_refresh_global_shopping_summary'):
+                self.waypoint_panel._refresh_global_shopping_summary()
+                
+        except Exception as e:
+            logger.warning(f"Some state could not be restored: {e}")
+    
+    def _save_settings_panel_state(self):
+        """Save current settings panel state"""
+        # Settings panel state is managed by config_manager, so we just need to capture current values
+        return {
+            'has_unsaved_changes': getattr(self.config_manager, 'has_unsaved_changes', False)
+        }
+    
+    def _restore_settings_panel_state(self, state):
+        """Restore settings panel state after reload"""
+        # Re-initialize values from configuration
+        if self.settings_panel and hasattr(self.settings_panel, 'initialize_all_values'):
+            self.settings_panel.initialize_all_values()
+        
+        # Restore unsaved changes state if needed
+        if state.get('has_unsaved_changes', False):
+            self.config_manager.mark_unsaved_changes()
+    
+    def _save_assist_panel_state(self):
+        """Save current assist panel state"""
+        if not self.assist_panel:
+            return {}
+        
+        # Get current assist states
+        return {
+            'assist_states': {
+                'FSD': getattr(self.ed_ap, 'fsd_assist_enabled', False),
+                'SC': getattr(self.ed_ap, 'sc_assist_enabled', False),
+                'WP': getattr(self.ed_ap, 'waypoint_assist_enabled', False),
+                'Robigo': getattr(self.ed_ap, 'robigo_assist_enabled', False),
+                'AFK': getattr(self.ed_ap, 'afk_combat_assist_enabled', False),
+                'DSS': getattr(self.ed_ap, 'dss_assist_enabled', False),
+            }
+        }
+    
+    def _restore_assist_panel_state(self, state):
+        """Restore assist panel state after reload"""
+        if not self.assist_panel or not state:
+            return
+        
+        # Restore assist states
+        assist_states = state.get('assist_states', {})
+        for assist_type, enabled in assist_states.items():
+            if hasattr(self.assist_panel, 'update_assist_state'):
+                self.assist_panel.update_assist_state(assist_type, enabled)
+    
+    def _toggle_debug_logging(self):
+        """Toggle debug logging level"""
+        from EDlogger import logger
+        current_level = logger.getEffectiveLevel()
+        
+        if current_level == 10:  # DEBUG
+            logger.setLevel(20)  # INFO
+            self.log_msg("Dev: Debug logging OFF")
+        else:
+            logger.setLevel(10)  # DEBUG
+            self.log_msg("Dev: Debug logging ON")
+    
+    def _show_panel_state(self):
+        """Show current panel states for debugging"""
+        state_info = []
+        
+        # Waypoint panel state
+        if self.waypoint_panel:
+            wp_state = self._save_waypoint_panel_state()
+            state_info.append("=== Waypoint Panel ===")
+            for key, value in wp_state.items():
+                state_info.append(f"{key}: {value}")
+        
+        # Settings panel state
+        if self.settings_panel:
+            state_info.append("\n=== Settings Panel ===")
+            state_info.append(f"has_unsaved_changes: {getattr(self.config_manager, 'has_unsaved_changes', False)}")
+        
+        # Assist panel state
+        if self.assist_panel:
+            assist_state = self._save_assist_panel_state()
+            state_info.append("\n=== Assist Panel ===")
+            for assist_type, enabled in assist_state.get('assist_states', {}).items():
+                state_info.append(f"{assist_type}: {enabled}")
+        
+        # Show in a dialog
+        state_text = "\n".join(state_info)
+        messagebox.showinfo("Panel State Debug", state_text)
+    
+    def _open_dev_console(self):
+        """Open a development console window"""
+        console = Toplevel(self.root)
+        console.title("🧪 Dev Console")
+        console.geometry("600x400")
+        
+        # Create text area for commands
+        console_frame = Frame(console)
+        console_frame.pack(fill=BOTH, expand=True, padx=10, pady=5)
+        
+        Label(console_frame, text="Development Console - Python REPL", 
+              font=('TkDefaultFont', 10, 'bold')).pack(anchor='w')
+        
+        # Text widget for output
+        output_text = tk.Text(console_frame, height=15, font=('Courier', 9))
+        output_scrollbar = Scrollbar(console_frame, command=output_text.yview)
+        output_text.configure(yscrollcommand=output_scrollbar.set)
+        
+        output_text.pack(side=LEFT, fill=BOTH, expand=True)
+        output_scrollbar.pack(side=RIGHT, fill=Y)
+        
+        # Input frame
+        input_frame = Frame(console)
+        input_frame.pack(fill=X, padx=10, pady=5)
+        
+        Label(input_frame, text=">>> ").pack(side=LEFT)
+        input_entry = Entry(input_frame)
+        input_entry.pack(side=LEFT, fill=X, expand=True, padx=5)
+        
+        def execute_command(event=None):
+            command = input_entry.get()
+            if not command:
+                return
+            
+            output_text.insert(END, f">>> {command}\n")
+            
+            try:
+                # Create a safe namespace with access to main objects
+                namespace = {
+                    'app': self,
+                    'ed_ap': self.ed_ap,
+                    'waypoint_panel': self.waypoint_panel,
+                    'settings_panel': self.settings_panel,
+                    'assist_panel': self.assist_panel,
+                    'config_manager': self.config_manager,
+                    'logger': logger,
+                }
+                
+                result = eval(command, namespace)
+                if result is not None:
+                    output_text.insert(END, f"{result}\n")
+            except Exception as e:
+                output_text.insert(END, f"Error: {e}\n")
+            
+            output_text.see(END)
+            input_entry.delete(0, END)
+        
+        input_entry.bind('<Return>', execute_command)
+        
+        Button(input_frame, text="Execute", command=execute_command).pack(side=RIGHT)
+        
+        # Add some helpful info
+        output_text.insert(END, "Available objects: app, ed_ap, waypoint_panel, settings_panel, assist_panel, config_manager, logger\n")
+        output_text.insert(END, "Example commands:\n")
+        output_text.insert(END, "  app.waypoint_panel.changed_waypoints\n")
+        output_text.insert(END, "  ed_ap.config['SunBrightThreshold']\n")
+        output_text.insert(END, "  logger.info('Hello from console')\n\n")
+        
+        input_entry.focus()
+    
+    def _force_save_all(self):
+        """Force save all panels and configurations"""
+        try:
+            if self.config_manager:
+                self.config_manager.save_all_settings()
+            
+            if self.waypoint_panel and hasattr(self.waypoint_panel, '_wp_editor_save'):
+                self.waypoint_panel._wp_editor_save()
+            
+            logger.info("✅ Force save completed")
+            self.log_msg("Dev: Force save completed")
+            
+        except Exception as e:
+            logger.error(f"❌ Force save failed: {e}")
+            messagebox.showerror("Save Error", f"Force save failed:\n{e}")
+    
+    def _validate_config_files(self):
+        """Validate all configuration files"""
+        issues = []
+        
+        try:
+            # Check waypoint files
+            waypoint_files = ['./waypoints/waypoints.json', './waypoints/completed.json', './waypoints/repeat.json']
+            for file_path in waypoint_files:
+                if os.path.exists(file_path):
+                    try:
+                        with open(file_path, 'r') as f:
+                            json.load(f)
+                    except json.JSONDecodeError as e:
+                        issues.append(f"Invalid JSON in {file_path}: {e}")
+                else:
+                    issues.append(f"Missing file: {file_path}")
+            
+            # Check ship configs
+            ship_config_file = './configs/ship_configs.json'
+            if os.path.exists(ship_config_file):
+                try:
+                    with open(ship_config_file, 'r') as f:
+                        json.load(f)
+                except json.JSONDecodeError as e:
+                    issues.append(f"Invalid JSON in {ship_config_file}: {e}")
+            
+            # Show results
+            if issues:
+                messagebox.showwarning("Config Validation", f"Found {len(issues)} issues:\n\n" + "\n".join(issues))
+            else:
+                messagebox.showinfo("Config Validation", "✅ All configuration files are valid!")
+                
+        except Exception as e:
+            messagebox.showerror("Validation Error", f"Failed to validate configs:\n{e}")
 
 
 def main():
