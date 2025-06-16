@@ -123,14 +123,21 @@ class APGui():
 
         self.gui_loaded = False
         self.log_buffer = queue.Queue()
+        self._programmatic_update = False  # Global flag for programmatic updates
 
-        self.ed_ap = EDAutopilot(cb=self.callback)
-        self.ed_ap.robigo.set_single_loop(self.ed_ap.config['Robigo_Single_Loop'])
+        try:
+            self.ed_ap = EDAutopilot(cb=self.callback)
+            self.ed_ap.robigo.set_single_loop(self.ed_ap.config['Robigo_Single_Loop'])
+        except Exception as e:
+            raise Exception(f"Failed to initialize EDAutopilot: {e}") from e
 
         self.mouse = MousePoint()
 
         # Initialize modular components
-        self.config_manager = ConfigManager(self.ed_ap)
+        try:
+            self.config_manager = ConfigManager(self.ed_ap)
+        except Exception as e:
+            raise Exception(f"Failed to initialize ConfigManager: {e}") from e
         
         # These will be set during GUI creation
         self.settings_panel: SettingsPanel | None = None
@@ -140,7 +147,10 @@ class APGui():
         self.cv_view = False
 
         # Create GUI
-        self.msgList = self._create_gui(root)
+        try:
+            self.msgList = self._create_gui(root)
+        except Exception as e:
+            raise Exception(f"Failed to create GUI: {e}") from e
 
         # Initialize component values
         self._initialize_all_components()
@@ -160,13 +170,33 @@ class APGui():
         self.ed_ap.gui_loaded = True
         self.gui_loaded = True
         
-        # Store original values for change detection
-        self.config_manager.capture_original_values()
-            
-        logger.debug("Initialization complete.")
-            
         # Send a log entry which will flush out the buffer.
         self.callback('log', 'ED Autopilot loaded successfully.')
+        
+        # Store original values for change detection after a delay to ensure all initialization is complete
+        self.root.after(500, self._delayed_baseline_capture)
+
+    def _delayed_baseline_capture(self):
+        """Capture baseline values after initialization is completely finished"""
+        logger.debug("Capturing initial baseline values after initialization delay")
+        # Clear any unsaved changes that might have been marked during initialization
+        self.config_manager.clear_unsaved_changes()
+        logger.debug("Cleared any false unsaved changes from initialization")
+
+    def programmatic_update(self):
+        """Context manager to prevent change detection during programmatic GUI updates"""
+        class ProgrammaticUpdateContext:
+            def __init__(self, gui):
+                self.gui = gui
+                
+            def __enter__(self):
+                self.gui._programmatic_update = True
+                return self
+                
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                self.gui._programmatic_update = False
+                
+        return ProgrammaticUpdateContext(self)
 
     def _create_gui(self, root):
         """Create the main GUI structure with modular components"""
@@ -250,10 +280,164 @@ class APGui():
 
     def _initialize_all_components(self):
         """Initialize values in all components"""
-        if self.settings_panel:
-            self.settings_panel.initialize_values()
-        if self.waypoint_panel:
-            self.waypoint_panel.initialize_values()
+        from EDlogger import logger
+        
+        # Set initialization flag to prevent change detection during initialization
+        logger.debug("Setting _initializing = True")
+        self._initializing = True
+        
+        try:
+            # Initialize settings panel (ship config, autopilot settings, checkboxes, radio buttons, etc.)
+            if self.settings_panel:
+                logger.debug("Initializing settings panel...")
+                self.settings_panel.initialize_all_values()
+            
+            # Initialize waypoint panel
+            if self.waypoint_panel:
+                logger.debug("Initializing waypoint panel...")
+                self.waypoint_panel.initialize_values()
+                
+            # Initialize assist panel checkboxes and state
+            if self.assist_panel:
+                logger.debug("Initializing assist panel...")
+                self._initialize_assist_panel_values()
+                
+        except Exception as e:
+            logger.error(f"Error during component initialization: {e}")
+            raise
+        finally:
+            # Always clear initialization flag
+            logger.debug("Setting _initializing = False")
+            self._initializing = False
+
+    def _initialize_settings_panel_values(self):
+        """Initialize settings panel values from configuration"""
+        if not self.settings_panel:
+            return
+            
+        # Initialize autopilot settings
+        if 'autopilot' in self.settings_panel.entries:
+            autopilot_entries = self.settings_panel.entries['autopilot']
+            if 'Sun Bright Threshold' in autopilot_entries:
+                autopilot_entries['Sun Bright Threshold'].delete(0, END)
+                autopilot_entries['Sun Bright Threshold'].insert(0, str(self.ed_ap.config.get('SunBrightThreshold', 125)))
+            if 'Nav Align Tries' in autopilot_entries:
+                autopilot_entries['Nav Align Tries'].delete(0, END)
+                autopilot_entries['Nav Align Tries'].insert(0, str(self.ed_ap.config.get('NavAlignTries', 3)))
+            if 'Jump Tries' in autopilot_entries:
+                autopilot_entries['Jump Tries'].delete(0, END)
+                autopilot_entries['Jump Tries'].insert(0, str(self.ed_ap.config.get('JumpTries', 3)))
+            if 'Docking Retries' in autopilot_entries:
+                autopilot_entries['Docking Retries'].delete(0, END)
+                autopilot_entries['Docking Retries'].insert(0, str(self.ed_ap.config.get('DockingRetries', 6)))
+            if 'Wait For Autodock' in autopilot_entries:
+                autopilot_entries['Wait For Autodock'].delete(0, END)
+                autopilot_entries['Wait For Autodock'].insert(0, str(self.ed_ap.config.get('WaitForAutoDockTimer', 120)))
+        
+        # Initialize fuel settings
+        if 'refuel' in self.settings_panel.entries:
+            refuel_entries = self.settings_panel.entries['refuel']
+            if 'Refuel Threshold' in refuel_entries:
+                refuel_entries['Refuel Threshold'].delete(0, END)
+                refuel_entries['Refuel Threshold'].insert(0, str(self.ed_ap.config.get('RefuelThreshold', 65)))
+            if 'Scoop Timeout' in refuel_entries:
+                refuel_entries['Scoop Timeout'].delete(0, END)
+                refuel_entries['Scoop Timeout'].insert(0, str(self.ed_ap.config.get('FuelScoopTimeOut', 180)))
+            if 'Fuel Threshold Abort' in refuel_entries:
+                refuel_entries['Fuel Threshold Abort'].delete(0, END)
+                refuel_entries['Fuel Threshold Abort'].insert(0, str(self.ed_ap.config.get('FuelThresholdAbort', 10)))
+        
+        # Initialize overlay settings
+        if 'overlay' in self.settings_panel.entries:
+            overlay_entries = self.settings_panel.entries['overlay']
+            if 'X Offset' in overlay_entries:
+                overlay_entries['X Offset'].delete(0, END)
+                overlay_entries['X Offset'].insert(0, str(self.ed_ap.config.get('OverlayTextXoffset', 100)))
+            if 'Y Offset' in overlay_entries:
+                overlay_entries['Y Offset'].delete(0, END)
+                overlay_entries['Y Offset'].insert(0, str(self.ed_ap.config.get('OverlayTextYoffset', 100)))
+            if 'Font Size' in overlay_entries:
+                overlay_entries['Font Size'].delete(0, END)
+                overlay_entries['Font Size'].insert(0, str(self.ed_ap.config.get('OverlayTextFontSize', 14)))
+        
+        # Initialize checkboxes
+        if hasattr(self.settings_panel, 'checkboxvar'):
+            checkboxes = {
+                'Enable Randomness': self.ed_ap.config.get('EnableRandomness', False),
+                'Activate Elite for each key': self.ed_ap.config.get('EliteKeySequenceRepeat', False),
+                'Automatic logout': self.ed_ap.config.get('Auto_Logout', False),
+                'Enable Overlay': self.ed_ap.config.get('Enable_Overlay', False),
+                'Enable Voice': self.ed_ap.config.get('Enable_Voice', True),
+                'ELW Scanner': self.ed_ap.config.get('EnableElwScannerSearch', False),
+            }
+            
+            for field, value in checkboxes.items():
+                if field in self.settings_panel.checkboxvar:
+                    self.settings_panel.checkboxvar[field].set(bool(value))
+        
+        # Initialize radio buttons
+        if hasattr(self.settings_panel, 'radiobuttonvar'):
+            if 'dss_button' in self.settings_panel.radiobuttonvar:
+                dss_button_value = self.ed_ap.config.get('DSSButton', 'Primary')
+                self.settings_panel.radiobuttonvar['dss_button'].set(dss_button_value)
+            
+            if 'debug_mode' in self.settings_panel.radiobuttonvar:
+                # Determine debug level from current log level
+                debug_level = "Info"  # default
+                if hasattr(self.ed_ap, 'logger_level'):
+                    level = self.ed_ap.logger_level
+                    if level == 'ERROR':
+                        debug_level = "Error"
+                    elif level == 'DEBUG':
+                        debug_level = "Debug"
+                    elif level == 'INFO':
+                        debug_level = "Info"
+                self.settings_panel.radiobuttonvar['debug_mode'].set(debug_level)
+        
+        # Initialize hotkey buttons
+        if 'buttons' in self.settings_panel.entries:
+            button_entries = self.settings_panel.entries['buttons']
+            hotkey_mappings = {
+                'Start FSD': self.ed_ap.config.get('HotKey_StartFSD', 'home'),
+                'Start SC': self.ed_ap.config.get('HotKey_StartSC', 'insert'),
+                'Start Robigo': self.ed_ap.config.get('HotKey_StartRobigo', 'page up'),
+                'Start Waypoint': self.ed_ap.config.get('HotKey_StartWaypoint', 'f12'),
+                'Stop All': self.ed_ap.config.get('HotKey_StopAllAssists', 'end'),
+                'Pause/Resume': self.ed_ap.config.get('HotKey_PauseResume', '')
+            }
+            
+            for field, hotkey in hotkey_mappings.items():
+                if field in button_entries and hotkey:
+                    button_entries[field].config(text=hotkey)
+                elif field in button_entries:
+                    button_entries[field].config(text="Click to set...")
+
+    def _initialize_assist_panel_values(self):
+        """Initialize assist panel values and state"""
+        if not self.assist_panel:
+            return
+            
+        # Initialize all assist checkboxes to unchecked state
+        assist_modes = ['FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 
+                      'Robigo Assist', 'AFK Combat Assist', 'DSS Assist']
+        
+        for mode in assist_modes:
+            if mode in self.assist_panel.checkboxvar:
+                self.assist_panel.checkboxvar[mode].set(0)
+        
+        # Reset all assist running states
+        self.assist_panel.FSD_A_running = False
+        self.assist_panel.SC_A_running = False
+        self.assist_panel.WP_A_running = False
+        self.assist_panel.RO_A_running = False
+        self.assist_panel.DSS_A_running = False
+        self.assist_panel.SWP_A_running = False
+        
+        # Reset pause system
+        self.assist_panel.all_paused = False
+        self.assist_panel.paused_assists = []
+        self.assist_panel.btn_pause.config(state='normal', bg='orange')
+        self.assist_panel.btn_resume.config(state='disabled', bg='gray')
 
     def _setup_config_management(self):
         """Set up configuration management with GUI elements"""
@@ -264,15 +448,16 @@ class APGui():
             'revert_button': self.settings_panel.revert_button if self.settings_panel else None
         }
         self.config_manager.set_gui_elements(gui_elements)
+        self.config_manager.set_programmatic_update_context(self.programmatic_update)
         
-        # Connect save/revert buttons to config manager
+        # Inject dependencies into settings panel
         if self.settings_panel:
-            self.settings_panel.save_button.config(command=self.config_manager.save_settings)
-            self.settings_panel.revert_button.config(command=self.config_manager.revert_all_changes)
-            
-            # Inject dependencies into settings panel instead of monkey-patching
             self.settings_panel.set_config_manager(self.config_manager)
             self.settings_panel.set_hotkey_capture_callback(self._capture_hotkey)
+            self.settings_panel.set_button_commands(
+                self.config_manager.save_settings,
+                self.config_manager.revert_all_changes
+            )
 
     def _setup_hotkeys(self):
         """Set up global hotkeys"""
@@ -372,12 +557,17 @@ class APGui():
         elif msg == 'jumpcount':
             self.update_jumpcount(body)
         elif msg == 'update_ship_cfg':
+            logger.debug(f"GUI: Received update_ship_cfg callback")
             self.update_ship_display()
 
     def update_ship_display(self):
         """Update ship configuration display"""
+        logger.debug(f"GUI: update_ship_display called, current_ship_type='{getattr(self.ed_ap, 'current_ship_type', 'NONE')}'")
         if self.settings_panel:
+            logger.debug(f"GUI: Calling settings_panel.update_ship_display()")
             self.settings_panel.update_ship_display()
+        else:
+            logger.debug(f"GUI: No settings_panel available")
 
     def calibrate_callback(self):
         self.ed_ap.calibrate()
@@ -560,18 +750,40 @@ class APGui():
             self.assist_panel._toggle_pause_all()
 
     def _entry_update(self, event=None, mark_changes=True):
-        """Handle entry field updates"""
+        """Handle entry field updates - only trigger on meaningful changes"""
+        from EDlogger import logger
+        
+        logger.debug(f"_entry_update called: event={event}, mark_changes={mark_changes}")
+        logger.debug(f"  Guard checks: _saving_settings={getattr(self, '_saving_settings', False)}, "
+                    f"_initializing={getattr(self, '_initializing', False)}, "
+                    f"_reverting_changes={getattr(self, '_reverting_changes', False)}, "
+                    f"_programmatic_update={self._programmatic_update}")
+        
         if (mark_changes and event is not None and 
-            not hasattr(self, '_saving_settings') and 
-            not hasattr(self, '_initializing') and
-            not hasattr(self, '_reverting_changes')):
+            not getattr(self, '_saving_settings', False) and 
+            not getattr(self, '_initializing', False) and
+            not getattr(self, '_reverting_changes', False) and
+            not self._programmatic_update):
             
-            if self.config_manager.has_actual_changes():
+            logger.debug("  Guards passed, checking for changes...")
+            has_changes = self.config_manager.has_actual_changes()
+            logger.debug(f"  has_actual_changes() returned: {has_changes}")
+            
+            if has_changes:
                 if not self.config_manager.has_unsaved_changes:
+                    logger.debug("  Marking unsaved changes")
                     self.config_manager.mark_unsaved_changes()
+                else:
+                    logger.debug("  Already marked as unsaved")
             else:
+                # Only clear if we previously had unsaved changes
                 if self.config_manager.has_unsaved_changes:
+                    logger.debug("  Clearing unsaved changes")
                     self.config_manager.clear_unsaved_changes()
+                else:
+                    logger.debug("  No changes detected, no action needed")
+        else:
+            logger.debug("  Guards failed, skipping change detection")
 
     def _check_cb(self, field):
         """Handle checkbox and radio button changes"""
@@ -888,9 +1100,78 @@ class APGui():
 
 
 def main():
-    root = tk.Tk()
-    app = APGui(root)
-    root.mainloop()
+    root = None
+    try:
+        root = tk.Tk()
+        app = APGui(root)
+        root.mainloop()
+    except Exception as e:
+        import traceback
+        error_msg = f"Startup Error: {str(e)}\n\nFull traceback:\n{traceback.format_exc()}"
+        
+        # Try to show error in GUI if possible
+        if root is not None:
+            try:
+                messagebox.showerror("EDAPGui Startup Error", error_msg)
+            except:
+                pass
+        
+        # Always print to console and create error window
+        print("=" * 60)
+        print("EDAPGui STARTUP ERROR:")
+        print("=" * 60)
+        print(error_msg)
+        print("=" * 60)
+        
+        # Create a simple error display window
+        try:
+            if root is None:
+                root = tk.Tk()
+            
+            root.title("EDAPGui - Startup Error")
+            root.geometry("800x600")
+            
+            # Create scrollable text widget
+            text_frame = tk.Frame(root)
+            text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+            
+            error_text = tk.Text(text_frame, wrap=tk.WORD, font=('Courier', 10))
+            scrollbar = tk.Scrollbar(text_frame, orient=tk.VERTICAL, command=error_text.yview)
+            error_text.configure(yscrollcommand=scrollbar.set)
+            
+            error_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            
+            # Insert error message
+            error_text.insert(tk.END, "EDAPGui failed to start. Error details:\n\n")
+            error_text.insert(tk.END, error_msg)
+            error_text.insert(tk.END, "\n\nPossible solutions:\n")
+            error_text.insert(tk.END, "1. Check that all required files are present\n")
+            error_text.insert(tk.END, "2. Verify Python dependencies are installed\n")
+            error_text.insert(tk.END, "3. Check for syntax errors in modified files\n")
+            error_text.insert(tk.END, "4. Check the autopilot.log file for additional details\n")
+            error_text.insert(tk.END, "5. Try reverting recent changes\n")
+            error_text.config(state=tk.DISABLED)
+            
+            # Add buttons
+            button_frame = tk.Frame(root)
+            button_frame.pack(pady=10)
+            
+            tk.Button(button_frame, text="Copy Error to Clipboard", 
+                     command=lambda: copy_to_clipboard(error_msg)).pack(side=tk.LEFT, padx=5)
+            tk.Button(button_frame, text="Close", 
+                     command=root.destroy).pack(side=tk.LEFT, padx=5)
+            
+            def copy_to_clipboard(text):
+                root.clipboard_clear()
+                root.clipboard_append(text)
+                root.update()
+            
+            root.mainloop()
+            
+        except Exception as display_error:
+            print(f"Could not create error display window: {display_error}")
+            input("Press Enter to continue...")
 
 
 if __name__ == "__main__":

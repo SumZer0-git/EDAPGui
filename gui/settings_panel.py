@@ -3,6 +3,9 @@ from tkinter import (
     BooleanVar, Button, Checkbutton, Entry, Frame, IntVar, Label, LabelFrame, 
     Radiobutton, Spinbox, StringVar, LEFT, END
 )
+from tkinter.ttk import Combobox
+import os
+import glob
 from idlelib.tooltip import Hovertip
 
 
@@ -39,6 +42,11 @@ class SettingsPanel:
         """Inject the hotkey capture callback"""
         self.hotkey_capture_callback = callback
     
+    def set_button_commands(self, save_command, revert_command):
+        """Inject save and revert button commands"""
+        self.save_button.config(command=save_command)
+        self.revert_button.config(command=revert_command)
+    
     def _create_settings_gui(self):
         """Create the settings panel GUI"""
         settings_main = tk.Frame(self.parent)
@@ -56,48 +64,412 @@ class SettingsPanel:
     
     def _create_ship_config_block(self, parent):
         """Create ship configuration section"""
-        blk_ship = LabelFrame(parent, text="SHIP CONFIGURATION")
-        blk_ship.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-        blk_ship.columnconfigure([0, 1], weight=1, minsize=120)
+        # Simple header without ship name
+        self.blk_ship = LabelFrame(parent, text="SHIP CONFIGURATION")
+        self.blk_ship.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        self.blk_ship.columnconfigure([0, 1], weight=1, minsize=120)
+        self.blk_ship.columnconfigure([2], weight=0, minsize=80)
         
-        # Ship parameter fields
+        # Active ship and configuration status
+        self.active_ship_var = StringVar()
+        self.active_ship_var.set("Active Ship: <detecting...>")
+        lbl_active_ship = tk.Label(self.blk_ship, textvariable=self.active_ship_var, 
+                                  anchor='w', font=("TkDefaultFont", 9, "bold"))
+        lbl_active_ship.grid(row=0, column=0, padx=2, pady=1, columnspan=4, sticky="nsew")
+        
+        self.config_type_var = StringVar()
+        self.config_type_var.set("Configuration: Default")
+        lbl_config_type = tk.Label(self.blk_ship, textvariable=self.config_type_var, 
+                                  anchor='w', font=("TkDefaultFont", 8))
+        lbl_config_type.grid(row=1, column=0, padx=2, pady=1, columnspan=4, sticky="nsew")
+        
+        # Configuration source selector
+        lbl_config = tk.Label(self.blk_ship, text="Config:", anchor='w')
+        lbl_config.grid(row=2, column=0, padx=2, pady=2, sticky="nsew")
+        
+        self.ship_config_var = StringVar()
+        self.ship_config_dropdown = Combobox(self.blk_ship, textvariable=self.ship_config_var, 
+                                           state="readonly", width=15)
+        self.ship_config_dropdown.grid(row=2, column=1, padx=2, pady=2, sticky="nsew")
+        self.ship_config_dropdown.bind('<<ComboboxSelected>>', self._on_config_selected)
+        
+        # Store reference for color updates
+        self.ship_config_dropdown.configure(foreground="black")
+        
+        # Reset to defaults button
+        self.reset_button = Button(self.blk_ship, text='Delete', command=self._reset_to_defaults, # Removes config from ship_configs.json
+                                  bg='lightcoral', width=8)
+        self.reset_button.grid(row=2, column=2, padx=2, pady=2, sticky="nsew")
+        Hovertip(self.reset_button, "Reset current ship to default values", hover_delay=500)
+        
+        # Status label for config matching
+        self.config_status_var = StringVar()
+        self.config_status_var.set("")
+        self.lbl_status = tk.Label(self.blk_ship, textvariable=self.config_status_var, 
+                                  anchor='w', fg="blue", font=("TkDefaultFont", 8))
+        self.lbl_status.grid(row=3, column=0, padx=2, pady=1, columnspan=4, sticky="nsew")
+        
+        # Ship parameter fields with tooltips
         self.entries['ship'] = {}
-        ship_fields = ('RollRate', 'PitchRate', 'YawRate')
-        for i, field in enumerate(ship_fields):
-            lbl = tk.Label(blk_ship, text=f"{field} (°/s):", anchor='w')
-            lbl.grid(row=i, column=0, padx=2, pady=2, sticky="nsew")
+        ship_fields = {
+            'RollRate': 'How fast your ship rotates left/right around its central axis (degrees per second)',
+            'PitchRate': 'How fast your ship rotates up/down (degrees per second)', 
+            'YawRate': 'How fast your ship turns left/right horizontally (degrees per second)'
+        }
+        
+        for i, (field, tooltip_text) in enumerate(ship_fields.items()):
+            row = i + 4  # Start after ship info, config selector and status
+            lbl = tk.Label(self.blk_ship, text=f"{field} (°/s):", anchor='w')
+            lbl.grid(row=row, column=0, padx=2, pady=2, sticky="nsew")
             
-            ent = tk.Spinbox(blk_ship, width=10, from_=0, to=1000, increment=0.5)
-            ent.grid(row=i, column=1, padx=2, pady=2, sticky="nsew")
+            ent = tk.Spinbox(self.blk_ship, width=10, from_=0, to=1000, increment=0.5)
+            ent.grid(row=row, column=1, padx=2, pady=2, sticky="nsew")
             ent.bind('<FocusOut>', self.entry_callback)
             ent.insert(0, "0")
             self.entries['ship'][field] = ent
+            
+            # Add tooltip to the label
+            Hovertip(lbl, tooltip_text, hover_delay=500)
 
         # Sun pitch up time setting
-        lbl_sun_pitch_up = tk.Label(blk_ship, text='SunPitchUp +/- Time (s):', anchor='w')
-        lbl_sun_pitch_up.grid(row=3, column=0, padx=2, pady=3, sticky="nsew")
-        spn_sun_pitch_up = tk.Spinbox(blk_ship, width=10, from_=-100, to=100, increment=0.5)
-        spn_sun_pitch_up.grid(row=3, column=1, padx=2, pady=3, sticky="nsew")
+        lbl_sun_pitch_up = tk.Label(self.blk_ship, text='SunPitchUp +/- Time (s):', anchor='w')
+        lbl_sun_pitch_up.grid(row=7, column=0, padx=2, pady=3, sticky="nsew")
+        spn_sun_pitch_up = tk.Spinbox(self.blk_ship, width=10, from_=-100, to=100, increment=0.5)
+        spn_sun_pitch_up.grid(row=7, column=1, padx=2, pady=3, sticky="nsew")
         spn_sun_pitch_up.bind('<FocusOut>', self.entry_callback)
         self.entries['ship']['SunPitchUp+Time'] = spn_sun_pitch_up
+        
+        # Add tooltip for sun pitch up time
+        Hovertip(lbl_sun_pitch_up, "Time adjustment for pitching up when too close to a star (seconds)", hover_delay=500)
 
         # Test buttons for ship parameters
-        blk_ship.columnconfigure([2], weight=1, minsize=80)
-        btn_tst_roll = Button(blk_ship, text='Test', command=self.ed_ap.ship_tst_roll)
-        btn_tst_roll.grid(row=0, column=2, padx=2, pady=2, sticky="news")
-        btn_tst_pitch = Button(blk_ship, text='Test', command=self.ed_ap.ship_tst_pitch)
-        btn_tst_pitch.grid(row=1, column=2, padx=2, pady=2, sticky="news")
-        btn_tst_yaw = Button(blk_ship, text='Test', command=self.ed_ap.ship_tst_yaw)
-        btn_tst_yaw.grid(row=2, column=2, padx=2, pady=2, sticky="news")
+        self.blk_ship.columnconfigure([3], weight=1, minsize=80)
+        btn_tst_roll = Button(self.blk_ship, text='Test', command=self.ed_ap.ship_tst_roll)
+        btn_tst_roll.grid(row=4, column=3, padx=2, pady=2, sticky="news")
+        btn_tst_pitch = Button(self.blk_ship, text='Test', command=self.ed_ap.ship_tst_pitch)
+        btn_tst_pitch.grid(row=5, column=3, padx=2, pady=2, sticky="news")
+        btn_tst_yaw = Button(self.blk_ship, text='Test', command=self.ed_ap.ship_tst_yaw)
+        btn_tst_yaw.grid(row=6, column=3, padx=2, pady=2, sticky="news")
 
-        # Active ship display and ship config file loading
-        lbl_active_ship = Label(blk_ship, textvariable=self.ship_filelabel, 
-                               relief="sunken", bg="lightgray")
-        lbl_active_ship.grid(row=4, column=0, padx=2, pady=2, columnspan=2, sticky="news")
         
-        btn_ship_file = Button(blk_ship, text="Load Ship File", command=self._open_ship_file)
-        btn_ship_file.grid(row=4, column=2, padx=2, pady=2, sticky="news")
-        tip_ship_file = Hovertip(btn_ship_file, self.tooltips['Ship Config Button'], hover_delay=1000)
+        # Initialize dropdown options
+        self._populate_config_dropdown()
+    
+    def _get_ship_display_name(self, ship_type):
+        """Convert internal ship type to proper display name using existing EDAP_data"""
+        try:
+            from EDAP_data import ship_name_map
+            return ship_name_map.get(ship_type, ship_type.replace('-', ' ').replace('_', ' ').title())
+        except ImportError:
+            # Fallback to automatic conversion if EDAP_data not available
+            return ship_type.replace('-', ' ').replace('_', ' ').title()
+    
+    def _get_ship_internal_name(self, display_name):
+        """Convert display name back to internal ship type using existing EDAP_data"""
+        try:
+            from EDAP_data import ship_name_map
+            # Create reverse mapping from display names to internal names
+            reverse_map = {v: k for k, v in ship_name_map.items()}
+            return reverse_map.get(display_name, display_name.lower().replace(' ', '_').replace('-', '_'))
+        except ImportError:
+            # Fallback to automatic conversion if EDAP_data not available  
+            return display_name.lower().replace(' ', '_').replace('-', '_')
+    
+    def _get_ship_file_name(self, ship_type):
+        """Convert internal ship type to ship file name - only for ships that don't follow automatic pattern"""
+        # Only include ships that need special file name mapping
+        file_name_mapping = {
+            'cobramkv': 'cobra-mk5',
+            'federation_corvette': 'fed-corvette', 
+            'type8': 'type-8',
+        }
+        return file_name_mapping.get(ship_type, ship_type.replace('_', '-'))
+    
+    def _ship_has_config_file(self, ship_type):
+        """Check if ship has a config file in ships/ directory"""
+        file_name = self._get_ship_file_name(ship_type)
+        return os.path.exists(f"./ships/{file_name}.json")
+    
+    def _ship_has_custom_config(self, ship_type):
+        """Check if ship has custom config saved in ship_configs.json"""
+        if not hasattr(self.ed_ap, 'ship_configs'):
+            return False
+        
+        ship_configs = self.ed_ap.ship_configs.get('Ship_Configs', {})
+        if ship_type not in ship_configs:
+            return False
+        
+        # Check if the config is not empty - empty configs {} don't count as custom
+        config = ship_configs[ship_type]
+        return bool(config and any(config.values()))
+    
+    def _populate_config_dropdown(self):
+        """Populate the ship config dropdown with available options"""
+        current_ship = getattr(self.ed_ap, 'current_ship_type', '')
+        
+        if not current_ship:
+            self.ship_config_dropdown['values'] = ["Custom"]
+            self.ship_config_var.set("Custom")
+            return
+        
+        ship_display = self._get_ship_display_name(current_ship)
+        options = []
+        
+        # Current ship section - conditionally add options based on what exists
+        has_config_file = self._ship_has_config_file(current_ship)
+        has_custom_config = self._ship_has_custom_config(current_ship)
+        
+        if has_custom_config:
+            options.append(f"{ship_display} (Custom)")
+        
+        if has_config_file:
+            options.append(f"{ship_display} (Default)")
+        elif not has_custom_config:
+            # No config file and no custom - show as default (uses hardcoded values)
+            options.append(f"{ship_display} (Default)")
+        
+        # Separator for templates
+        options.append("── Templates ──")
+        
+        # Add other ship files as templates
+        ship_files = glob.glob("./ships/*.json")
+        for ship_file in sorted(ship_files):
+            ship_name = os.path.splitext(os.path.basename(ship_file))[0]
+            # Skip current ship - already added above
+            if ship_name == current_ship:
+                continue
+            # Convert file names to display names using mapping
+            display_name = self._get_ship_display_name(ship_name)
+            options.append(display_name)
+        
+        self.ship_config_dropdown['values'] = options
+        
+        # Set selection based on actual configuration state
+        if has_custom_config and hasattr(self.ed_ap, 'using_custom_ship_config') and self.ed_ap.using_custom_ship_config:
+            self.ship_config_var.set(f"{ship_display} (Custom)")
+        else:
+            self.ship_config_var.set(f"{ship_display} (Default)")
+        
+        # Update color coding
+        self._update_dropdown_colors()
+    
+    def _update_dropdown_colors(self):
+        """Reset dropdown to default colors (no special color coding)"""
+        try:
+            if hasattr(self, 'ship_config_dropdown'):
+                # Always use default color
+                self.ship_config_dropdown.configure(foreground="black")
+        except Exception as e:
+            # Defensive programming - don't let color updates break the app
+            from EDlogger import logger
+            logger.debug(f"Error updating dropdown colors: {e}")
+    
+    def _on_config_selected(self, event):
+        """Handle ship config dropdown selection"""
+        selected = self.ship_config_var.get()
+        current_ship = getattr(self.ed_ap, 'current_ship_type', '')
+        
+        # Skip separator selections
+        if selected == "── Templates ──":
+            # Revert to previous selection based on actual state
+            ship_display = self._get_ship_display_name(current_ship)
+            has_custom_config = self._ship_has_custom_config(current_ship)
+            if has_custom_config and hasattr(self.ed_ap, 'using_custom_ship_config') and self.ed_ap.using_custom_ship_config:
+                self.ship_config_var.set(f"{ship_display} (Custom)")
+            else:
+                self.ship_config_var.set(f"{ship_display} (Default)")
+            return
+        
+        # Wrap entire config switching in programmatic update context to prevent false change detection
+        programmatic_context = None
+        if self.config_manager and hasattr(self.config_manager, 'programmatic_update_context'):
+            programmatic_context = self.config_manager.programmatic_update_context
+        
+        if programmatic_context:
+            with programmatic_context():
+                self._perform_config_switch(selected, current_ship)
+                # Capture new baseline inside programmatic context after config switch is complete
+                if self.config_manager:
+                    self.config_manager.capture_original_values()
+        else:
+            self._perform_config_switch(selected, current_ship)
+            # Capture new baseline after config switch is complete
+            if self.config_manager:
+                self.config_manager.capture_original_values()
+    
+    def _perform_config_switch(self, selected, current_ship):
+        """Perform the actual config switching logic"""
+        if selected.endswith(" (Custom)"):
+            # Load custom config for current ship from ship_configs.json
+            if current_ship:
+                self.ed_ap.load_ship_configuration(current_ship)
+                self.update_ship_display()
+        elif selected.endswith(" (Default)"):
+            # Load current ship's default configuration
+            if current_ship:
+                # Force loading defaults, bypassing custom config in ship_configs.json
+                self.ed_ap.using_custom_ship_config = False
+                self.ed_ap.load_ship_configuration(current_ship, force_defaults=True)
+                
+                # Update GUI to show we're now using defaults
+                self.update_ship_display()
+        else:
+            # Load template from another ship - convert display name back to file name
+            ship_internal_name = self._get_ship_internal_name(selected)
+            ship_file_name = self._get_ship_file_name(ship_internal_name)
+            self._load_ship_template(ship_file_name)
+            self._update_config_status()
+        
+        # Update colors after selection change
+        self._update_dropdown_colors()
+    
+    def refresh_config_status(self):
+        """Refresh configuration status display - called when changes are detected"""
+        if hasattr(self.ed_ap, 'current_ship_type') and self.ed_ap.current_ship_type:
+            ship_name = self._get_ship_display_name(self.ed_ap.current_ship_type)
+            self.active_ship_var.set(f"Active Ship: {ship_name}")
+            
+            # Show configuration type with modification indicator
+            config_type = "Custom" if getattr(self.ed_ap, 'using_custom_ship_config', False) else "Default"
+            has_unsaved = getattr(self.config_manager, 'has_unsaved_changes', False) if self.config_manager else False
+            modification_indicator = " (modified*)" if has_unsaved else ""
+            self.config_type_var.set(f"Configuration: {config_type}{modification_indicator}")
+    
+    def _load_ship_template(self, ship_file_name):
+        """Load ship default values as template without affecting custom flags"""
+        from file_utils import read_json_file
+        
+        # First try the ship file
+        ship_file_path = f"./ships/{ship_file_name}.json"
+        if os.path.exists(ship_file_path):
+            try:
+                ship_defaults = read_json_file(ship_file_path)
+                
+                # Load values directly into GUI fields only
+                self.entries['ship']['PitchRate'].delete(0, END)
+                self.entries['ship']['RollRate'].delete(0, END)
+                self.entries['ship']['YawRate'].delete(0, END)
+                self.entries['ship']['SunPitchUp+Time'].delete(0, END)
+
+                self.entries['ship']['PitchRate'].insert(0, ship_defaults.get('pitchrate', 33.0))
+                self.entries['ship']['RollRate'].insert(0, ship_defaults.get('rollrate', 80.0))
+                self.entries['ship']['YawRate'].insert(0, ship_defaults.get('yawrate', 8.0))
+                self.entries['ship']['SunPitchUp+Time'].insert(0, ship_defaults.get('SunPitchUp+Time', 0.0))
+                
+                # Update internal values for immediate effect (but don't save yet)
+                self.ed_ap.rollrate = float(ship_defaults.get('rollrate', 80.0))
+                self.ed_ap.pitchrate = float(ship_defaults.get('pitchrate', 33.0))
+                self.ed_ap.yawrate = float(ship_defaults.get('yawrate', 8.0))
+                self.ed_ap.sunpitchuptime = float(ship_defaults.get('SunPitchUp+Time', 0.0))
+                
+                # Template loaded - will be marked as modified only when user actually changes values
+                
+                return True
+                
+            except Exception as e:
+                from EDlogger import logger
+                logger.warning(f"Error loading ship template {ship_file_path}: {e}")
+        
+        # Fallback to hardcoded defaults
+        self.entries['ship']['PitchRate'].delete(0, END)
+        self.entries['ship']['RollRate'].delete(0, END)
+        self.entries['ship']['YawRate'].delete(0, END)
+        self.entries['ship']['SunPitchUp+Time'].delete(0, END)
+
+        self.entries['ship']['PitchRate'].insert(0, 33.0)
+        self.entries['ship']['RollRate'].insert(0, 80.0)
+        self.entries['ship']['YawRate'].insert(0, 8.0)
+        self.entries['ship']['SunPitchUp+Time'].insert(0, 0.0)
+        
+        # Update internal values
+        self.ed_ap.rollrate = 80.0
+        self.ed_ap.pitchrate = 33.0
+        self.ed_ap.yawrate = 8.0
+        self.ed_ap.sunpitchuptime = 0.0
+        
+        # Mark as having unsaved changes since we loaded fallback defaults
+        if self.config_manager:
+            self.config_manager.mark_unsaved_changes()
+        
+        return False
+    
+    def _update_config_status(self):
+        """Update the status text based on current config vs current ship"""
+        selected = self.ship_config_var.get()
+        current_ship = getattr(self.ed_ap, 'current_ship_type', '')
+        
+        if not current_ship:
+            self.config_status_var.set("")
+            return
+            
+        if selected.endswith(" (Custom)") or selected.endswith(" (Default)"):
+            # For current ship configs, no status message needed
+            self.config_status_var.set("")
+            self.lbl_status.config(fg="blue")  # Reset to default color
+        elif selected == "── Templates ──":
+            # Skip separator
+            self.config_status_var.set("")
+            self.lbl_status.config(fg="blue")  # Reset to default color
+        else:
+            # Template from another ship - check if it matches current ship
+            template_ship_display = selected
+            current_ship_display = current_ship.replace('_', ' ').title()
+            template_ship_file = selected.lower().replace(' ', '_')
+            
+            # Set the message
+            message = f"Using {template_ship_display} settings as template for {current_ship_display}"
+            self.config_status_var.set(message)
+            
+            # Color the text based on whether template matches current ship
+            if template_ship_file == current_ship:
+                # Green for matching ship template
+                self.lbl_status.config(fg="green")
+            else:
+                # Red for different ship template
+                self.lbl_status.config(fg="red")
+    
+    def _reset_to_defaults(self):
+        """Reset current ship to default values"""
+        current_ship = getattr(self.ed_ap, 'current_ship_type', '')
+        if not current_ship:
+            from tkinter import messagebox
+            messagebox.showwarning("No Ship Detected", "Cannot reset - no active ship detected.")
+            return
+        
+        # Confirm reset action
+        from tkinter import messagebox
+        ship_display = self._get_ship_display_name(current_ship)
+        result = messagebox.askyesno(
+            "Reset to Defaults", 
+            f"Reset {ship_display} to default values?\\n\\nThis will clear any custom modifications.",
+            icon="warning"
+        )
+        if not result:
+            return
+        
+        try:
+            # Clear custom config from ship_configs.json if it exists
+            if current_ship in self.ed_ap.ship_configs.get('Ship_Configs', {}):
+                del self.ed_ap.ship_configs['Ship_Configs'][current_ship]
+                self.ed_ap.write_ship_configs(self.ed_ap.ship_configs)
+            
+            # Reload ship configuration (will load defaults)
+            self.ed_ap.load_ship_configuration(current_ship)
+            
+            # Update GUI
+            self.update_ship_display()
+            
+            # Clear unsaved changes since the reset was completed and saved immediately
+            if self.config_manager:
+                self.config_manager.clear_unsaved_changes()
+                
+            from EDlogger import logger
+            logger.info(f"Reset {current_ship} to default configuration")
+            
+        except Exception as e:
+            from EDlogger import logger
+            logger.error(f"Error resetting ship to defaults: {e}")
+            messagebox.showerror("Reset Error", f"Failed to reset ship configuration: {e}")
     
     def _create_additional_settings_block(self, parent):
         """Create additional settings sections"""
@@ -278,12 +650,11 @@ class SettingsPanel:
         blk_settings_buttons.grid(row=4, column=0, padx=10, pady=5, sticky="nsew")
         blk_settings_buttons.columnconfigure([0, 1], weight=1, minsize=100)
         
-        self.save_button = Button(blk_settings_buttons, text='Save All Settings', 
-                                 command=self._save_settings)
+        # Create buttons without commands - commands will be injected by main GUI
+        self.save_button = Button(blk_settings_buttons, text='Save All Settings')
         self.save_button.grid(row=0, column=0, padx=2, pady=2, sticky="news")
         
         self.revert_button = Button(blk_settings_buttons, text='Revert Changes', 
-                                   command=self._revert_all_changes,
                                    state='disabled', bg='SystemButtonFace')
         self.revert_button.grid(row=0, column=1, padx=2, pady=2, sticky="news")
     
@@ -313,14 +684,6 @@ class SettingsPanel:
 
         return entries
     
-    def _open_ship_file(self):
-        """Open ship configuration file using the injected config manager"""
-        if self.config_manager:
-            return self.config_manager.open_ship_file()
-        else:
-            from EDlogger import logger
-            logger.warning("Config manager not available for ship file loading")
-            return False
     
     def _capture_hotkey(self, field_name):
         """Capture hotkey for button using the injected callback"""
@@ -335,18 +698,40 @@ class SettingsPanel:
         import os
         os.startfile('autopilot.log')
     
-    def _save_settings(self):
-        """Save all settings - placeholder for now"""
-        # This would need to be implemented with save logic
-        pass
-    
-    def _revert_all_changes(self):
-        """Revert all changes - placeholder for now"""
-        # This would need to be implemented with revert logic
-        pass
     
     def update_ship_display(self):
-        """Update ship configuration display"""
+        """Update ship configuration display and GUI fields from internal ed_ap state"""
+        self._refresh_all_ship_ui()
+        
+    def initialize_values(self):
+        """Initialize field values from configuration - alias for update_ship_display"""
+        self._refresh_all_ship_ui()
+    
+    def _refresh_all_ship_ui(self):
+        """Update all ship-related GUI elements from ed_ap internal state"""
+        from EDlogger import logger
+        
+        logger.debug(f"SettingsPanel: refreshing ship UI")
+        logger.debug(f"SettingsPanel: ed_ap.current_ship_type = '{getattr(self.ed_ap, 'current_ship_type', 'NONE')}'")
+        logger.debug(f"SettingsPanel: ed_ap.using_custom_ship_config = {getattr(self.ed_ap, 'using_custom_ship_config', 'NONE')}")
+        logger.debug(f"SettingsPanel: Ship rates - Roll={getattr(self.ed_ap, 'rollrate', 'NONE')}, Pitch={getattr(self.ed_ap, 'pitchrate', 'NONE')}, Yaw={getattr(self.ed_ap, 'yawrate', 'NONE')}")
+        
+        # Update ship parameter fields using context manager to prevent change detection
+        if (self.config_manager and 
+            hasattr(self.config_manager, 'programmatic_update_context') and 
+            self.config_manager.programmatic_update_context):
+            with self.config_manager.programmatic_update_context():
+                self._update_ship_entry_fields()
+        else:
+            self._update_ship_entry_fields()
+        
+        # Update all other ship UI elements
+        self._update_ship_info_display()
+        self._populate_config_dropdown()
+        self._update_config_status()
+    
+    def _update_ship_entry_fields(self):
+        """Update the ship parameter entry fields with current ed_ap values"""
         self.entries['ship']['PitchRate'].delete(0, END)
         self.entries['ship']['RollRate'].delete(0, END)
         self.entries['ship']['YawRate'].delete(0, END)
@@ -356,88 +741,101 @@ class SettingsPanel:
         self.entries['ship']['RollRate'].insert(0, self.ed_ap.rollrate)
         self.entries['ship']['YawRate'].insert(0, self.ed_ap.yawrate)
         self.entries['ship']['SunPitchUp+Time'].insert(0, self.ed_ap.sunpitchuptime)
-        
-        # Update active ship display with Default/Custom status
-        if hasattr(self.ed_ap, 'current_ship_type') and self.ed_ap.current_ship_type:
-            ship_name = self.ed_ap.current_ship_type
-            config_type = "Custom" if getattr(self.ed_ap, 'using_custom_ship_config', False) else "Default"
-            self.ship_filelabel.set(f"Active Ship: {ship_name} ({config_type})")
-        else:
-            self.ship_filelabel.set("Active Ship: <detecting...>")
     
-    def initialize_values(self):
-        """Initialize field values from configuration"""
-        # Ship configuration
-        self.entries['ship']['PitchRate'].delete(0, END)
-        self.entries['ship']['RollRate'].delete(0, END)
-        self.entries['ship']['YawRate'].delete(0, END)
-        self.entries['ship']['SunPitchUp+Time'].delete(0, END)
-
-        self.entries['ship']['PitchRate'].insert(0, float(self.ed_ap.pitchrate))
-        self.entries['ship']['RollRate'].insert(0, float(self.ed_ap.rollrate))
-        self.entries['ship']['YawRate'].insert(0, float(self.ed_ap.yawrate))
-        self.entries['ship']['SunPitchUp+Time'].insert(0, float(self.ed_ap.sunpitchuptime))
-        
-        # Update ship display with Default/Custom status
+    def _update_ship_info_display(self):
+        """Update the ship name and configuration type display"""
         if hasattr(self.ed_ap, 'current_ship_type') and self.ed_ap.current_ship_type:
-            ship_name = self.ed_ap.current_ship_type
+            ship_name = self._get_ship_display_name(self.ed_ap.current_ship_type)
+            self.active_ship_var.set(f"Active Ship: {ship_name}")
+            
+            # Show configuration type with modification indicator
             config_type = "Custom" if getattr(self.ed_ap, 'using_custom_ship_config', False) else "Default"
-            self.ship_filelabel.set(f"Active Ship: {ship_name} ({config_type})")
+            has_unsaved = getattr(self.config_manager, 'has_unsaved_changes', False) if self.config_manager else False
+            modification_indicator = " (modified*)" if has_unsaved else ""
+            self.config_type_var.set(f"Configuration: {config_type}{modification_indicator}")
         else:
-            self.ship_filelabel.set("Active Ship: <detecting...>")
-
+            self.active_ship_var.set("Active Ship: <detecting...>")
+            self.config_type_var.set("Configuration: Unknown")
+    
+    def initialize_all_values(self):
+        """Initialize all field values from configuration - both ship and non-ship settings"""
+        # Initialize ship values
+        self._refresh_all_ship_ui()
+        
+        # Initialize non-ship values
+        self._initialize_non_ship_values()
+    
+    def _initialize_non_ship_values(self):
+        """Initialize autopilot, fuel, overlay, and other non-ship configuration values"""
+        # Use context manager to prevent change detection
+        if (self.config_manager and 
+            hasattr(self.config_manager, 'programmatic_update_context') and 
+            self.config_manager.programmatic_update_context):
+            with self.config_manager.programmatic_update_context():
+                self._set_non_ship_field_values()
+        else:
+            self._set_non_ship_field_values()
+    
+    def _set_non_ship_field_values(self):
+        """Set the actual field values for non-ship settings"""
         # Autopilot settings
-        self.entries['autopilot']['Sun Bright Threshold'].delete(0, END)
-        self.entries['autopilot']['Nav Align Tries'].delete(0, END)
-        self.entries['autopilot']['Jump Tries'].delete(0, END)
-        self.entries['autopilot']['Docking Retries'].delete(0, END)
-        self.entries['autopilot']['Wait For Autodock'].delete(0, END)
+        if 'autopilot' in self.entries:
+            self.entries['autopilot']['Sun Bright Threshold'].delete(0, END)
+            self.entries['autopilot']['Nav Align Tries'].delete(0, END)
+            self.entries['autopilot']['Jump Tries'].delete(0, END)
+            self.entries['autopilot']['Docking Retries'].delete(0, END)
+            self.entries['autopilot']['Wait For Autodock'].delete(0, END)
 
-        self.entries['autopilot']['Sun Bright Threshold'].insert(0, int(self.ed_ap.config['SunBrightThreshold']))
-        self.entries['autopilot']['Nav Align Tries'].insert(0, int(self.ed_ap.config['NavAlignTries']))
-        self.entries['autopilot']['Jump Tries'].insert(0, int(self.ed_ap.config['JumpTries']))
-        self.entries['autopilot']['Docking Retries'].insert(0, int(self.ed_ap.config['DockingRetries']))
-        self.entries['autopilot']['Wait For Autodock'].insert(0, int(self.ed_ap.config['WaitForAutoDockTimer']))
+            self.entries['autopilot']['Sun Bright Threshold'].insert(0, int(self.ed_ap.config['SunBrightThreshold']))
+            self.entries['autopilot']['Nav Align Tries'].insert(0, int(self.ed_ap.config['NavAlignTries']))
+            self.entries['autopilot']['Jump Tries'].insert(0, int(self.ed_ap.config['JumpTries']))
+            self.entries['autopilot']['Docking Retries'].insert(0, int(self.ed_ap.config['DockingRetries']))
+            self.entries['autopilot']['Wait For Autodock'].insert(0, int(self.ed_ap.config['WaitForAutoDockTimer']))
         
         # Refuel settings
-        self.entries['refuel']['Refuel Threshold'].delete(0, END)
-        self.entries['refuel']['Scoop Timeout'].delete(0, END)
-        self.entries['refuel']['Fuel Threshold Abort'].delete(0, END)
-        
-        self.entries['refuel']['Refuel Threshold'].insert(0, int(self.ed_ap.config['RefuelThreshold']))
-        self.entries['refuel']['Scoop Timeout'].insert(0, int(self.ed_ap.config['FuelScoopTimeOut']))
-        self.entries['refuel']['Fuel Threshold Abort'].insert(0, int(self.ed_ap.config['FuelThreasholdAbortAP']))
+        if 'refuel' in self.entries:
+            self.entries['refuel']['Refuel Threshold'].delete(0, END)
+            self.entries['refuel']['Scoop Timeout'].delete(0, END)
+            self.entries['refuel']['Fuel Threshold Abort'].delete(0, END)
+            
+            self.entries['refuel']['Refuel Threshold'].insert(0, int(self.ed_ap.config['RefuelThreshold']))
+            self.entries['refuel']['Scoop Timeout'].insert(0, int(self.ed_ap.config['FuelScoopTimeOut']))
+            self.entries['refuel']['Fuel Threshold Abort'].insert(0, int(self.ed_ap.config['FuelThreasholdAbortAP']))
         
         # Overlay settings
-        self.entries['overlay']['X Offset'].delete(0, END)
-        self.entries['overlay']['Y Offset'].delete(0, END)
-        self.entries['overlay']['Font Size'].delete(0, END)
-        
-        self.entries['overlay']['X Offset'].insert(0, int(self.ed_ap.config['OverlayTextXOffset']))
-        self.entries['overlay']['Y Offset'].insert(0, int(self.ed_ap.config['OverlayTextYOffset']))
-        self.entries['overlay']['Font Size'].insert(0, int(self.ed_ap.config['OverlayTextFontSize']))
+        if 'overlay' in self.entries:
+            self.entries['overlay']['X Offset'].delete(0, END)
+            self.entries['overlay']['Y Offset'].delete(0, END)
+            self.entries['overlay']['Font Size'].delete(0, END)
+            
+            self.entries['overlay']['X Offset'].insert(0, int(self.ed_ap.config['OverlayTextXOffset']))
+            self.entries['overlay']['Y Offset'].insert(0, int(self.ed_ap.config['OverlayTextYOffset']))
+            self.entries['overlay']['Font Size'].insert(0, int(self.ed_ap.config['OverlayTextFontSize']))
 
         # Checkboxes
-        self.checkboxvar['Enable Randomness'].set(self.ed_ap.config['EnableRandomness'])
-        self.checkboxvar['Activate Elite for each key'].set(self.ed_ap.config['ActivateEliteEachKey'])
-        self.checkboxvar['Automatic logout'].set(self.ed_ap.config['AutomaticLogout'])
-        self.checkboxvar['Enable Overlay'].set(self.ed_ap.config['OverlayTextEnable'])
-        self.checkboxvar['Enable Voice'].set(self.ed_ap.config['VoiceEnable'])
+        if hasattr(self, 'checkboxvar'):
+            self.checkboxvar['Enable Randomness'].set(self.ed_ap.config['EnableRandomness'])
+            self.checkboxvar['Activate Elite for each key'].set(self.ed_ap.config['ActivateEliteEachKey'])
+            self.checkboxvar['Automatic logout'].set(self.ed_ap.config['AutomaticLogout'])
+            self.checkboxvar['Enable Overlay'].set(self.ed_ap.config['OverlayTextEnable'])
+            self.checkboxvar['Enable Voice'].set(self.ed_ap.config['VoiceEnable'])
 
         # Radio buttons
-        self.radiobuttonvar['dss_button'].set(self.ed_ap.config['DSSButton'])
-        
-        if self.ed_ap.config['LogDEBUG']:
-            self.radiobuttonvar['debug_mode'].set("Debug")
-        elif self.ed_ap.config['LogINFO']:
-            self.radiobuttonvar['debug_mode'].set("Info")
-        else:
-            self.radiobuttonvar['debug_mode'].set("Error")
+        if hasattr(self, 'radiobuttonvar'):
+            self.radiobuttonvar['dss_button'].set(self.ed_ap.config['DSSButton'])
+            
+            if self.ed_ap.config['LogDEBUG']:
+                self.radiobuttonvar['debug_mode'].set("Debug")
+            elif self.ed_ap.config['LogINFO']:
+                self.radiobuttonvar['debug_mode'].set("Info")
+            else:
+                self.radiobuttonvar['debug_mode'].set("Error")
 
         # Hotkey buttons
-        self.entries['buttons']['Start FSD'].config(text=str(self.ed_ap.config['HotKey_StartFSD']))
-        self.entries['buttons']['Start SC'].config(text=str(self.ed_ap.config['HotKey_StartSC']))
-        self.entries['buttons']['Start Robigo'].config(text=str(self.ed_ap.config['HotKey_StartRobigo']))
-        self.entries['buttons']['Start Waypoint'].config(text=str(self.ed_ap.config['HotKey_StartWaypoint']))
-        self.entries['buttons']['Stop All'].config(text=str(self.ed_ap.config['HotKey_StopAllAssists']))
-        self.entries['buttons']['Pause/Resume'].config(text=str(self.ed_ap.config['HotKey_PauseResume']))
+        if 'buttons' in self.entries:
+            self.entries['buttons']['Start FSD'].config(text=str(self.ed_ap.config['HotKey_StartFSD']))
+            self.entries['buttons']['Start SC'].config(text=str(self.ed_ap.config['HotKey_StartSC']))
+            self.entries['buttons']['Start Robigo'].config(text=str(self.ed_ap.config['HotKey_StartRobigo']))
+            self.entries['buttons']['Start Waypoint'].config(text=str(self.ed_ap.config['HotKey_StartWaypoint']))
+            self.entries['buttons']['Stop All'].config(text=str(self.ed_ap.config['HotKey_StopAllAssists']))
+            self.entries['buttons']['Pause/Resume'].config(text=str(self.ed_ap.config['HotKey_PauseResume']))

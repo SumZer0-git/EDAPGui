@@ -324,13 +324,22 @@ class EDAutopilot:
         """ Update the user's ship configuration file."""
         # Check if a ship and not a suit (on foot)
         if self.current_ship_type in ship_size_map:
+            # Ensure ship entry exists in config
+            if self.current_ship_type not in self.ship_configs['Ship_Configs']:
+                self.ship_configs['Ship_Configs'][self.current_ship_type] = {}
+                logger.debug(f"Created new ship config entry for: {self.current_ship_type}")
+            
             self.ship_configs['Ship_Configs'][self.current_ship_type]['compass_scale'] = round(self.compass_scale, 4)
             self.ship_configs['Ship_Configs'][self.current_ship_type]['PitchRate'] = self.pitchrate
             self.ship_configs['Ship_Configs'][self.current_ship_type]['RollRate'] = self.rollrate
             self.ship_configs['Ship_Configs'][self.current_ship_type]['YawRate'] = self.yawrate
             self.ship_configs['Ship_Configs'][self.current_ship_type]['SunPitchUp+Time'] = self.sunpitchuptime
 
+            # Once we save to ship_configs.json, it becomes a custom configuration
+            self.using_custom_ship_config = True
+
             self.write_ship_configs(self.ship_configs)
+            logger.debug(f"Saved ship config for: {self.current_ship_type}")
 
     def write_ship_configs(self, data, filename='./configs/ship_configs.json'):
         """ Write the user's ship configuration file."""
@@ -356,26 +365,27 @@ class EDAutopilot:
             logger.error(f"Error saving ship file {filename}: {e}")
             raise
     
-    def load_ship_configuration(self, ship_type):
+    def load_ship_configuration(self, ship_type, force_defaults=False):
         """Load ship configuration with proper hierarchy: ship_configs.json first, then defaults"""
         import os
         
         # Initialize flag to track if using custom config
-        self.using_custom_ship_config = False
+        if not force_defaults:
+            self.using_custom_ship_config = False
         
-        # Step 1: Check if we have custom config in ship_configs.json
-        if ship_type in self.ship_configs['Ship_Configs']:
+        # Step 1: Check if we have custom config in ship_configs.json (skip if forcing defaults)
+        if not force_defaults and ship_type in self.ship_configs['Ship_Configs']:
             current_ship_cfg = self.ship_configs['Ship_Configs'][ship_type]
             # Check if the custom config has actual values (not just empty dict)
             if any(key in current_ship_cfg for key in ['compass_scale', 'RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time']):
-                # Use custom configuration
+                # Use custom configuration - this means it's been modified and saved to ship_configs.json
                 self.compass_scale = current_ship_cfg.get('compass_scale', self.scr.scaleX)
                 self.rollrate = current_ship_cfg.get('RollRate', 80.0)
                 self.pitchrate = current_ship_cfg.get('PitchRate', 33.0)
                 self.yawrate = current_ship_cfg.get('YawRate', 8.0)
                 self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
                 self.using_custom_ship_config = True
-                logger.info(f"Loaded custom configuration for {ship_type}")
+                logger.info(f"Loaded custom configuration for {ship_type} from ship_configs.json")
                 return
         
         # Step 2: Try to load defaults from ship file
@@ -388,6 +398,8 @@ class EDAutopilot:
                 self.pitchrate = float(ship_defaults.get('pitchrate', 33.0)) 
                 self.yawrate = float(ship_defaults.get('yawrate', 8.0))
                 self.sunpitchuptime = float(ship_defaults.get('SunPitchUp+Time', 0.0))
+                # This is using defaults from ship file, so NOT custom
+                self.using_custom_ship_config = False
                 logger.info(f"Loaded default configuration for {ship_type} from ship file")
                 return
             except Exception as e:
@@ -399,6 +411,8 @@ class EDAutopilot:
         self.pitchrate = 33.0
         self.yawrate = 8.0
         self.sunpitchuptime = 0.0
+        # This is using hardcoded defaults, so NOT custom
+        self.using_custom_ship_config = False
         logger.info(f"Using hardcoded default configuration for {ship_type}")
         
         # Add empty entry to ship_configs for future customization
@@ -2600,14 +2614,14 @@ class EDAutopilot:
                         if self.jn.ship_state()['has_std_dock_comp']:
                             self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is fitted with a Standard Docking Computer.")
 
+                        # Store ship for change detection BEFORE loading config and GUI update
+                        self.current_ship_type = ship
+
                         # Load ship configuration with proper hierarchy
                         if ship is not None:
                             self.load_ship_configuration(ship)
                             # Update GUI
                             self.ap_ckb('update_ship_cfg')
-
-                        # Store ship for change detection
-                        self.current_ship_type = ship
 
                         # Reload templates
                         self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale)

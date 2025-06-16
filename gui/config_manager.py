@@ -18,6 +18,7 @@ class ConfigManager:
         self.save_button = None
         self.revert_button = None
         self.gui_elements = {}
+        self.programmatic_update_context = None  # Will be set by main GUI
     
     def set_gui_elements(self, elements):
         """Set references to GUI elements for change tracking"""
@@ -25,8 +26,13 @@ class ConfigManager:
         self.save_button = elements.get('save_button')
         self.revert_button = elements.get('revert_button')
     
+    def set_programmatic_update_context(self, context_func):
+        """Set the programmatic update context manager function"""
+        self.programmatic_update_context = context_func
+    
     def mark_unsaved_changes(self):
         """Mark that there are unsaved changes and highlight save button"""
+        was_already_marked = self.has_unsaved_changes
         if not self.has_unsaved_changes:
             self.has_unsaved_changes = True
             if self.save_button:
@@ -34,6 +40,12 @@ class ConfigManager:
             if self.revert_button:
                 self.revert_button.config(state='normal', bg='lightcoral')
             logger.debug("Marked unsaved changes - buttons should be highlighted")
+            
+        # Only update ship config status once, not in a loop
+        if not was_already_marked:
+            settings_panel = self.gui_elements.get('settings_panel')
+            if settings_panel and hasattr(settings_panel, 'refresh_config_status'):
+                settings_panel.refresh_config_status()
                 
     def clear_unsaved_changes(self):
         """Clear unsaved changes flag and restore normal save button"""
@@ -42,7 +54,13 @@ class ConfigManager:
             self.save_button.config(bg='SystemButtonFace', text='Save All Settings')
         if self.revert_button:
             self.revert_button.config(state='disabled', bg='SystemButtonFace')
-        # Refresh original values after saving
+        
+        # Update ship configuration status display
+        settings_panel = self.gui_elements.get('settings_panel')
+        if settings_panel and hasattr(settings_panel, 'refresh_config_status'):
+            settings_panel.refresh_config_status()
+            
+        # Refresh original values after updating display to avoid timing issues
         self.capture_original_values()
 
     def capture_original_values(self):
@@ -92,11 +110,19 @@ class ConfigManager:
                             pass
 
     def has_actual_changes(self):
-        """Check if any values have actually changed from their original state"""
+        """Check if any GUI values have changed from their captured baseline"""
         if not self.original_values:
             logger.debug("has_actual_changes: No original values captured yet")
             return False
         
+        # Simple approach: compare current GUI state with captured baseline
+        # This baseline represents the "saved state" and gets reset after save/revert
+        result = self._values_differ_from_original()
+        logger.debug(f"has_actual_changes: {result}")
+        return result
+    
+    def _values_differ_from_original(self):
+        """Original change detection logic - compare against captured original values"""
         # Check changes in all panels
         panels = ['settings_panel', 'waypoint_panel']
         for panel_name in panels:
@@ -156,11 +182,18 @@ class ConfigManager:
             # Always save ship configs to ship_configs.json, never to individual ship files
             self.ed_ap.update_ship_configs()
             logger.info("Settings saved successfully")
+            
+            # Update ship display to reflect that it's now "Custom" after saving
+            settings_panel = self.gui_elements.get('settings_panel')
+            if settings_panel:
+                settings_panel.update_ship_display()
                 
             self.clear_unsaved_changes()
             return True
         except Exception as e:
+            import traceback
             logger.error(f"Error saving settings: {e}")
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             messagebox.showerror("Save Error", f"Failed to save settings: {e}")
             return False
 
@@ -267,34 +300,18 @@ class ConfigManager:
         try:
             f_details = read_json_file(filename)
             
-            # Update GUI fields
-            settings_panel = self.gui_elements.get('settings_panel')
-            if settings_panel and 'ship' in settings_panel.entries:
-                settings_panel.entries['ship']['PitchRate'].delete(0, END)
-                settings_panel.entries['ship']['RollRate'].delete(0, END)
-                settings_panel.entries['ship']['YawRate'].delete(0, END)
-                settings_panel.entries['ship']['SunPitchUp+Time'].delete(0, END)
-
-                settings_panel.entries['ship']['PitchRate'].insert(0, f_details['pitchrate'])
-                settings_panel.entries['ship']['RollRate'].insert(0, f_details['rollrate'])
-                settings_panel.entries['ship']['YawRate'].insert(0, f_details['yawrate'])
-                settings_panel.entries['ship']['SunPitchUp+Time'].insert(0, f_details['SunPitchUp+Time'])
-
-            # Update internal values
+            # Update internal values first
             self.ed_ap.rollrate = float(f_details['rollrate'])
             self.ed_ap.pitchrate = float(f_details['pitchrate'])
             self.ed_ap.yawrate = float(f_details['yawrate'])
             self.ed_ap.sunpitchuptime = float(f_details['SunPitchUp+Time'])
 
-            # When manually loading a ship file, it becomes a "Custom" config
-            # Update the flag and ship display
-            self.ed_ap.using_custom_ship_config = True
+            # Update GUI to reflect the new internal values
+            settings_panel = self.gui_elements.get('settings_panel')
             if settings_panel:
-                if hasattr(self.ed_ap, 'current_ship_type') and self.ed_ap.current_ship_type:
-                    ship_name = self.ed_ap.current_ship_type
-                    settings_panel.ship_filelabel.set(f"Active Ship: {ship_name} (Custom - from file)")
-                else:
-                    settings_panel.ship_filelabel.set(f"Loaded from: {Path(filename).name}")
+                # Loading a ship file as template doesn't make it "Custom" until saved
+                # Update the ship display to reflect template loading
+                settings_panel.update_ship_display()
             
             self.ed_ap.update_config()
             return True
@@ -350,8 +367,13 @@ class ConfigManager:
                         try:
                             original_value = self.original_values[category].get(field_name, '')
                             if hasattr(entry_widget, 'delete') and hasattr(entry_widget, 'insert'):
-                                entry_widget.delete(0, tk.END)
-                                entry_widget.insert(0, original_value)
+                                if self.programmatic_update_context:
+                                    with self.programmatic_update_context():
+                                        entry_widget.delete(0, tk.END)
+                                        entry_widget.insert(0, original_value)
+                                else:
+                                    entry_widget.delete(0, tk.END)
+                                    entry_widget.insert(0, original_value)
                             elif hasattr(entry_widget, 'config'):
                                 entry_widget.config(text=original_value)
                         except:
