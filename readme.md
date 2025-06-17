@@ -1,5 +1,3 @@
-**NOTE!!! Do NOT download from Releases. The last release is very old at this point. Instead, download the source code from this page (the green 'Code' button, then 'Download Zip'), or clone the repo locally and run APGUI.**
-
 See [ChangeLog](/ChangeLog.md) for latest updates.<br>
 Join discord if need support or wish to provide inputs on new features:  https://discord.gg/HCgkfSc
 <br>
@@ -73,23 +71,56 @@ Also Note: This repository is provided for educational purposes as a in depth pr
   console kills the matching.  You can see that if you enable CV View
 * The Left Panel (Navigation) must be on the Navigation tab as the script assumes so.  It will be reset after a FSD jump back to Nav,
   but if in SC Assist, need to ensure it is configured there to support docking request
-* Must install needed packages:  pip install -r requirements.txt
 * "Advanced Autodocking" module must be outfitted on ship to support autodock 
 * The ELW Scanner may have issues for you, the screen region (defined in Screen_Region.py) isolates the region to where Earth, Water, and Ammonia
   signal would be present.  If using different resolution from 3440x1440 then this region will need to be adjusted for your resolution for
   proper detection
 * Must have required keybinding set for proper autopilot behavior.  See autopilot.log for any Warnings on missing key bindings
-* See https://github.com/skai2/EDAutopilot for other constraints that probably apply
+* If you jump into a system with 2 suns next to each other, will likely over heat and drop from Supercruise.
+* Have seen a few cases where after doing refueling, depending on ship acceleration, we don't get away from Sun far enough before engaging FSD
+  and can over heat
 
-# How to run:
-* Run the main EDAPGui.py script.
-  * With Elite Dangerous (ED) running, start EDAPGui.py
-    * python EDAPGui.py
-* Run the released exe file. **NOTE!!! Do NOT download from Releases at this time. The last release is very old at this point. So ignore this option and download the source code!**
-  * ./EDAPGui.exe  The EPAPGui.exe must live in the folder where the templates, configs, ships, waypoints folder reside.   
+# Installation
+_Requires **python 3** and **git**_
 
-# Getting Started:
-Once ED_AP has started there are few steps to complete the first time ED AP is run. These will help avoid common issues.
+_Python 3.11 is the recommended version of Python. Python 3.9 or 3.10 may also be used._
+If you don't have Python installed, here is a link to [Python 3.11 installer](https://www.python.org/downloads/release/python-3110/). Scroll to the bottom and select the installer with description **Recommended**.
+
+1. Clone this repository
+```sh
+> git clone https://github.com/sumzer0-git/EDAPGui
+```
+2. Install requirements
+```sh
+> cd EDAPGui
+> pip install -r requirements.txt
+```
+3. Run script
+```sh
+> python EDAPGui.py
+OR you may have to run
+> python3 EDAPGui.py
+if you have both python 2 and 3 installed.
+```
+
+If you encounter any issues during pip install, try running:
+> python -m pip install -r requirements.txt
+instead of > pip install -r requirements.txt
+
+The following error may occur:
+> AttributeError: '_thread._local' object has no attribute 'srcdc'
+
+The error is usually as a result of mss incompatibility. Try pip install mss==8.0.3 or pip install mss==8.0.3.
+
+# Running ED_AP
+* With Elite Dangerous (ED) running, start ED_AP:
+    * By double clicking start_ed_ap.bat in Windows Explorer (preferred method).
+    * By typing 'python EDAPGui.py' in a console window.
+    * By running EDAPGui.py directly in a Python supporting IDE.
+* The ED_AP Gui should appear and there may be messages in the log warning of issues to be fixed. Refer to the information on this page how to resolve those issues.
+
+# Getting Started
+Once ED_AP is running there are few steps to complete the first time ED AP is run. These will help avoid common issues.
 1. Perform screen calibration, detailed [here](docs/Calibration.md). This will configure ED_AP for your screen resolution. Many issues can be avoided with correct calibration.
 2. Check and if necessary, change keybinding options, detailed below. Pay special attention that the Ins, Home, End and Pg Up are not used by ED as these are used by EDAP.
 3. Note: the autopilot.log file will capture any required keybindings that are not set.
@@ -231,77 +262,7 @@ The following settings from the AP.json file are **not** available through the G
     "FCDepartureTime": 30.0,       # When leaving a Fleet Carrier, this is the amount of time in Secs to fly away before enabling SC.
     "Language": "en"               # Language for OCR checks (i.e. 'en', 'fr', 'de')
 ```
-The following are available through the GUI and are included here for reference.
-Note: the below is from the code, the real .json file will have the True/False values as lower case, as in true/false<br>
-  ```py
-       self.config = {  
-            "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS
-            "JumpTries": 3,                # 
-            "NavAlignTries": 3,            #
-            "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel
-            "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
-            "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking
-            "SunBrightThreshold": 125,     # The low level for brightness detection, range 0-255, want to mask out darker items
-            "FuelScoopTimeOut": 35,        # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
-            "DockingRetries": 30,          # number of time to attempt docking
-            "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
-            "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
-            "HotKey_StartRobigo": "pgup",  # 
-            "HotKey_StopAllAssists": "end",
-            "Robigo_Single_Loop": False,   # True means only 1 loop will execute and then terminate upon docking, will not perform mission processing
-            "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
-            "OverlayTextEnable": False,    # Experimental at this stage
-            "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
-            "OverlayTextXOffset": 50,      # offset left the screen to start place overlay text
-            "OverlayTextFont": "Eurostyle", 
-            "OverlayTextFontSize": 14, 
-            "OverlayGraphicEnable": False, # not implemented yet
-            "DiscordWebhook": False,       # discord not implemented yet
-            "DiscordWebhookURL": "",
-            "DiscordUserID": "",
-            "VoiceEnable": False,
-            "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
-            "ElwScannerEnable": False,
-            "LogDEBUG": False,             # enable for debug messages
-            "LogINFO": True
-        }
-```
-## Setup:
-_Requires **python 3** and **git**_
-
-_Python 3.11 is the recommended version of Python. Python 3.9 or 3.10 may also be used._
-
-1. Clone this repository
-```sh
-> git clone https://github.com/sumzer0-git/EDAPGui
-```
-2. Install requirements
-```sh
-> cd EDAPGui
-> pip install -r requirements.txt
-```
-3. Run script
-```sh
-> python EDAPGui.py
-OR you may have to run
-> python3 EDAPGui.py
-if you have both python 2 and 3 installed.
-```
-
-If you encounter any issues during pip install, try running:
-> python -m pip install -r requirements.txt
-instead of > pip install -r requirements.txt
-
-The following error may occur:
-> AttributeError: '_thread._local' object has no attribute 'srcdc'
-
-The error is usually as a result of mss incompatibility. Try pip install mss==8.0.3 or pip install mss==8.0.3.
-
-## Known Limitations
- * If you jump into a system with 2 suns next to each other, will likely over heat and drop from Supercruise.
- * Have seen a few cases where after doing refueling, depending on ship acceleration, we don't get away from Sun far enough before engaging FSD
-   and can over heat
-                                                               
+                                                              
 ## Elite Dangerous, Role Play and Autopilot
 * I am a CMDR in the Elite Dangerous universe and I have a trusty Diamondback Explorer
 * In my travels out into the black I have become frustrated with my flight computers abilities.  I don't want to stay
