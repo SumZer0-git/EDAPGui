@@ -7,9 +7,9 @@ from StatusParser import StatusParser
 
 class EDShipControl:
     """ Handles ship control, FSD, SC, etc. """
-    def __init__(self, screen, keys, cb):
+    def __init__(self, ed_ap, screen, keys, cb):
+        self.ocr = ed_ap.ocr
         self.screen = screen
-        self.ocr = OCR(screen)
         self.keys = keys
         self.status_parser = StatusParser()
         self.ap_ckb = cb

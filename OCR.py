@@ -20,9 +20,9 @@ Author: Stumpii
 
 
 class OCR:
-    def __init__(self, screen):
+    def __init__(self, screen, language: str = 'en'):
         self.screen = screen
-        self.paddleocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False, use_dilation=True,
+        self.paddleocr = PaddleOCR(use_angle_cls=True, lang=language, use_gpu=False, show_log=False, use_dilation=True,
                                    use_space_char=True)
         # Class for text similarity metrics
         self.jarowinkler = JaroWinkler()
@@ -246,11 +246,6 @@ class OCR:
         """
         abs_rect = self.screen.screen_rect_to_abs(region['rect'])
 
-        # Draw box around region
-        if ap.debug_overlay:
-            ap.overlay.overlay_rect1('wait_for_text', abs_rect, (0, 255, 0), 2)
-            ap.overlay.overlay_paint()
-
         start_time = time.time()
         text_found = False
         while True:
@@ -262,10 +257,6 @@ class OCR:
             for text in texts:
                 text_found, ocr_text = self.is_text_in_region(text, region)
 
-                if ap.debug_overlay:
-                    ap.overlay.overlay_floating_text('wait_for_text', f'{ocr_text}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
-                    ap.overlay.overlay_paint()
-
                 if text_found:
                     break
 
@@ -273,12 +264,5 @@ class OCR:
                 break
 
             time.sleep(0.25)
-
-        # Clean up screen
-        if ap.debug_overlay:
-            time.sleep(2)
-            ap.overlay.overlay_remove_rect('wait_for_text')
-            ap.overlay.overlay_remove_floating_text('wait_for_text')
-            ap.overlay.overlay_paint()
 
         return text_found

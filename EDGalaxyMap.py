@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from EDAP_data import GuiFocusGalaxyMap
-from OCR import OCR
 from StatusParser import StatusParser
 from time import sleep
 from EDlogger import logger
@@ -12,9 +11,9 @@ class EDGalaxyMap:
     """ Handles the Galaxy Map. """
     def __init__(self, ed_ap, screen, keys, cb, is_odyssey=True):
         self.ap = ed_ap
+        self.ocr = ed_ap.ocr
         self.is_odyssey = is_odyssey
         self.screen = screen
-        self.ocr = OCR(screen)
         self.keys = keys
         self.status_parser = StatusParser()
         self.ap_ckb = cb
@@ -148,7 +147,7 @@ class EDGalaxyMap:
 
             # Select first (or next) system
             ap.keys.send('UI_Select')  # Select >| button
-            sleep(0.05)
+            sleep(0.5)
 
             # zoom camera which puts focus back on the map
             ap.keys.send('CamZoomIn')
@@ -188,6 +187,7 @@ class EDGalaxyMap:
 
         # Close Galaxy map
         ap.keys.send('GalaxyMapOpen')
+        sleep(0.5)
         return True
 
     def set_next_system(self, ap, target_system) -> bool:

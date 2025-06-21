@@ -24,9 +24,9 @@ class EDStationServicesInShip:
     """ Handles Station Services In Ship. """
     def __init__(self, ed_ap, screen, keys, cb):
         self.ap = ed_ap
+        self.ocr = ed_ap.ocr
         self.locale = self.ap.locale
         self.screen = screen
-        self.ocr = self.ap.ocr
         self.keys = keys
         self.ap_ckb = cb
         self.status_parser = StatusParser()

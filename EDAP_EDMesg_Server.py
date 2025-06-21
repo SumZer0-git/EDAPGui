@@ -13,6 +13,7 @@ from EDAP_EDMesg_Interface import (
     SystemMapTargetStationByBookmarkAction,
     GalaxyMapTargetStationByBookmarkAction,
     GalaxyMapTargetSystemByNameAction,
+    GenericAction,
 
     EDAPLocationEvent,
     LaunchCompleteEvent,
@@ -72,6 +73,8 @@ class EDMesgServer:
                         self._galaxy_map_target_system_by_name(action.name)
                     if isinstance(action, LaunchAction):
                         self._launch(self._provider)
+                    if isinstance(action, GenericAction):
+                        self._generic_action(action.name)
 
                 sleep(0.1)
         except:
@@ -139,6 +142,10 @@ class EDMesgServer:
         self.ap.galaxy_map.goto_galaxy_map()
         self.ap.galaxy_map.set_gal_map_destination_text(self.ap, name, target_select_cb=None)
 
+    def _generic_action(self, name: str):
+        self.ap_ckb('log', f"Received EDMesg Action: GenericAction '{name}'")
+        if name == 'WriteTCEShoppingList':
+            self.ap.tce_integration.write_shopping_list()
 
 def main():
     edmesg_server = EDMesgServer(ed_ap=None, cb=None)

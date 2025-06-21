@@ -5,6 +5,7 @@ import random
 from tkinter import messagebox
 
 import cv2
+
 from simple_localization import LocalizationManager
 
 from EDAP_EDMesg_Server import EDMesgServer
@@ -29,6 +30,7 @@ from Overlay import *
 from StatusParser import StatusParser
 from Voice import *
 from Robigo import *
+from TCE_Integration import TceIntegration
 
 """
 File:EDAP.py    EDAutopilot
@@ -88,13 +90,14 @@ class EDAutopilot:
             "ShipConfigFile": None,        # Ship config to load on start - deprecated
             "TargetScale": 1.0,            # Scaling of the target when a system is selected
             "TCEDestinationFilepath": "C:\\TCE\\DUMP\\Destination.json",  # Destination file for TCE
+            "TCEInstallationPath": "C:\\TCE",
             "AutomaticLogout": False,      # Logout when we are done with the mission
             "FCDepartureTime": 5.0,        # Extra time to fly away from a Fleet Carrier
             "Language": 'en',              # Language (matching ./locales/xx.json file)
+            "OCRLanguage": 'en',           # Language for OCR detection (see OCR language doc in \docs)
             "EnableEDMesg": False,
             "EDMesgActionsPort": 15570,
             "EDMesgEventsPort": 15571,
-            "DebugOverlay": False,
         }
         # NOTE!!! When adding a new config value above, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
@@ -110,6 +113,7 @@ class EDAutopilot:
         self._single_waypoint_system = None
         self._prev_star_system = None
         self.honk_thread = None
+        self._tce_integration = None
 
         # used this to write the self.config table to the json file
         # self.write_config(self.config)
@@ -127,18 +131,20 @@ class EDAutopilot:
                     cnf['TargetScale'] = 1.0
                 if 'TCEDestinationFilepath' not in cnf:
                     cnf['TCEDestinationFilepath'] = "C:\\TCE\\DUMP\\Destination.json"
+                if 'TCEInstallationPath' not in cnf:
+                    cnf['TCEInstallationPath'] = "C:\\TCE"
                 if 'AutomaticLogout' not in cnf:
                     cnf['AutomaticLogout'] = False
                 if 'FCDepartureTime' not in cnf:
                     cnf['FCDepartureTime'] = 5.0
                 if 'Language' not in cnf:
                     cnf['Language'] = 'en'
+                if 'OCRLanguage' not in cnf:
+                    cnf['OCRLanguage'] = 'en'
                 if 'EnableEDMesg' not in cnf:
                     cnf['EnableEDMesg'] = False
                     cnf['EDMesgActionsPort'] = 15570
                     cnf['EDMesgEventsPort'] = 15571
-                if 'DebugOverlay' not in cnf:
-                    cnf['DebugOverlay'] = False
                 self.config = cnf
                 logger.debug("read AP json:"+str(cnf))
             else:
@@ -195,7 +201,7 @@ class EDAutopilot:
         self.scr.scaleX = self.config['TargetScale']
         self.scr.scaleY = self.config['TargetScale']
 
-        self.ocr = OCR(self.scr)
+        self.ocr = OCR(self.scr, self.config['OCRLanguage'])
         self.templ = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
         self.scrReg = Screen_Regions.Screen_Regions(self.scr, self.templ)
         self.jn = EDJournal()
@@ -206,7 +212,7 @@ class EDAutopilot:
         self.robigo = Robigo(self)
         self.status = StatusParser()
         self.nav_route = NavRouteParser()
-        self.ship_control = EDShipControl(self.scr, self.keys, cb)
+        self.ship_control = EDShipControl(self, self.scr, self.keys, cb)
         self.internal_panel = EDInternalStatusPanel(self, self.scr, self.keys, cb)
         self.galaxy_map = EDGalaxyMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
         self.system_map = EDSystemMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
@@ -252,8 +258,6 @@ class EDAutopilot:
         # must be called after we initialized the objects above
         self.update_overlay()
 
-        self.debug_overlay = self.config['DebugOverlay']
-
         # debug window
         self.cv_view = self.config['Enable_CV_View']
         self.cv_view_x = 10
@@ -264,6 +268,13 @@ class EDAutopilot:
         if doThread:
             self.ap_thread = kthread.KThread(target=self.engine_loop, name="EDAutopilot")
             self.ap_thread.start()
+
+    @property
+    def tce_integration(self) -> TceIntegration:
+        """ Load TCE Integration class when needed. """
+        if not self._tce_integration:
+            self._tce_integration = TceIntegration(self, self.ap_ckb)
+        return self._tce_integration
 
     # Loads the configuration file
     #
@@ -928,13 +939,6 @@ class EDAutopilot:
 
         reg_rect = scr_reg.reg['disengage']['rect']
 
-        # Draw box around region
-        if self.debug_overlay:
-            abs_rect = [pt[0] + reg_rect[0], pt[1] + reg_rect[1], pt[0] + reg_rect[0] + width, pt[1] + reg_rect[1] + height]
-            self.overlay.overlay_rect1('sc_disengage_label_up', abs_rect, (0, 255, 0), 2)
-            self.overlay.overlay_floating_text('sc_disengage_label_up', f'Match: {maxVal:5.4f} > {scr_reg.disengage_thresh}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
-            self.overlay.overlay_paint()
-
         if self.cv_view:
             self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
             dis_image = cv2.rectangle(dis_image, (0, 0), (1000, 25), (0, 0, 0), -1)
@@ -992,13 +996,6 @@ class EDAutopilot:
         if ocr_textlist is not None:
             sim = self.ocr.string_similarity(self.locale["PRESS_TO_DISENGAGE_MSG"], str(ocr_textlist))
             logger.info(f"Disengage similarity with {str(ocr_textlist)} is {sim}")
-
-        # Draw box around region
-        if self.debug_overlay:
-            abs_rect = scr_reg.reg['disengage']['rect']
-            self.overlay.overlay_rect1('sc_disengage_active', abs_rect, (0, 255, 0), 2)
-            self.overlay.overlay_floating_text('sc_disengage_active', f'{str(ocr_textlist)}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
-            self.overlay.overlay_paint()
 
         if self.cv_view:
             image = cv2.rectangle(image, (0, 0), (1000, 30), (0, 0, 0), -1)
@@ -1383,7 +1380,7 @@ class EDAutopilot:
             sleep(0.1)
 
         # Could not be found, return
-        if off == None:
+        if off is None:
             logger.debug("sc_target_align not finding target")
             self.ap_ckb('log', 'Target not found, terminating SC Assist')
             return False
@@ -1424,8 +1421,6 @@ class EDAutopilot:
             # check for SC Disengage
             if self.sc_disengage_label_up(scr_reg):
                 if self.sc_disengage_active(scr_reg):
-                    # Break so that the calling routine can detect the disengage
-                    break
 
             new = self.get_destination_offset(scr_reg)
             if new:
@@ -1436,15 +1431,6 @@ class EDAutopilot:
                 logger.debug("sc_target_align lost target")
                 self.ap_ckb('log', 'Target lost, attempting re-alignment.')
                 return False
-
-        # TODO - find a better way to clear these
-        if self.debug_overlay:
-            sleep(2)
-            self.overlay.overlay_remove_rect('sc_disengage_label_up')
-            self.overlay.overlay_remove_floating_text('sc_disengage_label_up')
-            self.overlay.overlay_remove_rect('sc_disengage_active')
-            self.overlay.overlay_remove_floating_text('sc_disengage_active')
-            self.overlay.overlay_paint()
 
         return True
 
@@ -2066,15 +2052,6 @@ class EDAutopilot:
                     self.keys.send('HyperSuperCombination')
                     self.stop_sco_monitoring()
                     break
-
-        # TODO - find a better way to clear these
-        if self.debug_overlay:
-            sleep(2)
-            self.overlay.overlay_remove_rect('sc_disengage_label_up')
-            self.overlay.overlay_remove_floating_text('sc_disengage_label_up')
-            self.overlay.overlay_remove_rect('sc_disengage_active')
-            self.overlay.overlay_remove_floating_text('sc_disengage_active')
-            self.overlay.overlay_paint()
 
         # if no error, we must have gotten disengage
         if not align_failed and do_docking:

@@ -37,6 +37,10 @@ class GalaxyMapTargetSystemByNameAction(EDMesgAction):
     name: str
 
 
+class GenericAction(EDMesgAction):
+    name: str
+
+
 class EDAPLocationEvent(EDMesgEvent):
     path: str
 
@@ -56,6 +60,7 @@ actions: list[type[EDMesgAction]] = [
     SystemMapTargetStationByBookmarkAction,
     GalaxyMapTargetStationByBookmarkAction,
     GalaxyMapTargetSystemByNameAction,
+    GenericAction,
 ]
 events: list[type[EDMesgEvent]] = [
     EDAPLocationEvent,
