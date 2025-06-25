@@ -1,6 +1,10 @@
 # 6/1/2025 Stumpii: Small improvements.
  - Added localisation to nav panel.
+ - Added Russian localisation file.
+ - Added language selection for OCR.
+ - Added TCE Integration class.
  - Added OCR to station services screen check.
+ - Prevent gal map being opened twice for no reason.
  - Added region scaling for stations.
  - Added EDNavigationPanel.py
  - Disabled build-executable.yml as it always fails.
