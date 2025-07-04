@@ -115,6 +115,7 @@ class APGui():
 
         self.gui_loaded = False
         self.log_buffer = queue.Queue()
+        self.callback('log', f'Starting ED Autopilot {EDAP_VERSION}.')
 
         self.ed_ap = EDAutopilot(cb=self.callback)
         self.ed_ap.robigo.set_single_loop(self.ed_ap.config['Robigo_Single_Loop'])

@@ -131,12 +131,12 @@ Once ED_AP is running there are few steps to complete the first time ED AP is ru
     * When a assist starts it will set focus to the Elite Dangerous window.
     * Ship will undock if docked, jump to SC, maneuver to the target and upon arriving at the target, will attempt to dock if it is a station.
     * Any flight issues, check ship tuning.
- 6. Perform an out-of-system test:
-    * In ED, use Galaxy Map select a target system.
-    * In the autopilot enable FSD Assist or hit the 'Home' key.
-    * When a assist starts it will set focus to the Elite Dangerous window.
-    * Ship will undock if docked, jump to SC, maneuver to the target, perform an FSD jump. Upon arrival in the system, it will manuever aroung the star, fuel scoop as necessary and either stop if no in system target is selected, or attempt to fly to the target and  attempt to dock if it is a station.
-    * Any flight issues, check ship tuning.
+6. Perform an out-of-system test:
+   * In ED, use Galaxy Map select a target system.
+   * In the autopilot enable FSD Assist or hit the 'Home' key.
+   * When a assist starts it will set focus to the Elite Dangerous window.
+   * Ship will undock if docked, jump to SC, maneuver to the target, perform an FSD jump. Upon arrival in the system, it will manuever aroung the star, fuel scoop as necessary and either stop if no in system target is selected, or attempt to fly to the target and  attempt to dock if it is a station.
+   * Any flight issues, check ship tuning.
 
 
 # Required Keybindings
