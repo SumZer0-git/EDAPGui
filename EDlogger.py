@@ -22,7 +22,7 @@ logging.basicConfig(filename=_filename, level=logging.ERROR,
 logger = colorlog.getLogger('ed_log')
 
 # Change this to debug if want to see debug lines in log file
-logger.setLevel(logging.WARNING)    # change to INFO for more... DEBUG for much more 
+logger.setLevel(logging.INFO)    # change to INFO for more... DEBUG for much more
 
 handler = logging.StreamHandler()
 handler.setLevel(logging.WARNING)  # change this to what is shown on console
