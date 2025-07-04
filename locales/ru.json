@@ -1,0 +1,17 @@
+{
+    "PRESS_TO_DISENGAGE_MSG": "Нажмите чтобы остановить",
+
+    "INT_PNL_TAB_MODULES": "Модули",
+    "INT_PNL_TAB_FIRE_GROUPS": "Огневые группы",
+    "INT_PNL_TAB_SHIP": "Корабль",
+    "INT_PNL_TAB_INVENTORY": "Снаряжение",
+    "INT_PNL_TAB_STORAGE": "Хранилище",
+    "INT_PNL_TAB_STATUS": "Статус",
+
+    "NAV_PNL_TAB_NAVIGATION": "Навигация",
+    "NAV_PNL_TAB_TRANSACTIONS": "Транзакции",
+    "NAV_PNL_TAB_CONTACTS": "Контакты",
+    "NAV_PNL_TAB_TARGET": "Цель",
+
+    "STN_SVCS_CONNECTED_TO": "?"
+}

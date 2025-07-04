@@ -17,9 +17,9 @@ class EDInternalStatusPanel:
 
     def __init__(self, ed_ap, screen, keys, cb):
         self.ap = ed_ap
+        self.ocr = ed_ap.ocr
         self.locale = self.ap.locale
         self.screen = screen
-        self.ocr = OCR(screen)
         self.keys = keys
         self.status_parser = StatusParser()
         self.ap_ckb = cb

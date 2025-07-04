@@ -17,6 +17,5 @@ pywin32==303
 pyzmq>=26.2.0 # For EDMesg
 protobuf<=3.20.2 # Specific version required for paddlepaddle (OCR).
 requests~=2.32.3
-simple_localization
 strsimpy~=0.2.1
 xmltodict~=0.14.2

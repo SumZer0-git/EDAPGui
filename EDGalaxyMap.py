@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from EDAP_data import GuiFocusGalaxyMap
-from OCR import OCR
 from StatusParser import StatusParser
 from time import sleep
 from EDlogger import logger
@@ -12,9 +11,9 @@ class EDGalaxyMap:
     """ Handles the Galaxy Map. """
     def __init__(self, ed_ap, screen, keys, cb, is_odyssey=True):
         self.ap = ed_ap
+        self.ocr = ed_ap.ocr
         self.is_odyssey = is_odyssey
         self.screen = screen
-        self.ocr = OCR(screen)
         self.keys = keys
         self.status_parser = StatusParser()
         self.ap_ckb = cb
@@ -105,9 +104,12 @@ class EDGalaxyMap:
         """ This sequence for the Odyssey. """
         self.goto_galaxy_map()
 
+        target_name_uc = target_name.upper()
+
         # Check if the current nav route is to the target system
         last_nav_route_sys = ap.nav_route.get_last_system()
-        if last_nav_route_sys.upper() == target_name.upper():
+        last_nav_route_sys_uc = last_nav_route_sys.upper()
+        if last_nav_route_sys_uc == target_name_uc:
             # Close Galaxy map
             ap.keys.send('GalaxyMapOpen')
             return True
@@ -119,8 +121,8 @@ class EDGalaxyMap:
         sleep(0.05)
 
         # type in the System name
-        typewrite(target_name, interval=0.25)
-        logger.debug(f"Entered system name: {target_name}")
+        typewrite(target_name_uc, interval=0.25)
+        logger.debug(f"Entered system name: {target_name_uc}.")
         sleep(0.05)
 
         # send enter key (removes focus out of input field)
@@ -144,11 +146,12 @@ class EDGalaxyMap:
         while not correct_route:
             # Store the current nav route system
             last_nav_route_sys = ap.nav_route.get_last_system()
-            logger.debug(f"Previous Nav Route dest: {last_nav_route_sys}.")
+            last_nav_route_sys_uc = last_nav_route_sys.upper()
+            logger.debug(f"Previous Nav Route dest: {last_nav_route_sys_uc}.")
 
             # Select first (or next) system
             ap.keys.send('UI_Select')  # Select >| button
-            sleep(0.05)
+            sleep(0.5)
 
             # zoom camera which puts focus back on the map
             ap.keys.send('CamZoomIn')
@@ -167,18 +170,19 @@ class EDGalaxyMap:
                 logger.debug(f"Waiting for Nav Route to update.")
                 while 1:
                     curr_nav_route_sys = ap.nav_route.get_last_system()
+                    curr_nav_route_sys_uc = curr_nav_route_sys.upper()
                     # Check if the nav route has been changed (right or wrong)
-                    if curr_nav_route_sys.upper() != last_nav_route_sys.upper():
-                        logger.debug(f"Current Nav Route dest: {curr_nav_route_sys}.")
+                    if curr_nav_route_sys_uc != last_nav_route_sys_uc:
+                        logger.debug(f"Nav Route dest changed from: {last_nav_route_sys_uc} to: {curr_nav_route_sys_uc}.")
                         # Check if this nav route is correct
-                        if curr_nav_route_sys.upper() == target_name.upper():
-                            logger.debug(f"Nav Route updated correctly.")
+                        if curr_nav_route_sys_uc == target_name_uc:
+                            logger.debug(f"Nav Route correctly updated to {target_name_uc}.")
                             # Break loop and exit
                             correct_route = True
                             break
                         else:
                             # Try the next system, go back to the search bar
-                            logger.debug(f"Nav Route updated with wrong target. Select next target.")
+                            logger.debug(f"Nav Route updated with wrong target: {curr_nav_route_sys_uc}. Select next target.")
                             ap.keys.send('UI_Up')
                             break
             else:
@@ -188,6 +192,7 @@ class EDGalaxyMap:
 
         # Close Galaxy map
         ap.keys.send('GalaxyMapOpen')
+        sleep(0.5)
         return True
 
     def set_next_system(self, ap, target_system) -> bool:

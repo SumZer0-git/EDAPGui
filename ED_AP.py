@@ -5,10 +5,10 @@ import random
 from tkinter import messagebox
 
 import cv2
+
 from simple_localization import LocalizationManager
 
 from EDAP_EDMesg_Server import EDMesgServer
-from EDAP_data import *
 from EDGalaxyMap import EDGalaxyMap
 from EDGraphicsSettings import EDGraphicsSettings
 from EDShipControl import EDShipControl
@@ -25,10 +25,12 @@ from EDafk_combat import AFK_Combat
 from EDInternalStatusPanel import EDInternalStatusPanel
 from NavRouteParser import NavRouteParser
 from OCR import OCR
+from EDNavigationPanel import EDNavigationPanel
 from Overlay import *
 from StatusParser import StatusParser
 from Voice import *
 from Robigo import *
+from TCE_Integration import TceIntegration
 
 """
 File:EDAP.py    EDAutopilot
@@ -88,9 +90,11 @@ class EDAutopilot:
             "ShipConfigFile": None,        # Ship config to load on start - deprecated
             "TargetScale": 1.0,            # Scaling of the target when a system is selected
             "TCEDestinationFilepath": "C:\\TCE\\DUMP\\Destination.json",  # Destination file for TCE
+            "TCEInstallationPath": "C:\\TCE",
             "AutomaticLogout": False,      # Logout when we are done with the mission
             "FCDepartureTime": 5.0,        # Extra time to fly away from a Fleet Carrier
             "Language": 'en',              # Language (matching ./locales/xx.json file)
+            "OCRLanguage": 'en',           # Language for OCR detection (see OCR language doc in \docs)
             "EnableEDMesg": False,
             "EDMesgActionsPort": 15570,
             "EDMesgEventsPort": 15571,
@@ -109,6 +113,7 @@ class EDAutopilot:
         self._single_waypoint_system = None
         self._prev_star_system = None
         self.honk_thread = None
+        self._tce_integration = None
 
         # used this to write the self.config table to the json file
         # self.write_config(self.config)
@@ -126,12 +131,16 @@ class EDAutopilot:
                     cnf['TargetScale'] = 1.0
                 if 'TCEDestinationFilepath' not in cnf:
                     cnf['TCEDestinationFilepath'] = "C:\\TCE\\DUMP\\Destination.json"
+                if 'TCEInstallationPath' not in cnf:
+                    cnf['TCEInstallationPath'] = "C:\\TCE"
                 if 'AutomaticLogout' not in cnf:
                     cnf['AutomaticLogout'] = False
                 if 'FCDepartureTime' not in cnf:
                     cnf['FCDepartureTime'] = 5.0
                 if 'Language' not in cnf:
                     cnf['Language'] = 'en'
+                if 'OCRLanguage' not in cnf:
+                    cnf['OCRLanguage'] = 'en'
                 if 'EnableEDMesg' not in cnf:
                     cnf['EnableEDMesg'] = False
                     cnf['EDMesgActionsPort'] = 15570
@@ -192,7 +201,7 @@ class EDAutopilot:
         self.scr.scaleX = self.config['TargetScale']
         self.scr.scaleY = self.config['TargetScale']
 
-        self.ocr = OCR(self.scr)
+        self.ocr = OCR(self.scr, self.config['OCRLanguage'])
         self.templ = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
         self.scrReg = Screen_Regions.Screen_Regions(self.scr, self.templ)
         self.jn = EDJournal()
@@ -203,11 +212,12 @@ class EDAutopilot:
         self.robigo = Robigo(self)
         self.status = StatusParser()
         self.nav_route = NavRouteParser()
-        self.ship_control = EDShipControl(self.scr, self.keys, cb)
+        self.ship_control = EDShipControl(self, self.scr, self.keys, cb)
         self.internal_panel = EDInternalStatusPanel(self, self.scr, self.keys, cb)
         self.galaxy_map = EDGalaxyMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
         self.system_map = EDSystemMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
         self.stn_svcs_in_ship = EDStationServicesInShip(self, self.scr, self.keys, cb)
+        self.nav_panel = EDNavigationPanel(self, self.scr, self.keys, cb)
 
         self.mesg_server = EDMesgServer(self, cb)
         self.mesg_server.actions_port = self.config['EDMesgActionsPort']
@@ -258,6 +268,13 @@ class EDAutopilot:
         if doThread:
             self.ap_thread = kthread.KThread(target=self.engine_loop, name="EDAutopilot")
             self.ap_thread.start()
+
+    @property
+    def tce_integration(self) -> TceIntegration:
+        """ Load TCE Integration class when needed. """
+        if not self._tce_integration:
+            self._tce_integration = TceIntegration(self, self.ap_ckb)
+        return self._tce_integration
 
     # Loads the configuration file
     #
@@ -920,6 +937,8 @@ class EDAutopilot:
         width = scr_reg.templates.template['disengage']['width']
         height = scr_reg.templates.template['disengage']['height']
 
+        reg_rect = scr_reg.reg['disengage']['rect']
+
         if self.cv_view:
             self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
             dis_image = cv2.rectangle(dis_image, (0, 0), (1000, 25), (0, 0, 0), -1)
@@ -1057,30 +1076,7 @@ class EDAutopilot:
 
     def request_docking(self, toCONTACT):
         """ Request docking from Nav Panel. """
-        self.keys.send('UI_Back', repeat=10)
-        self.keys.send('HeadLookReset')
-        self.keys.send('UIFocus', state=1)
-        self.keys.send('UI_Left')
-        self.keys.send('UIFocus', state=0)
-        sleep(0.5)
-
-        # we start with the Left Panel having "NAVIGATION" highlighted, we then need to right
-        # right twice to "CONTACTS".  Notice of a FSD run, the LEFT panel is reset to "NAVIGATION"
-        # otherwise it is on the last tab you selected.  Thus must start AP with "NAVIGATION" selected
-        if (toCONTACT == 1):
-            self.keys.send('CycleNextPanel', hold=0.2)
-            sleep(0.2)
-            self.keys.send('CycleNextPanel', hold=0.2)
-
-        # On the CONTACT TAB, go to top selection, do this 4 seconds to ensure at top
-        # then go right, which will be "REQUEST DOCKING" and select it
-        self.keys.send('UI_Up', hold=4)
-        self.keys.send('UI_Right')
-        self.keys.send('UI_Select')
-
-        sleep(0.3)
-        self.keys.send('UI_Back')
-        self.keys.send('HeadLookReset')
+        self.nav_panel.request_docking(toCONTACT)
 
     def dock(self):
         """ Docking sequence.  Assumes in normal space, will get closer to the Station
@@ -1106,7 +1102,7 @@ class EDAutopilot:
         # At this point (of sleep()) we should be < 7.5km from the station.  Go 0 speed
         # if we get docking granted ED's docking computer will take over
         self.keys.send('SetSpeedZero', repeat=2)
-
+        sleep(3)  # Wait for ship to come to stop
         self.ap_ckb('log+vce', "Initiating Docking Procedure")
         self.request_docking(1)
         sleep(1)
@@ -1123,6 +1119,7 @@ class EDAutopilot:
                     self.keys.send('SetSpeed50')
                     sleep(5)
                     self.keys.send('SetSpeedZero', repeat=2)
+                sleep(3)  # Wait for ship to come to stop
                 self.request_docking(0)
                 self.keys.send('SetSpeedZero', repeat=2)
                 sleep(1.5)
@@ -1162,20 +1159,7 @@ class EDAutopilot:
 
     def request_docking_cleanup(self):
         """ After request docking, go back to NAVIGATION tab in Nav Panel from the CONTACTS tab. """
-        self.keys.send('UI_Back', repeat=10)
-        self.keys.send('HeadLookReset')
-        self.keys.send('UIFocus', state=1)
-        self.keys.send('UI_Left')
-        self.keys.send('UIFocus', state=0)
-        sleep(0.5)
-
-        self.keys.send('CycleNextPanel', hold=0.2)  # STATS tab
-        sleep(0.2)
-        self.keys.send('CycleNextPanel', hold=0.2)  # NAVIGATION tab
-
-        sleep(0.3)
-        self.keys.send('UI_Back')
-        self.keys.send('HeadLookReset')
+        self.nav_panel.request_docking_cleanup()
 
     def is_sun_dead_ahead(self, scr_reg):
         return scr_reg.sun_percent(scr_reg.screen) > 5
@@ -1383,7 +1367,7 @@ class EDAutopilot:
             sleep(0.1)
 
         # Could not be found, return
-        if off == None:
+        if off is None:
             logger.debug("sc_target_align not finding target")
             self.ap_ckb('log', 'Target not found, terminating SC Assist')
             return False
@@ -1424,10 +1408,6 @@ class EDAutopilot:
             # check for SC Disengage
             if self.sc_disengage_label_up(scr_reg):
                 if self.sc_disengage_active(scr_reg):
-                    self.ap_ckb('log+vce', 'Disengage Supercruise')
-                    self.keys.send('HyperSuperCombination')
-                    self.stop_sco_monitoring()
-                    break
 
             new = self.get_destination_offset(scr_reg)
             if new:
@@ -1852,12 +1832,17 @@ class EDAutopilot:
         also can then perform trades if specific in the waypoints file."""
         self.waypoint.waypoint_assist(keys, scr_reg)
 
-    def jump_to_system(self, scr_reg, system_name: str) -> bool:
-        """ Jumps to the specified system. Returns True if in the system already,
-        or we successfully travel there, else False. """
-        self.update_ap_status(f"Targeting System: {system_name}")
-        ret = self.galaxy_map.set_next_system(self, system_name)
-        if not ret:
+    def jump_to_system(self, scr_reg) -> bool:
+        """ Jumps to the currently targeted system. Returns True if we successfully travel there, else False. """
+        # Current in game destination
+        status = self.status.get_cleaned_data()
+        destination_body = status['Destination_Body']  # The body number (0 for prim star)
+        destination_name = status['Destination_Name']  # The system/body/station/settlement name
+
+        # Check we have a route and that we have a destination to a star (body 0).
+        # We can have one without the other.
+        if destination_body != 0 or destination_name == "":
+            self.ap_ckb('log', "A valid destination system is not selected.")
             return False
 
         # if we are starting the waypoint docked at a station, we need to undock first
@@ -1906,18 +1891,24 @@ class EDAutopilot:
 
     def fsd_assist(self, scr_reg):
         """ FSD Route Assist. """
-
+        # TODO - can we enable this? Seems like a better way
+        # nav_route_parser = NavRouteParser()
         logger.debug('self.jn.ship_state='+str(self.jn.ship_state()))
 
         starttime = time.time()
         starttime -= 20  # to account for first instance not doing positioning
 
+        # TODO - can we enable this? Seems like a better way
+        # if nav_route_parser.get_last_system() is not None:
         if self.jn.ship_state()['target']:
             # if we are starting the waypoint docked at a station, we need to undock first
             if self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
                 self.update_overlay()
                 self.waypoint_undock_seq()
 
+        # Keep jumping as long as there is a system to jump to.
+        # TODO - can we enable this? Seems like a better way
+        # while nav_route_parser.get_last_system() is not None:
         while self.jn.ship_state()['target']:
             self.update_overlay()
 
@@ -2127,7 +2118,17 @@ class EDAutopilot:
             return False
 
         if self._single_waypoint_system != "":
-            res = self.jump_to_system(self.scrReg, self._single_waypoint_system)
+            self.ap_ckb('log+vce', f"Targeting system {self._single_waypoint_system}.")
+            # Select destination in galaxy map based on name
+            res = self.galaxy_map.set_gal_map_destination_text(self, self._single_waypoint_system, self.jn.ship_state)
+            if res:
+                self.ap_ckb('log', f"System has been targeted.")
+            else:
+                self.ap_ckb('log+vce', f"Unable to target {self._single_waypoint_system} in Galaxy Map.")
+                return False
+
+            # Jump to destination
+            res = self.jump_to_system(self.scrReg)
             if res is False:
                 return False
 

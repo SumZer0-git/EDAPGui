@@ -11,9 +11,9 @@ class EDSystemMap:
     """ Handles the System Map. """
     def __init__(self, ed_ap, screen, keys, cb, is_odyssey=True):
         self.ap = ed_ap
+        self.ocr = ed_ap.ocr
         self.is_odyssey = is_odyssey
         self.screen = screen
-        self.ocr = OCR(screen)
         self.keys = keys
         self.status_parser = StatusParser()
         self.ap_ckb = cb

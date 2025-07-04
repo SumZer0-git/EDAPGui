@@ -55,7 +55,7 @@ Author: sumzer0@yahoo.com
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
 # contains the names of the release.
-EDAP_VERSION = "V1.4.1"
+EDAP_VERSION = "V1.5.0"
 # depending on how release versions are best marked you could also change it to the release tag, see function check_update.
 # ---------------------------------------------------------------------------
 
@@ -754,6 +754,7 @@ class APGui():
             elif self.checkboxvar['Single Waypoint Assist'].get() == 0 and self.SWP_A_running == True:
                 self.stop_single_waypoint_assist()
 
+
     def makeform(self, win, ftype, fields, r=0, inc=1, rfrom=0, rto=1000):
         entries = {}
 
@@ -1008,7 +1009,7 @@ class APGui():
         blk_debug_buttons.columnconfigure([0, 1], weight=1, minsize=100)
 
         btn_save = Button(blk_debug_buttons, text='Save All Settings', command=self.save_settings)
-        btn_save.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        btn_save.grid(row=7, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
 
         # Statusbar
         statusbar = Frame(win)

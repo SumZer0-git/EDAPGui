@@ -1,22 +1,41 @@
 from __future__ import annotations
 
+import cv2
+
+import ED_AP
 from MarketParser import MarketParser
 from OCR import OCR
 from StatusParser import StatusParser
 from time import sleep
 from EDlogger import logger
+from Screen_Regions import reg_scale_for_station, size_scale_for_station
+
+"""
+File:StationServicesInShip.py    
+
+Description:
+  TBD 
+
+Author: Stumpii
+"""
 
 
 class EDStationServicesInShip:
     """ Handles Station Services In Ship. """
     def __init__(self, ed_ap, screen, keys, cb):
         self.ap = ed_ap
+        self.ocr = ed_ap.ocr
+        self.locale = self.ap.locale
         self.screen = screen
-        self.ocr = OCR(screen)
         self.keys = keys
-        self.status_parser = StatusParser()
         self.ap_ckb = cb
+        self.status_parser = StatusParser()
         self.market_parser = MarketParser()
+        # The rect is top left x, y, and bottom right x, y in fraction of screen resolution
+        self.reg = {'connected_to': {'rect': [0.0, 0.0, 0.25, 0.25]},
+                    'stn_svc_layout': {'rect': [0.05, 0.40, 0.60, 0.76]},
+                    'commodities_market': {'rect': [0.0, 0.0, 0.25, 0.25]},
+                    }
 
     def goto_station_services(self) -> bool:
         """ Goto Station Services. """
@@ -27,8 +46,30 @@ class EDStationServicesInShip:
         self.keys.send("UI_Down")  # station services
         self.keys.send("UI_Select")  # station services
 
-        # TODO - replace with OCR from OCR branch
-        sleep(5)  # wait for new menu to finish rendering
+        # Scale the regions based on the target resolution.
+        scl_reg = reg_scale_for_station(self.reg['connected_to'], self.screen.screen_width, self.screen.screen_height)
+
+        # Wait for screen to appear
+        res = self.ocr.wait_for_text(self.ap, [self.locale["STN_SVCS_CONNECTED_TO"]], scl_reg)
+
+        # Store image
+        # image = self.screen.get_screen_rect_pct(scl_reg['rect'])
+        # cv2.imwrite(f'test/station-services/station-services.png', image)
+
+        # After the OCR timeout, station services will have appeared, to return true anyway.
+        return True
+
+    def goto_construction_services(self) -> bool:
+        """ Goto Construction Services. This is for an Orbital Construction Site. """
+        # Go to cockpit view
+        self.ap.ship_control.goto_cockpit_view()
+
+        self.keys.send("UI_Up", repeat=3)  # go to very top (refuel line)
+        self.keys.send("UI_Down")  # station services
+        self.keys.send("UI_Select")  # station services
+
+        # TODO - replace with OCR from OCR branch?
+        sleep(3)  # wait for new menu to finish rendering
 
         return True
 
@@ -182,4 +223,18 @@ class EDStationServicesInShip:
             # keys.send('UI_Back')  # Back to commodities list
 
         return True, act_qty
+
+
+def dummy_cb(msg, body=None):
+    pass
+
+
+# Usage Example
+if __name__ == "__main__":
+    test_ed_ap = ED_AP.EDAutopilot(cb=dummy_cb)
+    test_ed_ap.keys.activate_window = True
+    svcs = EDStationServicesInShip(test_ed_ap, test_ed_ap.scr, test_ed_ap.keys, test_ed_ap.ap_ckb)
+    svcs.goto_station_services()
+
+
 

@@ -1,9 +1,7 @@
 from __future__ import annotations
-
 from time import sleep
-
 from CargoParser import CargoParser
-from EDAP_data import FlagsDocked
+from EDAP_data import *
 from EDKeys import EDKeys
 from EDlogger import logger
 import json
@@ -201,16 +199,6 @@ class EDWayPoint:
         self.write_waypoints(data=None, filename='./waypoints/' + Path(self.filename).name)
         self.log_stats()
 
-    def is_station_targeted(self, dest_key) -> bool:
-        """ Check if a station is specified in the waypoint by name or by bookmark."""
-        if self.waypoints[dest_key]['StationName'] is not None:
-            if self.waypoints[dest_key]['StationName'] != "":
-                return True
-        if self.waypoints[dest_key]['SystemBookmarkNumber'] is not None:
-            if self.waypoints[dest_key]['SystemBookmarkNumber'] != -1:
-                return True
-        return False
-
     def log_stats(self):
         calc1 = 1.5 ** self.stats_log['Colonisation']
         calc2 = 1.5 ** self.stats_log['Construction']
@@ -255,7 +243,7 @@ class EDWayPoint:
                 logger.debug(f"Execute Trade: On Orbital Construction Site")
 
             # Go to station services
-            self.ap.stn_svcs_in_ship.goto_station_services()
+            self.ap.stn_svcs_in_ship.goto_construction_services()
 
             # --------- SELL ----------
             if len(sell_commodities) > 0:
@@ -520,9 +508,9 @@ class EDWayPoint:
                 # TODO should this be in before every jump?
                 keys.send('TargetNextRouteSystem')
 
-                # Jump to the system
+                # Jump to the destination system
                 self.ap.ap_ckb('log+vce', f"Jumping to {next_wp_system}.")
-                res = self.ap.jump_to_system(scr_reg, next_wp_system)
+                res = self.ap.jump_to_system(scr_reg)
                 if not res:
                     self.ap.ap_ckb('log', f"Failed to jump to {next_wp_system}.")
                     _abort = True
@@ -656,7 +644,6 @@ def main():
 
     #  print("Doing: "+str(dest))
     #  print(wp.waypoints[dest])
-    # print("Dock w/station: "+  str(wp.is_station_targeted(dest)))
 
     #wp.set_station_target(None, dest)
 

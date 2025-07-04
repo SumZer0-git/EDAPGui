@@ -20,15 +20,20 @@ Author: Stumpii
 
 
 class OCR:
-    def __init__(self, screen):
+    def __init__(self, screen, language: str = 'en'):
         self.screen = screen
-        self.paddleocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False, use_dilation=True,
+        self.paddleocr = PaddleOCR(use_angle_cls=True, lang=language, use_gpu=False, show_log=False, use_dilation=True,
                                    use_space_char=True)
         # Class for text similarity metrics
         self.jarowinkler = JaroWinkler()
         self.sorensendice = SorensenDice()
 
-    def string_similarity(self, s1, s2):
+    def string_similarity(self, s1, s2) -> float:
+        """ Performs a string similarity check and returns the result.
+        @param s1: The first string to compare.
+        @param s2: The second string to compare.
+        @return: The similarity from 0.0 (no match) to 1.0 (identical).
+        """
         #return self.jarowinkler.similarity(s1, s2)
         return self.sorensendice.similarity(s1, s2)
 
@@ -158,7 +163,7 @@ class OCR:
         @param region: The region to check in % (0.0 - 1.0).
         """
         rect = region['rect']
-        image = self.screen.get_screen_region_pct(rect)
+        image = self.screen.get_screen_rect_pct(rect)
         return image
 
     def is_text_in_selected_item_in_image(self, img, text, min_w, min_h):
@@ -185,7 +190,7 @@ class OCR:
             logger.debug(f"Did not find '{text}' text in item text '{str(ocr_textlist)}'.")
             return False
 
-    def is_text_in_region(self, text, region):
+    def is_text_in_region(self, text, region) -> (bool, str):
         """ Does the region include the text being checked for. The region does not need
         to include highlighted areas.
         Checks if text exists in a region using OCR.
@@ -201,10 +206,10 @@ class OCR:
 
         if text.upper() in str(ocr_textlist):
             logger.debug(f"Found '{text}' text in item text '{str(ocr_textlist)}'.")
-            return True
+            return True, str(ocr_textlist)
         else:
             logger.debug(f"Did not find '{text}' text in item text '{str(ocr_textlist)}'.")
-            return False
+            return False, str(ocr_textlist)
 
     def select_item_in_list(self, text, region, keys, min_w, min_h) -> bool:
         """ Attempt to find the item by text in a list defined by the region.
@@ -237,22 +242,32 @@ class OCR:
                 in_list = True
                 keys.send("UI_Down")
 
-    def wait_for_text(self, texts: list[str], region, timeout=30) -> bool:
+    def wait_for_text(self, ap, texts: list[str], region, timeout=30) -> bool:
         """ Wait for a screen to appear by checking for text to appear in the region.
+        @param ap: ED_AP instance.
         @param texts: List of text to check for. Success occurs if any in the list is found.
         @param region: The region to check in % (0.0 - 1.0).
         @param timeout: Time to wait for screen in seconds
         """
+        abs_rect = self.screen.screen_rect_to_abs(region['rect'])
+
         start_time = time.time()
+        text_found = False
         while True:
             # Check for timeout.
             if time.time() > (start_time + timeout):
-                return False
+                break
 
             # Check if screen has appeared.
             for text in texts:
-                res = self.is_text_in_region(text, region)
-                if res:
-                    return True
+                text_found, ocr_text = self.is_text_in_region(text, region)
+
+                if text_found:
+                    break
+
+            if text_found:
+                break
 
             time.sleep(0.25)
+
+        return text_found
