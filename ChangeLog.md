@@ -4,6 +4,7 @@
  - Added localisation to nav panel.
  - Added TCE Integration class.
  - Added OCR to station services screen check.
+ - Added fix for Robigo issue not selecting system in gal map.
  - Improved debug for gal map.
  - Separated Station Services and Construction Services because OCR only works for Station Services (Construction Services are not as slow to open).
  - Moved docking cleanup to Nav Panel class.
