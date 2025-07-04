@@ -28,7 +28,12 @@ class OCR:
         self.jarowinkler = JaroWinkler()
         self.sorensendice = SorensenDice()
 
-    def string_similarity(self, s1, s2):
+    def string_similarity(self, s1, s2) -> float:
+        """ Performs a string similarity check and returns the result.
+        @param s1: The first string to compare.
+        @param s2: The second string to compare.
+        @return: The similarity from 0.0 (no match) to 1.0 (identical).
+        """
         #return self.jarowinkler.similarity(s1, s2)
         return self.sorensendice.similarity(s1, s2)
 

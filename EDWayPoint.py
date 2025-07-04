@@ -243,7 +243,7 @@ class EDWayPoint:
                 logger.debug(f"Execute Trade: On Orbital Construction Site")
 
             # Go to station services
-            self.ap.stn_svcs_in_ship.goto_station_services()
+            self.ap.stn_svcs_in_ship.goto_construction_services()
 
             # --------- SELL ----------
             if len(sell_commodities) > 0:

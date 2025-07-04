@@ -59,6 +59,20 @@ class EDStationServicesInShip:
         # After the OCR timeout, station services will have appeared, to return true anyway.
         return True
 
+    def goto_construction_services(self) -> bool:
+        """ Goto Construction Services. This is for an Orbital Construction Site. """
+        # Go to cockpit view
+        self.ap.ship_control.goto_cockpit_view()
+
+        self.keys.send("UI_Up", repeat=3)  # go to very top (refuel line)
+        self.keys.send("UI_Down")  # station services
+        self.keys.send("UI_Select")  # station services
+
+        # TODO - replace with OCR from OCR branch?
+        sleep(3)  # wait for new menu to finish rendering
+
+        return True
+
     def select_buy(self, keys) -> bool:
         """ Select Buy. Assumes on Commodities Market screen. """
 

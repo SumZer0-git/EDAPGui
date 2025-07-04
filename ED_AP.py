@@ -1159,20 +1159,7 @@ class EDAutopilot:
 
     def request_docking_cleanup(self):
         """ After request docking, go back to NAVIGATION tab in Nav Panel from the CONTACTS tab. """
-        self.keys.send('UI_Back', repeat=10)
-        self.keys.send('HeadLookReset')
-        self.keys.send('UIFocus', state=1)
-        self.keys.send('UI_Left')
-        self.keys.send('UIFocus', state=0)
-        sleep(0.5)
-
-        self.keys.send('CycleNextPanel', hold=0.2)  # STATS tab
-        sleep(0.2)
-        self.keys.send('CycleNextPanel', hold=0.2)  # NAVIGATION tab
-
-        sleep(0.3)
-        self.keys.send('UI_Back')
-        self.keys.send('HeadLookReset')
+        self.nav_panel.request_docking_cleanup()
 
     def is_sun_dead_ahead(self, scr_reg):
         return scr_reg.sun_percent(scr_reg.screen) > 5

@@ -76,6 +76,22 @@ class EDNavigationPanel:
         self.keys.send('UI_Back')
         self.keys.send('HeadLookReset')
 
+    def request_docking_cleanup(self):
+        """ After request docking, go back to NAVIGATION tab in Nav Panel from the CONTACTS tab. """
+        self.keys.send('UI_Back', repeat=10)
+        self.keys.send('HeadLookReset')
+        self.keys.send('UIFocus', state=1)
+        self.keys.send('UI_Left')
+        self.keys.send('UIFocus', state=0)
+        sleep(0.5)
+
+        self.keys.send('CycleNextPanel', hold=0.2)  # STATS tab
+        sleep(0.2)
+        self.keys.send('CycleNextPanel', hold=0.2)  # NAVIGATION tab
+
+        sleep(0.3)
+        self.keys.send('UI_Back')
+        self.keys.send('HeadLookReset')
 
 # Usage Example
 if __name__ == "__main__":
