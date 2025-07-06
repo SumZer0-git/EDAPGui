@@ -105,6 +105,7 @@ class EDAutopilot:
         self.ship_configs = {
             "Ship_Configs": {},  # Dictionary of ship types with additional settings
         }
+        self.def_ships_cfg_sc_50 = None
         self._sc_sco_active_loop_thread = None
         self._sc_sco_active_loop_enable = False
         self.sc_sco_is_active = 0
@@ -143,7 +144,9 @@ class EDAutopilot:
                     cnf['OCRLanguage'] = 'en'
                 if 'EnableEDMesg' not in cnf:
                     cnf['EnableEDMesg'] = False
+                if 'EDMesgActionsPort' not in cnf:
                     cnf['EDMesgActionsPort'] = 15570
+                if 'EDMesgEventsPort' not in cnf:
                     cnf['EDMesgEventsPort'] = 15571
                 self.config = cnf
                 logger.debug("read AP json:"+str(cnf))
@@ -155,6 +158,11 @@ class EDAutopilot:
 
         # Load selected language
         self.locale = LocalizationManager('locales', self.config['Language'])
+
+        # Load default ships config for 50% SC speed
+        self.def_ships_cfg_sc_50 = self.read_def_ships_cfg_sc_50()
+        if self.def_ships_cfg_sc_50 is None:
+            logger.debug("Unable to read default_ships_cfg_sc_50.json file.")
 
         shp_cnf = self.read_ship_configs()
         # if we read it then point to it, otherwise use the default table above
@@ -232,7 +240,7 @@ class EDAutopilot:
         # If you find that you are overshoot in pitch or roll, need to adjust these numbers.
         # Algorithm will roll the vehicle for the nav point to be north or south and then pitch to get the nave point
         # to center
-        self.compass_scale = 0.0
+        self.compass_scale = 1.0
         self.yawrate   = 8.0
         self.rollrate  = 80.0
         self.pitchrate = 33.0
@@ -262,6 +270,16 @@ class EDAutopilot:
         self.cv_view = self.config['Enable_CV_View']
         self.cv_view_x = 10
         self.cv_view_y = 10
+
+        # Load initial ship configuration if we can detect current ship
+        try:
+            initial_ship = self.jn.ship_state()['type']
+            if initial_ship and initial_ship in ship_size_map:
+                self.current_ship_type = initial_ship
+                self.load_ship_configuration(initial_ship)
+                logger.info(f"Loaded initial ship configuration for {initial_ship}")
+        except Exception as e:
+            logger.debug(f"Could not load initial ship configuration: {e}")
 
         #start the engine thread
         self.terminate = False  # terminate used by the thread to exit its loop
@@ -309,10 +327,26 @@ class EDAutopilot:
 
         return s
 
+    def read_def_ships_cfg_sc_50(self, filename='./configs/default_ships_cfg_sc_50.json'):
+        """ Read the default ship configuration file for 50% Supercruise (SC)."""
+        s = None
+        try:
+            with open(filename, "r") as fp:
+                s = json.load(fp)
+        except  Exception as e:
+            logger.warning("EDAPGui.py default_ships_cfg_sc_50 error :"+str(e))
+
+        return s
+
     def update_ship_configs(self):
         """ Update the user's ship configuration file."""
         # Check if a ship and not a suit (on foot)
         if self.current_ship_type in ship_size_map:
+            # Ensure ship entry exists in config
+            if self.current_ship_type not in self.ship_configs['Ship_Configs']:
+                self.ship_configs['Ship_Configs'][self.current_ship_type] = {}
+                logger.debug(f"Created new ship config entry for: {self.current_ship_type}")
+            
             self.ship_configs['Ship_Configs'][self.current_ship_type]['compass_scale'] = round(self.compass_scale, 4)
             self.ship_configs['Ship_Configs'][self.current_ship_type]['PitchRate'] = self.pitchrate
             self.ship_configs['Ship_Configs'][self.current_ship_type]['RollRate'] = self.rollrate
@@ -320,6 +354,7 @@ class EDAutopilot:
             self.ship_configs['Ship_Configs'][self.current_ship_type]['SunPitchUp+Time'] = self.sunpitchuptime
 
             self.write_ship_configs(self.ship_configs)
+            logger.debug(f"Saved ship config for: {self.current_ship_type}")
 
     def write_ship_configs(self, data, filename='./configs/ship_configs.json'):
         """ Write the user's ship configuration file."""
@@ -329,6 +364,52 @@ class EDAutopilot:
         except Exception as e:
             logger.warning("EDAPGui.py write_ship_configs error:"+str(e))
 
+    def load_ship_configuration(self, ship_type):
+        """ Load ship configuration with the following priority:
+            1. User's ship values from ship_configs.json file
+            2. Default ship values from default_ships_cfg_sc_50.json file
+            3. Hardcoded default values
+        """
+        import os
+        
+        # Step 1: Check if we have custom config in ship_configs.json (skip if forcing defaults)
+        if ship_type in self.ship_configs['Ship_Configs']:
+            current_ship_cfg = self.ship_configs['Ship_Configs'][ship_type]
+            # Check if the custom config has actual values (not just empty dict)
+            if any(key in current_ship_cfg for key in ['compass_scale', 'RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time']):
+                # Use custom configuration - this means it's been modified and saved to ship_configs.json
+                self.compass_scale = current_ship_cfg.get('compass_scale', self.scr.scaleX)
+                self.rollrate = current_ship_cfg.get('RollRate', 80.0)
+                self.pitchrate = current_ship_cfg.get('PitchRate', 33.0)
+                self.yawrate = current_ship_cfg.get('YawRate', 8.0)
+                self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
+                logger.info(f"Loaded your custom configuration for {ship_type} from ship_configs.json")
+                return
+        
+        # Step 2: Try to load defaults from ship file
+        if self.def_ships_cfg_sc_50 is not None:
+            if ship_type in self.def_ships_cfg_sc_50['Ship_Configs']:
+                ship_defaults = self.def_ships_cfg_sc_50['Ship_Configs'][ship_type]
+                # Use default configuration - this means it's been modified and saved to ship_configs.json
+                self.compass_scale = self.scr.scaleX  # Always use current scale for compass
+                self.rollrate = float(ship_defaults.get('rollrate', 80.0))
+                self.pitchrate = float(ship_defaults.get('pitchrate', 33.0)) 
+                self.yawrate = float(ship_defaults.get('yawrate', 8.0))
+                self.sunpitchuptime = float(ship_defaults.get('SunPitchUp+Time', 0.0))
+                logger.info(f"Loaded default configuration for {ship_type} from default ship cfg file")
+                return
+
+        # Step 3: Use hardcoded defaults
+        self.compass_scale = self.scr.scaleX
+        self.rollrate = 80.0
+        self.pitchrate = 33.0
+        self.yawrate = 8.0
+        self.sunpitchuptime = 0.0
+        logger.info(f"Using hardcoded default configuration for {ship_type}")
+        
+        # Add empty entry to ship_configs for future customization
+        if ship_type not in self.ship_configs['Ship_Configs']:
+            self.ship_configs['Ship_Configs'][ship_type] = dict()
 
     # draw the overlay data on the ED Window
     #
@@ -1287,6 +1368,9 @@ class EDAutopilot:
         # TODO: should use Pitch Rates to calculate, but this seems to work fine with all ships
         hold_pitch = 0.150
         hold_yaw = 0.300
+        new = None  # Initialize to avoid unbound variable
+        off = None  # Initialize to avoid unbound variable
+        
         for i in range(5):
             new = self.get_destination_offset(scr_reg)
             if new:
@@ -1303,7 +1387,12 @@ class EDAutopilot:
             else:
                 logger.debug('  out of fine -not off-'+'\n')
                 return
-        #
+        
+        # Safety check to ensure off is valid before using it
+        if off is None:
+            logger.debug('  off is None, cannot continue alignment')
+            return
+            
         while (off['x'] > close) or \
               (off['x'] < -close) or \
               (off['y'] > close) or \
@@ -2425,23 +2514,14 @@ class EDAutopilot:
                         if self.jn.ship_state()['has_std_dock_comp']:
                             self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is fitted with a Standard Docking Computer.")
 
-                        # Add ship to ship configs if missing
+                        # Store ship for change detection BEFORE loading config and GUI update
+                        self.current_ship_type = ship
+
+                        # Load ship configuration with proper hierarchy
                         if ship is not None:
-                            if ship not in self.ship_configs['Ship_Configs']:
-                                self.ship_configs['Ship_Configs'][ship] = dict()
-
-                            current_ship_cfg = self.ship_configs['Ship_Configs'][ship]
-                            self.compass_scale = current_ship_cfg.get('compass_scale', self.scr.scaleX)
-                            self.rollrate = current_ship_cfg.get('RollRate', 80.0)
-                            self.pitchrate = current_ship_cfg.get('PitchRate', 33.0)
-                            self.yawrate = current_ship_cfg.get('YawRate', 8.0)
-                            self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
-
+                            self.load_ship_configuration(ship)
                             # Update GUI
                             self.ap_ckb('update_ship_cfg')
-
-                        # Store ship for change detection
-                        self.current_ship_type = ship
 
                         # Reload templates
                         self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale)
