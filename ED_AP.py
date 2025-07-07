@@ -1408,6 +1408,7 @@ class EDAutopilot:
             # check for SC Disengage
             if self.sc_disengage_label_up(scr_reg):
                 if self.sc_disengage_active(scr_reg):
+                    break
 
             new = self.get_destination_offset(scr_reg)
             if new:
