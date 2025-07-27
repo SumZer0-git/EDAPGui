@@ -1,5 +1,6 @@
 import math
 import traceback
+from enum import Enum
 from math import atan, degrees
 import random
 from tkinter import messagebox
@@ -48,6 +49,11 @@ Author: sumzer0@yahoo.com
 class EDAP_Interrupt(Exception):
     pass
 
+
+class ScTargetAlignReturn(Enum):
+    Lost = 1
+    Found = 2
+    Disengage = 3
 
 class EDAutopilot:
 
@@ -143,7 +149,9 @@ class EDAutopilot:
                     cnf['OCRLanguage'] = 'en'
                 if 'EnableEDMesg' not in cnf:
                     cnf['EnableEDMesg'] = False
+                if 'EDMesgActionsPort' not in cnf:
                     cnf['EDMesgActionsPort'] = 15570
+                if 'EDMesgEventsPort' not in cnf:
                     cnf['EDMesgEventsPort'] = 15571
                 self.config = cnf
                 logger.debug("read AP json:"+str(cnf))
@@ -179,7 +187,8 @@ class EDAutopilot:
         self.vce.set_voice_id(self.config['VoiceID'])
         self.vce.say("Welcome to Autopilot")
 
-        # set log level based on config input
+        # set log level based on config input, defaulting to warning
+        logger.setLevel(logging.WARNING)
         if self.config['LogINFO']:
             logger.setLevel(logging.INFO)
         if self.config['LogDEBUG']:
@@ -204,7 +213,7 @@ class EDAutopilot:
         self.ocr = OCR(self.scr, self.config['OCRLanguage'])
         self.templ = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
         self.scrReg = Screen_Regions.Screen_Regions(self.scr, self.templ)
-        self.jn = EDJournal()
+        self.jn = EDJournal(cb)
         self.keys = EDKeys(cb)
         self.keys.activate_window = self.config['ActivateEliteEachKey']
         self.afk_combat = AFK_Combat(self.keys, self.jn, self.vce)
@@ -232,7 +241,7 @@ class EDAutopilot:
         # If you find that you are overshoot in pitch or roll, need to adjust these numbers.
         # Algorithm will roll the vehicle for the nav point to be north or south and then pitch to get the nave point
         # to center
-        self.compass_scale = 0.0
+        self.compass_scale = 1.0
         self.yawrate   = 8.0
         self.rollrate  = 80.0
         self.pitchrate = 33.0
@@ -313,6 +322,11 @@ class EDAutopilot:
         """ Update the user's ship configuration file."""
         # Check if a ship and not a suit (on foot)
         if self.current_ship_type in ship_size_map:
+            # Ensure ship entry exists in config
+            if self.current_ship_type not in self.ship_configs['Ship_Configs']:
+                self.ship_configs['Ship_Configs'][self.current_ship_type] = {}
+                logger.debug(f"Created new ship config entry for: {self.current_ship_type}")
+            
             self.ship_configs['Ship_Configs'][self.current_ship_type]['compass_scale'] = round(self.compass_scale, 4)
             self.ship_configs['Ship_Configs'][self.current_ship_type]['PitchRate'] = self.pitchrate
             self.ship_configs['Ship_Configs'][self.current_ship_type]['RollRate'] = self.rollrate
@@ -320,6 +334,7 @@ class EDAutopilot:
             self.ship_configs['Ship_Configs'][self.current_ship_type]['SunPitchUp+Time'] = self.sunpitchuptime
 
             self.write_ship_configs(self.ship_configs)
+            logger.debug(f"Saved ship config for: {self.current_ship_type}")
 
     def write_ship_configs(self, data, filename='./configs/ship_configs.json'):
         """ Write the user's ship configuration file."""
@@ -329,6 +344,49 @@ class EDAutopilot:
         except Exception as e:
             logger.warning("EDAPGui.py write_ship_configs error:"+str(e))
 
+    def load_ship_configuration(self, ship_type):
+        """ Load ship configuration with the following priority:
+            1. User's ship values from ship_configs.json file
+            2. Default ship values from default_ships_cfg_sc_50.json file
+            3. Hardcoded default values
+        """
+        # Step 1: Check if we have custom config in ship_configs.json (skip if forcing defaults)
+        if ship_type in self.ship_configs['Ship_Configs']:
+            current_ship_cfg = self.ship_configs['Ship_Configs'][ship_type]
+            # Check if the custom config has actual values (not just empty dict)
+            if any(key in current_ship_cfg for key in ['compass_scale', 'RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time']):
+                # Use custom configuration - this means it's been modified and saved to ship_configs.json
+                self.compass_scale = current_ship_cfg.get('compass_scale', self.scr.scaleX)
+                self.rollrate = current_ship_cfg.get('RollRate', 80.0)
+                self.pitchrate = current_ship_cfg.get('PitchRate', 33.0)
+                self.yawrate = current_ship_cfg.get('YawRate', 8.0)
+                self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
+                logger.info(f"Loaded your custom configuration for {ship_type} from ship_configs.json")
+                return
+        
+        # Step 2: Try to load defaults from ship file
+        if ship_type in ship_rpy_sc_50:
+            ship_defaults = ship_rpy_sc_50[ship_type]
+            # Use default configuration - this means it's been modified and saved to ship_configs.json
+            self.compass_scale = self.scr.scaleX  # Always use current scale for compass
+            self.rollrate = ship_defaults.get('RollRate', 80.0)
+            self.pitchrate = ship_defaults.get('PitchRate', 33.0)
+            self.yawrate = ship_defaults.get('YawRate', 8.0)
+            self.sunpitchuptime = ship_defaults.get('SunPitchUp+Time', 0.0)
+            logger.info(f"Loaded default configuration for {ship_type} from default ship cfg file")
+            return
+
+        # Step 3: Use hardcoded defaults
+        self.compass_scale = self.scr.scaleX
+        self.rollrate = 80.0
+        self.pitchrate = 33.0
+        self.yawrate = 8.0
+        self.sunpitchuptime = 0.0
+        logger.info(f"Using hardcoded default configuration for {ship_type}")
+        
+        # Add empty entry to ship_configs for future customization
+        if ship_type not in self.ship_configs['Ship_Configs']:
+            self.ship_configs['Ship_Configs'][ship_type] = dict()
 
     # draw the overlay data on the ED Window
     #
@@ -1287,6 +1345,9 @@ class EDAutopilot:
         # TODO: should use Pitch Rates to calculate, but this seems to work fine with all ships
         hold_pitch = 0.150
         hold_yaw = 0.300
+        new = None  # Initialize to avoid unbound variable
+        off = None  # Initialize to avoid unbound variable
+        
         for i in range(5):
             new = self.get_destination_offset(scr_reg)
             if new:
@@ -1303,7 +1364,12 @@ class EDAutopilot:
             else:
                 logger.debug('  out of fine -not off-'+'\n')
                 return
-        #
+        
+        # Safety check to ensure off is valid before using it
+        if off is None:
+            logger.debug('  off is None, cannot continue alignment')
+            return
+            
         while (off['x'] > close) or \
               (off['x'] < -close) or \
               (off['y'] > close) or \
@@ -1347,9 +1413,15 @@ class EDAutopilot:
 
         self.fsd_target_align(scr_reg)
 
-    def sc_target_align(self, scr_reg) -> bool:
+    def sc_target_align(self, scr_reg) -> ScTargetAlignReturn:
         """ Stays tight on the target, monitors for disengage and obscured.
-        If target could not be found, return false."""
+        If target could not be found, return false.
+        @param scr_reg: The screen region class.
+        @return: A string detailing the reason for the method return. Current return options:
+            'lost': Lost target
+            'found': Target found
+            'disengage': Disengage text found
+        """
 
         close = 6
         off = None
@@ -1370,19 +1442,19 @@ class EDAutopilot:
         if off is None:
             logger.debug("sc_target_align not finding target")
             self.ap_ckb('log', 'Target not found, terminating SC Assist')
-            return False
+            return ScTargetAlignReturn.Lost
 
         #logger.debug("sc_target_align x: "+str(off['x'])+" y:"+str(off['y']))
 
         while (abs(off['x']) > close) or \
                 (abs(off['y']) > close):
 
-            if (abs(off['x']) > 25):
+            if abs(off['x']) > 25:
                 hold_yaw = 0.2
             else:
                 hold_yaw = 0.09
 
-            if (abs(off['y']) > 25):
+            if abs(off['y']) > 25:
                 hold_pitch = 0.15
             else:
                 hold_pitch = 0.075
@@ -1408,7 +1480,10 @@ class EDAutopilot:
             # check for SC Disengage
             if self.sc_disengage_label_up(scr_reg):
                 if self.sc_disengage_active(scr_reg):
-                    break
+                    self.ap_ckb('log+vce', 'Disengage Supercruise')
+                    self.keys.send('HyperSuperCombination')
+                    self.stop_sco_monitoring()
+                    return ScTargetAlignReturn.Disengage
 
             new = self.get_destination_offset(scr_reg)
             if new:
@@ -1418,9 +1493,9 @@ class EDAutopilot:
             if new is None:
                 logger.debug("sc_target_align lost target")
                 self.ap_ckb('log', 'Target lost, attempting re-alignment.')
-                return False
+                return  ScTargetAlignReturn.Lost
 
-        return True
+        return  ScTargetAlignReturn.Found
 
     def occluded_reposition(self, scr_reg):
         """ Reposition is use when the target is occluded by a planet or other.
@@ -1600,7 +1675,6 @@ class EDAutopilot:
         if self.jn.ship_state()['status'] != 'in_supercruise':
             logger.error('refuel=err1')
             return False
-            raise Exception('not ready to refuel')
 
         is_star_scoopable = self.jn.ship_state()['star_class'] in scoopable_stars
 
@@ -2009,12 +2083,20 @@ class EDAutopilot:
             sleep(0.05)
             if self.jn.ship_state()['status'] == 'in_supercruise':
                 # Align and stay on target. If false is returned, we have lost the target behind us.
-                if not self.sc_target_align(scr_reg):
+                align_res = self.sc_target_align(scr_reg)
+                if align_res == ScTargetAlignReturn.Lost:
                     # Continue ahead before aligning to prevent us circling the target
                     # self.keys.send('SetSpeed100')
                     sleep(10)
                     self.keys.send('SetSpeed50')
                     self.nav_align(scr_reg)  # Compass Align
+
+                elif align_res == ScTargetAlignReturn.Found:
+                    pass
+
+                elif align_res == ScTargetAlignReturn.Disengage:
+                    break
+
             elif self.status.get_flag2(Flags2GlideMode):
                 # Gliding - wait to complete
                 logger.debug("Gliding")
@@ -2426,23 +2508,14 @@ class EDAutopilot:
                         if self.jn.ship_state()['has_std_dock_comp']:
                             self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is fitted with a Standard Docking Computer.")
 
-                        # Add ship to ship configs if missing
-                        if ship is not None:
-                            if ship not in self.ship_configs['Ship_Configs']:
-                                self.ship_configs['Ship_Configs'][ship] = dict()
-
-                            current_ship_cfg = self.ship_configs['Ship_Configs'][ship]
-                            self.compass_scale = current_ship_cfg.get('compass_scale', self.scr.scaleX)
-                            self.rollrate = current_ship_cfg.get('RollRate', 80.0)
-                            self.pitchrate = current_ship_cfg.get('PitchRate', 33.0)
-                            self.yawrate = current_ship_cfg.get('YawRate', 8.0)
-                            self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
-
-                            # Update GUI
-                            self.ap_ckb('update_ship_cfg')
-
-                        # Store ship for change detection
+                        # Store ship for change detection BEFORE loading config and GUI update
                         self.current_ship_type = ship
+
+                        # Load ship configuration with proper hierarchy
+                        self.load_ship_configuration(ship)
+
+                        # Update GUI with ship config
+                        self.ap_ckb('update_ship_cfg')
 
                         # Reload templates
                         self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale)

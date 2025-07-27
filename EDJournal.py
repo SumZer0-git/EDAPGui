@@ -128,7 +128,8 @@ def check_sco_fsd(modules: list[dict[str, any]] | None) -> bool:
 
 
 class EDJournal:
-    def __init__(self):
+    def __init__(self, cb):
+        self.ap_ckb = cb
         self.last_mod_time = None
         self.log_file = None
         self.current_log = self.get_latest_log()
@@ -423,8 +424,12 @@ class EDJournal:
         return self.ship
 
 
+def dummy_cb(msg, body=None):
+    pass
+
+
 def main():
-    jn = EDJournal()
+    jn = EDJournal(cb=dummy_cb)
     while True:
         sleep(5)
         print("Ship = ", jn.ship_state())

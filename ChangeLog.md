@@ -1,3 +1,12 @@
+# 7/28/2025 Stumpii: Panther Clipper + small improvements.
+ - Added quick fix for Robigo issue not selecting the system.
+ - Changed logger level on startup to INFO to allow logging of startup info before the user settings are read. Added mostly so we can log the version of EDAP that is started.
+ - Updated Russian language file.
+ - Moved default ship data from files to EDAP_data.py and included all ships.
+ - Deleted unused old config files.
+ - Added panther clipper data.
+ - Improve disengage check while in a loop.
+
 # 7/3/2025 Stumpii: Small improvements.
  - Added Russian localisation file.
  - Added language selection for OCR.

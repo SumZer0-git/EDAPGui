@@ -55,7 +55,7 @@ Author: sumzer0@yahoo.com
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
 # contains the names of the release.
-EDAP_VERSION = "V1.5.0"
+EDAP_VERSION = "V1.6.0"
 # depending on how release versions are best marked you could also change it to the release tag, see function check_update.
 # ---------------------------------------------------------------------------
 
@@ -106,7 +106,6 @@ class APGui():
             'X Offset': "Offset left the screen to start place overlay text.",
             'Y Offset': "Offset down the screen to start place overlay text.",
             'Font Size': "Font size of the overlay.",
-            'Ship Config Button': "Read in a file with roll, pitch, yaw values for a ship.",
             'Calibrate': "Will iterate through a set of scaling values \ngetting the best match for your system. \nSee HOWTO-Calibrate.md",
             'Waypoint List Button': "Read in a file with with your Waypoints.",
             'Cap Mouse XY': "This will provide the StationCoord value of the Station in the SystemMap. \nSelecting this button and then clicking on the Station in the SystemMap \nwill return the x,y value that can be pasted in the waypoints file",
@@ -115,6 +114,7 @@ class APGui():
 
         self.gui_loaded = False
         self.log_buffer = queue.Queue()
+        self.callback('log', f'Starting ED Autopilot {EDAP_VERSION}.')
 
         self.ed_ap = EDAutopilot(cb=self.callback)
         self.ed_ap.robigo.set_single_loop(self.ed_ap.config['Robigo_Single_Loop'])
@@ -488,44 +488,6 @@ class APGui():
     def ship_tst_yaw(self):
         self.ed_ap.ship_tst_yaw()
 
-    def open_ship_file(self, filename=None):
-        # if a filename was not provided, then prompt user for one
-        if not filename:
-            filetypes = (
-                ('json files', '*.json'),
-                ('All files', '*.*')
-            )
-
-            filename = fd.askopenfilename(
-                title='Open a file',
-                initialdir='./ships/',
-                filetypes=filetypes)
-
-        if not filename:
-            return
-
-        with open(filename, 'r') as json_file:
-            f_details = json.load(json_file)
-
-        # load up the display with what we read, the pass it along to AP
-        self.entries['ship']['PitchRate'].delete(0, END)
-        self.entries['ship']['RollRate'].delete(0, END)
-        self.entries['ship']['YawRate'].delete(0, END)
-        self.entries['ship']['SunPitchUp+Time'].delete(0, END)
-
-        self.entries['ship']['PitchRate'].insert(0, f_details['pitchrate'])
-        self.entries['ship']['RollRate'].insert(0, f_details['rollrate'])
-        self.entries['ship']['YawRate'].insert(0, f_details['yawrate'])
-        self.entries['ship']['SunPitchUp+Time'].insert(0, f_details['SunPitchUp+Time'])
-
-        self.ed_ap.rollrate = float(f_details['rollrate'])
-        self.ed_ap.pitchrate = float(f_details['pitchrate'])
-        self.ed_ap.yawrate = float(f_details['yawrate'])
-        self.ed_ap.sunpitchuptime = float(f_details['SunPitchUp+Time'])
-
-        self.ship_filelabel.set("loaded: " + Path(filename).name)
-        self.ed_ap.update_config()
-
     def open_wp_file(self):
         filetypes = (
             ('json files', '*.json'),
@@ -851,19 +813,12 @@ class APGui():
         spn_sun_pitch_up.bind('<FocusOut>', self.entry_update)
         self.entries['ship']['SunPitchUp+Time'] = spn_sun_pitch_up
 
-        btn_tst_roll = Button(blk_ship, text='Test Roll', command=self.ship_tst_roll)
+        btn_tst_roll = Button(blk_ship, text='Test Roll Rate', command=self.ship_tst_roll)
         btn_tst_roll.grid(row=4, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-        btn_tst_pitch = Button(blk_ship, text='Test Pitch', command=self.ship_tst_pitch)
+        btn_tst_pitch = Button(blk_ship, text='Test Pitch Rate', command=self.ship_tst_pitch)
         btn_tst_pitch.grid(row=5, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-        btn_tst_yaw = Button(blk_ship, text='Test Yaw', command=self.ship_tst_yaw)
+        btn_tst_yaw = Button(blk_ship, text='Test Yaw Rate', command=self.ship_tst_yaw)
         btn_tst_yaw.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-
-        # profile load / info button in ship values block
-        self.ship_filelabel = StringVar()
-        self.ship_filelabel.set("<no config loaded>")
-        btn_ship_file = Button(blk_ship, textvariable=self.ship_filelabel, command=self.open_ship_file)
-        btn_ship_file.grid(row=8, column=0, padx=2, pady=2, sticky=(N, E, W))
-        tip_ship_file = Hovertip(btn_ship_file, self.tooltips['Ship Config Button'], hover_delay=1000)
 
         # waypoints button block
         blk_wp_buttons = tk.LabelFrame(page0, text="Waypoints")
