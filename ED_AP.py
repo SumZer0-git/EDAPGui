@@ -1,5 +1,6 @@
 import math
 import traceback
+from enum import Enum
 from math import atan, degrees
 import random
 from tkinter import messagebox
@@ -48,6 +49,11 @@ Author: sumzer0@yahoo.com
 class EDAP_Interrupt(Exception):
     pass
 
+
+class ScTargetAlignReturn(Enum):
+    Lost = 1
+    Found = 2
+    Disengage = 3
 
 class EDAutopilot:
 
@@ -1407,9 +1413,15 @@ class EDAutopilot:
 
         self.fsd_target_align(scr_reg)
 
-    def sc_target_align(self, scr_reg) -> bool:
+    def sc_target_align(self, scr_reg) -> ScTargetAlignReturn:
         """ Stays tight on the target, monitors for disengage and obscured.
-        If target could not be found, return false."""
+        If target could not be found, return false.
+        @param scr_reg: The screen region class.
+        @return: A string detailing the reason for the method return. Current return options:
+            'lost': Lost target
+            'found': Target found
+            'disengage': Disengage text found
+        """
 
         close = 6
         off = None
@@ -1430,19 +1442,19 @@ class EDAutopilot:
         if off is None:
             logger.debug("sc_target_align not finding target")
             self.ap_ckb('log', 'Target not found, terminating SC Assist')
-            return False
+            return ScTargetAlignReturn.Lost
 
         #logger.debug("sc_target_align x: "+str(off['x'])+" y:"+str(off['y']))
 
         while (abs(off['x']) > close) or \
                 (abs(off['y']) > close):
 
-            if (abs(off['x']) > 25):
+            if abs(off['x']) > 25:
                 hold_yaw = 0.2
             else:
                 hold_yaw = 0.09
 
-            if (abs(off['y']) > 25):
+            if abs(off['y']) > 25:
                 hold_pitch = 0.15
             else:
                 hold_pitch = 0.075
@@ -1468,7 +1480,10 @@ class EDAutopilot:
             # check for SC Disengage
             if self.sc_disengage_label_up(scr_reg):
                 if self.sc_disengage_active(scr_reg):
-                    break
+                    self.ap_ckb('log+vce', 'Disengage Supercruise')
+                    self.keys.send('HyperSuperCombination')
+                    self.stop_sco_monitoring()
+                    return ScTargetAlignReturn.Disengage
 
             new = self.get_destination_offset(scr_reg)
             if new:
@@ -1478,9 +1493,9 @@ class EDAutopilot:
             if new is None:
                 logger.debug("sc_target_align lost target")
                 self.ap_ckb('log', 'Target lost, attempting re-alignment.')
-                return False
+                return  ScTargetAlignReturn.Lost
 
-        return True
+        return  ScTargetAlignReturn.Found
 
     def occluded_reposition(self, scr_reg):
         """ Reposition is use when the target is occluded by a planet or other.
@@ -1660,7 +1675,6 @@ class EDAutopilot:
         if self.jn.ship_state()['status'] != 'in_supercruise':
             logger.error('refuel=err1')
             return False
-            raise Exception('not ready to refuel')
 
         is_star_scoopable = self.jn.ship_state()['star_class'] in scoopable_stars
 
@@ -2069,12 +2083,20 @@ class EDAutopilot:
             sleep(0.05)
             if self.jn.ship_state()['status'] == 'in_supercruise':
                 # Align and stay on target. If false is returned, we have lost the target behind us.
-                if not self.sc_target_align(scr_reg):
+                align_res = self.sc_target_align(scr_reg)
+                if align_res == ScTargetAlignReturn.Lost:
                     # Continue ahead before aligning to prevent us circling the target
                     # self.keys.send('SetSpeed100')
                     sleep(10)
                     self.keys.send('SetSpeed50')
                     self.nav_align(scr_reg)  # Compass Align
+
+                elif align_res == ScTargetAlignReturn.Found:
+                    pass
+
+                elif align_res == ScTargetAlignReturn.Disengage:
+                    break
+
             elif self.status.get_flag2(Flags2GlideMode):
                 # Gliding - wait to complete
                 logger.debug("Gliding")
