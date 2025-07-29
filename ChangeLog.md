@@ -1,3 +1,6 @@
+# 7/28/2025 Stumpii: Debug_overlay bug.
+ - Removed debug_overlay bug.
+
 # 7/28/2025 Stumpii: Panther Clipper + small improvements.
  - Added quick fix for Robigo issue not selecting the system.
  - Changed logger level on startup to INFO to allow logging of startup info before the user settings are read. Added mostly so we can log the version of EDAP that is started.
