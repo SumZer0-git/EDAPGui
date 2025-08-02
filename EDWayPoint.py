@@ -268,8 +268,10 @@ class EDWayPoint:
             logger.debug(f"Execute Trade: On Regular Station")
             self.stats_log['Station'] = self.stats_log['Station'] + 1
 
-            self.market_parser.get_market_data()
-            market_time_old = self.market_parser.current_data['timestamp']
+            market_time_old = ""
+            data = self.market_parser.get_market_data()
+            if data is not None:
+                market_time_old = self.market_parser.current_data['timestamp']
 
             # We start off on the Main Menu in the Station
             self.ap.stn_svcs_in_ship.goto_station_services()
@@ -294,11 +296,16 @@ class EDWayPoint:
             self.ap.ap_ckb('log+vce', "Downloading commodities data from market.")
 
             # Wait for market to update
-            self.market_parser.get_market_data()
-            market_time_new = self.market_parser.current_data['timestamp']
-            while market_time_new == market_time_old:
-                self.market_parser.get_market_data()
+            market_time_new = ""
+            data = self.market_parser.get_market_data()
+            if data is not None:
                 market_time_new = self.market_parser.current_data['timestamp']
+
+            while market_time_new == market_time_old:
+                market_time_new = ""
+                data = self.market_parser.get_market_data()
+                if data is not None:
+                    market_time_new = self.market_parser.current_data['timestamp']
                 sleep(1)  # wait for new menu to finish rendering
 
             cargo_capacity = ap.jn.ship_state()['cargo_capacity']
