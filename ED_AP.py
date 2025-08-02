@@ -535,7 +535,7 @@ class EDAutopilot:
 
         return scale, max_pick
 
-    def calibrate(self):
+    def calibrate_target(self):
         """ Routine to find the optimal scaling values for the template images. """
         msg = 'Select OK to begin Calibration. You must be in space and have a star system targeted in center screen.'
         self.vce.say(msg)
@@ -555,7 +555,7 @@ class EDAutopilot:
         self.overlay.overlay_paint()
 
         # Calibrate system target
-        self.calibrate_target()
+        self.calibrate_target_worker()
 
         # Clean up
         self.overlay.overlay_clear()
@@ -583,7 +583,7 @@ class EDAutopilot:
         self.overlay.overlay_paint()
 
         # Calibrate compass
-        self.calibrate_ship_compass()
+        self.calibrate_compass_worker()
 
         # Clean up
         self.overlay.overlay_clear()
@@ -591,7 +591,7 @@ class EDAutopilot:
 
         self.ap_ckb('log+vce', 'Calibration complete.')
 
-    def calibrate_target(self):
+    def calibrate_target_worker(self):
         """ Calibrate target """
         range_low = 30
         range_high = 200
@@ -630,7 +630,7 @@ class EDAutopilot:
         # reload the templates with the new (or previous value)
         self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale)
 
-    def calibrate_ship_compass(self):
+    def calibrate_compass_worker(self):
         """ Calibrate Compass """
         range_low = 30
         range_high = 200

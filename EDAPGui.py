@@ -315,7 +315,7 @@ class APGui():
         self.entries['ship']['SunPitchUp+Time'].insert(0, self.ed_ap.sunpitchuptime)
 
     def calibrate_callback(self):
-        self.ed_ap.calibrate()
+        self.ed_ap.calibrate_target()
 
     def calibrate_compass_callback(self):
         self.ed_ap.calibrate_compass()
