@@ -217,7 +217,10 @@ class EDGalaxyMap:
             self.ap.ship_control.goto_cockpit_view()
             # Goto Galaxy Map
             self.keys.send('GalaxyMapOpen')
+
             # Wait for map to load
+            if not self.status_parser.wait_for_gui_focus(GuiFocusGalaxyMap):
+                logger.debug("goto_galaxy_map: Galaxy map did not open.")
 
             # TODO - check this to OCR check
             sleep(2)

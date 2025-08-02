@@ -95,6 +95,10 @@ class EDSystemMap:
             # Goto System Map
             self.ap.keys.send('SystemMapOpen')
 
+            # Wait for map to load
+            if not self.status_parser.wait_for_gui_focus(GuiFocusSystemMap):
+                logger.debug("goto_galaxy_map: System map did not open.")
+
             # TODO - Add OCR to check screen loaded
             sleep(3.5)
         else:
