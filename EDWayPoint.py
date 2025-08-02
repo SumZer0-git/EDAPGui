@@ -302,7 +302,7 @@ class EDWayPoint:
                 sleep(1)  # wait for new menu to finish rendering
 
             cargo_capacity = ap.jn.ship_state()['cargo_capacity']
-            logger.info(f"Execute trade: Current cargo capacity: {cargo_capacity}")
+            logger.info(f"Execute trade: Ship's max cargo capacity: {cargo_capacity}")
 
             # --------- SELL ----------
             if len(sell_commodities) > 0:
