@@ -1132,9 +1132,9 @@ class EDAutopilot:
 
         # Performs left menu ops to request docking
 
-    def request_docking(self, toCONTACT):
+    def request_docking(self):
         """ Request docking from Nav Panel. """
-        self.nav_panel.request_docking(toCONTACT)
+        self.nav_panel.request_docking()
 
     def dock(self):
         """ Docking sequence.  Assumes in normal space, will get closer to the Station
@@ -1162,15 +1162,14 @@ class EDAutopilot:
         self.keys.send('SetSpeedZero', repeat=2)
         sleep(3)  # Wait for ship to come to stop
         self.ap_ckb('log+vce', "Initiating Docking Procedure")
-        self.request_docking(1)
+        # Request docking through Nav panel.
+        self.request_docking()
         sleep(1)
 
         tries = self.config['DockingRetries']
         granted = False
         if self.jn.ship_state()['status'] == "dockinggranted":
             granted = True
-            # Go back to navigation tab
-            self.request_docking_cleanup()
         else:
             for i in range(tries):
                 if self.jn.ship_state()['no_dock_reason'] == "Distance":
@@ -1178,13 +1177,15 @@ class EDAutopilot:
                     sleep(5)
                     self.keys.send('SetSpeedZero', repeat=2)
                 sleep(3)  # Wait for ship to come to stop
-                self.request_docking(0)
+                # Request docking through Nav panel.
+                self.request_docking()
                 self.keys.send('SetSpeedZero', repeat=2)
+
                 sleep(1.5)
                 if self.jn.ship_state()['status'] == "dockinggranted":
                     granted = True
                     # Go back to navigation tab
-                    self.request_docking_cleanup()
+                    #self.request_docking_cleanup()
                     break
                 if self.jn.ship_state()['status'] == "dockingdenied":
                     pass
@@ -1194,6 +1195,7 @@ class EDAutopilot:
             logger.warning('Did not get docking authorization, reason:'+str(self.jn.ship_state()['no_dock_reason']))
             raise Exception('Docking failed (Did not get docking authorization)')
         else:
+            self.ap_ckb('log+vce', "Docking request granted")
             # allow auto dock to take over
             for i in range(self.config['WaitForAutoDockTimer']):
                 sleep(1)
@@ -1214,10 +1216,6 @@ class EDAutopilot:
             self.ap_ckb('log', 'Auto dock timer timed out.')
             logger.warning('Auto dock timer timed out. Aborting Docking.')
             raise Exception('Docking failed (Auto dock timer timed out)')
-
-    def request_docking_cleanup(self):
-        """ After request docking, go back to NAVIGATION tab in Nav Panel from the CONTACTS tab. """
-        self.nav_panel.request_docking_cleanup()
 
     def is_sun_dead_ahead(self, scr_reg):
         return scr_reg.sun_percent(scr_reg.screen) > 5
