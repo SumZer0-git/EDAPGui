@@ -493,7 +493,7 @@ class EDAutopilot:
             self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
 
             # do image matching on the compass and the target
-            image, (minVal, maxVal, minLoc, maxLoc), match = self.scrReg.match_template_in_region(reg_name, templ_name)
+            image, (minVal, maxVal, minLoc, maxLoc), match = self.scrReg.match_template_in_region_x3(reg_name, templ_name)
 
             border = 10  # border to prevent the box from interfering with future matches
             reg_pos = self.scrReg.reg[reg_name]['rect']
@@ -735,7 +735,7 @@ class EDAutopilot:
 
     def have_destination(self, scr_reg) -> bool:
         """ Check to see if the compass is on the screen. """
-        icompass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('compass', 'compass')
+        icompass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region_x3('compass', 'compass')
 
         logger.debug("has_destination:"+str(maxVal))
 
@@ -793,13 +793,13 @@ class EDAutopilot:
          Returns the x,y,z value as x,y in degrees (-90 to 90) and z as 1 or -1.
          {'roll': r, 'pit': p, 'yaw': y}
          Where 'roll' is:
-            -180deg (6 o'oclock anticlockwise) to
+            -180deg (6 o'clock anticlockwise) to
              0deg (12 o'clock) to
-             180deg (6 o'oclock clockwise)
+             180deg (6 o'clock clockwise)
          """
 
         icompass_image, (minVal, maxVal, minLoc, maxLoc), match = (
-            scr_reg.match_template_in_region('compass', 'compass'))
+            scr_reg.match_template_in_region_x3('compass', 'compass'))
 
         pt = maxLoc
 
@@ -812,10 +812,11 @@ class EDAutopilot:
         # cut out the compass from the region
         pad = 5
         compass_image = icompass_image[abs(pt[1]-pad): pt[1]+c_hgt+pad, abs(pt[0]-pad): pt[0]+c_wid+pad].copy()
+        compass_image_gray = cv2.cvtColor(compass_image, cv2.COLOR_BGR2GRAY)
 
         # find the nav point within the compass box
         navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = (
-            scr_reg.match_template_in_image(compass_image, 'navpoint'))
+            scr_reg.match_template_in_image(compass_image_gray, 'navpoint'))
         n_pt = n_maxLoc
 
         compass_x_min = pad
@@ -828,7 +829,7 @@ class EDAutopilot:
 
             # find the nav point within the compass box using the -behind template
             navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = (
-                scr_reg.match_template_in_image(compass_image, 'navpoint-behind'))
+                scr_reg.match_template_in_image(compass_image_gray, 'navpoint-behind'))
             n_pt = n_maxLoc
         else:
             final_z_pct = 1.0  # Ahead
@@ -878,7 +879,8 @@ class EDAutopilot:
                   'roll': round(final_roll_deg, 2), 'pit': round(final_pit_deg, 2), 'yaw': round(final_yaw_deg, 2)}
 
         if self.cv_view:
-            icompass_image_d = cv2.cvtColor(icompass_image, cv2.COLOR_GRAY2RGB)
+            #icompass_image_d = cv2.cvtColor(compass_image_gray, cv2.COLOR_GRAY2RGB)
+            icompass_image_d = compass_image
             self.draw_match_rect(icompass_image_d, pt, (pt[0]+c_wid, pt[1]+c_hgt), (0, 0, 255), 2)
             #cv2.rectangle(icompass_image_display, pt, (pt[0]+c_wid, pt[1]+c_hgt), (0, 0, 255), 2)
             #self.draw_match_rect(compass_image, n_pt, (n_pt[0] + wid, n_pt[1] + hgt), (255,255,255), 2)
