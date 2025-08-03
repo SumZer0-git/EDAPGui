@@ -67,7 +67,7 @@ class EDAutopilot:
             "NavAlignTries": 3,            #
             "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel
             "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
-            "WaitForAutoDockTimer": 120,   # After docking granted, wait this amount of time for us to get docked with autodocking
+            "WaitForAutoDockTimer": 240,   # After docking granted, wait this amount of time for us to get docked with autodocking
             "SunBrightThreshold": 125,     # The low level for brightness detection, range 0-255, want to mask out darker items
             "FuelScoopTimeOut": 35,        # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
             "DockingRetries": 30,          # number of time to attempt docking
