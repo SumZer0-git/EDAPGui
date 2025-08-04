@@ -191,7 +191,38 @@ class Screen_Regions:
         match = cv2.matchTemplate(image, self.templates.template[template]['image'], cv2.TM_CCOEFF_NORMED)
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(match)
         return image, (minVal, maxVal, minLoc, maxLoc), match     
-    
+
+    def match_template_in_image_x3(self, image, templ_name):
+        """ Attempt to match the given template in the (unfiltered) image.
+        The image is split into separate HSV channels, each channel tested and the best result kept.
+        Returns the original image, detail of match and the match mask. """
+        templ = self.templates.template[templ_name]['image']
+
+        # Convert to HSV and split.
+        img_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        h, s, v = cv2.split(img_hsv)
+        hsv_comb = np.concatenate((h, s, v), axis=1)  # Combine 3 images
+        cv2.imshow("Split HSV", hsv_comb)
+
+        # Perform matches
+        match_h = cv2.matchTemplate(h, templ, cv2.TM_CCOEFF_NORMED)
+        match_s = cv2.matchTemplate(s, templ, cv2.TM_CCOEFF_NORMED)
+        match_v = cv2.matchTemplate(v, templ, cv2.TM_CCOEFF_NORMED)
+        (minVal_h, maxVal_h, minLoc_h, maxLoc_h) = cv2.minMaxLoc(match_h)
+        (minVal_s, maxVal_s, minLoc_s, maxLoc_s) = cv2.minMaxLoc(match_s)
+        (minVal_v, maxVal_v, minLoc_v, maxLoc_v) = cv2.minMaxLoc(match_v)
+        match_comb = np.concatenate((match_h, match_s, match_v), axis=1)  # Combine 3 images
+        cv2.imshow("Split Matches", match_comb)
+
+        # Get best result
+        # V is likely the best match, so check it first
+        if maxVal_v > maxVal_s and maxVal_v > maxVal_h:
+            return image, (minVal_v, maxVal_v, minLoc_v, maxLoc_v), match_v
+        # S is likely the 2nd best match, so check it
+        if maxVal_s > maxVal_h:
+            return image, (minVal_s, maxVal_s, minLoc_s, maxLoc_s), match_s
+        # H must be the best match
+        return image, (minVal_h, maxVal_h, minLoc_h, maxLoc_h), match_h
 
     def equalize(self, image=None, noOp=None):
         # Load the image in greyscale

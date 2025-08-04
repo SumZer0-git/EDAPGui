@@ -812,11 +812,12 @@ class EDAutopilot:
         # cut out the compass from the region
         pad = 5
         compass_image = icompass_image[abs(pt[1]-pad): pt[1]+c_hgt+pad, abs(pt[0]-pad): pt[0]+c_wid+pad].copy()
-        compass_image_gray = cv2.cvtColor(compass_image, cv2.COLOR_BGR2GRAY)
+        #compass_image_gray = cv2.cvtColor(compass_image, cv2.COLOR_BGR2GRAY)
+        compass_image_gray =  self.scrReg.equalize(compass_image)
 
         # find the nav point within the compass box
         navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = (
-            scr_reg.match_template_in_image(compass_image_gray, 'navpoint'))
+            scr_reg.match_template_in_image_x3(compass_image, 'navpoint'))
         n_pt = n_maxLoc
 
         compass_x_min = pad
@@ -829,7 +830,7 @@ class EDAutopilot:
 
             # find the nav point within the compass box using the -behind template
             navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = (
-                scr_reg.match_template_in_image(compass_image_gray, 'navpoint-behind'))
+                scr_reg.match_template_in_image_x3(compass_image, 'navpoint-behind'))
             n_pt = n_maxLoc
         else:
             final_z_pct = 1.0  # Ahead
