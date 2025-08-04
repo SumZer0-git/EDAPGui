@@ -156,8 +156,7 @@ class Screen_Regions:
         """ Attempt to match the given template in the given region which is unfiltered.
         The region's image is split into separate HSV channels, each channel tested and the best result kept.
         Returns the image, detail of match and the match mask. """
-        img_region = self.screen.get_screen_region(self.reg[region_name]['rect'], False)
-        img_region = cv2.cvtColor(img_region, cv2.COLOR_RGBA2BGR)
+        img_region = self.screen.get_screen_region(self.reg[region_name]['rect'], rgb=False)
         templ = self.templates.template[templ_name]['image']
 
         # Convert to HSV and split.

@@ -156,11 +156,11 @@ class Screen:
         return s
 
     # reg defines a box as a percentage of screen width and height
-    def get_screen_region(self, reg, inv_col=True):
-        image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]), inv_col)
+    def get_screen_region(self, reg, rgb=True):
+        image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]), rgb)
         return image
 
-    def get_screen(self, x_left, y_top, x_right, y_bot, inv_col=True):    # if absolute need to scale??
+    def get_screen(self, x_left, y_top, x_right, y_bot, rgb=True):    # if absolute need to scale??
         monitor = {
             "top": self.mon["top"] + y_top,
             "left": self.mon["left"] + x_left,
@@ -170,7 +170,7 @@ class Screen:
         }
         image = array(self.mss.grab(monitor))
         # TODO - mss.grab returns the image in BGR format, so no need to convert to RGB2BGR
-        if inv_col:
+        if rgb:
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         return image
         
