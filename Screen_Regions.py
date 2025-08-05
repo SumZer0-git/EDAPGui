@@ -201,8 +201,8 @@ class Screen_Regions:
         # Convert to HSV and split.
         img_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         h, s, v = cv2.split(img_hsv)
-        hsv_comb = np.concatenate((h, s, v), axis=1)  # Combine 3 images
-        cv2.imshow("Split HSV", hsv_comb)
+        # hsv_comb = np.concatenate((h, s, v), axis=1)  # Combine 3 images
+        # cv2.imshow("Split HSV", hsv_comb)
 
         # Perform matches
         match_h = cv2.matchTemplate(h, templ, cv2.TM_CCOEFF_NORMED)
@@ -211,8 +211,8 @@ class Screen_Regions:
         (minVal_h, maxVal_h, minLoc_h, maxLoc_h) = cv2.minMaxLoc(match_h)
         (minVal_s, maxVal_s, minLoc_s, maxLoc_s) = cv2.minMaxLoc(match_s)
         (minVal_v, maxVal_v, minLoc_v, maxLoc_v) = cv2.minMaxLoc(match_v)
-        match_comb = np.concatenate((match_h, match_s, match_v), axis=1)  # Combine 3 images
-        cv2.imshow("Split Matches", match_comb)
+        # match_comb = np.concatenate((match_h, match_s, match_v), axis=1)  # Combine 3 images
+        # cv2.imshow("Split Matches", match_comb)
 
         # Get best result
         # V is likely the best match, so check it first
