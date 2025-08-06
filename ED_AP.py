@@ -104,6 +104,7 @@ class EDAutopilot:
             "EnableEDMesg": False,
             "EDMesgActionsPort": 15570,
             "EDMesgEventsPort": 15571,
+            "DebugOverlay": False,
         }
         # NOTE!!! When adding a new config value above, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
@@ -150,6 +151,8 @@ class EDAutopilot:
                 cnf['EDMesgActionsPort'] = 15570
             if 'EDMesgEventsPort' not in cnf:
                 cnf['EDMesgEventsPort'] = 15571
+            if 'DebugOverlay' not in cnf:
+                cnf['DebugOverlay'] = False
             self.config = cnf
             logger.debug("read AP json:"+str(cnf))
         else:
@@ -260,6 +263,8 @@ class EDAutopilot:
         self.overlay.overlay_set_pos(self.config['OverlayTextXOffset'], self.config['OverlayTextYOffset'])
         # must be called after we initialized the objects above
         self.update_overlay()
+
+        self.debug_overlay = self.config['DebugOverlay']
 
         # debug window
         self.cv_view = self.config['Enable_CV_View']
@@ -1052,6 +1057,13 @@ class EDAutopilot:
             sim = self.ocr.string_similarity(self.locale["PRESS_TO_DISENGAGE_MSG"], str(ocr_textlist))
             logger.info(f"Disengage similarity with {str(ocr_textlist)} is {sim}")
 
+        # Draw box around region
+        if self.debug_overlay:
+            abs_rect = scr_reg.reg['disengage']['rect']
+            self.overlay.overlay_rect1('sc_disengage_active', abs_rect, (0, 255, 0), 2)
+            self.overlay.overlay_floating_text('sc_disengage_active', f'{str(ocr_textlist)}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
+            self.overlay.overlay_paint()
+
         if self.cv_view:
             image = cv2.rectangle(image, (0, 0), (1000, 30), (0, 0, 0), -1)
             cv2.putText(image, f'Text: {str(ocr_textlist)}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
@@ -1489,6 +1501,13 @@ class EDAutopilot:
                 logger.debug("sc_target_align lost target")
                 self.ap_ckb('log', 'Target lost, attempting re-alignment.')
                 return  ScTargetAlignReturn.Lost
+
+        # TODO - find a better way to clear these
+        if self.debug_overlay:
+            sleep(2)
+            self.overlay.overlay_remove_rect('sc_disengage_active')
+            self.overlay.overlay_remove_floating_text('sc_disengage_active')
+            self.overlay.overlay_paint()
 
         return  ScTargetAlignReturn.Found
 
@@ -2117,6 +2136,13 @@ class EDAutopilot:
                     self.keys.send('HyperSuperCombination')
                     self.stop_sco_monitoring()
                     break
+
+        # TODO - find a better way to clear these
+        if self.debug_overlay:
+            sleep(2)
+            self.overlay.overlay_remove_rect('sc_disengage_active')
+            self.overlay.overlay_remove_floating_text('sc_disengage_active')
+            self.overlay.overlay_paint()
 
         # if no error, we must have gotten disengage
         if not align_failed and do_docking:
