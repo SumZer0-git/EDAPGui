@@ -127,37 +127,31 @@ class EDAutopilot:
         cnf = self.read_config()
         # if we read it then point to it, otherwise use the default table above
         if cnf is not None:
-            if len(cnf) != len(self.config):
-                # If configs of different lengths, then a new parameter was added.
-                # self.write_config(self.config)
-                # Add default values for new entries
-                if 'SunBrightThreshold' not in cnf:
-                    cnf['SunBrightThreshold'] = 125
-                if 'TargetScale' not in cnf:
-                    cnf['TargetScale'] = 1.0
-                if 'TCEDestinationFilepath' not in cnf:
-                    cnf['TCEDestinationFilepath'] = "C:\\TCE\\DUMP\\Destination.json"
-                if 'TCEInstallationPath' not in cnf:
-                    cnf['TCEInstallationPath'] = "C:\\TCE"
-                if 'AutomaticLogout' not in cnf:
-                    cnf['AutomaticLogout'] = False
-                if 'FCDepartureTime' not in cnf:
-                    cnf['FCDepartureTime'] = 5.0
-                if 'Language' not in cnf:
-                    cnf['Language'] = 'en'
-                if 'OCRLanguage' not in cnf:
-                    cnf['OCRLanguage'] = 'en'
-                if 'EnableEDMesg' not in cnf:
-                    cnf['EnableEDMesg'] = False
-                if 'EDMesgActionsPort' not in cnf:
-                    cnf['EDMesgActionsPort'] = 15570
-                if 'EDMesgEventsPort' not in cnf:
-                    cnf['EDMesgEventsPort'] = 15571
-                self.config = cnf
-                logger.debug("read AP json:"+str(cnf))
-            else:
-                self.config = cnf
-                logger.debug("read AP json:"+str(cnf))
+            # NOTE!!! Add default values for new entries below!
+            if 'SunBrightThreshold' not in cnf:
+                cnf['SunBrightThreshold'] = 125
+            if 'TargetScale' not in cnf:
+                cnf['TargetScale'] = 1.0
+            if 'TCEDestinationFilepath' not in cnf:
+                cnf['TCEDestinationFilepath'] = "C:\\TCE\\DUMP\\Destination.json"
+            if 'TCEInstallationPath' not in cnf:
+                cnf['TCEInstallationPath'] = "C:\\TCE"
+            if 'AutomaticLogout' not in cnf:
+                cnf['AutomaticLogout'] = False
+            if 'FCDepartureTime' not in cnf:
+                cnf['FCDepartureTime'] = 5.0
+            if 'Language' not in cnf:
+                cnf['Language'] = 'en'
+            if 'OCRLanguage' not in cnf:
+                cnf['OCRLanguage'] = 'en'
+            if 'EnableEDMesg' not in cnf:
+                cnf['EnableEDMesg'] = False
+            if 'EDMesgActionsPort' not in cnf:
+                cnf['EDMesgActionsPort'] = 15570
+            if 'EDMesgEventsPort' not in cnf:
+                cnf['EDMesgEventsPort'] = 15571
+            self.config = cnf
+            logger.debug("read AP json:"+str(cnf))
         else:
             self.write_config(self.config)
 
