@@ -66,9 +66,9 @@ if not exist "venv\Scripts\python.exe" (
     )
     
     echo Installing requirements...
-    venv\Scripts\pip.exe install --upgrade pip
-    venv\Scripts\pip.exe install -r requirements.txt
-    
+    venv\Scripts\python -m pip install --upgrade pip
+    venv\Scripts\python -m pip install -r requirements.txt
+
     if %errorlevel% neq 0 (
         echo Error: Failed to install requirements
         pause
