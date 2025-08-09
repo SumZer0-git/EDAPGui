@@ -55,6 +55,7 @@ class ScTargetAlignReturn(Enum):
     Found = 2
     Disengage = 3
 
+
 class EDAutopilot:
 
     def __init__(self, cb, doThread=True):
@@ -997,7 +998,13 @@ class EDAutopilot:
         width = scr_reg.templates.template['disengage']['width']
         height = scr_reg.templates.template['disengage']['height']
 
-        reg_rect = scr_reg.reg['disengage']['rect']
+        # # Draw box around region
+        # reg_rect = scr_reg.reg['disengage']['rect']
+        # if self.debug_overlay:
+        #     abs_rect = [pt[0] + reg_rect[0], pt[1] + reg_rect[1], pt[0] + reg_rect[0] + width, pt[1] + reg_rect[1] + height]
+        #     self.overlay.overlay_rect1('sc_disengage_label_up', abs_rect, (0, 255, 0), 2)
+        #     self.overlay.overlay_floating_text('sc_disengage_label_up', f'Match: {maxVal:5.4f} > {scr_reg.disengage_thresh}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
+        #     self.overlay.overlay_paint()
 
         if self.cv_view:
             self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
@@ -1505,6 +1512,8 @@ class EDAutopilot:
         # TODO - find a better way to clear these
         if self.debug_overlay:
             sleep(2)
+            # self.overlay.overlay_remove_rect('sc_disengage_label_up')
+            # self.overlay.overlay_remove_floating_text('sc_disengage_label_up')
             self.overlay.overlay_remove_rect('sc_disengage_active')
             self.overlay.overlay_remove_floating_text('sc_disengage_active')
             self.overlay.overlay_paint()
