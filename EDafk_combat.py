@@ -48,12 +48,7 @@ class AFK_Combat:
         des = self.jn.ship_state()['fighter_destroyed']
         self.jn.ship_state()['fighter_destroyed'] = False    # reset it to false after we read it
         return des
- 
-    def set_focus_elite_window(self):
-        handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")   
-        if handle != None:
-            win32gui.SetForegroundWindow(handle)  # give focus to ED
-        
+
     def evade(self):
         # boost and prep for supercruise
         if self.voice != None:

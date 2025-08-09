@@ -11,6 +11,7 @@ from xml.etree.ElementTree import parse
 import win32gui
 import xmltodict
 
+from Screen import set_focus_elite_window
 from directinput import *
 from EDlogger import logger
 
@@ -20,14 +21,6 @@ Description:  Pulls the keybindings for specific controls from the ED Key Bindin
 
 Constraints:  This file will use the latest modified *.binds file
 """
-
-
-def set_focus_elite_window():
-    """ set focus to the ED window, if ED does not have focus then the keystrokes will go to the window
-    that does have focus. """
-    handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
-    if handle != 0:
-        win32gui.SetForegroundWindow(handle)  # give focus to ED
 
 
 @final

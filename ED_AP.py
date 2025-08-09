@@ -544,7 +544,7 @@ class EDAutopilot:
 
         self.ap_ckb('log+vce', 'Calibration starting.')
 
-        self.set_focus_elite_window()
+        set_focus_elite_window()
 
         # Draw the target and compass regions on the screen
         key = 'target'
@@ -572,7 +572,7 @@ class EDAutopilot:
 
         self.ap_ckb('log+vce', 'Calibration starting.')
 
-        self.set_focus_elite_window()
+        set_focus_elite_window()
 
         # Draw the target and compass regions on the screen
         key = 'compass'
@@ -1776,14 +1776,6 @@ class EDAutopilot:
             self.pitchUp(15)  # if not refueling pitch up somemore so we won't heat up
             return False
 
-
-    # set focus to the ED window, if ED does not have focus then the key strokes will go to the window
-    # that does have focus
-    def set_focus_elite_window(self):
-        handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
-        if handle != 0:
-            win32gui.SetForegroundWindow(handle)  # give focus to ED
-
     def waypoint_undock_seq(self):
         self.update_ap_status("Executing Undocking/Launch")
 
@@ -2189,7 +2181,7 @@ class EDAutopilot:
     def afk_combat_loop(self):
         while True:
             if self.afk_combat.check_shields_up() == False:
-                self.set_focus_elite_window()
+                set_focus_elite_window()
                 self.vce.say("Shields down, evading")
                 self.afk_combat.evade()
                 # after supercruise the menu is reset to top
@@ -2197,7 +2189,7 @@ class EDAutopilot:
                 break
 
             if self.afk_combat.check_fighter_destroyed() == True:
-                self.set_focus_elite_window()
+                set_focus_elite_window()
                 self.vce.say("Fighter Destroyed, redeploying")
                 self.afk_combat.launch_fighter()  # assuming two fighter bays
 
@@ -2211,7 +2203,7 @@ class EDAutopilot:
                 if cur_star_system != self._prev_star_system:
                     self.update_ap_status("DSS Scan")
                     self.ap_ckb('log', 'DSS Scan: '+cur_star_system)
-                    self.set_focus_elite_window()
+                    set_focus_elite_window()
                     self.honk()
                     self._prev_star_system = cur_star_system
                     self.update_ap_status("Idle")
@@ -2384,7 +2376,7 @@ class EDAutopilot:
 
             if self.fsd_assist_enabled == True:
                 logger.debug("Running fsd_assist")
-                self.set_focus_elite_window()
+                set_focus_elite_window()
                 self.update_overlay()
                 self.jump_cnt = 0
                 self.refuel_cnt = 0
@@ -2417,7 +2409,7 @@ class EDAutopilot:
 
             elif self.sc_assist_enabled == True:
                 logger.debug("Running sc_assist")
-                self.set_focus_elite_window()
+                set_focus_elite_window()
                 self.update_overlay()
                 try:
                     self.update_ap_status("SC to Target")
@@ -2436,7 +2428,7 @@ class EDAutopilot:
             elif self.waypoint_assist_enabled == True:
                 logger.debug("Running waypoint_assist")
 
-                self.set_focus_elite_window()
+                set_focus_elite_window()
                 self.update_overlay()
                 self.jump_cnt = 0
                 self.refuel_cnt = 0
@@ -2456,7 +2448,7 @@ class EDAutopilot:
 
             elif self.robigo_assist_enabled == True:
                 logger.debug("Running robigo_assist")
-                self.set_focus_elite_window()
+                set_focus_elite_window()
                 self.update_overlay()
                 try:
                     self.robigo_assist()
@@ -2482,7 +2474,7 @@ class EDAutopilot:
 
             elif self.dss_assist_enabled == True:
                 logger.debug("Running dss_assist")
-                self.set_focus_elite_window()
+                set_focus_elite_window()
                 self.update_overlay()
                 try:
                     self.dss_assist()
@@ -2558,7 +2550,7 @@ class EDAutopilot:
             self.ap_ckb('log', "Select a target system and try again.")
             return
 
-        self.set_focus_elite_window()
+        set_focus_elite_window()
         sleep(0.25)
         self.keys.send('SetSpeed50')
         self.pitchUp(360)
@@ -2576,7 +2568,7 @@ class EDAutopilot:
             self.ap_ckb('log', "Select a target system and try again.")
             return
 
-        self.set_focus_elite_window()
+        set_focus_elite_window()
         sleep(0.25)
         self.keys.send('SetSpeed50')
         self.rotateLeft(360)
@@ -2594,7 +2586,7 @@ class EDAutopilot:
             self.ap_ckb('log', "Select a target system and try again.")
             return
 
-        self.set_focus_elite_window()
+        set_focus_elite_window()
         sleep(0.25)
         self.keys.send('SetSpeed50')
         self.yawLeft(360)

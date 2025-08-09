@@ -1,6 +1,7 @@
 from __future__ import annotations
 import typing
 import cv2
+import win32con
 import win32gui
 from numpy import array
 import mss
@@ -25,6 +26,25 @@ Author: sumzer0@yahoo.com
 #     img = ImageGrab.grab(bbox)
 
 elite_dangerous_window = "Elite - Dangerous (CLIENT)"
+
+
+def set_focus_elite_window():
+    """ set focus to the ED window, if ED does not have focus then the keystrokes will go to the window
+    that does have focus. """
+    ed_title = "Elite - Dangerous (CLIENT)"
+
+    # TODO - determine if GetWindowText is faster than FindWindow if ED is in foreground
+    if win32gui.GetWindowText(win32gui.GetForegroundWindow()) == ed_title:
+        return
+
+    handle = win32gui.FindWindow(0, ed_title)
+    if handle != 0:
+        try:
+            win32gui.ShowWindow(handle, win32con.SW_NORMAL)  # give focus to ED
+            win32gui.SetForegroundWindow(handle)  # give focus to ED
+        except:
+            print("set_focus_elite_window ERROR")
+            pass
 
 
 class Screen:
