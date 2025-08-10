@@ -1296,29 +1296,34 @@ class EDAutopilot:
         for ii in range(self.config['NavAlignTries']):
             off = self.get_nav_offset(scr_reg)
 
+            # Check if we are close enough already
             if abs(off['yaw']) < close and abs(off['pit']) < close:
                 break
 
-            for i in range(20):
-                # Calc roll time based on nav point location
-                if abs(off['roll']) > close and (180 - abs(off['roll']) > close):
-                    # first roll to get the nav point at the vertical position
-                    if off['yaw'] > 0 and off['pit'] > 0:
-                        # top right quad, then roll right to get to 90 up
-                        self.rotateRight(off['roll'])
-                    elif off['yaw'] > 0 > off['pit']:
-                        # bottom right quad, then roll left
-                        self.rotateLeft(180 - off['roll'])
-                    elif off['yaw'] < 0 < off['pit']:
-                        # top left quad, then roll left
-                        self.rotateLeft(-off['roll'])
+            # Roll if the nav point is not directly behind us.
+            if ((-180 + close) < off['yaw'] < (180 - close) and
+                    (-180 + close) < off['pit'] < (180 - close)):
+
+                for i in range(20):
+                    # Calc roll time based on nav point location
+                    if abs(off['roll']) > close and (180 - abs(off['roll']) > close):
+                        # first roll to get the nav point at the vertical position
+                        if off['yaw'] > 0 and off['pit'] > 0:
+                            # top right quad, then roll right to get to 90 up
+                            self.rotateRight(off['roll'])
+                        elif off['yaw'] > 0 > off['pit']:
+                            # bottom right quad, then roll left
+                            self.rotateLeft(180 - off['roll'])
+                        elif off['yaw'] < 0 < off['pit']:
+                            # top left quad, then roll left
+                            self.rotateLeft(-off['roll'])
+                        else:
+                            # bottom left quad, then roll right
+                            self.rotateRight(180 + off['roll'])
+                        sleep(1)
+                        off = self.get_nav_offset(scr_reg)
                     else:
-                        # bottom left quad, then roll right
-                        self.rotateRight(180 + off['roll'])
-                    sleep(1)
-                    off = self.get_nav_offset(scr_reg)
-                else:
-                    break
+                        break
 
             for i in range(20):
                 # Calc pitch time based on nav point location
@@ -1388,6 +1393,7 @@ class EDAutopilot:
               (off['x'] < -close) or \
               (off['y'] > close) or \
               (off['y'] < -close):
+
 
             #print("off:"+str(new))
             if off['x'] > close:
@@ -1507,7 +1513,7 @@ class EDAutopilot:
             if new is None:
                 logger.debug("sc_target_align lost target")
                 self.ap_ckb('log', 'Target lost, attempting re-alignment.')
-                return  ScTargetAlignReturn.Lost
+                return ScTargetAlignReturn.Lost
 
         # TODO - find a better way to clear these
         if self.debug_overlay:
@@ -1518,7 +1524,7 @@ class EDAutopilot:
             self.overlay.overlay_remove_floating_text('sc_disengage_active')
             self.overlay.overlay_paint()
 
-        return  ScTargetAlignReturn.Found
+        return ScTargetAlignReturn.Found
 
     def occluded_reposition(self, scr_reg):
         """ Reposition is use when the target is occluded by a planet or other.
