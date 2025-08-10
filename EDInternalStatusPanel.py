@@ -18,11 +18,11 @@ class EDInternalStatusPanel:
     def __init__(self, ed_ap, screen, keys, cb):
         self.ap = ed_ap
         self.ocr = ed_ap.ocr
-        self.locale = self.ap.locale
         self.screen = screen
         self.keys = keys
-        self.status_parser = StatusParser()
         self.ap_ckb = cb
+        self.locale = self.ap.locale
+        self.status_parser = StatusParser()
 
         self.modules_tab_text = self.locale["INT_PNL_TAB_MODULES"]
         self.fire_groups_tab_text = self.locale["INT_PNL_TAB_FIRE_GROUPS"]
@@ -38,7 +38,7 @@ class EDInternalStatusPanel:
         self.nav_pnl_tab_height = 35  # Nav panel tab height in pixels at 1920x1080
 
     def show_right_panel(self):
-        """ Shows the Internal (Right) Panel. Opens the Internal Panel if not already open.
+        """ Shows the Internal (Right) Panel.
         Returns True if successful, else False.
         """
         logger.debug("show_right_panel: entered")
@@ -125,7 +125,7 @@ class EDInternalStatusPanel:
         # Try this 'n' times before giving up
         tab_text = ""
         for i in range(10):
-            # Is open, so proceed
+            # Take screenshot of the panel
             image = self.ocr.capture_region_pct(self.reg['right_panel'])
             # tab_bar = self.capture_tab_bar()
             # if tab_bar is None:
@@ -140,7 +140,7 @@ class EDInternalStatusPanel:
                 logger.debug("is_right_panel_active: image selected")
                 logger.debug(f"is_right_panel_active: OCR: {ocr_textlist}")
 
-                # Over OCR result
+                # Overlay OCR result
                 if self.ap.debug_overlay:
                     self.ap.overlay.overlay_floating_text('right_panel_text', f'{ocr_textlist}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
                     self.ap.overlay.overlay_paint()
@@ -187,15 +187,11 @@ class EDInternalStatusPanel:
             return False, ""
 
     def hide_right_panel(self):
-        """ Hides the Nav Panel if open.
+        """ Hides the Internal Panel if open.
         """
-        # active, active_tab_name = self.is_nav_panel_active()
-        # if active is not None:
-
-        # Is nav panel active?
+        # Is internal panel active?
         if self.status_parser.get_gui_focus() == GuiFocusInternalPanel:
-            self.keys.send("UI_Back")
-            self.keys.send("HeadLookReset")
+            self.ap.ship_control.goto_cockpit_view()
 
     def transfer_to_fleetcarrier(self, ap):
         """ Transfer all goods to Fleet Carrier """
