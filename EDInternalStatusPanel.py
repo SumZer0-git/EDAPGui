@@ -18,11 +18,11 @@ class EDInternalStatusPanel:
     def __init__(self, ed_ap, screen, keys, cb):
         self.ap = ed_ap
         self.ocr = ed_ap.ocr
-        self.locale = self.ap.locale
         self.screen = screen
         self.keys = keys
-        self.status_parser = StatusParser()
         self.ap_ckb = cb
+        self.locale = self.ap.locale
+        self.status_parser = StatusParser()
 
         self.modules_tab_text = self.locale["INT_PNL_TAB_MODULES"]
         self.fire_groups_tab_text = self.locale["INT_PNL_TAB_FIRE_GROUPS"]
@@ -31,14 +31,14 @@ class EDInternalStatusPanel:
         self.storage_tab_text = self.locale["INT_PNL_TAB_STORAGE"]
         self.status_tab_text = self.locale["INT_PNL_TAB_STATUS"]
 
-        # The rect is top left x, y, and bottom right x, y in fraction of screen resolution
-        self.reg = {'right_panel': {'rect': [0.25, 0.0, 1.0, 0.5]}}
+        # The rect is [L, T, R, B] top left x, y, and bottom right x, y in fraction of screen resolution
+        self.reg = {'right_panel': {'rect': [0.2, 0.2, 1.0, 0.35]}}
 
         self.nav_pnl_tab_width = 140  # Nav panel tab width in pixels at 1920x1080
         self.nav_pnl_tab_height = 35  # Nav panel tab height in pixels at 1920x1080
 
     def show_right_panel(self):
-        """ Shows the Internal (Right) Panel. Opens the Internal Panel if not already open.
+        """ Shows the Internal (Right) Panel.
         Returns True if successful, else False.
         """
         logger.debug("show_right_panel: entered")
@@ -116,9 +116,16 @@ class EDInternalStatusPanel:
 
         logger.debug("is_right_panel_active: right panel is focused")
 
+        # Draw box around region
+        abs_rect = self.screen.screen_rect_to_abs(self.reg['right_panel']['rect'])
+        if self.ap.debug_overlay:
+            self.ap.overlay.overlay_rect1('right_panel_active', abs_rect, (0, 255, 0), 2)
+            self.ap.overlay.overlay_paint()
+
         # Try this 'n' times before giving up
+        tab_text = ""
         for i in range(10):
-            # Is open, so proceed
+            # Take screenshot of the panel
             image = self.ocr.capture_region_pct(self.reg['right_panel'])
             # tab_bar = self.capture_tab_bar()
             # if tab_bar is None:
@@ -132,18 +139,31 @@ class EDInternalStatusPanel:
             if img_selected is not None:
                 logger.debug("is_right_panel_active: image selected")
                 logger.debug(f"is_right_panel_active: OCR: {ocr_textlist}")
+
+                # Overlay OCR result
+                if self.ap.debug_overlay:
+                    self.ap.overlay.overlay_floating_text('right_panel_text', f'{ocr_textlist}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
+                    self.ap.overlay.overlay_paint()
+
+                # Test OCR string
                 if self.modules_tab_text in str(ocr_textlist):
-                    return True, self.modules_tab_text
+                    tab_text = self.modules_tab_text
+                    break
                 if self.fire_groups_tab_text in str(ocr_textlist):
-                    return True, self.fire_groups_tab_text
+                    tab_text = self.fire_groups_tab_text
+                    break
                 if self.ship_tab_text in str(ocr_textlist):
-                    return True, self.ship_tab_text
+                    tab_text = self.ship_tab_text
+                    break
                 if self.inventory_tab_text in str(ocr_textlist):
-                    return True, self.inventory_tab_text
+                    tab_text = self.inventory_tab_text
+                    break
                 if self.storage_tab_text in str(ocr_textlist):
-                    return True, self.storage_tab_text
+                    tab_text = self.storage_tab_text
+                    break
                 if self.status_tab_text in str(ocr_textlist):
-                    return True, self.status_tab_text
+                    tab_text = self.status_tab_text
+                    break
             else:
                 logger.debug("is_right_panel_active: no image selected")
 
@@ -153,19 +173,25 @@ class EDInternalStatusPanel:
             # In case we are on a picture tab, cycle to the next tab
             self.keys.send('CycleNextPanel')
 
-        # Did not find anything
-        return False, ""
+        # Clean up screen
+        if self.ap.debug_overlay:
+            sleep(2)
+            self.ap.overlay.overlay_remove_rect('right_panel_active')
+            self.ap.overlay.overlay_remove_floating_text('right_panel_text')
+            self.ap.overlay.overlay_paint()
+
+        # Return Tab text or nothing
+        if tab_text != "":
+            return True, tab_text
+        else:
+            return False, ""
 
     def hide_right_panel(self):
-        """ Hides the Nav Panel if open.
+        """ Hides the Internal Panel if open.
         """
-        # active, active_tab_name = self.is_nav_panel_active()
-        # if active is not None:
-
-        # Is nav panel active?
+        # Is internal panel active?
         if self.status_parser.get_gui_focus() == GuiFocusInternalPanel:
-            self.keys.send("UI_Back")
-            self.keys.send("HeadLookReset")
+            self.ap.ship_control.goto_cockpit_view()
 
     def transfer_to_fleetcarrier(self, ap):
         """ Transfer all goods to Fleet Carrier """
@@ -235,11 +261,20 @@ class EDInternalStatusPanel:
         print("End of transfer from FC")
 
 
+def dummy_cb(msg, body=None):
+    pass
+
+
 # Usage Example
 if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)  # Default to log all debug when running this file.
-    scr = Screen(cb=None)
-    mykeys = EDKeys(cb=None)
+    from ED_AP import EDAutopilot
+    ap = EDAutopilot(cb=dummy_cb)
+    scr = ap.scr
+    mykeys = ap.keys
     mykeys.activate_window = True  # Helps with single steps testing
-    nav_pnl = EDInternalStatusPanel(scr, mykeys, None, None)
+
+    from Screen import set_focus_elite_window
+    set_focus_elite_window()
+    nav_pnl = EDInternalStatusPanel(ap, scr, mykeys, dummy_cb)
     nav_pnl.show_inventory_tab()

@@ -3,6 +3,7 @@ from __future__ import annotations
 from EDAP_data import GuiFocusSystemMap
 from EDlogger import logger
 from OCR import OCR
+from Screen_Regions import reg_scale_for_station
 from StatusParser import StatusParser
 from time import sleep
 
@@ -17,6 +18,9 @@ class EDSystemMap:
         self.keys = keys
         self.status_parser = StatusParser()
         self.ap_ckb = cb
+        # The rect is top left x, y, and bottom right x, y in fraction of screen resolution
+        self.reg = {'cartographics': {'rect': [0.0, 0.0, 0.25, 0.25]},
+                    }
 
     def set_sys_map_dest_bookmark(self, ap, bookmark_type: str, bookmark_position: int) -> bool:
         """ Set the System Map destination using a bookmark.
@@ -95,8 +99,19 @@ class EDSystemMap:
             # Goto System Map
             self.ap.keys.send('SystemMapOpen')
 
+            # Wait for map to load
+            # if not self.status_parser.wait_for_gui_focus(GuiFocusSystemMap):
+            #     logger.debug("goto_galaxy_map: System map did not open.")
+
             # TODO - Add OCR to check screen loaded
-            sleep(3.5)
+            # Scale the regions based on the target resolution.
+            scl_reg = reg_scale_for_station(self.reg['cartographics'], self.screen.screen_width,
+                                            self.screen.screen_height)
+
+            # Wait for screen to appear. The text is the same, regardless of language.
+            res = self.ocr.wait_for_text(self.ap, ["CARTOGRAPHICS"], scl_reg)
+
+            # sleep(3.5)
         else:
             logger.debug("System Map is already open")
             self.keys.send('UI_Left')

@@ -197,7 +197,7 @@ class StatusParser:
         while True:
             if os.access(self.file_path, os.R_OK):
                 try:
-                    with open(self.file_path, 'r') as file:
+                    with open(self.file_path, 'r', encoding='utf-8') as file:
                         data = json.load(file)
                         if attempt > 1:
                             print(f"Status file attempt: {attempt}")

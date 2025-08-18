@@ -1,6 +1,7 @@
 from __future__ import annotations
 import typing
 import cv2
+import win32con
 import win32gui
 from numpy import array
 import mss
@@ -25,6 +26,25 @@ Author: sumzer0@yahoo.com
 #     img = ImageGrab.grab(bbox)
 
 elite_dangerous_window = "Elite - Dangerous (CLIENT)"
+
+
+def set_focus_elite_window():
+    """ set focus to the ED window, if ED does not have focus then the keystrokes will go to the window
+    that does have focus. """
+    ed_title = "Elite - Dangerous (CLIENT)"
+
+    # TODO - determine if GetWindowText is faster than FindWindow if ED is in foreground
+    if win32gui.GetWindowText(win32gui.GetForegroundWindow()) == ed_title:
+        return
+
+    handle = win32gui.FindWindow(0, ed_title)
+    if handle != 0:
+        try:
+            win32gui.ShowWindow(handle, win32con.SW_NORMAL)  # give focus to ED
+            win32gui.SetForegroundWindow(handle)  # give focus to ED
+        except:
+            print("set_focus_elite_window ERROR")
+            pass
 
 
 class Screen:
@@ -156,11 +176,11 @@ class Screen:
         return s
 
     # reg defines a box as a percentage of screen width and height
-    def get_screen_region(self, reg, inv_col=True):
-        image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]), inv_col)
+    def get_screen_region(self, reg, rgb=True):
+        image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]), rgb)
         return image
 
-    def get_screen(self, x_left, y_top, x_right, y_bot, inv_col=True):    # if absolute need to scale??
+    def get_screen(self, x_left, y_top, x_right, y_bot, rgb=True):    # if absolute need to scale??
         monitor = {
             "top": self.mon["top"] + y_top,
             "left": self.mon["left"] + x_left,
@@ -170,7 +190,7 @@ class Screen:
         }
         image = array(self.mss.grab(monitor))
         # TODO - mss.grab returns the image in BGR format, so no need to convert to RGB2BGR
-        if inv_col:
+        if rgb:
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         return image
         
