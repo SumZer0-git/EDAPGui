@@ -1164,8 +1164,9 @@ class EDAutopilot:
         if self.jn.ship_state()['status'] != "in_space":
             logger.error('In dock(), after wait, but still not in_space')
 
-        sleep(5)  # wait 5 seconds to get to 7.5km to request docking
-        self.keys.send('SetSpeed50')
+        sleep(2)  # wait 5 seconds to get to 7.5km to request docking
+        self.keys.send('UseBoostJuice')
+        self.keys.send('SetSpeedZero')
 
         if self.jn.ship_state()['status'] != "in_space":
             self.keys.send('SetSpeedZero')
