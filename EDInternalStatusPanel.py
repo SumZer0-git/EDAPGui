@@ -32,10 +32,10 @@ class EDInternalStatusPanel:
         self.status_tab_text = self.locale["INT_PNL_TAB_STATUS"]
 
         # The rect is [L, T, R, B] top left x, y, and bottom right x, y in fraction of screen resolution
-        self.reg = {'right_panel': {'rect': [0.2, 0.2, 1.0, 0.35]}}
+        self.reg = {'right_panel': {'rect': [0.35, 0.2, 0.85, 0.26]}}
 
-        self.nav_pnl_tab_width = 140  # Nav panel tab width in pixels at 1920x1080
-        self.nav_pnl_tab_height = 35  # Nav panel tab height in pixels at 1920x1080
+        self.nav_pnl_tab_width = 100  # Nav panel tab width in pixels at 1920x1080
+        self.nav_pnl_tab_height = 20  # Nav panel tab height in pixels at 1920x1080
 
     def show_right_panel(self):
         """ Shows the Internal (Right) Panel.
