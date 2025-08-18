@@ -32,7 +32,7 @@ class EDStationServicesInShip:
         self.status_parser = StatusParser()
         self.market_parser = MarketParser()
         # The rect is top left x, y, and bottom right x, y in fraction of screen resolution
-        self.reg = {'connected_to': {'rect': [0.0, 0.0, 0.25, 0.25]},
+        self.reg = {'connected_to': {'rect': [0.0, 0.0, 0.30, 0.30]},
                     'stn_svc_layout': {'rect': [0.05, 0.40, 0.60, 0.76]},
                     'commodities_market': {'rect': [0.0, 0.0, 0.25, 0.25]},
                     }
