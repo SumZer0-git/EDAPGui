@@ -34,12 +34,17 @@ class EDInternalStatusPanel:
         self.status_tab_text = self.locale["INT_PNL_TAB_STATUS"]
 
         # The rect is [L, T, R, B] top left x, y, and bottom right x, y in fraction of screen resolution
-        self.reg = {'right_panel': {'rect': [0.35, 0.2, 0.85, 0.26]}}
+        self.reg = {
+            'right_panel': {'rect': [0.35, 0.2, 0.85, 0.26]},
+            'inventory_list': {'rect': [0.2, 0.3, 0.8, 0.9]}
+        }
 
         self.load_calibrated_regions()
 
         self.nav_pnl_tab_width = 100  # Nav panel tab width in pixels at 1920x1080
         self.nav_pnl_tab_height = 20  # Nav panel tab height in pixels at 1920x1080
+        self.inventory_item_width = 100
+        self.inventory_item_height = 20
 
         self.load_calibrated_sizes()
 
@@ -52,6 +57,10 @@ class EDInternalStatusPanel:
             if "EDInternalStatusPanel.size.nav_pnl_tab" in calibrated_data:
                 self.nav_pnl_tab_width = calibrated_data["EDInternalStatusPanel.size.nav_pnl_tab"]['width']
                 self.nav_pnl_tab_height = calibrated_data["EDInternalStatusPanel.size.nav_pnl_tab"]['height']
+
+            if "EDInternalStatusPanel.size.inventory_item" in calibrated_data:
+                self.inventory_item_width = calibrated_data["EDInternalStatusPanel.size.inventory_item"]['width']
+                self.inventory_item_height = calibrated_data["EDInternalStatusPanel.size.inventory_item"]['height']
 
     def load_calibrated_regions(self):
         calibration_file = 'configs/ocr_calibration.json'
@@ -287,6 +296,87 @@ class EDInternalStatusPanel:
         ap.keys.send("HeadLookReset")
         print("End of transfer from FC")
 
+    def refuel_tritium_from_inventory(self, ap):
+        """ Transfer tritium from ship inventory to fleet carrier fuel tank using OCR. """
+        ap.ap_ckb('log+vce', "Refueling Fleet Carrier with Tritium.")
+        logger.debug("refuel_tritium_from_inventory: entered")
+        # Go to the internal (right) panel inventory tab
+        self.show_inventory_tab()
+
+        # Assumes on the INVENTORY tab
+        ap.keys.send('UI_Right')
+        sleep(0.1)
+        ap.keys.send('UI_Up')  # To FILTERS
+        sleep(0.1)
+        ap.keys.send('UI_Right')  # To >> TRANSFER
+        sleep(0.1)
+        ap.keys.send('UI_Select')  # Click >> TRANSFER
+        sleep(0.1)
+
+        inventory_list_region = self.reg.get('inventory_list', {'rect': [0.2, 0.3, 0.8, 0.9]})
+
+        # Determine the inventory item row size at this resolution
+        scl_row_w, scl_row_h = size_scale_for_station(self.inventory_item_width, self.inventory_item_height,
+                                                      self.screen.screen_width, self.screen.screen_height)
+
+        # Find Tritium in the list
+        tritium_found = False
+        ap.keys.send('UI_Up', hold=3) # Go to top of list
+        sleep(0.5)
+        for _ in range(20): # Max 20 scrolls
+            image = self.ocr.capture_region_pct(inventory_list_region)
+            img_selected, ocr_data, ocr_textlist = self.ocr.get_highlighted_item_data(image, scl_row_w, scl_row_h)
+
+            if img_selected is not None and "TRITIUM" in str(ocr_textlist).upper():
+                tritium_found = True
+                break
+
+            ap.keys.send('UI_Down') # Scroll down
+            sleep(0.5)
+
+        if not tritium_found:
+            logger.error("Could not find Tritium in inventory.")
+            ap.ap_ckb('log+vce', "Error: Could not find Tritium in inventory.")
+            return
+
+        # Now on tritium, go right to select quantity
+        for _ in range(1): # Press right for 20 seconds to transfer a lot
+            ap.keys.send('UI_Left', hold=20)
+        sleep(0.1)
+
+        ap.keys.send('UI_Down') # To cancel button
+        sleep(0.1)
+        ap.keys.send('UI_Right') # To transfer button
+        sleep(0.1)
+        ap.keys.send('UI_Select') # Click Transfer
+        sleep(0.1)
+
+        # Now on confirmation
+        ap.keys.send('UI_Select') # Confirm transfer
+        sleep(2) # Wait for transfer to complete
+
+        ap.keys.send("UI_Back", repeat=4)
+        sleep(0.2)
+        ap.keys.send("HeadLookReset")
+        logger.info("Tritium transfer complete.")
+        ap.ap_ckb('log+vce', "Tritium transfer complete,refueling...")
+        ap.stn_svcs_in_ship.goto_station_services()
+        ap.keys.send('UI_Down') # To redemption office
+        sleep(0.2)
+        ap.keys.send('UI_Down') # To tritium depot
+        sleep(0.2)
+        ap.keys.send('UI_Select') # select tritium depot
+        sleep(0.2)
+        ap.keys.send('UI_Select') # select select refuel
+        sleep(0.2)
+        ap.keys.send('UI_Up') # select move to confirm
+        sleep(0.2)
+        ap.keys.send('UI_Select') # select confirm
+        sleep(0.2)
+        ap.keys.send("UI_Back", repeat=4)
+        sleep(0.2)
+        ap.keys.send("HeadLookReset")
+        print("Refueling Complete.")
 
 def dummy_cb(msg, body=None):
     pass

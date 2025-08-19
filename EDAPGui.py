@@ -89,6 +89,7 @@ class APGui():
             'Single Waypoint Assist': "",
             'ELW Scanner': "Will perform FSS scans while FSD Assist is traveling between stars. \nIf the FSS shows a signal in the region of Earth, \nWater or Ammonia type worlds, it will announce that discovery.",
             'AFK Combat Assist': "Used with a AFK Combat ship in a Rez Zone.",
+            'Fleet Carrier Assist': "Automates fleet carrier jumps along a waypoint route.",
             'RollRate': "Roll rate your ship has in deg/sec. Higher the number the more maneuverable the ship.",
             'PitchRate': "Pitch (up/down) rate your ship has in deg/sec. Higher the number the more maneuverable the ship.",
             'YawRate': "Yaw rate (rudder) your ship has in deg/sec. Higher the number the more maneuverable the ship.",
@@ -137,6 +138,7 @@ class APGui():
         self.RO_A_running = False
         self.DSS_A_running = False
         self.SWP_A_running = False
+        self.FC_A_running = False
 
         self.cv_view = False
 
@@ -276,6 +278,10 @@ class APGui():
             logger.debug("Detected 'single_waypoint_stop' callback msg")
             self.checkboxvar['Single Waypoint Assist'].set(0)
             self.check_cb('Single Waypoint Assist')
+        elif msg == 'fc_stop':
+            logger.debug("Detected 'fc_stop' callback msg")
+            self.checkboxvar['Fleet Carrier Assist'].set(0)
+            self.check_cb('Fleet Carrier Assist')
 
         elif msg == 'stop_all_assists':
             logger.debug("Detected 'stop_all_assists' callback msg")
@@ -300,6 +306,9 @@ class APGui():
 
             self.checkboxvar['Single Waypoint Assist'].set(0)
             self.check_cb('Single Waypoint Assist')
+
+            self.checkboxvar['Fleet Carrier Assist'].set(0)
+            self.check_cb('Fleet Carrier Assist')
 
         elif msg == 'jumpcount':
             self.update_jumpcount(body)
@@ -437,6 +446,21 @@ class APGui():
         self.ed_ap.vce.say("Single Waypoint Assist Off")
         self.update_statusline("Idle")
 
+    def start_fc(self):
+        logger.debug("Entered: start_fc")
+        self.ed_ap.set_fc_assist(True)
+        self.FC_A_running = True
+        self.log_msg("Fleet Carrier Assist start")
+        self.ed_ap.vce.say("Fleet Carrier Assist On")
+
+    def stop_fc(self):
+        logger.debug("Entered: stop_fc")
+        self.ed_ap.set_fc_assist(False)
+        self.FC_A_running = False
+        self.log_msg("Fleet Carrier Assist stop")
+        self.ed_ap.vce.say("Fleet Carrier Assist Off")
+        self.update_statusline("Idle")
+
     def about(self):
         webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui")
 
@@ -572,6 +596,24 @@ class APGui():
 
             elif self.checkboxvar['FSD Route Assist'].get() == 0 and self.FSD_A_running == True:
                 self.stop_fsd()
+                self.lab_ck['Supercruise Assist'].config(state='active')
+                self.lab_ck['AFK Combat Assist'].config(state='active')
+                self.lab_ck['Waypoint Assist'].config(state='active')
+                self.lab_ck['Robigo Assist'].config(state='active')
+
+        if field == 'Fleet Carrier Assist':
+            if self.checkboxvar['Fleet Carrier Assist'].get() == 1 and self.FC_A_running == False:
+                self.lab_ck['FSD Route Assist'].config(state='disabled')
+                self.lab_ck['Supercruise Assist'].config(state='disabled')
+                self.lab_ck['AFK Combat Assist'].config(state='disabled')
+                self.lab_ck['Waypoint Assist'].config(state='disabled')
+                self.lab_ck['Robigo Assist'].config(state='disabled')
+                self.lab_ck['DSS Assist'].config(state='disabled')
+                self.start_fc()
+
+            elif self.checkboxvar['Fleet Carrier Assist'].get() == 0 and self.FC_A_running == True:
+                self.stop_fc()
+                self.lab_ck['FSD Route Assist'].config(state='active')
                 self.lab_ck['Supercruise Assist'].config(state='active')
                 self.lab_ck['AFK Combat Assist'].config(state='active')
                 self.lab_ck['Waypoint Assist'].config(state='active')
@@ -757,33 +799,54 @@ class APGui():
         self.ocr_calibration_data = {}
         calibration_file = 'configs/ocr_calibration.json'
 
+        default_regions = {
+            "Screen_Regions.sun": {"rect": [0.30, 0.30, 0.70, 0.68]},
+            "Screen_Regions.disengage": {"rect": [0.42, 0.65, 0.60, 0.80]},
+            "Screen_Regions.sco": {"rect": [0.42, 0.65, 0.60, 0.80]},
+            "Screen_Regions.fss": {"rect": [0.5045, 0.7545, 0.532, 0.7955]},
+            "Screen_Regions.mission_dest": {"rect": [0.46, 0.38, 0.65, 0.86]},
+            "Screen_Regions.missions": {"rect": [0.50, 0.78, 0.65, 0.85]},
+            "Screen_Regions.nav_panel": {"rect": [0.25, 0.36, 0.60, 0.85]},
+            "EDInternalStatusPanel.right_panel": {"rect": [0.35, 0.2, 0.85, 0.26]},
+            "EDInternalStatusPanel.inventory_list": {"rect": [0.2, 0.3, 0.8, 0.9]},
+            "EDInternalStatusPanel.size.inventory_item": {"width": 100, "height": 20},
+            "EDInternalStatusPanel.size.nav_pnl_tab": {"width": 100, "height": 20},
+            "EDStationServicesInShip.connected_to": {"rect": [0.0, 0.0, 0.30, 0.30]},
+            "EDStationServicesInShip.stn_svc_layout": {"rect": [0.05, 0.40, 0.60, 0.76]},
+            "EDStationServicesInShip.commodities_market": {"rect": [0.0, 0.0, 0.25, 0.25]},
+            "EDStationServicesInShip.services_list": {"rect": [0.1, 0.4, 0.5, 0.9]},
+            "EDStationServicesInShip.carrier_admin_header": {"rect": [0.4, 0.1, 0.6, 0.2]},
+            "EDGalaxyMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
+            "EDGalaxyMap.galaxy_map_header": {"rect": [0.0, 0.0, 0.2, 0.1]},
+            "EDSystemMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
+            "EDNavigationPanel.nav_panel": {"rect": [0.11, 0.21, 0.70, 0.86]},
+            "EDNavigationPanel.temp_tab_bar": {"rect": [0.0, 0.2, 0.7, 0.35]},
+            "EDNavigationPanel.sub_reg.tab_bar": {"rect": [0.0, 0.0, 1.0, 0.08]},
+            "EDNavigationPanel.sub_reg.location_panel": {"rect": [0.2218, 0.3, 0.8, 1.0]},
+            "EDNavigationPanel.size.nav_pnl_tab": {"width": 260, "height": 35},
+            "EDNavigationPanel.size.nav_pnl_location": {"width": 500, "height": 35}
+        }
+
         if not os.path.exists(calibration_file):
             # Create the file with default values if it doesn't exist
-            default_regions = {
-                "Screen_Regions.sun": {"rect": [0.30, 0.30, 0.70, 0.68]},
-                "Screen_Regions.disengage": {"rect": [0.42, 0.65, 0.60, 0.80]},
-                "Screen_Regions.sco": {"rect": [0.42, 0.65, 0.60, 0.80]},
-                "Screen_Regions.fss": {"rect": [0.5045, 0.7545, 0.532, 0.7955]},
-                "Screen_Regions.mission_dest": {"rect": [0.46, 0.38, 0.65, 0.86]},
-                "Screen_Regions.missions": {"rect": [0.50, 0.78, 0.65, 0.85]},
-                "Screen_Regions.nav_panel": {"rect": [0.25, 0.36, 0.60, 0.85]},
-                "EDInternalStatusPanel.right_panel": {"rect": [0.35, 0.2, 0.85, 0.26]},
-                "EDStationServicesInShip.connected_to": {"rect": [0.0, 0.0, 0.30, 0.30]},
-                "EDStationServicesInShip.stn_svc_layout": {"rect": [0.05, 0.40, 0.60, 0.76]},
-                "EDStationServicesInShip.commodities_market": {"rect": [0.0, 0.0, 0.25, 0.25]},
-                "EDGalaxyMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
-                "EDSystemMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
-                "EDNavigationPanel.nav_panel": {"rect": [0.11, 0.21, 0.70, 0.86]},
-                "EDNavigationPanel.temp_tab_bar": {"rect": [0.0, 0.2, 0.7, 0.35]},
-                "EDNavigationPanel.sub_reg.tab_bar": {"rect": [0.0, 0.0, 1.0, 0.08]},
-                "EDNavigationPanel.sub_reg.location_panel": {"rect": [0.2218, 0.3, 0.8, 1.0]}
-            }
             with open(calibration_file, 'w') as f:
                 json.dump(default_regions, f, indent=4)
             self.ocr_calibration_data = default_regions
         else:
             with open(calibration_file, 'r') as f:
                 self.ocr_calibration_data = json.load(f)
+
+            # Check for missing keys and add them
+            updated = False
+            for key, value in default_regions.items():
+                if key not in self.ocr_calibration_data:
+                    self.ocr_calibration_data[key] = value
+                    updated = True
+
+            # If we updated the data, save it back to the file
+            if updated:
+                with open(calibration_file, 'w') as f:
+                    json.dump(self.ocr_calibration_data, f, indent=4)
 
     def save_ocr_calibration_data(self):
         calibration_file = 'configs/ocr_calibration.json'
@@ -1044,7 +1107,7 @@ class APGui():
 
     def gui_gen(self, win):
 
-        modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'Robigo Assist', 'AFK Combat Assist', 'DSS Assist')
+        modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'Robigo Assist', 'AFK Combat Assist', 'DSS Assist', 'Fleet Carrier Assist')
         ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate')
         autopilot_entry_fields = ('Sun Bright Threshold', 'Nav Align Tries', 'Jump Tries', 'Docking Retries', 'Wait For Autodock')
         buttons_entry_fields = ('Start FSD', 'Start SC', 'Start Robigo', 'Stop All')

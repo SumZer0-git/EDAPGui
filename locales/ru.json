@@ -13,5 +13,9 @@
     "NAV_PNL_TAB_CONTACTS": "Контакты",
     "NAV_PNL_TAB_TARGET": "Цель",
 
-    "STN_SVCS_CONNECTED_TO": "Пристыкован к"
+    "STN_SVCS_CONNECTED_TO": "Пристыкован к",
+    "STN_SVCS_STATION_SVCS": "STATION SERVICES",
+    "STN_SVCS_FC_MANAGEMENT": "Fleet Carrier Management",
+    "STN_SVCS_FC_ADMIN_HEADER": "CARRIER ADMINISTRATION",
+    "GALAXY_MAP_HEADER": "GALAXY MAP"
 }

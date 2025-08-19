@@ -13,5 +13,9 @@
     "NAV_PNL_TAB_CONTACTS": "?",
     "NAV_PNL_TAB_TARGET": "?",
 
-    "STN_SVCS_CONNECTED_TO": "?"
+    "STN_SVCS_CONNECTED_TO": "?",
+    "STN_SVCS_STATION_SVCS": "?",
+    "STN_SVCS_FC_MANAGEMENT": "?",
+    "STN_SVCS_FC_ADMIN_HEADER": "?",
+    "GALAXY_MAP_HEADER": "?"
 }

@@ -32,6 +32,7 @@ from StatusParser import StatusParser
 from Voice import *
 from Robigo import *
 from TCE_Integration import TceIntegration
+from EDFleetCarrierAP import FleetCarrierAutopilot
 
 """
 File:EDAP.py    EDAutopilot
@@ -200,6 +201,7 @@ class EDAutopilot:
         self.robigo_assist_enabled = False
         self.dss_assist_enabled = False
         self.single_waypoint_enabled = False
+        self.fc_assist_enabled = False
 
         # Create instance of each of the needed Classes
         self.gfx_settings = EDGraphicsSettings()
@@ -225,6 +227,7 @@ class EDAutopilot:
         self.system_map = EDSystemMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
         self.stn_svcs_in_ship = EDStationServicesInShip(self, self.scr, self.keys, cb)
         self.nav_panel = EDNavigationPanel(self, self.scr, self.keys, cb)
+        self.fc_ap = FleetCarrierAutopilot(self)
 
         self.mesg_server = EDMesgServer(self, cb)
         self.mesg_server.actions_port = self.config['EDMesgActionsPort']
@@ -2325,6 +2328,11 @@ class EDAutopilot:
         self._single_waypoint_station = station
         self.single_waypoint_enabled = enable
 
+    def set_fc_assist(self, enable=True):
+        if enable == False and self.fc_assist_enabled == True:
+            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+        self.fc_assist_enabled = enable
+
     def set_cv_view(self, enable=True, x=0, y=0):
         self.cv_view = enable
         self.config['Enable_CV_View'] = int(self.cv_view)  # update the config
@@ -2517,6 +2525,22 @@ class EDAutopilot:
                     logger.debug("Stopping Single Waypoint Assist")
                 self.single_waypoint_enabled = False
                 self.ap_ckb('single_waypoint_stop')
+                self.update_overlay()
+
+            elif self.fc_assist_enabled == True:
+                logger.debug("Running fc_assist")
+                set_focus_elite_window()
+                self.update_overlay()
+                try:
+                    self.fc_ap.fc_waypoint_assist()
+                except EDAP_Interrupt:
+                    logger.debug("Caught stop exception")
+                except Exception as e:
+                    print("Trapped generic:"+str(e))
+                    traceback.print_exc()
+
+                self.fc_assist_enabled = False
+                self.ap_ckb('fc_stop') # This will need to be added to the GUI
                 self.update_overlay()
 
             # Check once EDAPGUI loaded to prevent errors logging to the listbox before loaded

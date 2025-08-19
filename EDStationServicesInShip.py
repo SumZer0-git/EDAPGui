@@ -36,6 +36,8 @@ class EDStationServicesInShip:
         self.reg = {'connected_to': {'rect': [0.0, 0.0, 0.30, 0.30]},
                     'stn_svc_layout': {'rect': [0.05, 0.40, 0.60, 0.76]},
                     'commodities_market': {'rect': [0.0, 0.0, 0.25, 0.25]},
+                    'services_list': {'rect': [0.1, 0.4, 0.5, 0.9]},
+                    'carrier_admin_header': {'rect': [0.4, 0.1, 0.6, 0.2]},
                     }
 
         self.load_calibrated_regions()
@@ -240,6 +242,44 @@ class EDStationServicesInShip:
             # keys.send('UI_Back')  # Back to commodities list
 
         return True, act_qty
+
+
+    def goto_fleet_carrier_management(self):
+        """ Navigates to the Fleet Carrier Management screen from station services. """
+        self.ap_ckb('log+vce', "Navigating to Fleet Carrier Management.")
+        logger.debug("goto_fleet_carrier_management: entered")
+
+        if not self.goto_station_services():
+            logger.error("Could not open station services.")
+            return False
+
+        sleep(0.2)
+        self.keys.send('UI_Down') # To redemption office
+        sleep(0.2)
+        self.keys.send('UI_Down') # To tritium depot
+        sleep(0.2)
+        self.keys.send('UI_Right') # To tritium depot
+        sleep(0.2)
+        self.keys.send('UI_Right') # To tritium depot
+        sleep(0.2)
+        self.keys.send('UI_Select') # To tritium depot
+        sleep(5) # Wait for screen to load
+
+        # Verify we are on the carrier management screen
+        admin_header_region = self.reg.get('carrier_admin_header', {'rect': [0.4, 0.1, 0.6, 0.2]})
+        header_image = self.screen.get_screen_rect_pct(admin_header_region['rect'])
+        header_text = self.ocr.image_to_string(header_image)
+        admin_text = self.locale.get("STN_SVCS_FC_ADMIN_HEADER", "MANAGEMENT")
+
+        if admin_text in header_text:
+           logger.info("Successfully navigated to Fleet Carrier Management.")
+           self.ap_ckb('log+vce', "Successfully navigated to Fleet Carrier Management.")
+           return True
+        else:
+           logger.error("Failed to verify Fleet Carrier Management screen.")
+           self.ap_ckb('log+vce', "Error: Failed to verify Fleet Carrier Management screen.")
+           return False
+
 
 
 def dummy_cb(msg, body=None):
