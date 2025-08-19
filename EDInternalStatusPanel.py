@@ -43,6 +43,8 @@ class EDInternalStatusPanel:
 
         self.nav_pnl_tab_width = 100  # Nav panel tab width in pixels at 1920x1080
         self.nav_pnl_tab_height = 20  # Nav panel tab height in pixels at 1920x1080
+        self.inventory_item_width = 100
+        self.inventory_item_height = 20
 
         self.load_calibrated_sizes()
 
@@ -55,6 +57,10 @@ class EDInternalStatusPanel:
             if "EDInternalStatusPanel.size.nav_pnl_tab" in calibrated_data:
                 self.nav_pnl_tab_width = calibrated_data["EDInternalStatusPanel.size.nav_pnl_tab"]['width']
                 self.nav_pnl_tab_height = calibrated_data["EDInternalStatusPanel.size.nav_pnl_tab"]['height']
+
+            if "EDInternalStatusPanel.size.inventory_item" in calibrated_data:
+                self.inventory_item_width = calibrated_data["EDInternalStatusPanel.size.inventory_item"]['width']
+                self.inventory_item_height = calibrated_data["EDInternalStatusPanel.size.inventory_item"]['height']
 
     def load_calibrated_regions(self):
         calibration_file = 'configs/ocr_calibration.json'
@@ -309,24 +315,22 @@ class EDInternalStatusPanel:
 
         inventory_list_region = self.reg.get('inventory_list', {'rect': [0.2, 0.3, 0.8, 0.9]})
 
+        # Determine the inventory item row size at this resolution
+        scl_row_w, scl_row_h = size_scale_for_station(self.inventory_item_width, self.inventory_item_height,
+                                                      self.screen.screen_width, self.screen.screen_height)
+
         # Find Tritium in the list
         tritium_found = False
-        for _ in range(10): # Max 10 scrolls
+        ap.keys.send('UI_Up', hold=3) # Go to top of list
+        sleep(0.5)
+        for _ in range(20): # Max 20 scrolls
             image = self.screen.get_screen_rect_pct(inventory_list_region['rect'])
-            ocr_textlist = self.ocr.image_to_string(image, psm=6)
-            lines = ocr_textlist.split('\n')
-            for i, line in enumerate(lines):
-                if "Tritium" in line:
-                    # We found it, now select it
-                    ap.keys.send('UI_Up', hold=3) # Go to top of list
-                    sleep(0.5)
-                    if i > 0:
-                        ap.keys.send('UI_Down', repeat=i)
-                    sleep(0.5)
-                    tritium_found = True
-                    break
-            if tritium_found:
+            img_selected, ocr_data, ocr_textlist = self.ocr.get_highlighted_item_data(image, scl_row_w, scl_row_h)
+
+            if img_selected is not None and "Tritium" in str(ocr_textlist):
+                tritium_found = True
                 break
+
             ap.keys.send('UI_Down') # Scroll down
             sleep(0.5)
 
