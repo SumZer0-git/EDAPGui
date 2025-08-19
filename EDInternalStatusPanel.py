@@ -359,7 +359,7 @@ class EDInternalStatusPanel:
         sleep(0.2)
         ap.keys.send("HeadLookReset")
         logger.info("Tritium transfer complete.")
-        ap.ap_ckb('log+vce', "Tritium transfer complete.")
+        ap.ap_ckb('log+vce', "Tritium transfer complete,refueling...")
 
 
 def dummy_cb(msg, body=None):
