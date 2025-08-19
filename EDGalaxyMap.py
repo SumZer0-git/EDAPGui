@@ -256,3 +256,23 @@ class EDGalaxyMap:
             logger.debug("Galaxy Map is already open")
             self.keys.send('UI_Left', repeat=2)
             self.keys.send('UI_Up', hold=2)  # Go up to search bar. Allows 1 left to bookmarks.
+
+    def goto_galaxy_map_from_fc(self):
+        """Open Galaxy Map if we are not there. Waits for map to load. Selects the search bar.
+        """
+
+        # Wait for map to load
+        # if not self.status_parser.wait_for_gui_focus(GuiFocusGalaxyMap):
+        #     logger.debug("goto_galaxy_map: Galaxy map did not open.")
+
+        # TODO - check this to OCR check
+        sleep(2)
+        # Scale the regions based on the target resolution.
+        scl_reg = reg_scale_for_station(self.reg['cartographics'], self.screen.screen_width,
+                                            self.screen.screen_height)
+
+        # Wait for screen to appear. The text is the same, regardless of language.
+        res = self.ocr.wait_for_text(self.ap, ["CARTOGRAPHICS"], scl_reg)
+
+
+
