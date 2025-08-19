@@ -1004,6 +1004,34 @@ class APGui():
 
         self.calibration_overlay.destroy()
 
+    def reset_all_calibrations(self):
+        if messagebox.askyesno("Reset All Calibrations", "Are you sure you want to reset all OCR calibrations to their default values? This cannot be undone."):
+            calibration_file = 'configs/ocr_calibration.json'
+            if os.path.exists(calibration_file):
+                os.remove(calibration_file)
+                self.log_msg("Removed existing ocr_calibration.json.")
+
+            # This will recreate the file with defaults
+            self.load_ocr_calibration_data()
+
+            # --- Repopulate UI ---
+            # Clear current selections
+            self.calibration_region_var.set('')
+            self.calibration_size_var.set('')
+            self.calibration_rect_label_var.set('')
+            self.calibration_size_label_var.set('')
+
+            # Repopulate region dropdown
+            region_keys = sorted([key for key in self.ocr_calibration_data.keys() if '.size.' not in key and 'compass' not in key and 'target' not in key])
+            self.calibration_region_combo['values'] = region_keys
+
+            # Repopulate size dropdown
+            size_keys = sorted([key for key in self.ocr_calibration_data.keys() if '.size.' in key])
+            self.calibration_size_combo['values'] = size_keys
+
+            self.log_msg("All OCR calibrations have been reset to default.")
+            messagebox.showinfo("Reset Complete", "All calibrations have been reset to default. Please restart the application for all changes to take effect.")
+
     def gui_gen(self, win):
 
         modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'Robigo Assist', 'AFK Combat Assist', 'DSS Assist')
