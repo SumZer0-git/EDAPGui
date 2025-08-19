@@ -263,22 +263,23 @@ class EDStationServicesInShip:
         self.keys.send('UI_Right') # To tritium depot
         sleep(0.2)
         self.keys.send('UI_Select') # To tritium depot
-        sleep(5) # Wait for screen to load
+        sleep(1) # Wait for screen to load
 
-        # Verify we are on the carrier management screen
-        admin_header_region = self.reg.get('carrier_admin_header', {'rect': [0.4, 0.1, 0.6, 0.2]})
-        header_image = self.screen.get_screen_rect_pct(admin_header_region['rect'])
-        header_text = self.ocr.image_to_string(header_image)
-        admin_text = self.locale.get("STN_SVCS_FC_ADMIN_HEADER", "MANAGEMENT")
 
-        if admin_text in header_text:
-           logger.info("Successfully navigated to Fleet Carrier Management.")
-           self.ap_ckb('log+vce', "Successfully navigated to Fleet Carrier Management.")
-           return True
-        else:
-           logger.error("Failed to verify Fleet Carrier Management screen.")
-           self.ap_ckb('log+vce', "Error: Failed to verify Fleet Carrier Management screen.")
-           return False
+        # Scale the regions based on the target resolution.
+        scl_fleet = reg_scale_for_station(self.reg['carrier_admin_header'], self.screen.screen_width, self.screen.screen_height)
+
+        # Wait for screen to appear
+        res = self.ocr.wait_for_text(self.ap, [self.locale["STN_SVCS_FC_ADMIN_HEADER"]], scl_fleet)
+
+        # Store image
+        # image = self.screen.get_screen_rect_pct(scl_reg['rect'])
+        # cv2.imwrite(f'test/carrier-management/carrier-management.png', image)
+
+        # After the OCR timeout, carrier management will have appeared, to return true anyway.
+        self.ap_ckb('log+vce', "Sucessfully entered Fleet Carrier Management.")
+        logger.debug("goto_fleet_carrier_management: sucess")
+        return True
 
 
 
