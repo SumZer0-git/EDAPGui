@@ -15,10 +15,12 @@ import requests
 
 from PIL import Image, ImageGrab, ImageTk
 import tkinter as tk
-from tkinter import *
 from tkinter import filedialog as fd
 from tkinter import messagebox
 from tkinter import ttk
+import sv_ttk
+import pywinstyles
+import sys
 from idlelib.tooltip import Hovertip
 
 from Voice import *
@@ -125,9 +127,9 @@ class APGui():
         self.radiobuttonvar = {}
         self.entries = {}
         self.lab_ck = {}
-        self.single_waypoint_system = StringVar()
-        self.single_waypoint_station = StringVar()
-        self.TCE_Destination_Filepath = StringVar()
+        self.single_waypoint_system = tk.StringVar()
+        self.single_waypoint_station = tk.StringVar()
+        self.TCE_Destination_Filepath = tk.StringVar()
 
         self.FSD_A_running = False
         self.SC_A_running = False
@@ -150,29 +152,29 @@ class APGui():
 
         self.radiobuttonvar['dss_button'].set(self.ed_ap.config['DSSButton'])
 
-        self.entries['ship']['PitchRate'].delete(0, END)
-        self.entries['ship']['RollRate'].delete(0, END)
-        self.entries['ship']['YawRate'].delete(0, END)
-        self.entries['ship']['SunPitchUp+Time'].delete(0, END)
+        self.entries['ship']['PitchRate'].delete(0, tk.END)
+        self.entries['ship']['RollRate'].delete(0, tk.END)
+        self.entries['ship']['YawRate'].delete(0, tk.END)
+        self.entries['ship']['SunPitchUp+Time'].delete(0, tk.END)
 
-        self.entries['autopilot']['Sun Bright Threshold'].delete(0, END)
-        self.entries['autopilot']['Nav Align Tries'].delete(0, END)
-        self.entries['autopilot']['Jump Tries'].delete(0, END)
-        self.entries['autopilot']['Docking Retries'].delete(0, END)
-        self.entries['autopilot']['Wait For Autodock'].delete(0, END)
+        self.entries['autopilot']['Sun Bright Threshold'].delete(0, tk.END)
+        self.entries['autopilot']['Nav Align Tries'].delete(0, tk.END)
+        self.entries['autopilot']['Jump Tries'].delete(0, tk.END)
+        self.entries['autopilot']['Docking Retries'].delete(0, tk.END)
+        self.entries['autopilot']['Wait For Autodock'].delete(0, tk.END)
 
-        self.entries['refuel']['Refuel Threshold'].delete(0, END)
-        self.entries['refuel']['Scoop Timeout'].delete(0, END)
-        self.entries['refuel']['Fuel Threshold Abort'].delete(0, END)
+        self.entries['refuel']['Refuel Threshold'].delete(0, tk.END)
+        self.entries['refuel']['Scoop Timeout'].delete(0, tk.END)
+        self.entries['refuel']['Fuel Threshold Abort'].delete(0, tk.END)
 
-        self.entries['overlay']['X Offset'].delete(0, END)
-        self.entries['overlay']['Y Offset'].delete(0, END)
-        self.entries['overlay']['Font Size'].delete(0, END)
+        self.entries['overlay']['X Offset'].delete(0, tk.END)
+        self.entries['overlay']['Y Offset'].delete(0, tk.END)
+        self.entries['overlay']['Font Size'].delete(0, tk.END)
 
-        self.entries['buttons']['Start FSD'].delete(0, END)
-        self.entries['buttons']['Start SC'].delete(0, END)
-        self.entries['buttons']['Start Robigo'].delete(0, END)
-        self.entries['buttons']['Stop All'].delete(0, END)
+        self.entries['buttons']['Start FSD'].delete(0, tk.END)
+        self.entries['buttons']['Start SC'].delete(0, tk.END)
+        self.entries['buttons']['Start Robigo'].delete(0, tk.END)
+        self.entries['buttons']['Stop All'].delete(0, tk.END)
 
         self.entries['ship']['PitchRate'].insert(0, float(self.ed_ap.pitchrate))
         self.entries['ship']['RollRate'].insert(0, float(self.ed_ap.rollrate))
@@ -306,10 +308,10 @@ class APGui():
 
     def update_ship_cfg(self):
         # load up the display with what we read from ED_AP for the current ship
-        self.entries['ship']['PitchRate'].delete(0, END)
-        self.entries['ship']['RollRate'].delete(0, END)
-        self.entries['ship']['YawRate'].delete(0, END)
-        self.entries['ship']['SunPitchUp+Time'].delete(0, END)
+        self.entries['ship']['PitchRate'].delete(0, tk.END)
+        self.entries['ship']['RollRate'].delete(0, tk.END)
+        self.entries['ship']['YawRate'].delete(0, tk.END)
+        self.entries['ship']['SunPitchUp+Time'].delete(0, tk.END)
 
         self.entries['ship']['PitchRate'].insert(0, self.ed_ap.pitchrate)
         self.entries['ship']['RollRate'].insert(0, self.ed_ap.rollrate)
@@ -465,10 +467,10 @@ class APGui():
         else:
             # Add queued messages to the list
             while not self.log_buffer.empty():
-                self.msgList.insert(END, self.log_buffer.get())
+                self.msgList.insert(tk.END, self.log_buffer.get())
 
-            self.msgList.insert(END, message)
-            self.msgList.yview(END)
+            self.msgList.insert(tk.END, message)
+            self.msgList.yview(tk.END)
             logger.info(msg)
 
     def set_statusbar(self, txt):
@@ -727,32 +729,28 @@ class APGui():
 
     def makeform(self, win, ftype, fields, r=0, inc=1, rfrom=0, rto=1000):
         entries = {}
+        win.columnconfigure(1, weight=1)
 
         for field in fields:
-            row = tk.Frame(win)
-            row.grid(row=r, column=0, padx=2, pady=2, sticky=(N, S, E, W))
-            r += 1
-
             if ftype == FORM_TYPE_CHECKBOX:
-                self.checkboxvar[field] = IntVar()
-                lab = Checkbutton(row, text=field, anchor='w', width=27, justify=LEFT, variable=self.checkboxvar[field], command=(lambda field=field: self.check_cb(field)))
+                self.checkboxvar[field] = tk.IntVar()
+                lab = ttk.Checkbutton(win, text=field, variable=self.checkboxvar[field], command=(lambda field=field: self.check_cb(field)))
                 self.lab_ck[field] = lab
+                lab.grid(row=r, column=0, columnspan=2, padx=2, pady=2, sticky=tk.W)
             else:
-                lab = tk.Label(row, anchor='w', width=20, pady=3, text=field + ": ")
+                lab = ttk.Label(win, text=field + ": ")
                 if ftype == FORM_TYPE_SPINBOX:
-                    ent = tk.Spinbox(row, width=10, from_=rfrom, to=rto, increment=inc)
+                    ent = ttk.Spinbox(win, width=10, from_=rfrom, to=rto, increment=inc, justify=tk.RIGHT)
                 else:
-                    ent = tk.Entry(row, width=10)
+                    ent = ttk.Entry(win, width=10, justify=tk.RIGHT)
                 ent.bind('<FocusOut>', self.entry_update)
                 ent.insert(0, "0")
-
-            lab.grid(row=0, column=0)
-            lab = Hovertip(row, self.tooltips[field], hover_delay=1000)
-
-            if ftype != FORM_TYPE_CHECKBOX:
-                ent.grid(row=0, column=1)
+                lab.grid(row=r, column=0, padx=2, pady=2, sticky=tk.W)
+                ent.grid(row=r, column=1, padx=2, pady=2, sticky=tk.E)
                 entries[field] = ent
 
+            lab = Hovertip(lab, self.tooltips[field], hover_delay=1000)
+            r += 1
         return entries
 
     def gui_gen(self, win):
@@ -764,227 +762,232 @@ class APGui():
         refuel_entry_fields = ('Refuel Threshold', 'Scoop Timeout', 'Fuel Threshold Abort')
         overlay_entry_fields = ('X Offset', 'Y Offset', 'Font Size')
 
-        #
-        # Define all the menus
-        #
-        menubar = Menu(win, background='#ff8000', foreground='black', activebackground='white', activeforeground='black')
-        file = Menu(menubar, tearoff=0)
-        file.add_command(label="Calibrate Target", command=self.calibrate_callback)
-        file.add_command(label="Calibrate Compass", command=self.calibrate_compass_callback)
-        self.checkboxvar['Enable CV View'] = IntVar()
-        self.checkboxvar['Enable CV View'].set(int(self.ed_ap.config['Enable_CV_View']))  # set IntVar value to the one from config
-        file.add_checkbutton(label='Enable CV View', onvalue=1, offvalue=0, variable=self.checkboxvar['Enable CV View'], command=(lambda field='Enable CV View': self.check_cb(field)))
-        file.add_separator()
-        file.add_command(label="Restart", command=self.restart_program)
-        file.add_command(label="Exit", command=self.close_window)  # win.quit)
-        menubar.add_cascade(label="File", menu=file)
-
-        help = Menu(menubar, tearoff=0)
-        help.add_command(label="Check for Updates", command=self.check_updates)
-        help.add_command(label="View Changelog", command=self.open_changelog)
-        help.add_separator()
-        help.add_command(label="Join Discord", command=self.open_discord)
-        help.add_command(label="About", command=self.about)
-        menubar.add_cascade(label="Help", menu=help)
-
-        win.config(menu=menubar)
 
         # notebook pages
         nb = ttk.Notebook(win)
         nb.grid()
-        page0 = Frame(nb)
-        page1 = Frame(nb)
-        page2 = Frame(nb)
+        page0 = ttk.Frame(nb)
+        page1 = ttk.Frame(nb)
+        page2 = ttk.Frame(nb)
         nb.add(page0, text="Main")  # main page
         nb.add(page1, text="Settings")  # options page
         nb.add(page2, text="Debug/Test")  # debug/test page
 
         # main options block
-        blk_main = tk.Frame(page0)
-        blk_main.grid(row=0, column=0, padx=10, pady=5, sticky=(E, W))
+        blk_main = ttk.Frame(page0)
+        blk_main.grid(row=0, column=0, padx=10, pady=5, sticky=(tk.E, tk.W))
         blk_main.columnconfigure([0, 1], weight=1, minsize=100, uniform="group1")
 
         # ap mode checkboxes block
-        blk_modes = LabelFrame(blk_main, text="MODE")
-        blk_modes.grid(row=0, column=0, padx=2, pady=2, sticky=(N, S, E, W))
+        blk_modes = ttk.LabelFrame(blk_main, text="MODE")
+        blk_modes.grid(row=0, column=0, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
         self.makeform(blk_modes, FORM_TYPE_CHECKBOX, modes_check_fields)
 
         # ship values block
-        blk_ship = LabelFrame(blk_main, text="SHIP")
-        blk_ship.grid(row=0, column=1, padx=2, pady=2, sticky=(N, S, E, W))
+        blk_ship = ttk.LabelFrame(blk_main, text="SHIP")
+        blk_ship.grid(row=0, column=1, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
         self.entries['ship'] = self.makeform(blk_ship, FORM_TYPE_SPINBOX, ship_entry_fields, 0, 0.5)
 
-        lbl_sun_pitch_up = tk.Label(blk_ship, text='SunPitchUp +/- Time:', anchor='w', width=20)
-        lbl_sun_pitch_up.grid(row=3, column=0, pady=3, sticky=(N, S, E, W))
-        spn_sun_pitch_up = tk.Spinbox(blk_ship, width=10, from_=-100, to=100, increment=0.5)
-        spn_sun_pitch_up.grid(row=3, column=1, padx=2, pady=2, sticky=(N, S, E, W))
+        lbl_sun_pitch_up = ttk.Label(blk_ship, text='SunPitchUp +/- Time:')
+        lbl_sun_pitch_up.grid(row=3, column=0, pady=3, sticky=tk.W)
+        spn_sun_pitch_up = ttk.Spinbox(blk_ship, width=10, from_=-100, to=100, increment=0.5, justify=tk.RIGHT)
+        spn_sun_pitch_up.grid(row=3, column=1, padx=2, pady=2, sticky=tk.E)
         spn_sun_pitch_up.bind('<FocusOut>', self.entry_update)
         self.entries['ship']['SunPitchUp+Time'] = spn_sun_pitch_up
 
-        btn_tst_roll = Button(blk_ship, text='Test Roll Rate', command=self.ship_tst_roll)
-        btn_tst_roll.grid(row=4, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-        btn_tst_pitch = Button(blk_ship, text='Test Pitch Rate', command=self.ship_tst_pitch)
-        btn_tst_pitch.grid(row=5, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-        btn_tst_yaw = Button(blk_ship, text='Test Yaw Rate', command=self.ship_tst_yaw)
-        btn_tst_yaw.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        btn_tst_roll = ttk.Button(blk_ship, text='Test Roll Rate', command=self.ship_tst_roll)
+        btn_tst_roll.grid(row=4, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
+        btn_tst_pitch = ttk.Button(blk_ship, text='Test Pitch Rate', command=self.ship_tst_pitch)
+        btn_tst_pitch.grid(row=5, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
+        btn_tst_yaw = ttk.Button(blk_ship, text='Test Yaw Rate', command=self.ship_tst_yaw)
+        btn_tst_yaw.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
 
         # waypoints button block
-        blk_wp_buttons = tk.LabelFrame(page0, text="Waypoints")
-        blk_wp_buttons.grid(row=1, column=0, padx=10, pady=5, columnspan=2, sticky=(N, S, E, W))
+        blk_wp_buttons = ttk.LabelFrame(page0, text="Waypoints")
+        blk_wp_buttons.grid(row=1, column=0, padx=10, pady=5, columnspan=2, sticky=(tk.N, tk.S, tk.E, tk.W))
         blk_wp_buttons.columnconfigure([0, 1], weight=1, minsize=100, uniform="group1")
 
-        self.wp_filelabel = StringVar()
+        self.wp_filelabel = tk.StringVar()
         self.wp_filelabel.set("<no list loaded>")
-        btn_wp_file = Button(blk_wp_buttons, textvariable=self.wp_filelabel, command=self.open_wp_file)
-        btn_wp_file.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        btn_wp_file = ttk.Button(blk_wp_buttons, textvariable=self.wp_filelabel, command=self.open_wp_file)
+        btn_wp_file.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
         tip_wp_file = Hovertip(btn_wp_file, self.tooltips['Waypoint List Button'], hover_delay=1000)
 
-        btn_reset = Button(blk_wp_buttons, text='Reset List', command=self.reset_wp_file)
-        btn_reset.grid(row=1, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        btn_reset = ttk.Button(blk_wp_buttons, text='Reset List', command=self.reset_wp_file)
+        btn_reset.grid(row=1, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
         tip_reset = Hovertip(btn_reset, self.tooltips['Reset Waypoint List'], hover_delay=1000)
 
         # log window
-        log = LabelFrame(page0, text="LOG")
-        log.grid(row=3, column=0, padx=12, pady=5, sticky=(N, S, E, W))
-        scrollbar = Scrollbar(log)
-        scrollbar.grid(row=0, column=1, sticky=(N, S))
-        mylist = Listbox(log, width=72, height=10, yscrollcommand=scrollbar.set)
+        log = ttk.LabelFrame(page0, text="LOG")
+        log.grid(row=3, column=0, padx=12, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
+        scrollbar = ttk.Scrollbar(log)
+        scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        mylist = tk.Listbox(log, width=72, height=10, yscrollcommand=scrollbar.set)
         mylist.grid(row=0, column=0)
         scrollbar.config(command=mylist.yview)
 
         # settings block
-        blk_settings = tk.Frame(page1)
-        blk_settings.grid(row=0, column=0, padx=10, pady=5, sticky=(E, W))
+        blk_settings = ttk.Frame(page1)
+        blk_settings.grid(row=0, column=0, padx=10, pady=5, sticky=(tk.E, tk.W))
         blk_main.columnconfigure([0, 1], weight=1, minsize=100, uniform="group1")
 
         # autopilot settings block
-        blk_ap = LabelFrame(blk_settings, text="AUTOPILOT")
-        blk_ap.grid(row=0, column=0, padx=2, pady=2, sticky=(N, S, E, W))
+        blk_ap = ttk.LabelFrame(blk_settings, text="AUTOPILOT")
+        blk_ap.grid(row=0, column=0, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
         self.entries['autopilot'] = self.makeform(blk_ap, FORM_TYPE_SPINBOX, autopilot_entry_fields)
-        self.checkboxvar['Enable Randomness'] = BooleanVar()
-        cb_random = Checkbutton(blk_ap, text='Enable Randomness', anchor='w', pady=3, justify=LEFT, onvalue=1, offvalue=0, variable=self.checkboxvar['Enable Randomness'], command=(lambda field='Enable Randomness': self.check_cb(field)))
-        cb_random.grid(row=5, column=0, columnspan=2, sticky=(W))
-        self.checkboxvar['Activate Elite for each key'] = BooleanVar()
-        cb_activate_elite = Checkbutton(blk_ap, text='Activate Elite for each key', anchor='w', pady=3, justify=LEFT, onvalue=1, offvalue=0, variable=self.checkboxvar['Activate Elite for each key'], command=(lambda field='Activate Elite for each key': self.check_cb(field)))
-        cb_activate_elite.grid(row=6, column=0, columnspan=2, sticky=(W))
-        self.checkboxvar['Automatic logout'] = BooleanVar()
-        cb_logout = Checkbutton(blk_ap, text='Automatic logout', anchor='w', pady=3, justify=LEFT, onvalue=1, offvalue=0, variable=self.checkboxvar['Automatic logout'], command=(lambda field='Automatic logout': self.check_cb(field)))
-        cb_logout.grid(row=7, column=0, columnspan=2, sticky=(W))
+        self.checkboxvar['Enable Randomness'] = tk.BooleanVar()
+        cb_random = ttk.Checkbutton(blk_ap, text='Enable Randomness', variable=self.checkboxvar['Enable Randomness'], command=(lambda field='Enable Randomness': self.check_cb(field)))
+        cb_random.grid(row=5, column=0, columnspan=2, sticky=(tk.W))
+        self.checkboxvar['Activate Elite for each key'] = tk.BooleanVar()
+        cb_activate_elite = ttk.Checkbutton(blk_ap, text='Activate Elite for each key', variable=self.checkboxvar['Activate Elite for each key'], command=(lambda field='Activate Elite for each key': self.check_cb(field)))
+        cb_activate_elite.grid(row=6, column=0, columnspan=2, sticky=(tk.W))
+        self.checkboxvar['Automatic logout'] = tk.BooleanVar()
+        cb_logout = ttk.Checkbutton(blk_ap, text='Automatic logout', variable=self.checkboxvar['Automatic logout'], command=(lambda field='Automatic logout': self.check_cb(field)))
+        cb_logout.grid(row=7, column=0, columnspan=2, sticky=(tk.W))
 
         # buttons settings block
-        blk_buttons = LabelFrame(blk_settings, text="BUTTONS")
-        blk_buttons.grid(row=0, column=1, padx=2, pady=2, sticky=(N, S, E, W))
-        blk_dss = Frame(blk_buttons)
-        blk_dss.grid(row=0, column=0, columnspan=2, padx=0, pady=0, sticky=(N, S, E, W))
-        lb_dss = Label(blk_dss, width=18, anchor='w', pady=3, text="DSS Button: ")
-        lb_dss.grid(row=0, column=0, sticky=(W))
-        self.radiobuttonvar['dss_button'] = StringVar()
-        rb_dss_primary = Radiobutton(blk_dss, pady=3, text="Primary", variable=self.radiobuttonvar['dss_button'], value="Primary", command=(lambda field='dss_button': self.check_cb(field)))
-        rb_dss_primary.grid(row=0, column=1, sticky=(W))
-        rb_dss_secandary = Radiobutton(blk_dss, pady=3, text="Secondary", variable=self.radiobuttonvar['dss_button'], value="Secondary", command=(lambda field='dss_button': self.check_cb(field)))
-        rb_dss_secandary.grid(row=1, column=1, sticky=(W))
+        blk_buttons = ttk.LabelFrame(blk_settings, text="BUTTONS")
+        blk_buttons.grid(row=0, column=1, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
+        blk_dss = ttk.Frame(blk_buttons)
+        blk_dss.grid(row=0, column=0, columnspan=2, padx=0, pady=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+        lb_dss = ttk.Label(blk_dss, text="DSS Button: ")
+        lb_dss.grid(row=0, column=0, sticky=(tk.W))
+        self.radiobuttonvar['dss_button'] = tk.StringVar()
+        rb_dss_primary = ttk.Radiobutton(blk_dss, text="Primary", variable=self.radiobuttonvar['dss_button'], value="Primary", command=(lambda field='dss_button': self.check_cb(field)))
+        rb_dss_primary.grid(row=0, column=1, sticky=(tk.W))
+        rb_dss_secandary = ttk.Radiobutton(blk_dss, text="Secondary", variable=self.radiobuttonvar['dss_button'], value="Secondary", command=(lambda field='dss_button': self.check_cb(field)))
+        rb_dss_secandary.grid(row=1, column=1, sticky=(tk.W))
         self.entries['buttons'] = self.makeform(blk_buttons, FORM_TYPE_ENTRY, buttons_entry_fields, 2)
 
         # refuel settings block
-        blk_fuel = LabelFrame(blk_settings, text="FUEL")
-        blk_fuel.grid(row=1, column=0, padx=2, pady=2, sticky=(N, S, E, W))
+        blk_fuel = ttk.LabelFrame(blk_settings, text="FUEL")
+        blk_fuel.grid(row=1, column=0, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
         self.entries['refuel'] = self.makeform(blk_fuel, FORM_TYPE_SPINBOX, refuel_entry_fields)
 
         # overlay settings block
-        blk_overlay = LabelFrame(blk_settings, text="OVERLAY")
-        blk_overlay.grid(row=1, column=1, padx=2, pady=2, sticky=(N, S, E, W))
-        self.checkboxvar['Enable Overlay'] = BooleanVar()
-        cb_enable = Checkbutton(blk_overlay, text='Enable (requires restart)', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['Enable Overlay'], command=(lambda field='Enable Overlay': self.check_cb(field)))
-        cb_enable.grid(row=0, column=0, columnspan=2, sticky=(W))
+        blk_overlay = ttk.LabelFrame(blk_settings, text="OVERLAY")
+        blk_overlay.grid(row=1, column=1, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
+        self.checkboxvar['Enable Overlay'] = tk.BooleanVar()
+        cb_enable = ttk.Checkbutton(blk_overlay, text='Enable (requires restart)', variable=self.checkboxvar['Enable Overlay'], command=(lambda field='Enable Overlay': self.check_cb(field)))
+        cb_enable.grid(row=0, column=0, columnspan=2, sticky=(tk.W))
         self.entries['overlay'] = self.makeform(blk_overlay, FORM_TYPE_SPINBOX, overlay_entry_fields, 1, 1.0, 0.0, 3000.0)
 
         # tts / voice settings block
-        blk_voice = LabelFrame(blk_settings, text="VOICE")
-        blk_voice.grid(row=2, column=0, padx=2, pady=2, sticky=(N, S, E, W))
-        self.checkboxvar['Enable Voice'] = BooleanVar()
-        cb_enable = Checkbutton(blk_voice, text='Enable', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['Enable Voice'], command=(lambda field='Enable Voice': self.check_cb(field)))
-        cb_enable.grid(row=0, column=0, columnspan=2, sticky=(W))
+        blk_voice = ttk.LabelFrame(blk_settings, text="VOICE")
+        blk_voice.grid(row=2, column=0, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
+        self.checkboxvar['Enable Voice'] = tk.BooleanVar()
+        cb_enable = ttk.Checkbutton(blk_voice, text='Enable', variable=self.checkboxvar['Enable Voice'], command=(lambda field='Enable Voice': self.check_cb(field)))
+        cb_enable.grid(row=0, column=0, columnspan=2, sticky=(tk.W))
 
         # Scanner settings block
-        blk_voice = LabelFrame(blk_settings, text="ELW SCANNER")
-        blk_voice.grid(row=2, column=1, padx=2, pady=2, sticky=(N, S, E, W))
-        self.checkboxvar['ELW Scanner'] = BooleanVar()
-        cb_enable = Checkbutton(blk_voice, text='Enable', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['ELW Scanner'], command=(lambda field='ELW Scanner': self.check_cb(field)))
-        cb_enable.grid(row=0, column=0, columnspan=2, sticky=(W))
+        blk_voice = ttk.LabelFrame(blk_settings, text="ELW SCANNER")
+        blk_voice.grid(row=2, column=1, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
+        self.checkboxvar['ELW Scanner'] = tk.BooleanVar()
+        cb_enable = ttk.Checkbutton(blk_voice, text='Enable', variable=self.checkboxvar['ELW Scanner'], command=(lambda field='ELW Scanner': self.check_cb(field)))
+        cb_enable.grid(row=0, column=0, columnspan=2, sticky=(tk.W))
 
         # settings button block
-        blk_settings_buttons = tk.Frame(page1)
-        blk_settings_buttons.grid(row=3, column=0, padx=10, pady=5, sticky=(N, S, E, W))
+        blk_settings_buttons = ttk.Frame(page1)
+        blk_settings_buttons.grid(row=3, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
         blk_settings_buttons.columnconfigure([0, 1], weight=1, minsize=100)
-        btn_save = Button(blk_settings_buttons, text='Save All Settings', command=self.save_settings)
-        btn_save.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        btn_save = ttk.Button(blk_settings_buttons, text='Save All Settings', command=self.save_settings, style="Accent.TButton")
+        btn_save.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
+
+        # File Actions
+        blk_file_actions = ttk.LabelFrame(page2, text="File Actions")
+        blk_file_actions.grid(row=0, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
+        btn_calibrate_target = ttk.Button(blk_file_actions, text="Calibrate Target", command=self.calibrate_callback)
+        btn_calibrate_target.grid(row=0, column=0, padx=2, pady=2, sticky=tk.W)
+        btn_calibrate_compass = ttk.Button(blk_file_actions, text="Calibrate Compass", command=self.calibrate_compass_callback)
+        btn_calibrate_compass.grid(row=1, column=0, padx=2, pady=2, sticky=tk.W)
+        self.checkboxvar['Enable CV View'] = tk.IntVar()
+        self.checkboxvar['Enable CV View'].set(int(self.ed_ap.config['Enable_CV_View']))
+        cb_enable_cv_view = ttk.Checkbutton(blk_file_actions, text='Enable CV View', variable=self.checkboxvar['Enable CV View'], command=(lambda field='Enable CV View': self.check_cb(field)))
+        cb_enable_cv_view.grid(row=2, column=0, padx=2, pady=2, sticky=tk.W)
+        btn_restart = ttk.Button(blk_file_actions, text="Restart", command=self.restart_program)
+        btn_restart.grid(row=3, column=0, padx=2, pady=2, sticky=tk.W)
+        btn_exit = ttk.Button(blk_file_actions, text="Exit", command=self.close_window)
+        btn_exit.grid(row=4, column=0, padx=2, pady=2, sticky=tk.W)
+
+
+        # Help Actions
+        blk_help_actions = ttk.LabelFrame(page2, text="Help Actions")
+        blk_help_actions.grid(row=0, column=1, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
+        btn_check_updates = ttk.Button(blk_help_actions, text="Check for Updates", command=self.check_updates)
+        btn_check_updates.grid(row=0, column=0, padx=2, pady=2, sticky=tk.W)
+        btn_view_changelog = ttk.Button(blk_help_actions, text="View Changelog", command=self.open_changelog)
+        btn_view_changelog.grid(row=1, column=0, padx=2, pady=2, sticky=tk.W)
+        btn_join_discord = ttk.Button(blk_help_actions, text="Join Discord", command=self.open_discord)
+        btn_join_discord.grid(row=2, column=0, padx=2, pady=2, sticky=tk.W)
+        btn_about = ttk.Button(blk_help_actions, text="About", command=self.about)
+        btn_about.grid(row=3, column=0, padx=2, pady=2, sticky=tk.W)
 
         # debug block
-        blk_debug = tk.Frame(page2)
-        blk_debug.grid(row=0, column=0, padx=10, pady=5, sticky=(E, W))
+        blk_debug = ttk.Frame(page2)
+        blk_debug.grid(row=1, column=0, padx=10, pady=5, sticky=(tk.E, tk.W))
         blk_debug.columnconfigure([0, 1], weight=1, minsize=100, uniform="group2")
 
         # debug settings block
-        blk_debug_settings = LabelFrame(blk_debug, text="DEBUG")
-        blk_debug_settings.grid(row=0, column=0, padx=2, pady=2, sticky=(N, S, E, W))
-        self.radiobuttonvar['debug_mode'] = StringVar()
-        rb_debug_debug = Radiobutton(blk_debug_settings, pady=3, text="Debug + Info + Errors", variable=self.radiobuttonvar['debug_mode'], value="Debug", command=(lambda field='debug_mode': self.check_cb(field)))
-        rb_debug_debug.grid(row=0, column=1, columnspan=2, sticky=(W))
-        rb_debug_info = Radiobutton(blk_debug_settings, pady=3, text="Info + Errors", variable=self.radiobuttonvar['debug_mode'], value="Info", command=(lambda field='debug_mode': self.check_cb(field)))
-        rb_debug_info.grid(row=1, column=1, columnspan=2, sticky=(W))
-        rb_debug_error = Radiobutton(blk_debug_settings, pady=3, text="Errors only (default)", variable=self.radiobuttonvar['debug_mode'], value="Error", command=(lambda field='debug_mode': self.check_cb(field)))
-        rb_debug_error.grid(row=2, column=1, columnspan=2, sticky=(W))
-        btn_open_logfile = Button(blk_debug_settings, text='Open Log File', command=self.open_logfile)
-        btn_open_logfile.grid(row=3, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        blk_debug_settings = ttk.LabelFrame(blk_debug, text="DEBUG")
+        blk_debug_settings.grid(row=0, column=0, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
+        self.radiobuttonvar['debug_mode'] = tk.StringVar()
+        rb_debug_debug = ttk.Radiobutton(blk_debug_settings, text="Debug + Info + Errors", variable=self.radiobuttonvar['debug_mode'], value="Debug", command=(lambda field='debug_mode': self.check_cb(field)))
+        rb_debug_debug.grid(row=0, column=1, columnspan=2, sticky=(tk.W))
+        rb_debug_info = ttk.Radiobutton(blk_debug_settings, text="Info + Errors", variable=self.radiobuttonvar['debug_mode'], value="Info", command=(lambda field='debug_mode': self.check_cb(field)))
+        rb_debug_info.grid(row=1, column=1, columnspan=2, sticky=(tk.W))
+        rb_debug_error = ttk.Radiobutton(blk_debug_settings, text="Errors only (default)", variable=self.radiobuttonvar['debug_mode'], value="Error", command=(lambda field='debug_mode': self.check_cb(field)))
+        rb_debug_error.grid(row=2, column=1, columnspan=2, sticky=(tk.W))
+        btn_open_logfile = ttk.Button(blk_debug_settings, text='Open Log File', command=self.open_logfile)
+        btn_open_logfile.grid(row=3, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
 
         # debug settings block
-        blk_single_waypoint_asst = LabelFrame(page2, text="Single Waypoint Assist")
-        blk_single_waypoint_asst.grid(row=1, column=0, padx=10, pady=5, columnspan=2, sticky=(N, S, E, W))
+        blk_single_waypoint_asst = ttk.LabelFrame(page2, text="Single Waypoint Assist")
+        blk_single_waypoint_asst.grid(row=1, column=1, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
         blk_single_waypoint_asst.columnconfigure(0, weight=1, minsize=10, uniform="group1")
         blk_single_waypoint_asst.columnconfigure(1, weight=3, minsize=10, uniform="group1")
 
-        lbl_system = tk.Label(blk_single_waypoint_asst, text='System:')
-        lbl_system.grid(row=0, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-        txt_system = Entry(blk_single_waypoint_asst, textvariable=self.single_waypoint_system)
-        txt_system.grid(row=0, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-        lbl_station = tk.Label(blk_single_waypoint_asst, text='Station:')
-        lbl_station.grid(row=1, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-        txt_station = Entry(blk_single_waypoint_asst, textvariable=self.single_waypoint_station)
-        txt_station.grid(row=1, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-        self.checkboxvar['Single Waypoint Assist'] = BooleanVar()
-        cb_single_waypoint = Checkbutton(blk_single_waypoint_asst, text='Single Waypoint Assist', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['Single Waypoint Assist'], command=(lambda field='Single Waypoint Assist': self.check_cb(field)))
-        cb_single_waypoint.grid(row=2, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        lbl_system = ttk.Label(blk_single_waypoint_asst, text='System:')
+        lbl_system.grid(row=0, column=0, padx=2, pady=2, columnspan=1, sticky=(tk.N, tk.E, tk.W, tk.S))
+        txt_system = ttk.Entry(blk_single_waypoint_asst, textvariable=self.single_waypoint_system)
+        txt_system.grid(row=0, column=1, padx=2, pady=2, columnspan=1, sticky=(tk.N, tk.E, tk.W, tk.S))
+        lbl_station = ttk.Label(blk_single_waypoint_asst, text='Station:')
+        lbl_station.grid(row=1, column=0, padx=2, pady=2, columnspan=1, sticky=(tk.N, tk.E, tk.W, tk.S))
+        txt_station = ttk.Entry(blk_single_waypoint_asst, textvariable=self.single_waypoint_station)
+        txt_station.grid(row=1, column=1, padx=2, pady=2, columnspan=1, sticky=(tk.N, tk.E, tk.W, tk.S))
+        self.checkboxvar['Single Waypoint Assist'] = tk.BooleanVar()
+        cb_single_waypoint = ttk.Checkbutton(blk_single_waypoint_asst, text='Single Waypoint Assist', variable=self.checkboxvar['Single Waypoint Assist'], command=(lambda field='Single Waypoint Assist': self.check_cb(field)))
+        cb_single_waypoint.grid(row=2, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
 
-        lbl_tce = tk.Label(blk_single_waypoint_asst, text='Trade Computer Extension (TCE)', fg="blue", cursor="hand2")
+        lbl_tce = ttk.Label(blk_single_waypoint_asst, text='Trade Computer Extension (TCE)', style="Link.TLabel")
         lbl_tce.bind("<Button-1>", lambda e: hyperlink_callback("https://forums.frontier.co.uk/threads/trade-computer-extension-mk-ii.223056/"))
-        lbl_tce.grid(row=3, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-        lbl_tce_dest = tk.Label(blk_single_waypoint_asst, text='TCE Dest json:')
-        lbl_tce_dest.grid(row=4, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-        txt_tce_dest = Entry(blk_single_waypoint_asst, textvariable=self.TCE_Destination_Filepath)
+        lbl_tce.grid(row=3, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
+        lbl_tce_dest = ttk.Label(blk_single_waypoint_asst, text='TCE Dest json:')
+        lbl_tce_dest.grid(row=4, column=0, padx=2, pady=2, columnspan=1, sticky=(tk.N, tk.E, tk.W, tk.S))
+        txt_tce_dest = ttk.Entry(blk_single_waypoint_asst, textvariable=self.TCE_Destination_Filepath)
         txt_tce_dest.bind('<FocusOut>', self.entry_update)
-        txt_tce_dest.grid(row=4, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+        txt_tce_dest.grid(row=4, column=1, padx=2, pady=2, columnspan=1, sticky=(tk.N, tk.E, tk.W, tk.S))
 
-        btn_load_tce = Button(blk_single_waypoint_asst, text='Load TCE Destination', command=self.load_tce_dest)
-        btn_load_tce.grid(row=5, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        btn_load_tce = ttk.Button(blk_single_waypoint_asst, text='Load TCE Destination', command=self.load_tce_dest)
+        btn_load_tce.grid(row=5, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
 
-        blk_debug_buttons = tk.Frame(page2)
-        blk_debug_buttons.grid(row=3, column=0, padx=10, pady=5, columnspan=2, sticky=(N, S, E, W))
+        blk_debug_buttons = ttk.Frame(page2)
+        blk_debug_buttons.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
         blk_debug_buttons.columnconfigure([0, 1], weight=1, minsize=100)
 
-        self.checkboxvar['Debug Overlay'] = BooleanVar()
-        cb_debug_overlay = Checkbutton(blk_debug_buttons, text='Debug Overlay', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['Debug Overlay'], command=(lambda field='Debug Overlay': self.check_cb(field)))
-        cb_debug_overlay.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        self.checkboxvar['Debug Overlay'] = tk.BooleanVar()
+        cb_debug_overlay = ttk.Checkbutton(blk_debug_buttons, text='Debug Overlay', variable=self.checkboxvar['Debug Overlay'], command=(lambda field='Debug Overlay': self.check_cb(field)))
+        cb_debug_overlay.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
 
-        btn_save = Button(blk_debug_buttons, text='Save All Settings', command=self.save_settings)
-        btn_save.grid(row=7, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        btn_save = ttk.Button(blk_debug_buttons, text='Save All Settings', command=self.save_settings, style="Accent.TButton")
+        btn_save.grid(row=7, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
 
         # Statusbar
-        statusbar = Frame(win)
+        statusbar = ttk.Frame(win)
         statusbar.grid(row=4, column=0)
-        self.status = tk.Label(win, text="Status: ", bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=29)
-        self.jumpcount = tk.Label(statusbar, text="<info> ", bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=40)
-        self.status.pack(in_=statusbar, side=LEFT, fill=BOTH, expand=True)
-        self.jumpcount.pack(in_=statusbar, side=RIGHT, fill=Y, expand=False)
+        self.status = ttk.Label(win, text="Status: ", relief=tk.SUNKEN, anchor=tk.W, justify=tk.LEFT, width=29)
+        self.jumpcount = ttk.Label(statusbar, text="<info> ", relief=tk.SUNKEN, anchor=tk.W, justify=tk.LEFT, width=40)
+        self.status.pack(in_=statusbar, side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.jumpcount.pack(in_=statusbar, side=tk.RIGHT, fill=tk.Y, expand=False)
 
         return mylist
 
@@ -1005,6 +1008,19 @@ class APGui():
         import os
         os.execv(sys.executable, ['python'] + sys.argv)
 
+def apply_theme_to_titlebar(root):
+    version = sys.getwindowsversion()
+
+    if version.major == 10 and version.build >= 22000:
+        # Set the title bar color to the background color on Windows 11 for better appearance
+        pywinstyles.change_header_color(root, "#1c1c1c" if sv_ttk.get_theme() == "dark" else "#fafafa")
+    elif version.major == 10:
+        pywinstyles.apply_style(root, "dark" if sv_ttk.get_theme() == "dark" else "normal")
+
+        # A hacky way to update the title bar's color on Windows 10 (it doesn't update instantly like on Windows 11)
+        root.wm_attributes("-alpha", 0.99)
+        root.wm_attributes("-alpha", 1)
+
 def main():
     #   handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
     #   if handle != None:
@@ -1013,6 +1029,9 @@ def main():
     root = tk.Tk()
     app = APGui(root)
 
+    sv_ttk.set_theme("dark")
+    if sys.platform == "win32":
+        apply_theme_to_titlebar(root)
     root.mainloop()
 
 

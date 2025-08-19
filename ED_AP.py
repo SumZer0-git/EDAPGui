@@ -1850,12 +1850,21 @@ class EDAutopilot:
 
                 if not fleet_carrier:
                     # In space (launched from starport or outpost etc.)
-                    sleep(1.5)
-                    self.update_ap_status("Undock Complete, accelerating")
                     self.keys.send('SetSpeed100')
-                    sleep(1)
-                    self.keys.send('UseBoostJuice')
-                    sleep(13)  # get away from Station
+
+                    # While Mass Locked, keep boosting.
+                    while not self.status.wait_for_flag_off(FlagsFsdMassLocked, timeout=2):
+                        self.keys.send('UseBoostJuice')
+
+                    # Enter supercruise to get away from the Station
+                    self.keys.send('Supercruise')
+
+                    # Start SCO monitoring
+                    self.start_sco_monitoring()
+
+                    # Wait the configured time before continuing
+                    self.ap_ckb('log', 'Flying for configured FC departure time.')
+                    sleep(self.config['FCDepartureTime'])
                     self.keys.send('SetSpeed50')
 
         elif on_planet:
