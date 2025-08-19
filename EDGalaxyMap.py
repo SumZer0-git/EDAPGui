@@ -261,12 +261,19 @@ class EDGalaxyMap:
         """Open Galaxy Map if we are not there. Waits for map to load. Selects the search bar.
         """
 
+        sleep(1) # Wait for screen to load
+        self.keys.send('UI_Down') # To navigation
+        sleep(0.2)
+        self.keys.send('UI_Select') # To navigation
+        sleep(0.2)
+        self.keys.send('UI_Select') # open gal map
+        sleep(1) # Wait for screen to load
+
         # Wait for map to load
         # if not self.status_parser.wait_for_gui_focus(GuiFocusGalaxyMap):
         #     logger.debug("goto_galaxy_map: Galaxy map did not open.")
 
         # TODO - check this to OCR check
-        sleep(2)
         # Scale the regions based on the target resolution.
         scl_reg = reg_scale_for_station(self.reg['cartographics'], self.screen.screen_width,
                                             self.screen.screen_height)
