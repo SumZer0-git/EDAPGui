@@ -1,54 +1,139 @@
 {
     "Screen_Regions.sun": {
-        "rect": [0.30, 0.30, 0.70, 0.68]
+        "rect": [
+            0.3,
+            0.3,
+            0.7,
+            0.68
+        ]
     },
     "Screen_Regions.disengage": {
-        "rect": [0.42, 0.65, 0.60, 0.80]
+        "rect": [
+            0.42,
+            0.65,
+            0.6,
+            0.8
+        ]
     },
     "Screen_Regions.sco": {
-        "rect": [0.42, 0.65, 0.60, 0.80]
+        "rect": [
+            0.42,
+            0.65,
+            0.6,
+            0.8
+        ]
     },
     "Screen_Regions.fss": {
-        "rect": [0.5045, 0.7545, 0.532, 0.7955]
+        "rect": [
+            0.5045,
+            0.7545,
+            0.532,
+            0.7955
+        ]
     },
     "Screen_Regions.mission_dest": {
-        "rect": [0.46, 0.38, 0.65, 0.86]
+        "rect": [
+            0.46,
+            0.38,
+            0.65,
+            0.86
+        ]
     },
     "Screen_Regions.missions": {
-        "rect": [0.50, 0.78, 0.65, 0.85]
+        "rect": [
+            0.5,
+            0.78,
+            0.65,
+            0.85
+        ]
     },
     "Screen_Regions.nav_panel": {
-        "rect": [0.25, 0.36, 0.60, 0.85]
+        "rect": [
+            0.25,
+            0.36,
+            0.6,
+            0.85
+        ]
     },
     "EDInternalStatusPanel.right_panel": {
-        "rect": [0.35, 0.2, 0.85, 0.26]
+        "rect": [
+            0.35,
+            0.2,
+            0.85,
+            0.26
+        ]
     },
     "EDStationServicesInShip.connected_to": {
-        "rect": [0.0, 0.0, 0.30, 0.30]
+        "rect": [
+            0.0,
+            0.0,
+            0.3,
+            0.3
+        ]
     },
     "EDStationServicesInShip.stn_svc_layout": {
-        "rect": [0.05, 0.40, 0.60, 0.76]
+        "rect": [
+            0.05,
+            0.4,
+            0.6,
+            0.76
+        ]
     },
     "EDStationServicesInShip.commodities_market": {
-        "rect": [0.0, 0.0, 0.25, 0.25]
+        "rect": [
+            0.0,
+            0.0,
+            0.25,
+            0.25
+        ]
     },
     "EDGalaxyMap.cartographics": {
-        "rect": [0.0, 0.0, 0.25, 0.25]
+        "rect": [
+            0.0,
+            0.0,
+            0.25,
+            0.25
+        ]
     },
     "EDSystemMap.cartographics": {
-        "rect": [0.0, 0.0, 0.25, 0.25]
+        "rect": [
+            0.0,
+            0.0,
+            0.25,
+            0.25
+        ]
     },
     "EDNavigationPanel.nav_panel": {
-        "rect": [0.11, 0.21, 0.70, 0.86]
+        "rect": [
+            0.11,
+            0.21,
+            0.7,
+            0.86
+        ]
     },
     "EDNavigationPanel.temp_tab_bar": {
-        "rect": [0.0, 0.2, 0.7, 0.35]
+        "rect": [
+            0.0,
+            0.2,
+            0.7,
+            0.35
+        ]
     },
     "EDNavigationPanel.sub_reg.tab_bar": {
-        "rect": [0.0, 0.0, 1.0, 0.08]
+        "rect": [
+            0.0,
+            0.0,
+            1.0,
+            0.08
+        ]
     },
     "EDNavigationPanel.sub_reg.location_panel": {
-        "rect": [0.2218, 0.3, 0.8, 1.0]
+        "rect": [
+            0.2218,
+            0.3,
+            0.8,
+            1.0
+        ]
     },
     "EDNavigationPanel.size.nav_pnl_tab": {
         "width": 260,
@@ -61,5 +146,41 @@
     "EDInternalStatusPanel.size.nav_pnl_tab": {
         "width": 100,
         "height": 20
+    },
+    "EDInternalStatusPanel.inventory_list": {
+        "rect": [
+            0.2,
+            0.3,
+            0.8,
+            0.9
+        ]
+    },
+    "EDInternalStatusPanel.size.inventory_item": {
+        "width": 100,
+        "height": 20
+    },
+    "EDStationServicesInShip.services_list": {
+        "rect": [
+            0.1,
+            0.4,
+            0.5,
+            0.9
+        ]
+    },
+    "EDStationServicesInShip.carrier_admin_header": {
+        "rect": [
+            0.3994186046511628,
+            0.0,
+            0.6,
+            0.1986111111111111
+        ]
+    },
+    "EDGalaxyMap.galaxy_map_header": {
+        "rect": [
+            0.0,
+            0.0,
+            0.2,
+            0.1
+        ]
     }
 }
