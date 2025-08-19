@@ -837,9 +837,19 @@ class APGui():
 
         ttk.Button(blk_size_cal, text="Calibrate Size", command=self.calibrate_ocr_size).grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
 
+        # Other Calibrations
+        blk_other_cal = ttk.LabelFrame(tab, text="Other Calibrations")
+        blk_other_cal.grid(row=2, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
+
+        btn_calibrate_compass = ttk.Button(blk_other_cal, text="Calibrate Compass", command=self.calibrate_compass_callback)
+        btn_calibrate_compass.pack(side=tk.LEFT, padx=5, pady=5)
+
+        btn_calibrate_target = ttk.Button(blk_other_cal, text="Calibrate Target", command=self.calibrate_callback)
+        btn_calibrate_target.pack(side=tk.LEFT, padx=5, pady=5)
+
         # Button Frame
         button_frame = ttk.Frame(tab)
-        button_frame.grid(row=2, column=0, padx=10, pady=10, sticky=tk.W)
+        button_frame.grid(row=3, column=0, padx=10, pady=10, sticky=tk.W)
         ttk.Button(button_frame, text="Save All Calibrations", command=self.save_ocr_calibration_data, style="Accent.TButton").pack(side=tk.LEFT, padx=5)
         ttk.Button(button_frame, text="Reset All to Default", command=self.reset_all_calibrations).pack(side=tk.LEFT, padx=5)
 
@@ -1179,10 +1189,6 @@ class APGui():
         # File Actions
         blk_file_actions = ttk.LabelFrame(page2, text="File Actions")
         blk_file_actions.grid(row=0, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
-        btn_calibrate_target = ttk.Button(blk_file_actions, text="Calibrate Target", command=self.calibrate_callback)
-        btn_calibrate_target.grid(row=0, column=0, padx=2, pady=2, sticky=tk.W)
-        btn_calibrate_compass = ttk.Button(blk_file_actions, text="Calibrate Compass", command=self.calibrate_compass_callback)
-        btn_calibrate_compass.grid(row=1, column=0, padx=2, pady=2, sticky=tk.W)
         self.checkboxvar['Enable CV View'] = tk.IntVar()
         self.checkboxvar['Enable CV View'].set(int(self.ed_ap.config['Enable_CV_View']))
         cb_enable_cv_view = ttk.Checkbutton(blk_file_actions, text='Enable CV View', variable=self.checkboxvar['Enable CV View'], command=(lambda field='Enable CV View': self.check_cb(field)))
