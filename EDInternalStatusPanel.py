@@ -367,11 +367,11 @@ class EDInternalStatusPanel:
         sleep(0.2)
         ap.keys.send('UI_Select') # select tritium depot
         sleep(0.2)
-        ap.keys.send('UI_Select') # select tritium depot
+        ap.keys.send('UI_Select') # select select refuel
         sleep(0.2)
-        ap.keys.send('UI_Up') # select tritium depot
+        ap.keys.send('UI_Up') # select move to confirm
         sleep(0.2)
-        ap.keys.send('UI_Select') # select tritium depot
+        ap.keys.send('UI_Select') # select confirm
         sleep(0.2)
         ap.keys.send("UI_Back", repeat=4)
         sleep(0.2)
