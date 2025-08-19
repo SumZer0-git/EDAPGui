@@ -215,6 +215,54 @@ class EDGalaxyMap:
         sleep(0.5)
         return True
 
+    def set_fc_destination(self, ap, target_name) -> bool:
+        """ This sequence for the Odyssey. """
+        self.goto_galaxy_map()
+
+        target_name_uc = target_name.upper()
+
+        # Check if the current nav route is to the target system
+        last_nav_route_sys = ap.nav_route.get_last_system()
+        last_nav_route_sys_uc = last_nav_route_sys.upper()
+        if last_nav_route_sys_uc == target_name_uc:
+            # Close Galaxy map
+            ap.keys.send('GalaxyMapOpen')
+            return True
+
+        # navigate to and select: search field
+        ap.keys.send('UI_Up')
+        sleep(0.05)
+        ap.keys.send('UI_Select')
+        sleep(0.05)
+
+        # type in the System name
+        typewrite(target_name_uc, interval=0.25)
+        logger.debug(f"Entered system name: {target_name_uc}.")
+        sleep(0.05)
+
+        # send enter key (removes focus out of input field)
+        ap.keys.send_key('Down', 28)  # 28=ENTER
+        sleep(0.05)
+        ap.keys.send_key('Up', 28)  # 28=ENTER
+        sleep(0.05)
+
+        # According to some reports, the ENTER key does not always reselect the text
+        # box, so this down and up will reselect the text box.
+        ap.keys.send('UI_Down')
+        sleep(0.05)
+        ap.keys.send('UI_Up')
+        sleep(0.05)
+
+        # navigate to and select: search button
+        ap.keys.send('UI_Right')  # to >| button
+        sleep(0.05)
+        ap.keys.send('UI_Select')  # search
+        sleep(5)
+        ap.keys.send('UI_Right')
+        sleep(1)
+        ap.keys.send('UI_Select')
+        return True
+
     def set_next_system(self, ap, target_system) -> bool:
         """ Sets the next system to jump to, or the final system to jump to.
         If the system is already selected or is selected correctly, returns True,
