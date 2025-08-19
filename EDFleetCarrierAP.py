@@ -56,27 +56,34 @@ class FleetCarrierAutopilot:
             self.ap.ap_ckb('log+vce', "Refueling tritium from inventory.")
             self.internal_panel.refuel_tritium_from_inventory(self.ap)
 
-            # 2. Plot route and jump
-            self.plot_and_jump(next_wp_system)
+            jump_successful = False
+            for attempt in range(3):
+                # 2. Plot route and jump
+                self.plot_and_jump(next_wp_system)
 
-            # 3. Wait for jump to complete
-            jump_complete = self.wait_for_carrier_jump(next_wp_system)
+                # 3. Wait for jump to complete
+                jump_complete = self.wait_for_carrier_jump(next_wp_system)
 
-            if not jump_complete:
-                self.ap.ap_ckb('log+vce', "Carrier jump timed out or failed.")
+                if not jump_complete:
+                    self.ap.ap_ckb('log+vce', f"Carrier jump timed out or failed. Retry {attempt + 1} of 3.")
+                    continue
+
+                # 4. Verify jump and mark waypoint as complete
+                current_system = self.journal.ship_state()['cur_star_system'].upper()
+                if current_system == next_wp_system:
+                    self.ap.ap_ckb('log+vce', f"Successfully jumped to {next_wp_system}.")
+                    self.waypoint.mark_waypoint_complete(dest_key)
+                    # 5. Wait for cooldown
+                    self.ap.ap_ckb('log+vce', "Waiting for cooldown (5 minutes).")
+                    sleep(5 * 60)
+                    jump_successful = True
+                    break
+                else:
+                    self.ap.ap_ckb('log+vce', f"Failed to jump to {next_wp_system}. Current system: {current_system}. Retry {attempt + 1} of 3.")
+            
+            if not jump_successful:
+                self.ap.ap_ckb('log+vce', f"Failed to jump to {next_wp_system} after 3 attempts. Aborting.")
                 break
-
-            # 4. Verify jump and mark waypoint as complete
-            current_system = self.journal.ship_state()['cur_star_system'].upper()
-            if current_system == next_wp_system:
-                self.ap.ap_ckb('log+vce', f"Successfully jumped to {next_wp_system}.")
-                self.waypoint.mark_waypoint_complete(dest_key)
-                # 5. Wait for cooldown
-                self.ap.ap_ckb('log+vce', "Waiting for cooldown (5 minutes).")
-                sleep(5 * 60)
-            else:
-                self.ap.ap_ckb('log+vce', f"Failed to jump to {next_wp_system}. Current system: {current_system}")
-                break # Abort on failure
 
         self.ap.ap_ckb('log+vce', "Fleet Carrier Autopilot Disengaged.")
 
@@ -94,7 +101,7 @@ class FleetCarrierAutopilot:
         log_file_path = self.journal.get_latest_log()
         with open(log_file_path, 'r', encoding='utf-8') as f:
             f.seek(0, 2) # Go to the end of the file
-            timeout = time() + 16 * 60 # 16 minutes timeout
+            timeout = time() + 30 * 60 # 30 minutes timeout
             while time() < timeout:
                 line = f.readline()
                 if line:
@@ -109,7 +116,7 @@ class FleetCarrierAutopilot:
                         # Ignore malformed lines
                         pass
                 else:
-                    sleep(1)
+                    sleep(10)
         return False
 
     def plot_and_jump(self, system_name):
@@ -137,7 +144,7 @@ class FleetCarrierAutopilot:
              self.keys.send('UI_Back')
              return False
         sleep(10)
-        self.keys.send("UI_Back", repeat=6)
+        self.keys.send("UI_Back", repeat=12)
 
 
         logger.info(f"Jump to {system_name} initiated.")
