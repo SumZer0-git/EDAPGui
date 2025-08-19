@@ -465,9 +465,9 @@ class APGui():
         else:
             # Add queued messages to the list
             while not self.log_buffer.empty():
-                self.msgList.insert('', tk.END, values=(self.log_buffer.get(),))
+                self.msgList.insert(tk.END, self.log_buffer.get())
 
-            self.msgList.insert('', tk.END, values=(message,))
+            self.msgList.insert(tk.END, message)
             self.msgList.yview(tk.END)
             logger.info(msg)
 
@@ -842,12 +842,10 @@ class APGui():
         # log window
         log = ttk.LabelFrame(page0, text="LOG")
         log.grid(row=3, column=0, padx=12, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
-        log.columnconfigure(0, weight=1)
         scrollbar = ttk.Scrollbar(log)
         scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
-        mylist = ttk.Treeview(log, columns=('messages',), show='headings', height=10, yscrollcommand=scrollbar.set)
-        mylist.heading('messages', text='Log Messages')
-        mylist.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+        mylist = tk.Listbox(log, width=72, height=10, yscrollcommand=scrollbar.set)
+        mylist.grid(row=0, column=0)
         scrollbar.config(command=mylist.yview)
 
         # settings block
