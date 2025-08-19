@@ -760,7 +760,6 @@ class APGui():
         if not os.path.exists(calibration_file):
             # Create the file with default values if it doesn't exist
             default_regions = {
-                "Screen_Regions.target_occluded": {"rect": [0.33, 0.27, 0.66, 0.70]},
                 "Screen_Regions.sun": {"rect": [0.30, 0.30, 0.70, 0.68]},
                 "Screen_Regions.disengage": {"rect": [0.42, 0.65, 0.60, 0.80]},
                 "Screen_Regions.sco": {"rect": [0.42, 0.65, 0.60, 0.80]},
@@ -773,7 +772,11 @@ class APGui():
                 "EDStationServicesInShip.stn_svc_layout": {"rect": [0.05, 0.40, 0.60, 0.76]},
                 "EDStationServicesInShip.commodities_market": {"rect": [0.0, 0.0, 0.25, 0.25]},
                 "EDGalaxyMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
-                "EDSystemMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]}
+                "EDSystemMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
+                "EDNavigationPanel.nav_panel": {"rect": [0.11, 0.21, 0.70, 0.86]},
+                "EDNavigationPanel.temp_tab_bar": {"rect": [0.0, 0.2, 0.7, 0.35]},
+                "EDNavigationPanel.sub_reg.tab_bar": {"rect": [0.0, 0.0, 1.0, 0.08]},
+                "EDNavigationPanel.sub_reg.location_panel": {"rect": [0.2218, 0.3, 0.8, 1.0]}
             }
             with open(calibration_file, 'w') as f:
                 json.dump(default_regions, f, indent=4)

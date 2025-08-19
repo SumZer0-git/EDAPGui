@@ -1,7 +1,4 @@
 {
-    "Screen_Regions.target_occluded": {
-        "rect": [0.33, 0.27, 0.66, 0.70]
-    },
     "Screen_Regions.sun": {
         "rect": [0.30, 0.30, 0.70, 0.68]
     },
@@ -40,5 +37,17 @@
     },
     "EDSystemMap.cartographics": {
         "rect": [0.0, 0.0, 0.25, 0.25]
+    },
+    "EDNavigationPanel.nav_panel": {
+        "rect": [0.11, 0.21, 0.70, 0.86]
+    },
+    "EDNavigationPanel.temp_tab_bar": {
+        "rect": [0.0, 0.2, 0.7, 0.35]
+    },
+    "EDNavigationPanel.sub_reg.tab_bar": {
+        "rect": [0.0, 0.0, 1.0, 0.08]
+    },
+    "EDNavigationPanel.sub_reg.location_panel": {
+        "rect": [0.2218, 0.3, 0.8, 1.0]
     }
 }
