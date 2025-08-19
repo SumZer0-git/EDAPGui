@@ -340,11 +340,13 @@ class EDInternalStatusPanel:
             return
 
         # Now on tritium, go right to select quantity
-        for _ in range(20): # Press right for 2 seconds to transfer a lot
-            ap.keys.send('UI_Right', hold=0.1)
+        for _ in range(1): # Press right for 20 seconds to transfer a lot
+            ap.keys.send('UI_Left', hold=20)
         sleep(0.1)
 
-        ap.keys.send('UI_Down') # To transfer button
+        ap.keys.send('UI_Down') # To cancel button
+        sleep(0.1)
+        ap.keys.send('UI_Right') # To transfer button
         sleep(0.1)
         ap.keys.send('UI_Select') # Click Transfer
         sleep(0.1)
