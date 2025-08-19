@@ -100,14 +100,6 @@ class FleetCarrierAutopilot:
             return False
 
         # Now in fleet carrier management screen
-
-        sleep(1) # Wait for screen to load
-        self.keys.send('UI_Down') # To navigation
-        sleep(0.2)
-        self.keys.send('UI_Select') # To navigation
-        sleep(0.2)
-        self.keys.send('UI_Select') # open gal map
-        sleep(1) # Wait for screen to load
         self.ap.galaxy_map.goto_galaxy_map_from_fc()
 
         # 1. Open Galaxy Map
