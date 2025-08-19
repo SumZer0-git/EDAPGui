@@ -215,6 +215,54 @@ class EDGalaxyMap:
         sleep(0.5)
         return True
 
+    def set_fc_destination(self, ap, target_name) -> bool:
+        """ This sequence for the Odyssey. """
+        self.goto_galaxy_map()
+
+        target_name_uc = target_name.upper()
+
+        # Check if the current nav route is to the target system
+        last_nav_route_sys = ap.nav_route.get_last_system()
+        last_nav_route_sys_uc = last_nav_route_sys.upper()
+        if last_nav_route_sys_uc == target_name_uc:
+            # Close Galaxy map
+            ap.keys.send('GalaxyMapOpen')
+            return True
+
+        # navigate to and select: search field
+        ap.keys.send('UI_Up')
+        sleep(0.05)
+        ap.keys.send('UI_Select')
+        sleep(0.05)
+
+        # type in the System name
+        typewrite(target_name_uc, interval=0.25)
+        logger.debug(f"Entered system name: {target_name_uc}.")
+        sleep(0.05)
+
+        # send enter key (removes focus out of input field)
+        ap.keys.send_key('Down', 28)  # 28=ENTER
+        sleep(0.05)
+        ap.keys.send_key('Up', 28)  # 28=ENTER
+        sleep(0.05)
+
+        # According to some reports, the ENTER key does not always reselect the text
+        # box, so this down and up will reselect the text box.
+        ap.keys.send('UI_Down')
+        sleep(0.05)
+        ap.keys.send('UI_Up')
+        sleep(0.05)
+
+        # navigate to and select: search button
+        ap.keys.send('UI_Right')  # to >| button
+        sleep(0.05)
+        ap.keys.send('UI_Select')  # search
+        sleep(5)
+        ap.keys.send('UI_Right')
+        sleep(1)
+        ap.keys.send('UI_Select')
+        return True
+
     def set_next_system(self, ap, target_system) -> bool:
         """ Sets the next system to jump to, or the final system to jump to.
         If the system is already selected or is selected correctly, returns True,
@@ -256,3 +304,30 @@ class EDGalaxyMap:
             logger.debug("Galaxy Map is already open")
             self.keys.send('UI_Left', repeat=2)
             self.keys.send('UI_Up', hold=2)  # Go up to search bar. Allows 1 left to bookmarks.
+
+    def goto_galaxy_map_from_fc(self):
+        """Open Galaxy Map if we are not there. Waits for map to load. Selects the search bar.
+        """
+
+        sleep(1) # Wait for screen to load
+        self.keys.send('UI_Down') # To navigation
+        sleep(0.2)
+        self.keys.send('UI_Select') # To navigation
+        sleep(0.2)
+        self.keys.send('UI_Select') # open gal map
+        sleep(1) # Wait for screen to load
+
+        # Wait for map to load
+        # if not self.status_parser.wait_for_gui_focus(GuiFocusGalaxyMap):
+        #     logger.debug("goto_galaxy_map: Galaxy map did not open.")
+
+        # TODO - check this to OCR check
+        # Scale the regions based on the target resolution.
+        scl_reg = reg_scale_for_station(self.reg['cartographics'], self.screen.screen_width,
+                                            self.screen.screen_height)
+
+        # Wait for screen to appear. The text is the same, regardless of language.
+        res = self.ocr.wait_for_text(self.ap, ["CARTOGRAPHICS"], scl_reg)
+
+
+
