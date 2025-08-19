@@ -327,7 +327,7 @@ class EDInternalStatusPanel:
             image = self.ocr.capture_region_pct(inventory_list_region)
             img_selected, ocr_data, ocr_textlist = self.ocr.get_highlighted_item_data(image, scl_row_w, scl_row_h)
 
-            if img_selected is not None and "Tritium" in str(ocr_textlist):
+            if img_selected is not None and "TRITIUM" in str(ocr_textlist).upper():
                 tritium_found = True
                 break
 

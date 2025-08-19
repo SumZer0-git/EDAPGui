@@ -192,7 +192,7 @@ class OCR:
         ocr_textlist = self.image_simple_ocr(img_selected)
         # print(str(ocr_textlist))
 
-        if text.upper() in str(ocr_textlist):
+        if text.upper() in str(ocr_textlist).upper():
             logger.debug(f"Found '{text}' text in item text '{str(ocr_textlist)}'.")
             return True
         else:
@@ -213,7 +213,7 @@ class OCR:
         ocr_textlist = self.image_simple_ocr(img)
         # print(str(ocr_textlist))
 
-        if text.upper() in str(ocr_textlist):
+        if text.upper() in str(ocr_textlist).upper():
             logger.debug(f"Found '{text}' text in item text '{str(ocr_textlist)}'.")
             return True, str(ocr_textlist)
         else:
