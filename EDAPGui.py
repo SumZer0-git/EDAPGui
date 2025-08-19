@@ -837,8 +837,11 @@ class APGui():
 
         ttk.Button(blk_size_cal, text="Calibrate Size", command=self.calibrate_ocr_size).grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
 
-        # Save Button
-        ttk.Button(tab, text="Save All Calibrations", command=self.save_ocr_calibration_data, style="Accent.TButton").grid(row=2, column=0, padx=10, pady=10)
+        # Button Frame
+        button_frame = ttk.Frame(tab)
+        button_frame.grid(row=2, column=0, padx=10, pady=10, sticky=tk.W)
+        ttk.Button(button_frame, text="Save All Calibrations", command=self.save_ocr_calibration_data, style="Accent.TButton").pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Reset All to Default", command=self.reset_all_calibrations).pack(side=tk.LEFT, padx=5)
 
     def on_size_select(self, event):
         selected_size = self.calibration_size_var.get()
