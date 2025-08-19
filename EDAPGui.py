@@ -832,18 +832,16 @@ class APGui():
         self.log_msg(f"Starting calibration for: {selected_region}")
 
         self.calibration_overlay = tk.Toplevel(self.root)
-        self.calibration_overlay.attributes('-fullscreen', True)
         self.calibration_overlay.overrideredirect(True)
-        # self.calibration_overlay.attributes('-alpha', 0.5)  # This can be buggy
-
-        self.calibration_canvas = tk.Canvas(self.calibration_overlay, highlightthickness=0)
-        self.calibration_canvas.pack(fill=tk.BOTH, expand=True)
 
         screen_w = self.root.winfo_screenwidth()
         screen_h = self.root.winfo_screenheight()
+        self.calibration_overlay.geometry(f"{screen_w}x{screen_h}+0+0")
 
-        # Create a semi-transparent background
-        self.calibration_canvas.create_rectangle(0, 0, screen_w, screen_h, fill='black', stipple='gray50')
+        self.calibration_overlay.attributes('-alpha', 0.3)
+
+        self.calibration_canvas = tk.Canvas(self.calibration_overlay, highlightthickness=0, bg='black')
+        self.calibration_canvas.pack(fill=tk.BOTH, expand=True)
 
         # Draw current region
         rect_pct = self.ocr_calibration_data[selected_region]['rect']
@@ -851,7 +849,7 @@ class APGui():
         y1 = rect_pct[1] * screen_h
         x2 = rect_pct[2] * screen_w
         y2 = rect_pct[3] * screen_h
-        self.calibration_canvas.create_rectangle(x1, y1, x2, y2, outline='red', width=2, fill='red', stipple='gray25')
+        self.calibration_canvas.create_rectangle(x1, y1, x2, y2, outline='red', width=2)
 
         self.start_x = None
         self.start_y = None
