@@ -2,6 +2,8 @@ from __future__ import annotations
 from time import sleep
 from EDlogger import logger
 from Screen_Regions import reg_scale_for_station
+import os
+import json
 
 class FleetCarrierAutopilot:
     def __init__(self, ed_ap):
@@ -11,6 +13,26 @@ class FleetCarrierAutopilot:
         self.journal = self.ap.jn
         self.internal_panel = self.ap.internal_panel
         self.station_services = self.ap.stn_svcs_in_ship
+        self.ocr = self.ap.ocr
+        self.screen = self.ap.scr
+
+        # The rect is [L, T, R, B] top left x, y, and bottom right x, y in fraction of screen resolution
+        self.reg = {
+            'select_body_for_jump': {'rect': [0.45, 0.45, 0.55, 0.55]},
+        }
+
+        self.load_calibrated_regions()
+
+    def load_calibrated_regions(self):
+        calibration_file = 'configs/ocr_calibration.json'
+        if os.path.exists(calibration_file):
+            with open(calibration_file, 'r') as f:
+                calibrated_regions = json.load(f)
+
+            for key, value in self.reg.items():
+                calibrated_key = f"EDFleetCarrierAP.{key}"
+                if calibrated_key in calibrated_regions:
+                    self.reg[key]['rect'] = calibrated_regions[calibrated_key]['rect']
 
     def fc_waypoint_assist(self):
         """
@@ -107,21 +129,16 @@ class FleetCarrierAutopilot:
 
 
         # 2. Enter System Name and plot route
-        if not self.ap.galaxy_map.set_gal_map_destination_text(self.ap, system_name, self.journal.ship_state):
+        if not self.ap.galaxy_map.set_fc_destination(self.ap, system_name):
              logger.error(f"Failed to set destination to {system_name} in galaxy map.")
              # Back out of the galaxy map
              self.keys.send('UI_Back')
              sleep(1)
              self.keys.send('UI_Back')
              return False
-        sleep(2)
+        sleep(10)
+        self.keys.send("UI_Back", repeat=6)
 
-        # 3. Confirm Jump from within the fleet carrier management's galaxy map
-        # This is different from a normal jump. There should be a "confirm" button.
-        # I'll assume it's the first selectable item after plotting the route.
-        self.keys.send('UI_Select') # Select the plotted route
-        sleep(1)
-        self.keys.send('UI_Select') # Confirm the jump
 
         logger.info(f"Jump to {system_name} initiated.")
         self.ap.ap_ckb('log+vce', f"Jump to {system_name} initiated.")
