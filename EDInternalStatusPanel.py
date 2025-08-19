@@ -324,7 +324,7 @@ class EDInternalStatusPanel:
         ap.keys.send('UI_Up', hold=3) # Go to top of list
         sleep(0.5)
         for _ in range(20): # Max 20 scrolls
-            image = self.screen.get_screen_rect_pct(inventory_list_region['rect'])
+            image = self.ocr.capture_region_pct(inventory_list_region)
             img_selected, ocr_data, ocr_textlist = self.ocr.get_highlighted_item_data(image, scl_row_w, scl_row_h)
 
             if img_selected is not None and "Tritium" in str(ocr_textlist):
