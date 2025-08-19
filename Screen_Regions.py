@@ -1,6 +1,8 @@
 import numpy as np
 from numpy import array, sum
 import cv2
+import json
+import os
 
 
 """
@@ -120,6 +122,8 @@ class Screen_Regions:
         self.reg['missions']    = {'rect': [0.50, 0.78, 0.65, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}   
         self.reg['nav_panel']   = {'rect': [0.25, 0.36, 0.60, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}  
         
+        self.load_calibrated_regions()
+
         # convert rect from percent of screen into pixel location, calc the width/height of the area
         for i, key in enumerate(self.reg):
             xx = self.reg[key]['rect']
@@ -127,6 +131,17 @@ class Screen_Regions:
                                      int(xx[2]*screen.screen_width), int(xx[3]*screen.screen_height)]
             self.reg[key]['width']  = self.reg[key]['rect'][2] - self.reg[key]['rect'][0]
             self.reg[key]['height'] = self.reg[key]['rect'][3] - self.reg[key]['rect'][1]
+
+    def load_calibrated_regions(self):
+        calibration_file = 'configs/ocr_calibration.json'
+        if os.path.exists(calibration_file):
+            with open(calibration_file, 'r') as f:
+                calibrated_regions = json.load(f)
+
+            for key, value in self.reg.items():
+                calibrated_key = f"Screen_Regions.{key}"
+                if calibrated_key in calibrated_regions:
+                    self.reg[key]['rect'] = calibrated_regions[calibrated_key]['rect']
 
     def capture_region(self, screen, region_name):
         """ Just grab the screen based on the region name/rect.
