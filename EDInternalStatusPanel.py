@@ -34,7 +34,10 @@ class EDInternalStatusPanel:
         self.status_tab_text = self.locale["INT_PNL_TAB_STATUS"]
 
         # The rect is [L, T, R, B] top left x, y, and bottom right x, y in fraction of screen resolution
-        self.reg = {'right_panel': {'rect': [0.35, 0.2, 0.85, 0.26]}}
+        self.reg = {
+            'right_panel': {'rect': [0.35, 0.2, 0.85, 0.26]},
+            'inventory_list': {'rect': [0.2, 0.3, 0.8, 0.9]}
+        }
 
         self.load_calibrated_regions()
 
@@ -286,6 +289,71 @@ class EDInternalStatusPanel:
         sleep(0.2)
         ap.keys.send("HeadLookReset")
         print("End of transfer from FC")
+
+    def refuel_tritium_from_inventory(self, ap):
+        """ Transfer tritium from ship inventory to fleet carrier fuel tank using OCR. """
+        ap.ap_ckb('log+vce', "Refueling Fleet Carrier with Tritium.")
+        logger.debug("refuel_tritium_from_inventory: entered")
+        # Go to the internal (right) panel inventory tab
+        self.show_inventory_tab()
+
+        # Assumes on the INVENTORY tab
+        ap.keys.send('UI_Right')
+        sleep(0.1)
+        ap.keys.send('UI_Up')  # To FILTERS
+        sleep(0.1)
+        ap.keys.send('UI_Right')  # To >> TRANSFER
+        sleep(0.1)
+        ap.keys.send('UI_Select')  # Click >> TRANSFER
+        sleep(0.1)
+
+        inventory_list_region = self.reg.get('inventory_list', {'rect': [0.2, 0.3, 0.8, 0.9]})
+
+        # Find Tritium in the list
+        tritium_found = False
+        for _ in range(10): # Max 10 scrolls
+            image = self.screen.get_screen_rect_pct(inventory_list_region['rect'])
+            ocr_textlist = self.ocr.image_to_string(image, psm=6)
+            lines = ocr_textlist.split('\n')
+            for i, line in enumerate(lines):
+                if "Tritium" in line:
+                    # We found it, now select it
+                    ap.keys.send('UI_Up', hold=3) # Go to top of list
+                    sleep(0.5)
+                    if i > 0:
+                        ap.keys.send('UI_Down', repeat=i)
+                    sleep(0.5)
+                    tritium_found = True
+                    break
+            if tritium_found:
+                break
+            ap.keys.send('UI_Down') # Scroll down
+            sleep(0.5)
+
+        if not tritium_found:
+            logger.error("Could not find Tritium in inventory.")
+            ap.ap_ckb('log+vce', "Error: Could not find Tritium in inventory.")
+            return
+
+        # Now on tritium, go right to select quantity
+        for _ in range(20): # Press right for 2 seconds to transfer a lot
+            ap.keys.send('UI_Right', hold=0.1)
+        sleep(0.1)
+
+        ap.keys.send('UI_Down') # To transfer button
+        sleep(0.1)
+        ap.keys.send('UI_Select') # Click Transfer
+        sleep(0.1)
+
+        # Now on confirmation
+        ap.keys.send('UI_Select') # Confirm transfer
+        sleep(2) # Wait for transfer to complete
+
+        ap.keys.send("UI_Back", repeat=4)
+        sleep(0.2)
+        ap.keys.send("HeadLookReset")
+        logger.info("Tritium transfer complete.")
+        ap.ap_ckb('log+vce', "Tritium transfer complete.")
 
 
 def dummy_cb(msg, body=None):

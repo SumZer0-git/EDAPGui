@@ -137,6 +137,7 @@ class APGui():
         self.RO_A_running = False
         self.DSS_A_running = False
         self.SWP_A_running = False
+        self.FC_A_running = False
 
         self.cv_view = False
 
@@ -276,6 +277,10 @@ class APGui():
             logger.debug("Detected 'single_waypoint_stop' callback msg")
             self.checkboxvar['Single Waypoint Assist'].set(0)
             self.check_cb('Single Waypoint Assist')
+        elif msg == 'fc_stop':
+            logger.debug("Detected 'fc_stop' callback msg")
+            self.checkboxvar['Fleet Carrier Assist'].set(0)
+            self.check_cb('Fleet Carrier Assist')
 
         elif msg == 'stop_all_assists':
             logger.debug("Detected 'stop_all_assists' callback msg")
@@ -300,6 +305,9 @@ class APGui():
 
             self.checkboxvar['Single Waypoint Assist'].set(0)
             self.check_cb('Single Waypoint Assist')
+
+            self.checkboxvar['Fleet Carrier Assist'].set(0)
+            self.check_cb('Fleet Carrier Assist')
 
         elif msg == 'jumpcount':
             self.update_jumpcount(body)
@@ -437,6 +445,21 @@ class APGui():
         self.ed_ap.vce.say("Single Waypoint Assist Off")
         self.update_statusline("Idle")
 
+    def start_fc(self):
+        logger.debug("Entered: start_fc")
+        self.ed_ap.set_fc_assist(True)
+        self.FC_A_running = True
+        self.log_msg("Fleet Carrier Assist start")
+        self.ed_ap.vce.say("Fleet Carrier Assist On")
+
+    def stop_fc(self):
+        logger.debug("Entered: stop_fc")
+        self.ed_ap.set_fc_assist(False)
+        self.FC_A_running = False
+        self.log_msg("Fleet Carrier Assist stop")
+        self.ed_ap.vce.say("Fleet Carrier Assist Off")
+        self.update_statusline("Idle")
+
     def about(self):
         webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui")
 
@@ -572,6 +595,24 @@ class APGui():
 
             elif self.checkboxvar['FSD Route Assist'].get() == 0 and self.FSD_A_running == True:
                 self.stop_fsd()
+                self.lab_ck['Supercruise Assist'].config(state='active')
+                self.lab_ck['AFK Combat Assist'].config(state='active')
+                self.lab_ck['Waypoint Assist'].config(state='active')
+                self.lab_ck['Robigo Assist'].config(state='active')
+
+        if field == 'Fleet Carrier Assist':
+            if self.checkboxvar['Fleet Carrier Assist'].get() == 1 and self.FC_A_running == False:
+                self.lab_ck['FSD Route Assist'].config(state='disabled')
+                self.lab_ck['Supercruise Assist'].config(state='disabled')
+                self.lab_ck['AFK Combat Assist'].config(state='disabled')
+                self.lab_ck['Waypoint Assist'].config(state='disabled')
+                self.lab_ck['Robigo Assist'].config(state='disabled')
+                self.lab_ck['DSS Assist'].config(state='disabled')
+                self.start_fc()
+
+            elif self.checkboxvar['Fleet Carrier Assist'].get() == 0 and self.FC_A_running == True:
+                self.stop_fc()
+                self.lab_ck['FSD Route Assist'].config(state='active')
                 self.lab_ck['Supercruise Assist'].config(state='active')
                 self.lab_ck['AFK Combat Assist'].config(state='active')
                 self.lab_ck['Waypoint Assist'].config(state='active')
@@ -1044,7 +1085,7 @@ class APGui():
 
     def gui_gen(self, win):
 
-        modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'Robigo Assist', 'AFK Combat Assist', 'DSS Assist')
+        modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'Robigo Assist', 'AFK Combat Assist', 'DSS Assist', 'Fleet Carrier Assist')
         ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate')
         autopilot_entry_fields = ('Sun Bright Threshold', 'Nav Align Tries', 'Jump Tries', 'Docking Retries', 'Wait For Autodock')
         buttons_entry_fields = ('Start FSD', 'Start SC', 'Start Robigo', 'Stop All')
