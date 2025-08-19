@@ -19,6 +19,8 @@ from tkinter import filedialog as fd
 from tkinter import messagebox
 from tkinter import ttk
 import sv_ttk
+import pywinstyles
+import sys
 from idlelib.tooltip import Hovertip
 
 from Voice import *
@@ -760,30 +762,6 @@ class APGui():
         refuel_entry_fields = ('Refuel Threshold', 'Scoop Timeout', 'Fuel Threshold Abort')
         overlay_entry_fields = ('X Offset', 'Y Offset', 'Font Size')
 
-        #
-        # Define all the menus
-        #
-        menubar = tk.Menu(win, background='#ff8000', foreground='black', activebackground='white', activeforeground='black')
-        file = tk.Menu(menubar, tearoff=0)
-        file.add_command(label="Calibrate Target", command=self.calibrate_callback)
-        file.add_command(label="Calibrate Compass", command=self.calibrate_compass_callback)
-        self.checkboxvar['Enable CV View'] = tk.IntVar()
-        self.checkboxvar['Enable CV View'].set(int(self.ed_ap.config['Enable_CV_View']))  # set IntVar value to the one from config
-        file.add_checkbutton(label='Enable CV View', onvalue=1, offvalue=0, variable=self.checkboxvar['Enable CV View'], command=(lambda field='Enable CV View': self.check_cb(field)))
-        file.add_separator()
-        file.add_command(label="Restart", command=self.restart_program)
-        file.add_command(label="Exit", command=self.close_window)  # win.quit)
-        menubar.add_cascade(label="File", menu=file)
-
-        help = tk.Menu(menubar, tearoff=0)
-        help.add_command(label="Check for Updates", command=self.check_updates)
-        help.add_command(label="View Changelog", command=self.open_changelog)
-        help.add_separator()
-        help.add_command(label="Join Discord", command=self.open_discord)
-        help.add_command(label="About", command=self.about)
-        menubar.add_cascade(label="Help", menu=help)
-
-        win.config(menu=menubar)
 
         # notebook pages
         nb = ttk.Notebook(win)
@@ -915,9 +893,38 @@ class APGui():
         btn_save = ttk.Button(blk_settings_buttons, text='Save All Settings', command=self.save_settings, style="Accent.TButton")
         btn_save.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
 
+        # File Actions
+        blk_file_actions = ttk.LabelFrame(page2, text="File Actions")
+        blk_file_actions.grid(row=0, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
+        btn_calibrate_target = ttk.Button(blk_file_actions, text="Calibrate Target", command=self.calibrate_callback)
+        btn_calibrate_target.grid(row=0, column=0, padx=2, pady=2, sticky=tk.W)
+        btn_calibrate_compass = ttk.Button(blk_file_actions, text="Calibrate Compass", command=self.calibrate_compass_callback)
+        btn_calibrate_compass.grid(row=1, column=0, padx=2, pady=2, sticky=tk.W)
+        self.checkboxvar['Enable CV View'] = tk.IntVar()
+        self.checkboxvar['Enable CV View'].set(int(self.ed_ap.config['Enable_CV_View']))
+        cb_enable_cv_view = ttk.Checkbutton(blk_file_actions, text='Enable CV View', variable=self.checkboxvar['Enable CV View'], command=(lambda field='Enable CV View': self.check_cb(field)))
+        cb_enable_cv_view.grid(row=2, column=0, padx=2, pady=2, sticky=tk.W)
+        btn_restart = ttk.Button(blk_file_actions, text="Restart", command=self.restart_program)
+        btn_restart.grid(row=3, column=0, padx=2, pady=2, sticky=tk.W)
+        btn_exit = ttk.Button(blk_file_actions, text="Exit", command=self.close_window)
+        btn_exit.grid(row=4, column=0, padx=2, pady=2, sticky=tk.W)
+
+
+        # Help Actions
+        blk_help_actions = ttk.LabelFrame(page2, text="Help Actions")
+        blk_help_actions.grid(row=0, column=1, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
+        btn_check_updates = ttk.Button(blk_help_actions, text="Check for Updates", command=self.check_updates)
+        btn_check_updates.grid(row=0, column=0, padx=2, pady=2, sticky=tk.W)
+        btn_view_changelog = ttk.Button(blk_help_actions, text="View Changelog", command=self.open_changelog)
+        btn_view_changelog.grid(row=1, column=0, padx=2, pady=2, sticky=tk.W)
+        btn_join_discord = ttk.Button(blk_help_actions, text="Join Discord", command=self.open_discord)
+        btn_join_discord.grid(row=2, column=0, padx=2, pady=2, sticky=tk.W)
+        btn_about = ttk.Button(blk_help_actions, text="About", command=self.about)
+        btn_about.grid(row=3, column=0, padx=2, pady=2, sticky=tk.W)
+
         # debug block
         blk_debug = ttk.Frame(page2)
-        blk_debug.grid(row=0, column=0, padx=10, pady=5, sticky=(tk.E, tk.W))
+        blk_debug.grid(row=1, column=0, padx=10, pady=5, sticky=(tk.E, tk.W))
         blk_debug.columnconfigure([0, 1], weight=1, minsize=100, uniform="group2")
 
         # debug settings block
@@ -935,7 +942,7 @@ class APGui():
 
         # debug settings block
         blk_single_waypoint_asst = ttk.LabelFrame(page2, text="Single Waypoint Assist")
-        blk_single_waypoint_asst.grid(row=1, column=0, padx=10, pady=5, columnspan=2, sticky=(tk.N, tk.S, tk.E, tk.W))
+        blk_single_waypoint_asst.grid(row=1, column=1, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
         blk_single_waypoint_asst.columnconfigure(0, weight=1, minsize=10, uniform="group1")
         blk_single_waypoint_asst.columnconfigure(1, weight=3, minsize=10, uniform="group1")
 
@@ -964,7 +971,7 @@ class APGui():
         btn_load_tce.grid(row=5, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
 
         blk_debug_buttons = ttk.Frame(page2)
-        blk_debug_buttons.grid(row=3, column=0, padx=10, pady=5, columnspan=2, sticky=(tk.N, tk.S, tk.E, tk.W))
+        blk_debug_buttons.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
         blk_debug_buttons.columnconfigure([0, 1], weight=1, minsize=100)
 
         self.checkboxvar['Debug Overlay'] = tk.BooleanVar()
@@ -1001,6 +1008,19 @@ class APGui():
         import os
         os.execv(sys.executable, ['python'] + sys.argv)
 
+def apply_theme_to_titlebar(root):
+    version = sys.getwindowsversion()
+
+    if version.major == 10 and version.build >= 22000:
+        # Set the title bar color to the background color on Windows 11 for better appearance
+        pywinstyles.change_header_color(root, "#1c1c1c" if sv_ttk.get_theme() == "dark" else "#fafafa")
+    elif version.major == 10:
+        pywinstyles.apply_style(root, "dark" if sv_ttk.get_theme() == "dark" else "normal")
+
+        # A hacky way to update the title bar's color on Windows 10 (it doesn't update instantly like on Windows 11)
+        root.wm_attributes("-alpha", 0.99)
+        root.wm_attributes("-alpha", 1)
+
 def main():
     #   handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
     #   if handle != None:
@@ -1010,6 +1030,8 @@ def main():
     app = APGui(root)
 
     sv_ttk.set_theme("dark")
+    if sys.platform == "win32":
+        apply_theme_to_titlebar(root)
     root.mainloop()
 
 
