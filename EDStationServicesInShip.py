@@ -253,45 +253,33 @@ class EDStationServicesInShip:
             logger.error("Could not open station services.")
             return False
 
-        # Define the region for the services list
-        services_list_region = self.reg.get('services_list', {'rect': [0.1, 0.4, 0.5, 0.9]})
+        sleep(0.2)
+        self.keys.send('UI_Down') # To redemption office
+        sleep(0.2)
+        self.keys.send('UI_Down') # To tritium depot
+        sleep(0.2)
+        self.keys.send('UI_Right') # To tritium depot
+        sleep(0.2)
+        self.keys.send('UI_Right') # To tritium depot
+        sleep(0.2)
+        self.keys.send('UI_Select') # To tritium depot
+        sleep(5) # Wait for screen to load
 
-        # Use OCR to find "Fleet Carrier Management"
-        image = self.screen.get_screen_rect_pct(services_list_region['rect'])
-        ocr_textlist = self.ocr.image_to_string(image, psm=6)
+        # Verify we are on the carrier management screen
+        admin_header_region = self.reg.get('carrier_admin_header', {'rect': [0.4, 0.1, 0.6, 0.2]})
+        header_image = self.screen.get_screen_rect_pct(admin_header_region['rect'])
+        header_text = self.ocr.image_to_string(header_image)
+        admin_text = self.locale.get("STN_SVCS_FC_ADMIN_HEADER", "MANAGEMENT")
 
-        target_text = self.locale.get("STN_SVCS_FC_MANAGEMENT", "Fleet Carrier Management")
+        if admin_text in header_text:
+           logger.info("Successfully navigated to Fleet Carrier Management.")
+           self.ap_ckb('log+vce', "Successfully navigated to Fleet Carrier Management.")
+           return True
+        else:
+           logger.error("Failed to verify Fleet Carrier Management screen.")
+           self.ap_ckb('log+vce', "Error: Failed to verify Fleet Carrier Management screen.")
+           return False
 
-        lines = ocr_textlist.split('\n')
-        for i, line in enumerate(lines):
-            if target_text in line:
-                # We found it, now select it
-                self.keys.send('UI_Up', hold=3) # Go to top of list
-                sleep(0.5)
-                if i > 0:
-                    self.keys.send('UI_Down', repeat=i)
-                sleep(0.5)
-                self.keys.send('UI_Select')
-                sleep(2) # Wait for screen to load
-
-                # Verify we are on the carrier management screen
-                admin_header_region = self.reg.get('carrier_admin_header', {'rect': [0.4, 0.1, 0.6, 0.2]})
-                header_image = self.screen.get_screen_rect_pct(admin_header_region['rect'])
-                header_text = self.ocr.image_to_string(header_image)
-                admin_text = self.locale.get("STN_SVCS_FC_ADMIN_HEADER", "CARRIER ADMINISTRATION")
-
-                if admin_text in header_text:
-                    logger.info("Successfully navigated to Fleet Carrier Management.")
-                    self.ap_ckb('log+vce', "Successfully navigated to Fleet Carrier Management.")
-                    return True
-                else:
-                    logger.error("Failed to verify Fleet Carrier Management screen.")
-                    self.ap_ckb('log+vce', "Error: Failed to verify Fleet Carrier Management screen.")
-                    return False
-
-        logger.error("Could not find 'Fleet Carrier Management' in station services.")
-        self.ap_ckb('log+vce', "Error: Could not find Fleet Carrier Management.")
-        return False
 
 
 def dummy_cb(msg, body=None):
