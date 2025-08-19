@@ -54,6 +54,8 @@ class EDNavigationPanel:
         self.nav_pnl_location_width = 500  # Nav panel location width in pixels at 1920x1080
         self.nav_pnl_location_height = 35  # Nav panel location height in pixels at 1920x1080
 
+        self.load_calibrated_sizes()
+
     def request_docking_ocr(self) -> bool:
         """ Try to request docking with OCR.
         """
@@ -75,6 +77,20 @@ class EDNavigationPanel:
         # self.hide_nav_panel()
         # return True
         pass
+
+    def load_calibrated_sizes(self):
+        calibration_file = 'configs/ocr_calibration.json'
+        if os.path.exists(calibration_file):
+            with open(calibration_file, 'r') as f:
+                calibrated_data = json.load(f)
+
+            if "EDNavigationPanel.size.nav_pnl_tab" in calibrated_data:
+                self.nav_pnl_tab_width = calibrated_data["EDNavigationPanel.size.nav_pnl_tab"]['width']
+                self.nav_pnl_tab_height = calibrated_data["EDNavigationPanel.size.nav_pnl_tab"]['height']
+
+            if "EDNavigationPanel.size.nav_pnl_location" in calibrated_data:
+                self.nav_pnl_location_width = calibrated_data["EDNavigationPanel.size.nav_pnl_location"]['width']
+                self.nav_pnl_location_height = calibrated_data["EDNavigationPanel.size.nav_pnl_location"]['height']
 
     def load_calibrated_regions(self):
         calibration_file = 'configs/ocr_calibration.json'

@@ -801,30 +801,130 @@ class APGui():
     def create_calibration_tab(self, tab):
         self.load_ocr_calibration_data()
 
-        blk_calibration = ttk.LabelFrame(tab, text="OCR Calibration")
-        blk_calibration.grid(row=0, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
+        # Region Calibration
+        blk_region_cal = ttk.LabelFrame(tab, text="Region Calibration")
+        blk_region_cal.grid(row=0, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
 
-        region_label = ttk.Label(blk_calibration, text="Region:")
-        region_label.grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
-
+        region_keys = sorted([key for key in self.ocr_calibration_data.keys() if '.size.' not in key and 'compass' not in key and 'target' not in key])
         self.calibration_region_var = tk.StringVar()
-        self.calibration_region_combo = ttk.Combobox(blk_calibration, textvariable=self.calibration_region_var)
-        self.calibration_region_combo['values'] = sorted(list(self.ocr_calibration_data.keys()))
+        self.calibration_region_combo = ttk.Combobox(blk_region_cal, textvariable=self.calibration_region_var, values=region_keys)
         self.calibration_region_combo.grid(row=0, column=1, padx=5, pady=5, sticky=(tk.W, tk.E))
         self.calibration_region_combo.bind("<<ComboboxSelected>>", self.on_region_select)
 
-        rect_label = ttk.Label(blk_calibration, text="Rect:")
-        rect_label.grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+        ttk.Label(blk_region_cal, text="Region:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        ttk.Label(blk_region_cal, text="Rect:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
 
         self.calibration_rect_label_var = tk.StringVar()
-        self.calibration_rect_label = ttk.Label(blk_calibration, textvariable=self.calibration_rect_label_var)
-        self.calibration_rect_label.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
+        ttk.Label(blk_region_cal, textvariable=self.calibration_rect_label_var).grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
 
-        calibrate_button = ttk.Button(blk_calibration, text="Calibrate", command=self.calibrate_ocr_region)
-        calibrate_button.grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
+        ttk.Button(blk_region_cal, text="Calibrate Region", command=self.calibrate_ocr_region).grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
 
-        save_button = ttk.Button(blk_calibration, text="Save", command=self.save_ocr_calibration_data)
-        save_button.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
+        # Size Calibration
+        blk_size_cal = ttk.LabelFrame(tab, text="Size Calibration")
+        blk_size_cal.grid(row=1, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
+
+        size_keys = sorted([key for key in self.ocr_calibration_data.keys() if '.size.' in key])
+        self.calibration_size_var = tk.StringVar()
+        self.calibration_size_combo = ttk.Combobox(blk_size_cal, textvariable=self.calibration_size_var, values=size_keys)
+        self.calibration_size_combo.grid(row=0, column=1, padx=5, pady=5, sticky=(tk.W, tk.E))
+        self.calibration_size_combo.bind("<<ComboboxSelected>>", self.on_size_select)
+
+        ttk.Label(blk_size_cal, text="Size:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        ttk.Label(blk_size_cal, text="W/H:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+
+        self.calibration_size_label_var = tk.StringVar()
+        ttk.Label(blk_size_cal, textvariable=self.calibration_size_label_var).grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
+
+        ttk.Button(blk_size_cal, text="Calibrate Size", command=self.calibrate_ocr_size).grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
+
+        # Save Button
+        ttk.Button(tab, text="Save All Calibrations", command=self.save_ocr_calibration_data, style="Accent.TButton").grid(row=2, column=0, padx=10, pady=10)
+
+    def on_size_select(self, event):
+        selected_size = self.calibration_size_var.get()
+        if selected_size in self.ocr_calibration_data:
+            size = self.ocr_calibration_data[selected_size]
+            self.calibration_size_label_var.set(f"W: {size['width']}, H: {size['height']}")
+
+    def calibrate_ocr_size(self):
+        selected_size = self.calibration_size_var.get()
+        if not selected_size:
+            messagebox.showerror("Error", "Please select a size to calibrate.")
+            return
+
+        self.log_msg(f"Starting size calibration for: {selected_size}")
+
+        self.calibration_overlay = tk.Toplevel(self.root)
+        self.calibration_overlay.overrideredirect(True)
+
+        screen_w = self.root.winfo_screenwidth()
+        screen_h = self.root.winfo_screenheight()
+        self.calibration_overlay.geometry(f"{screen_w}x{screen_h}+0+0")
+
+        self.calibration_overlay.attributes('-alpha', 0.3)
+
+        self.calibration_canvas = tk.Canvas(self.calibration_overlay, highlightthickness=0, bg='black')
+        self.calibration_canvas.pack(fill=tk.BOTH, expand=True)
+
+        # Scale and display the current size for reference
+        ref_w = 1920.0
+        x_scale = screen_w / ref_w
+
+        current_size = self.ocr_calibration_data[selected_size]
+        current_w = current_size['width'] * x_scale
+        current_h = current_size['height'] * x_scale
+
+        # Center the reference box
+        center_x = screen_w / 2
+        center_y = screen_h / 2
+        x1 = center_x - current_w / 2
+        y1 = center_y - current_h / 2
+        x2 = center_x + current_w / 2
+        y2 = center_y + current_h / 2
+        self.calibration_canvas.create_rectangle(x1, y1, x2, y2, outline='yellow', width=2)
+
+        self.start_x = None
+        self.start_y = None
+        self.current_rect = None
+
+        self.calibration_canvas.bind("<ButtonPress-1>", self.on_size_cal_press)
+        self.calibration_canvas.bind("<B1-Motion>", self.on_size_cal_drag)
+        self.calibration_canvas.bind("<ButtonRelease-1>", self.on_size_cal_release)
+        self.calibration_overlay.bind("<Escape>", lambda e: self.calibration_overlay.destroy())
+
+    def on_size_cal_press(self, event):
+        self.start_x = event.x
+        self.start_y = event.y
+        self.current_rect = self.calibration_canvas.create_rectangle(self.start_x, self.start_y, self.start_x, self.start_y, outline='green', width=2)
+
+    def on_size_cal_drag(self, event):
+        if self.current_rect:
+            self.calibration_canvas.coords(self.current_rect, self.start_x, self.start_y, event.x, event.y)
+
+    def on_size_cal_release(self, event):
+        end_x = event.x
+        end_y = event.y
+
+        # Un-scale the captured pixel size back to 1080p reference
+        screen_w = self.root.winfo_screenwidth()
+        ref_w = 1920.0
+        x_scale = screen_w / ref_w
+
+        captured_width = abs(self.start_x - end_x)
+        captured_height = abs(self.start_y - end_y)
+
+        base_width = int(captured_width / x_scale)
+        base_height = int(captured_height / x_scale)
+
+        selected_size = self.calibration_size_var.get()
+        self.ocr_calibration_data[selected_size]['width'] = base_width
+        self.ocr_calibration_data[selected_size]['height'] = base_height
+        self.log_msg(f"New size for {selected_size}: W={base_width}, H={base_height}")
+
+        # Update label
+        self.on_size_select(None)
+
+        self.calibration_overlay.destroy()
 
     def calibrate_ocr_region(self):
         selected_region = self.calibration_region_var.get()

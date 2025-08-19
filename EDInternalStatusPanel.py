@@ -41,6 +41,18 @@ class EDInternalStatusPanel:
         self.nav_pnl_tab_width = 100  # Nav panel tab width in pixels at 1920x1080
         self.nav_pnl_tab_height = 20  # Nav panel tab height in pixels at 1920x1080
 
+        self.load_calibrated_sizes()
+
+    def load_calibrated_sizes(self):
+        calibration_file = 'configs/ocr_calibration.json'
+        if os.path.exists(calibration_file):
+            with open(calibration_file, 'r') as f:
+                calibrated_data = json.load(f)
+
+            if "EDInternalStatusPanel.size.nav_pnl_tab" in calibrated_data:
+                self.nav_pnl_tab_width = calibrated_data["EDInternalStatusPanel.size.nav_pnl_tab"]['width']
+                self.nav_pnl_tab_height = calibrated_data["EDInternalStatusPanel.size.nav_pnl_tab"]['height']
+
     def load_calibrated_regions(self):
         calibration_file = 'configs/ocr_calibration.json'
         if os.path.exists(calibration_file):

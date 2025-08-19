@@ -49,5 +49,17 @@
     },
     "EDNavigationPanel.sub_reg.location_panel": {
         "rect": [0.2218, 0.3, 0.8, 1.0]
+    },
+    "EDNavigationPanel.size.nav_pnl_tab": {
+        "width": 260,
+        "height": 35
+    },
+    "EDNavigationPanel.size.nav_pnl_location": {
+        "width": 500,
+        "height": 35
+    },
+    "EDInternalStatusPanel.size.nav_pnl_tab": {
+        "width": 100,
+        "height": 20
     }
 }
