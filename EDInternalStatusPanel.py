@@ -360,6 +360,7 @@ class EDInternalStatusPanel:
         ap.keys.send("HeadLookReset")
         logger.info("Tritium transfer complete.")
         ap.ap_ckb('log+vce', "Tritium transfer complete,refueling...")
+        ap.stn_svcs_in_ship.goto_station_services()
 
 
 def dummy_cb(msg, body=None):
