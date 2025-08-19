@@ -1,6 +1,7 @@
 from __future__ import annotations
 from time import sleep
 from EDlogger import logger
+from Screen_Regions import reg_scale_for_station
 
 class FleetCarrierAutopilot:
     def __init__(self, ed_ap):
@@ -100,21 +101,18 @@ class FleetCarrierAutopilot:
 
         # Now in fleet carrier management screen
 
+        sleep(1) # Wait for screen to load
+        self.keys.send('UI_Down') # To navigation
+        sleep(0.2)
+        self.keys.send('UI_Select') # To navigation
+        sleep(0.2)
+        self.keys.send('UI_Select') # open gal map
+        sleep(1) # Wait for screen to load
+        self.ap.galaxy_map.goto_galaxy_map_from_fc()
+
         # 1. Open Galaxy Map
         self.keys.send('UI_Select')
 
-        # Wait for galaxy map to open
-        galaxy_map_open = False
-        for _ in range(10):
-            if self.ap.galaxy_map.is_galaxy_map_open():
-                galaxy_map_open = True
-                break
-            sleep(1)
-
-        if not galaxy_map_open:
-            logger.error("Failed to open galaxy map.")
-            self.ap.ap_ckb('log+vce', "Error: Failed to open galaxy map.")
-            return False
 
         # 2. Enter System Name and plot route
         if not self.ap.galaxy_map.set_gal_map_destination_text(self.ap, system_name, self.journal.ship_state):
