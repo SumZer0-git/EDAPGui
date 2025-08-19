@@ -361,7 +361,22 @@ class EDInternalStatusPanel:
         logger.info("Tritium transfer complete.")
         ap.ap_ckb('log+vce', "Tritium transfer complete,refueling...")
         ap.stn_svcs_in_ship.goto_station_services()
-
+        ap.keys.send('UI_Down') # To redemption office
+        sleep(0.2)
+        ap.keys.send('UI_Down') # To tritium depot
+        sleep(0.2)
+        ap.keys.send('UI_Select') # select tritium depot
+        sleep(0.2)
+        ap.keys.send('UI_Select') # select tritium depot
+        sleep(0.2)
+        ap.keys.send('UI_Up') # select tritium depot
+        sleep(0.2)
+        ap.keys.send('UI_Select') # select tritium depot
+        sleep(0.2)
+        ap.keys.send("UI_Back", repeat=4)
+        sleep(0.2)
+        ap.keys.send("HeadLookReset")
+        print("Refueling Complete.")
 
 def dummy_cb(msg, body=None):
     pass
