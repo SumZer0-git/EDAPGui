@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import cv2
-
+import json
+import os
 import ED_AP
 from MarketParser import MarketParser
 from OCR import OCR
@@ -36,6 +37,19 @@ class EDStationServicesInShip:
                     'stn_svc_layout': {'rect': [0.05, 0.40, 0.60, 0.76]},
                     'commodities_market': {'rect': [0.0, 0.0, 0.25, 0.25]},
                     }
+
+        self.load_calibrated_regions()
+
+    def load_calibrated_regions(self):
+        calibration_file = 'configs/ocr_calibration.json'
+        if os.path.exists(calibration_file):
+            with open(calibration_file, 'r') as f:
+                calibrated_regions = json.load(f)
+
+            for key, value in self.reg.items():
+                calibrated_key = f"EDStationServicesInShip.{key}"
+                if calibrated_key in calibrated_regions:
+                    self.reg[key]['rect'] = calibrated_regions[calibrated_key]['rect']
 
     def goto_station_services(self) -> bool:
         """ Goto Station Services. """

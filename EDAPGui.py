@@ -753,6 +753,151 @@ class APGui():
             r += 1
         return entries
 
+    def load_ocr_calibration_data(self):
+        self.ocr_calibration_data = {}
+        calibration_file = 'configs/ocr_calibration.json'
+
+        if not os.path.exists(calibration_file):
+            # Create the file with default values if it doesn't exist
+            default_regions = {
+                "Screen_Regions.target_occluded": {"rect": [0.33, 0.27, 0.66, 0.70]},
+                "Screen_Regions.sun": {"rect": [0.30, 0.30, 0.70, 0.68]},
+                "Screen_Regions.disengage": {"rect": [0.42, 0.65, 0.60, 0.80]},
+                "Screen_Regions.sco": {"rect": [0.42, 0.65, 0.60, 0.80]},
+                "Screen_Regions.fss": {"rect": [0.5045, 0.7545, 0.532, 0.7955]},
+                "Screen_Regions.mission_dest": {"rect": [0.46, 0.38, 0.65, 0.86]},
+                "Screen_Regions.missions": {"rect": [0.50, 0.78, 0.65, 0.85]},
+                "Screen_Regions.nav_panel": {"rect": [0.25, 0.36, 0.60, 0.85]},
+                "EDInternalStatusPanel.right_panel": {"rect": [0.35, 0.2, 0.85, 0.26]},
+                "EDStationServicesInShip.connected_to": {"rect": [0.0, 0.0, 0.30, 0.30]},
+                "EDStationServicesInShip.stn_svc_layout": {"rect": [0.05, 0.40, 0.60, 0.76]},
+                "EDStationServicesInShip.commodities_market": {"rect": [0.0, 0.0, 0.25, 0.25]},
+                "EDGalaxyMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
+                "EDSystemMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]}
+            }
+            with open(calibration_file, 'w') as f:
+                json.dump(default_regions, f, indent=4)
+            self.ocr_calibration_data = default_regions
+        else:
+            with open(calibration_file, 'r') as f:
+                self.ocr_calibration_data = json.load(f)
+
+    def save_ocr_calibration_data(self):
+        calibration_file = 'configs/ocr_calibration.json'
+        with open(calibration_file, 'w') as f:
+            json.dump(self.ocr_calibration_data, f, indent=4)
+        self.log_msg("OCR calibration data saved.")
+        messagebox.showinfo("Saved", "OCR calibration data saved.\nPlease restart the application for changes to take effect.")
+
+    def on_region_select(self, event):
+        selected_region = self.calibration_region_var.get()
+        if selected_region in self.ocr_calibration_data:
+            rect = self.ocr_calibration_data[selected_region]['rect']
+            self.calibration_rect_label_var.set(f"[{rect[0]:.4f}, {rect[1]:.4f}, {rect[2]:.4f}, {rect[3]:.4f}]")
+
+    def create_calibration_tab(self, tab):
+        self.load_ocr_calibration_data()
+
+        blk_calibration = ttk.LabelFrame(tab, text="OCR Calibration")
+        blk_calibration.grid(row=0, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
+
+        region_label = ttk.Label(blk_calibration, text="Region:")
+        region_label.grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+
+        self.calibration_region_var = tk.StringVar()
+        self.calibration_region_combo = ttk.Combobox(blk_calibration, textvariable=self.calibration_region_var)
+        self.calibration_region_combo['values'] = sorted(list(self.ocr_calibration_data.keys()))
+        self.calibration_region_combo.grid(row=0, column=1, padx=5, pady=5, sticky=(tk.W, tk.E))
+        self.calibration_region_combo.bind("<<ComboboxSelected>>", self.on_region_select)
+
+        rect_label = ttk.Label(blk_calibration, text="Rect:")
+        rect_label.grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+
+        self.calibration_rect_label_var = tk.StringVar()
+        self.calibration_rect_label = ttk.Label(blk_calibration, textvariable=self.calibration_rect_label_var)
+        self.calibration_rect_label.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
+
+        calibrate_button = ttk.Button(blk_calibration, text="Calibrate", command=self.calibrate_ocr_region)
+        calibrate_button.grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
+
+        save_button = ttk.Button(blk_calibration, text="Save", command=self.save_ocr_calibration_data)
+        save_button.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
+
+    def calibrate_ocr_region(self):
+        selected_region = self.calibration_region_var.get()
+        if not selected_region:
+            messagebox.showerror("Error", "Please select a region to calibrate.")
+            return
+
+        self.log_msg(f"Starting calibration for: {selected_region}")
+
+        self.calibration_overlay = tk.Toplevel(self.root)
+        self.calibration_overlay.attributes('-fullscreen', True)
+        self.calibration_overlay.attributes('-alpha', 0.5)  # Semi-transparent
+        self.calibration_overlay.configure(bg='white')
+        self.calibration_overlay.attributes("-transparentcolor", "white")
+        self.calibration_overlay.overrideredirect(True)
+
+        self.calibration_canvas = tk.Canvas(self.calibration_overlay, bg='white', highlightthickness=0)
+        self.calibration_canvas.pack(fill=tk.BOTH, expand=True)
+
+        # Draw current region
+        screen_w = self.root.winfo_screenwidth()
+        screen_h = self.root.winfo_screenheight()
+        rect_pct = self.ocr_calibration_data[selected_region]['rect']
+        x1 = rect_pct[0] * screen_w
+        y1 = rect_pct[1] * screen_h
+        x2 = rect_pct[2] * screen_w
+        y2 = rect_pct[3] * screen_h
+        self.calibration_canvas.create_rectangle(x1, y1, x2, y2, fill='red', outline='red', width=2)
+
+        self.start_x = None
+        self.start_y = None
+        self.current_rect = None
+
+        self.calibration_canvas.bind("<ButtonPress-1>", self.on_calibration_press)
+        self.calibration_canvas.bind("<B1-Motion>", self.on_calibration_drag)
+        self.calibration_canvas.bind("<ButtonRelease-1>", self.on_calibration_release)
+        self.calibration_overlay.bind("<Escape>", lambda e: self.calibration_overlay.destroy())
+
+    def on_calibration_press(self, event):
+        self.start_x = event.x
+        self.start_y = event.y
+        self.current_rect = self.calibration_canvas.create_rectangle(self.start_x, self.start_y, self.start_x, self.start_y, outline='blue', width=2)
+
+    def on_calibration_drag(self, event):
+        if self.current_rect:
+            self.calibration_canvas.coords(self.current_rect, self.start_x, self.start_y, event.x, event.y)
+
+    def on_calibration_release(self, event):
+        end_x = event.x
+        end_y = event.y
+
+        screen_w = self.root.winfo_screenwidth()
+        screen_h = self.root.winfo_screenheight()
+
+        # Ensure coordinates are ordered correctly
+        left = min(self.start_x, end_x)
+        top = min(self.start_y, end_y)
+        right = max(self.start_x, end_x)
+        bottom = max(self.start_y, end_y)
+
+        new_rect_pct = [
+            left / screen_w,
+            top / screen_h,
+            right / screen_w,
+            bottom / screen_h
+        ]
+
+        selected_region = self.calibration_region_var.get()
+        self.ocr_calibration_data[selected_region]['rect'] = new_rect_pct
+        self.log_msg(f"New rect for {selected_region}: {new_rect_pct}")
+
+        # Update label
+        self.on_region_select(None)
+
+        self.calibration_overlay.destroy()
+
     def gui_gen(self, win):
 
         modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'Robigo Assist', 'AFK Combat Assist', 'DSS Assist')
@@ -772,6 +917,10 @@ class APGui():
         nb.add(page0, text="Main")  # main page
         nb.add(page1, text="Settings")  # options page
         nb.add(page2, text="Debug/Test")  # debug/test page
+        page3 = ttk.Frame(nb)
+        nb.add(page3, text="Calibration")
+        self.create_calibration_tab(page3)
+
 
         # main options block
         blk_main = ttk.Frame(page0)

@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from time import sleep
 import cv2
+import json
+import os
 from EDAP_data import *
 from EDKeys import EDKeys
 from OCR import OCR
@@ -34,8 +36,21 @@ class EDInternalStatusPanel:
         # The rect is [L, T, R, B] top left x, y, and bottom right x, y in fraction of screen resolution
         self.reg = {'right_panel': {'rect': [0.35, 0.2, 0.85, 0.26]}}
 
+        self.load_calibrated_regions()
+
         self.nav_pnl_tab_width = 100  # Nav panel tab width in pixels at 1920x1080
         self.nav_pnl_tab_height = 20  # Nav panel tab height in pixels at 1920x1080
+
+    def load_calibrated_regions(self):
+        calibration_file = 'configs/ocr_calibration.json'
+        if os.path.exists(calibration_file):
+            with open(calibration_file, 'r') as f:
+                calibrated_regions = json.load(f)
+
+            for key, value in self.reg.items():
+                calibrated_key = f"EDInternalStatusPanel.{key}"
+                if calibrated_key in calibrated_regions:
+                    self.reg[key]['rect'] = calibrated_regions[calibrated_key]['rect']
 
     def show_right_panel(self):
         """ Shows the Internal (Right) Panel.
