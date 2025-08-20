@@ -30,6 +30,7 @@ from Image_Templates import *
 from Screen import *
 from Screen_Regions import *
 from EDKeys import *
+from Screen_Regions import reg_scale_for_station
 from EDJournal import *
 from ED_AP import *
 
@@ -1024,10 +1025,26 @@ class APGui():
 
         # Draw current region
         rect_pct = self.ocr_calibration_data[selected_region]['rect']
-        x1 = rect_pct[0] * screen_w
-        y1 = rect_pct[1] * screen_h
-        x2 = rect_pct[2] * screen_w
-        y2 = rect_pct[3] * screen_h
+
+        # Regions that require special scaling normalization to a 1920x1080 reference resolution
+        station_scaled_regions = [
+            "EDGalaxyMap.cartographics",
+            "EDSystemMap.cartographics"
+        ]
+
+        # For display, we need to reverse the normalization for station-scaled regions
+        if selected_region.startswith("EDStationServicesInShip.") or selected_region in station_scaled_regions:
+            # The stored rect is normalized, so we scale it to the current screen resolution for an accurate display.
+            scl_reg = reg_scale_for_station({'rect': rect_pct}, screen_w, screen_h)
+            display_rect_pct = scl_reg['rect']
+            self.log_msg(f"Applying station-style scaling for display of {selected_region}.")
+        else:
+            display_rect_pct = rect_pct
+
+        x1 = display_rect_pct[0] * screen_w
+        y1 = display_rect_pct[1] * screen_h
+        x2 = display_rect_pct[2] * screen_w
+        y2 = display_rect_pct[3] * screen_h
         self.calibration_canvas.create_rectangle(x1, y1, x2, y2, outline='red', width=2)
 
         self.start_x = None
@@ -1048,6 +1065,32 @@ class APGui():
         if self.current_rect:
             self.calibration_canvas.coords(self.current_rect, self.start_x, self.start_y, event.x, event.y)
 
+    def _normalize_for_station(self, rect_pct, screen_w, screen_h):
+        """
+        Normalizes captured rectangle percentages for station-style regions
+        to a 1920x1080 reference resolution.
+        """
+        ref_w = 1920.0
+        ref_h = 1080.0
+
+        if screen_w > 0 and screen_h > 0:
+            x_scale = screen_w / ref_w
+            y_scale = screen_h / ref_h
+
+            if x_scale > 0 and y_scale > 0:
+                top_pct = rect_pct[1]
+                bottom_pct = rect_pct[3]
+                
+                # This formula "un-applies" the scaling of the current resolution and applies the reference
+                # scaling, effectively normalizing the calibrated percentages to a 1920x1080 base.
+                norm_top_pct = 0.5 + (top_pct - 0.5) * y_scale / x_scale
+                norm_bottom_pct = 0.5 + (bottom_pct - 0.5) * y_scale / x_scale
+
+                return [rect_pct[0], norm_top_pct, rect_pct[2], norm_bottom_pct]
+
+        # Return original if scaling is not possible
+        return rect_pct
+
     def on_calibration_release(self, event):
         end_x = event.x
         end_y = event.y
@@ -1061,16 +1104,31 @@ class APGui():
         right = max(self.start_x, end_x)
         bottom = max(self.start_y, end_y)
 
-        new_rect_pct = [
-            left / screen_w,
-            top / screen_h,
-            right / screen_w,
-            bottom / screen_h
-        ]
+        left_pct = left / screen_w
+        top_pct = top / screen_h
+        right_pct = right / screen_w
+        bottom_pct = bottom / screen_h
 
         selected_region = self.calibration_region_var.get()
+
+        # Regions that require special scaling normalization to a 1920x1080 reference resolution
+        station_scaled_regions = [
+            "EDGalaxyMap.cartographics",
+            "EDSystemMap.cartographics"
+        ]
+
+        # Get the raw percentages from the drawn box
+        raw_rect_pct = [left_pct, top_pct, right_pct, bottom_pct]
+
+        if selected_region.startswith("EDStationServicesInShip.") or selected_region in station_scaled_regions:
+            new_rect_pct = self._normalize_for_station(raw_rect_pct, screen_w, screen_h)
+            if new_rect_pct != raw_rect_pct:
+                self.log_msg(f"Applying station-style normalization for {selected_region}.")
+        else:
+            new_rect_pct = raw_rect_pct
+
         self.ocr_calibration_data[selected_region]['rect'] = new_rect_pct
-        self.log_msg(f"New rect for {selected_region}: {new_rect_pct}")
+        self.log_msg(f"New rect for {selected_region}: [{new_rect_pct[0]:.4f}, {new_rect_pct[1]:.4f}, {new_rect_pct[2]:.4f}, {new_rect_pct[3]:.4f}]")
 
         # Update label
         self.on_region_select(None)
