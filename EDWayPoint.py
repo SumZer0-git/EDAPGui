@@ -8,6 +8,7 @@ import json
 from MarketParser import MarketParser
 from MousePt import MousePoint
 from pathlib import Path
+from EDNavigationPanel import EDNavigationPanel
 
 """
 File: EDWayPoint.py    
@@ -49,6 +50,7 @@ class EDWayPoint:
         self.mouse = MousePoint()
         self.market_parser = MarketParser()
         self.cargo_parser = CargoParser()
+        self.nav_panel = EDNavigationPanel(ed_ap, ed_ap.scr, ed_ap.keys, ed_ap.ap_ckb)
 
     def load_waypoint_file(self, filename=None) -> bool:
         if filename is None:
@@ -576,6 +578,19 @@ class EDWayPoint:
                             _abort = True
                             break
 
+                    elif sys_bookmark_type == 'Nav-OCR':
+                        # Set destination via Nav-OCR
+                        station_to_find = next_wp_station
+                        if "EXT_PANEL_ColonisationShip;".upper() in station_to_find:
+                            parts = station_to_find.split(';')
+                            if len(parts) > 1:
+                                station_to_find = parts[1].strip()
+
+                        res = self.nav_panel.select_station_by_ocr(station_to_find)
+                        if not res:
+                            self.ap.ap_ckb('log+vce', f"Unable to set station by Nav-OCR.")
+                            _abort = True
+                            break
                     elif next_wp_station != "":
                         # Need OCR added in for this (WIP)
                         need_ocr = True
