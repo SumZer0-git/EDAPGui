@@ -33,6 +33,7 @@ from EDKeys import *
 from Screen_Regions import reg_scale_for_station
 from EDJournal import *
 from ED_AP import *
+from EDAPWaypointEditor import WaypointEditorTab
 
 from EDlogger import logger
 
@@ -1185,6 +1186,11 @@ class APGui():
         page3 = ttk.Frame(nb)
         nb.add(page3, text="Calibration")
         self.create_calibration_tab(page3)
+
+        page4 = ttk.Frame(nb)
+        nb.add(page4, text="Waypoint Editor")
+        self.waypoint_editor_tab = WaypointEditorTab(page4, self.ed_ap.waypoint)
+        self.waypoint_editor_tab.frame.pack(fill="both", expand=True)
 
 
         # main options block
