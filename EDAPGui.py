@@ -818,6 +818,9 @@ class APGui():
             "EDStationServicesInShip.commodities_market": {"rect": [0.0, 0.0, 0.25, 0.25]},
             "EDStationServicesInShip.services_list": {"rect": [0.1, 0.4, 0.5, 0.9]},
             "EDStationServicesInShip.carrier_admin_header": {"rect": [0.4, 0.1, 0.6, 0.2]},
+            "EDStationServicesInShip.commodities_list": {"rect": [0.2, 0.2, 0.8, 0.9]},
+            "EDStationServicesInShip.commodity_quantity": {"rect": [0.4, 0.5, 0.6, 0.6]},
+            "EDStationServicesInShip.size.commodity_item": {"width": 100, "height": 15},
             "EDGalaxyMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
             "EDGalaxyMap.galaxy_map_header": {"rect": [0.0, 0.0, 0.2, 0.1]},
             "EDSystemMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
@@ -866,10 +869,12 @@ class APGui():
 
     def create_calibration_tab(self, tab):
         self.load_ocr_calibration_data()
+        tab.columnconfigure(0, weight=1)
 
         # Region Calibration
         blk_region_cal = ttk.LabelFrame(tab, text="Region Calibration")
         blk_region_cal.grid(row=0, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
+        blk_region_cal.columnconfigure(1, weight=1)
 
         region_keys = sorted([key for key in self.ocr_calibration_data.keys() if '.size.' not in key and 'compass' not in key and 'target' not in key])
         self.calibration_region_var = tk.StringVar()
@@ -888,6 +893,7 @@ class APGui():
         # Size Calibration
         blk_size_cal = ttk.LabelFrame(tab, text="Size Calibration")
         blk_size_cal.grid(row=1, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
+        blk_size_cal.columnconfigure(1, weight=1)
 
         size_keys = sorted([key for key in self.ocr_calibration_data.keys() if '.size.' in key])
         self.calibration_size_var = tk.StringVar()
@@ -916,6 +922,7 @@ class APGui():
         # Value Calibration
         blk_value_cal = ttk.LabelFrame(tab, text="Value Calibration")
         blk_value_cal.grid(row=3, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
+        blk_value_cal.columnconfigure(1, weight=1)
 
         ttk.Label(blk_value_cal, text="Nav Panel Deskew Angle:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
         self.deskew_angle_var = tk.DoubleVar(value=self.ocr_calibration_data.get("EDNavigationPanel.deskew_angle", 0.0))
