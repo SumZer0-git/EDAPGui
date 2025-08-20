@@ -155,6 +155,7 @@ class EDStationServicesInShip:
                 if value['Name_Localised'].upper() == name.upper():
                     # Set the stock bracket to 0, so it does not get included in available commodities list.
                     self.market_parser.current_data['Items'][i]['StockBracket'] = 0
+                    self.market_parser.current_data['Items'][i]['Stock'] = 0
 
         if index > -1:
             keys.send('UI_Up', hold=3.0)  # go up to top of list
