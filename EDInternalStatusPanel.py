@@ -314,6 +314,10 @@ class EDInternalStatusPanel:
         sleep(0.1)
 
         inventory_list_region = self.reg.get('inventory_list', {'rect': [0.2, 0.3, 0.8, 0.9]})
+        abs_rect = self.screen.screen_rect_to_abs(inventory_list_region['rect'])
+        if self.ap.debug_overlay:
+            self.ap.overlay.overlay_rect1('inventory_list', abs_rect, (0, 255, 0), 2)
+            self.ap.overlay.overlay_paint()
 
         # Determine the inventory item row size at this resolution
         scl_row_w, scl_row_h = size_scale_for_station(self.inventory_item_width, self.inventory_item_height,
@@ -322,17 +326,27 @@ class EDInternalStatusPanel:
         # Find Tritium in the list
         tritium_found = False
         ap.keys.send('UI_Up', hold=3) # Go to top of list
-        sleep(0.5)
+        sleep(0.2)
         for _ in range(20): # Max 20 scrolls
             image = self.ocr.capture_region_pct(inventory_list_region)
             img_selected, ocr_data, ocr_textlist = self.ocr.get_highlighted_item_data(image, scl_row_w, scl_row_h)
+
+            if self.ap.debug_overlay:
+                self.ap.overlay.overlay_floating_text('inventory_list_text', f'{ocr_textlist}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
+                self.ap.overlay.overlay_paint()
 
             if img_selected is not None and "TRITIUM" in str(ocr_textlist).upper():
                 tritium_found = True
                 break
 
             ap.keys.send('UI_Down') # Scroll down
-            sleep(0.5)
+            sleep(0.1)
+
+        if self.ap.debug_overlay:
+            sleep(1)
+            self.ap.overlay.overlay_remove_rect('inventory_list')
+            self.ap.overlay.overlay_remove_floating_text('inventory_list_text')
+            self.ap.overlay.overlay_paint()
 
         if not tritium_found:
             logger.error("Could not find Tritium in inventory.")
