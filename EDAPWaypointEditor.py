@@ -675,20 +675,32 @@ class WaypointEditorTab:
             entry.entry.select_range(0, 'end')
             entry.entry.icursor('end')
 
-            def save_edit(save_event):
+            def _save_and_destroy_if_needed(widget_to_destroy):
+                # This check runs after a short delay.
+                # If the widget still exists, it means the user clicked away
+                # without making a selection. If they made a selection,
+                # the on_select_callback would have already destroyed it.
                 try:
-                    new_value = entry.get()
-                    commodity_list[item_index].name.set(new_value)
-                    self.update_commodity_list(commodity_list, treeview)
-                finally:
-                    entry.hide_dropdown()
-                    entry.destroy()
+                    if widget_to_destroy.winfo_exists():
+                        new_value = widget_to_destroy.get()
+                        commodity_list[item_index].name.set(new_value)
+                        self.update_commodity_list(commodity_list, treeview)
+                        widget_to_destroy.destroy()
+                except tk.TclError:
+                    # Widget was already destroyed.
+                    pass
+
+            def save_edit(event):
+                # When focus is lost or Return is pressed, schedule a check.
+                # This delay handles the race condition between FocusOut and TreeviewSelect.
+                self.frame.after(50, lambda: _save_and_destroy_if_needed(entry))
 
             def cancel_edit(cancel_event):
                 entry.hide_dropdown()
                 entry.destroy()
 
             entry.entry.bind("<Return>", save_edit)
+            entry.entry.bind("<FocusOut>", save_edit)
             entry.entry.bind("<Escape>", cancel_edit)
 
         elif column_index == 1: # Quantity column
