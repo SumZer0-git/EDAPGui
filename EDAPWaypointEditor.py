@@ -35,7 +35,10 @@ class SearchableCombobox(ttk.Frame):
 
         # Scrollbar
         scrollbar = ttk.Scrollbar(container, orient="vertical")
-        self.treeview = ttk.Treeview(container, show="tree", height=5, yscrollcommand=scrollbar.set)
+        self.treeview = ttk.Treeview(container, columns=("name",), show="headings", height=5, yscrollcommand=scrollbar.set)
+        self.treeview.heading("name", text="Name", anchor="w")
+        self.treeview.column("name", anchor="w")
+        self.treeview.column("#0", width=0, stretch=False)
 
         scrollbar.config(command=self.treeview.yview)
 
@@ -45,7 +48,7 @@ class SearchableCombobox(ttk.Frame):
 
         self.treeview.bind("<<TreeviewSelect>>", self.on_select)
         for option in self.options:
-            self.treeview.insert("", "end", text=option)
+            self.treeview.insert("", "end", values=(option,))
 
     def get(self):
         return self.entry.get()
@@ -64,17 +67,17 @@ class SearchableCombobox(ttk.Frame):
         # Repopulate with filtered options
         if not typed_value:
             for option in self.options:
-                self.treeview.insert("", "end", text=option)
+                self.treeview.insert("", "end", values=(option,))
         else:
             filtered_options = [option for option in self.options if option.lower().startswith(typed_value)]
             for option in filtered_options:
-                self.treeview.insert("", "end", text=option)
+                self.treeview.insert("", "end", values=(option,))
         self.show_dropdown()
 
     def on_select(self, event):
         selected_item = self.treeview.selection()
         if selected_item:
-            selected_option = self.treeview.item(selected_item[0], "text")
+            selected_option = self.treeview.item(selected_item[0], "values")[0]
             self.set(selected_option)
             self.hide_dropdown()
             if self.on_select_callback:
