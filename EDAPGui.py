@@ -826,7 +826,8 @@ class APGui():
             "EDNavigationPanel.sub_reg.tab_bar": {"rect": [0.0, 0.0, 1.0, 0.08]},
             "EDNavigationPanel.sub_reg.location_panel": {"rect": [0.2218, 0.3, 0.8, 1.0]},
             "EDNavigationPanel.size.nav_pnl_tab": {"width": 260, "height": 35},
-            "EDNavigationPanel.size.nav_pnl_location": {"width": 500, "height": 35}
+            "EDNavigationPanel.size.nav_pnl_location": {"width": 500, "height": 35},
+            "EDNavigationPanel.deskew_angle": -1.0
         }
 
         if not os.path.exists(calibration_file):
@@ -912,11 +913,31 @@ class APGui():
         btn_calibrate_target = ttk.Button(blk_other_cal, text="Calibrate Target", command=self.calibrate_callback)
         btn_calibrate_target.pack(side=tk.LEFT, padx=5, pady=5)
 
+        # Value Calibration
+        blk_value_cal = ttk.LabelFrame(tab, text="Value Calibration")
+        blk_value_cal.grid(row=3, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
+
+        ttk.Label(blk_value_cal, text="Nav Panel Deskew Angle:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        self.deskew_angle_var = tk.DoubleVar(value=self.ocr_calibration_data.get("EDNavigationPanel.deskew_angle", 0.0))
+        self.deskew_angle_spinbox = ttk.Spinbox(blk_value_cal, from_=-45.0, to=45.0, increment=0.1, textvariable=self.deskew_angle_var, command=self.on_value_change)
+        self.deskew_angle_spinbox.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
+        self.deskew_angle_spinbox.bind('<FocusOut>', self.on_value_change)
+
+
         # Button Frame
         button_frame = ttk.Frame(tab)
-        button_frame.grid(row=3, column=0, padx=10, pady=10, sticky=tk.W)
+        button_frame.grid(row=4, column=0, padx=10, pady=10, sticky=tk.W)
         ttk.Button(button_frame, text="Save All Calibrations", command=self.save_ocr_calibration_data, style="Accent.TButton").pack(side=tk.LEFT, padx=5)
         ttk.Button(button_frame, text="Reset All to Default", command=self.reset_all_calibrations).pack(side=tk.LEFT, padx=5)
+
+    def on_value_change(self, event=None):
+        try:
+            angle = self.deskew_angle_var.get()
+            self.ocr_calibration_data["EDNavigationPanel.deskew_angle"] = angle
+            self.log_msg(f"Nav Panel Deskew Angle set to: {angle}")
+        except tk.TclError:
+            # This can happen if the spinbox is empty during input
+            pass
 
     def on_size_select(self, event):
         selected_size = self.calibration_size_var.get()
@@ -1440,7 +1461,7 @@ def apply_theme_to_titlebar(root):
 def main():
     #   handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
     #   if handle != None:
-    #       win32gui.SetForegroundWindow(handle)  # put the window in foreground
+    #       win32gui.SetForegroundWindow(handle)  # put the wind8ow in foreground
 
     root = tk.Tk()
     app = APGui(root)
