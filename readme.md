@@ -84,7 +84,20 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 _Requires **python 3** and **git**_
 
 _Python 3.11 is the recommended version of Python. Python 3.9 or 3.10 may also be used._
-If you don't have Python installed, here is a link to [Python 3.11 installer](https://www.python.org/downloads/release/python-3110/). Scroll to the bottom and select the installer with description **Recommended**.
+If you don't have Python installed, here is a link to [Python 3.11 installer](https://www.python.org/downloads/release/python-3110/). Scroll to the bottom and select the installer with the description "Recommended".
+
+## Simple
+If you just want to download and run EDAP and have no interest in the source code, use this method:
+
+1. Download the source by clicking on the green '<> Code' button above, and then click 'Download ZIP'.
+2. Unzip the zip file to a folder of your choice.
+3. Locate the file 'start_ed_ap.bat' in the folder.
+4. Double click (run) the file 'start_ed_ap.bat'.
+5. The install should proceed, download all necessary files and complete.
+6. Double click (run) the file 'start_ed_ap.bat' again to start EDAP.
+
+## Advanced
+If you are interested in Python and making changes to the code, or seeing how it works, use this method:
 
 1. Clone this repository
 ```sh
@@ -94,6 +107,11 @@ If you don't have Python installed, here is a link to [Python 3.11 installer](ht
 ```sh
 > cd EDAPGui
 > pip install -r requirements.txt
+```
+or run 'install_requirements.bat':
+```sh
+> cd EDAPGui
+> install_requirements.bat
 ```
 3. Run script
 ```sh
