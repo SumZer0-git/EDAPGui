@@ -38,7 +38,10 @@ class EDStationServicesInShip:
                     'commodities_market': {'rect': [0.0, 0.0, 0.25, 0.25]},
                     'services_list': {'rect': [0.1, 0.4, 0.5, 0.9]},
                     'carrier_admin_header': {'rect': [0.4, 0.1, 0.6, 0.2]},
+                    'commodities_list': {'rect': [0.2, 0.2, 0.8, 0.9]},
+                    'commodity_quantity': {'rect': [0.4, 0.5, 0.6, 0.6]},
                     }
+        self.commodity_item_size = {"width": 100, "height": 15}
 
         self.load_calibrated_regions()
 
@@ -52,6 +55,10 @@ class EDStationServicesInShip:
                 calibrated_key = f"EDStationServicesInShip.{key}"
                 if calibrated_key in calibrated_regions:
                     self.reg[key]['rect'] = calibrated_regions[calibrated_key]['rect']
+            
+            calibrated_size_key = "EDStationServicesInShip.size.commodity_item"
+            if calibrated_size_key in calibrated_regions:
+                self.commodity_item_size = calibrated_regions[calibrated_size_key]
 
     def goto_station_services(self) -> bool:
         """ Goto Station Services. """
@@ -116,6 +123,91 @@ class EDStationServicesInShip:
         keys.send('UI_Right')  # Go to top of commodities list
         return True
 
+    def _parse_quantity(self, ocr_text: list[str]) -> int:
+        if not ocr_text:
+            return 0
+        try:
+            s = "".join(ocr_text).replace(",", "").split('/')[0].strip()
+            return int(s)
+        except (ValueError, IndexError):
+            # It could be that the OCR picked up something else.
+            # Try to find a number in the string.
+            import re
+            numbers = re.findall(r'\d+', "".join(ocr_text).replace(",", ""))
+            if numbers:
+                return int(numbers[0])
+        return 0
+
+    def _set_quantity_with_ocr(self, keys, act_qty: int, name: str, is_buy: bool, max_qty: bool) -> bool:
+        """
+        Sets the quantity of an item using OCR verification.
+        Assumes the UI is on the buy/sell panel.
+        """
+        sleep(0.5)  # give time to popup
+        keys.send('UI_Up', repeat=2)  # go up to quantity
+
+        scl_reg_qty = reg_scale_for_station(self.reg['commodity_quantity'], self.screen.screen_width,
+                                        self.screen.screen_height)
+        
+        abs_rect_qty = self.screen.screen_rect_to_abs(scl_reg_qty['rect'])
+        if self.ap.debug_overlay:
+            self.ap.overlay.overlay_rect1('commodity_quantity', abs_rect_qty, (0, 255, 0), 2)
+            self.ap.overlay.overlay_paint()
+
+        if max_qty:
+            keys.send("UI_Right", hold=4)
+        else:
+            keys.send('UI_Left', hold=4.0) # Reset to 1
+            sleep(0.2)
+            if act_qty > 1:
+                keys.send('UI_Right', repeat=act_qty - 1)
+        
+        sleep(0.5)
+
+        # Verify final quantity
+        img_qty = self.ocr.capture_region_pct(scl_reg_qty)
+        ocr_text = self.ocr.image_simple_ocr(img_qty)
+        current_qty = self._parse_quantity(ocr_text)
+
+        if self.ap.debug_overlay:
+            self.ap.overlay.overlay_floating_text('commodity_quantity_text', f'Target: {act_qty}, OCR: {current_qty}', abs_rect_qty[0], abs_rect_qty[1] - 25, (0, 255, 0))
+            self.ap.overlay.overlay_paint()
+
+        if current_qty != act_qty:
+            # Fallback to adjust loop
+            for _ in range(10): # Try to adjust 10 times
+                if current_qty == act_qty:
+                    break
+                
+                diff = act_qty - current_qty
+                if diff > 0:
+                    keys.send('UI_Right', repeat=diff)
+                else:
+                    keys.send('UI_Left', repeat=-diff)
+                sleep(0.5)
+
+                img_qty = self.ocr.capture_region_pct(scl_reg_qty)
+                ocr_text = self.ocr.image_simple_ocr(img_qty)
+                current_qty = self._parse_quantity(ocr_text)
+
+                if self.ap.debug_overlay:
+                    self.ap.overlay.overlay_floating_text('commodity_quantity_text', f'Target: {act_qty}, OCR: {current_qty}', abs_rect_qty[0], abs_rect_qty[1] - 25, (0, 255, 0))
+                    self.ap.overlay.overlay_paint()
+
+        if self.ap.debug_overlay:
+            sleep(1)
+            self.ap.overlay.overlay_remove_rect('commodity_quantity')
+            self.ap.overlay.overlay_remove_floating_text('commodity_quantity_text')
+            self.ap.overlay.overlay_paint()
+
+        if current_qty != act_qty:
+            self.ap_ckb('log+vce', f"Could not set quantity to {act_qty} for '{name}'.")
+            logger.error(f"Could not set quantity to {act_qty} for '{name}'. Current quantity: {current_qty}")
+            keys.send('UI_Back')
+            return False
+
+        return True
+
     def buy_commodity(self, keys, name: str, qty: int, free_cargo: int) -> tuple[bool, int]:
         """ Buy qty of commodity. If qty >= 9999 then buy as much as possible.
         Assumed to be in the commodities buy screen in the list. """
@@ -155,28 +247,70 @@ class EDStationServicesInShip:
                 if value['Name_Localised'].upper() == name.upper():
                     # Set the stock bracket to 0, so it does not get included in available commodities list.
                     self.market_parser.current_data['Items'][i]['StockBracket'] = 0
-                    self.market_parser.current_data['Items'][i]['Stock'] = 0
 
-        if index > -1:
-            keys.send('UI_Up', hold=3.0)  # go up to top of list
-            keys.send('UI_Down', hold=0.05, repeat=index)  # go down # of times user specified
-            sleep(0.5)
-            keys.send('UI_Select')  # Select that commodity
+        if buyable_items is None:
+            return False, 0
 
-            sleep(0.5)  # give time to popup
-            keys.send('UI_Up', repeat=2)  # go up to quantity to buy (may not default to this)
-            # Log the planned quantity
-            self.ap_ckb('log+vce', f"Buying {act_qty} units of {name}.")
-            logger.info(f"Attempting to buy {act_qty} units of {name}")
-            # Increment count
-            if qty >= 9999 or qty >= stock or qty >= free_cargo:
-                keys.send("UI_Right", hold=4)
-            else:
-                keys.send("UI_Right", hold=0.04, repeat=act_qty)
+        # Go to top of list
+        keys.send('UI_Up', hold=3.0)
+        sleep(0.5)
+
+        # Find item in list with OCR
+        found_on_screen = False
+        scl_reg = reg_scale_for_station(self.reg['commodities_list'], self.screen.screen_width,
+                                        self.screen.screen_height)
+        min_w, min_h = size_scale_for_station(self.commodity_item_size['width'], self.commodity_item_size['height'], self.screen.screen_width, self.screen.screen_height)
+
+        # Loop to find the item
+        in_list = False
+        abs_rect = self.screen.screen_rect_to_abs(scl_reg['rect'])
+        if self.ap.debug_overlay:
+            self.ap.overlay.overlay_rect1('commodities_list', abs_rect, (0, 255, 0), 2)
+            self.ap.overlay.overlay_paint()
+
+        for _ in range(len(buyable_items) + 5):
+            img = self.ocr.capture_region_pct(scl_reg)
+            img_selected, ocr_data, ocr_textlist = self.ocr.get_highlighted_item_data(img, min_w, min_h)
+
+            if self.ap.debug_overlay:
+                self.ap.overlay.overlay_floating_text('commodities_list_text', f'{ocr_textlist}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
+                self.ap.overlay.overlay_paint()
+
+            if ocr_textlist and name.upper() in str(ocr_textlist).upper():
+                found_on_screen = True
+                break
+            
+            if img_selected is None and in_list:
+                # End of list
+                break
+
+            in_list = True
             keys.send('UI_Down')
-            keys.send('UI_Select')  # Select Buy
-            sleep(0.5)
-            # keys.send('UI_Back')  # Back to commodities list
+            sleep(0.2)
+
+        if self.ap.debug_overlay:
+            sleep(1)
+            self.ap.overlay.overlay_remove_rect('commodities_list')
+            self.ap.overlay.overlay_remove_floating_text('commodities_list_text')
+            self.ap.overlay.overlay_paint()
+
+        if not found_on_screen:
+            self.ap_ckb('log+vce', f"Could not find '{name}' on screen in the market.")
+            logger.error(f"Could not find '{name}' on screen in the market.")
+            return False, 0
+
+        keys.send('UI_Select')  # Select that commodity
+
+        max_qty = qty >= 9999 or qty >= stock or qty >= free_cargo
+        if not self._set_quantity_with_ocr(keys, act_qty, name, True, max_qty):
+            return False, 0
+
+        self.ap_ckb('log+vce', f"Buying {act_qty} units of {name}.")
+        logger.info(f"Buying {act_qty} units of {name}")
+        keys.send('UI_Down')
+        keys.send('UI_Select')  # Select Buy
+        sleep(0.5)
+        # keys.send('UI_Back')  # Back to commodities list
 
         return True, act_qty
 
@@ -202,45 +336,79 @@ class EDStationServicesInShip:
             return False, 0
 
         # Find commodity in market and return the index
-        index = -1
         demand = 0
         sellable_items = self.market_parser.get_sellable_items(cargo_parser)
         if sellable_items is not None:
             for i, value in enumerate(sellable_items):
                 if value['Name_Localised'].upper() == name.upper():
-                    index = i
                     demand = value['Demand']
-                    logger.debug(f"Execute trade: Sell {name} ({qty} of {demand} demanded) at position {index + 1}.")
+                    logger.debug(f"Execute trade: Sell {name} ({qty} of {demand} demanded).")
                     break
+        else:
+            return False, 0
 
         # Qty we can sell. Unlike buying, we can sell more than the demand
         # But maybe not at all stations!
         act_qty = qty
 
-        if index > -1:
-            keys.send('UI_Up', hold=3.0)  # go up to top of list
-            keys.send('UI_Down', hold=0.05, repeat=index)  # go down # of times user specified
-            sleep(0.5)
-            keys.send('UI_Select')  # Select that commodity
+        # Go to top of list
+        keys.send('UI_Up', hold=3.0)
+        sleep(0.5)
 
-            sleep(0.5)  # give time for popup
-            keys.send('UI_Up', repeat=2)  # make sure at top
+        # Find item in list with OCR
+        found_on_screen = False
+        scl_reg = reg_scale_for_station(self.reg['commodities_list'], self.screen.screen_width,
+                                        self.screen.screen_height)
+        min_w, min_h = size_scale_for_station(self.commodity_item_size['width'], self.commodity_item_size['height'], self.screen.screen_width, self.screen.screen_height)
 
-            # Log the planned quantity
-            if qty >= 9999:
-                self.ap_ckb('log+vce', f"Selling all our units of {name}.")
-                logger.info(f"Attempting to sell all our units of {name}")
-                keys.send("UI_Right", hold=4)
-            else:
-                self.ap_ckb('log+vce', f"Selling {act_qty} units of {name}.")
-                logger.info(f"Attempting to sell {act_qty} units of {name}")
-                keys.send('UI_Left', hold=4.0)  # Clear quantity to 0
-                keys.send("UI_Right", hold=0.04, repeat=act_qty)
+        # Loop to find the item
+        in_list = False
+        abs_rect = self.screen.screen_rect_to_abs(scl_reg['rect'])
+        if self.ap.debug_overlay:
+            self.ap.overlay.overlay_rect1('commodities_list', abs_rect, (0, 255, 0), 2)
+            self.ap.overlay.overlay_paint()
 
-            keys.send('UI_Down')  # Down to the Sell button (already assume sell all)
-            keys.send('UI_Select')  # Select to Sell all
-            sleep(0.5)
-            # keys.send('UI_Back')  # Back to commodities list
+        for _ in range(len(sellable_items) + 5):
+            img = self.ocr.capture_region_pct(scl_reg)
+            img_selected, ocr_data, ocr_textlist = self.ocr.get_highlighted_item_data(img, min_w, min_h)
+
+            if self.ap.debug_overlay:
+                self.ap.overlay.overlay_floating_text('commodities_list_text', f'{ocr_textlist}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
+                self.ap.overlay.overlay_paint()
+
+            if ocr_textlist and name.upper() in str(ocr_textlist).upper():
+                found_on_screen = True
+                break
+            
+            if img_selected is None and in_list:
+                # End of list
+                break
+
+            in_list = True
+            keys.send('UI_Down')
+            sleep(0.2)
+
+        if self.ap.debug_overlay:
+            sleep(1)
+            self.ap.overlay.overlay_remove_rect('commodities_list')
+            self.ap.overlay.overlay_remove_floating_text('commodities_list_text')
+            self.ap.overlay.overlay_paint()
+
+        if not found_on_screen:
+            self.ap_ckb('log+vce', f"Could not find '{name}' on screen in the market.")
+            logger.error(f"Could not find '{name}' on screen in the market.")
+            return False, 0
+
+        keys.send('UI_Select')  # Select that commodity
+
+        max_qty = qty >= 9999
+        if not self._set_quantity_with_ocr(keys, act_qty, name, False, max_qty):
+            return False, 0
+
+        keys.send('UI_Down')  # Down to the Sell button (already assume sell all)
+        keys.send('UI_Select')  # Select to Sell all
+        sleep(0.5)
+        # keys.send('UI_Back')  # Back to commodities list
 
         return True, act_qty
 
