@@ -105,18 +105,18 @@
     },
     "EDNavigationPanel.nav_panel": {
         "rect": [
-            0.11,
-            0.21,
-            0.7,
-            0.86
+            0.19476744186046513,
+            0.19444444444444445,
+            0.648546511627907,
+            0.2826388888888889
         ]
     },
     "EDNavigationPanel.temp_tab_bar": {
         "rect": [
-            0.0,
-            0.2,
-            0.7,
-            0.35
+            0.20261627906976745,
+            0.1986111111111111,
+            0.6415697674418605,
+            0.26875
         ]
     },
     "EDNavigationPanel.sub_reg.tab_bar": {
@@ -135,9 +135,17 @@
             1.0
         ]
     },
+    "EDNavigationPanel.nav_list": {
+        "rect": [
+            0.3174418604651163,
+            0.3215277777777778,
+            0.5982558139534884,
+            0.8569444444444444
+        ]
+    },
     "EDNavigationPanel.size.nav_pnl_tab": {
-        "width": 260,
-        "height": 35
+        "width": 169,
+        "height": 14
     },
     "EDNavigationPanel.size.nav_pnl_location": {
         "width": 500,
@@ -182,5 +190,6 @@
             0.2,
             0.1
         ]
-    }
+    },
+    "EDNavigationPanel.deskew_angle": -1.0
 }
