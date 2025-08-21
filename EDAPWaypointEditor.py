@@ -251,7 +251,7 @@ class WaypointEditorTab:
 
         # System Bookmark
         ttk.Label(station_options_frame, text="System Bookmark Type:").grid(row=1, column=0, padx=5, pady=2, sticky="w")
-        self.system_bookmark_type_combo = ttk.Combobox(station_options_frame, values=["", "Favorite", "Body", "Station", "Settlement", "Navigation Panel"])
+        self.system_bookmark_type_combo = ttk.Combobox(station_options_frame, values=["", "Favorite", "Body", "Station", "Settlement", "nav-ocr", "Navigation Panel"])
         self.system_bookmark_type_combo.grid(row=1, column=1, padx=5, pady=2, sticky="ew")
         ttk.Label(station_options_frame, text="System Bookmark Number:").grid(row=1, column=2, padx=5, pady=2, sticky="w")
         self.system_bookmark_number_entry = ttk.Entry(station_options_frame)
