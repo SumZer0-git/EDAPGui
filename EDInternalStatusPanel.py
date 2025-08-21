@@ -35,7 +35,7 @@ class EDInternalStatusPanel:
 
         # The rect is [L, T, R, B] top left x, y, and bottom right x, y in fraction of screen resolution
         self.reg = {
-            'right_panel': {'rect': [0.35, 0.2, 0.85, 0.26]},
+            'tab_bar': {'rect': [0.35, 0.2, 0.85, 0.26]},
             'inventory_list': {'rect': [0.2, 0.3, 0.8, 0.9]}
         }
 
@@ -218,7 +218,7 @@ class EDInternalStatusPanel:
         logger.debug("is_right_panel_active: right panel is focused")
 
         # Draw box around region
-        abs_rect = self.screen.screen_rect_to_abs(self.reg['right_panel']['rect'])
+        abs_rect = self.screen.screen_rect_to_abs(self.reg['tab_bar']['rect'])
         if self.ap.debug_overlay:
             self.ap.overlay.overlay_rect1('right_panel_active', abs_rect, (0, 255, 0), 2)
             self.ap.overlay.overlay_paint()
@@ -227,7 +227,7 @@ class EDInternalStatusPanel:
         tab_text = ""
         for i in range(10):
             # Take screenshot of the panel
-            image = self.ocr.capture_region_pct(self.reg['right_panel'])
+            image = self.ocr.capture_region_pct(self.reg['tab_bar'])
             # tab_bar = self.capture_tab_bar()
             # if tab_bar is None:
             #     return None

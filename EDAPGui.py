@@ -85,7 +85,7 @@ class APGui():
             "Screen_Regions.mission_dest": {"rect": [0.46, 0.38, 0.65, 0.86]},
             "Screen_Regions.missions": {"rect": [0.50, 0.78, 0.65, 0.85]},
             "Screen_Regions.nav_panel": {"rect": [0.25, 0.36, 0.60, 0.85]},
-            "EDInternalStatusPanel.right_panel": {"rect": [0.35, 0.2, 0.85, 0.26]},
+            "EDInternalStatusPanel.tab_bar": {"rect": [0.35, 0.2, 0.85, 0.26]},
             "EDInternalStatusPanel.inventory_list": {"rect": [0.2, 0.3, 0.8, 0.9]},
             "EDInternalStatusPanel.size.inventory_item": {"width": 100, "height": 20},
             "EDInternalStatusPanel.size.nav_pnl_tab": {"width": 100, "height": 20},
@@ -97,7 +97,7 @@ class APGui():
             "EDGalaxyMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
             "EDSystemMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
             "EDNavigationPanel.nav_panel": {"rect": [0.11, 0.21, 0.70, 0.86]},
-            "EDNavigationPanel.temp_tab_bar": {"rect": [0.0, 0.2, 0.7, 0.35]},
+            "EDNavigationPanel.tab_bar": {"rect": [0.0, 0.2, 0.7, 0.35]},
             "EDNavigationPanel.size.nav_pnl_tab": {"width": 260, "height": 35},
             "EDNavigationPanel.size.nav_pnl_location": {"width": 500, "height": 35},
             "EDNavigationPanel.deskew_angle": -1.0

@@ -55,7 +55,7 @@
             0.85
         ]
     },
-    "EDInternalStatusPanel.right_panel": {
+    "EDInternalStatusPanel.tab_bar": {
         "rect": [
             0.35,
             0.2,
@@ -95,7 +95,7 @@
             0.2826388888888889
         ]
     },
-    "EDNavigationPanel.temp_tab_bar": {
+    "EDNavigationPanel.tab_bar": {
         "rect": [
             0.20261627906976745,
             0.1986111111111111,

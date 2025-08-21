@@ -44,7 +44,7 @@ class EDNavigationPanel:
         # The rect is [L, T, R, B], top left x, y, and bottom right x, y in fraction of screen resolution
         # Nav Panel region covers the entire navigation panel.
         self.reg = {'nav_panel': {'rect': [0.11, 0.21, 0.70, 0.86]},
-                    'temp_tab_bar': {'rect': [0.0, 0.2, 0.7, 0.35]},
+                    'tab_bar': {'rect': [0.0, 0.2, 0.7, 0.35]},
                     'nav_list': {'rect': [0.2218, 0.3, 0.8, 1.0]}}
 
         self.load_calibrated_regions()
@@ -109,7 +109,7 @@ class EDNavigationPanel:
         logger.debug("is_nav_panel_active: nav panel is focused")
 
         # Draw box around region
-        abs_rect = self.screen.screen_rect_to_abs(self.reg['temp_tab_bar']['rect'])
+        abs_rect = self.screen.screen_rect_to_abs(self.reg['tab_bar']['rect'])
         if self.ap.debug_overlay:
             self.ap.overlay.overlay_rect1('nav_panel_active', abs_rect, (0, 255, 0), 2)
             self.ap.overlay.overlay_paint()
@@ -118,7 +118,7 @@ class EDNavigationPanel:
         tab_text = ""
         for i in range(10):
             # Take screenshot of the panel
-            image = self.ocr.capture_region_pct(self.reg['temp_tab_bar'])
+            image = self.ocr.capture_region_pct(self.reg['tab_bar'])
 
             # De-skew the image
             if self.deskew_angle != 0:
