@@ -661,6 +661,7 @@ class APGui():
                 self.lab_ck['Waypoint Assist'].config(state='disabled')
                 self.lab_ck['Robigo Assist'].config(state='disabled')
                 self.lab_ck['DSS Assist'].config(state='disabled')
+                self.lab_ck['Fleet Carrier Assist'].config(state='disabled')
                 self.start_fsd()
 
             elif self.checkboxvar['FSD Route Assist'].get() == 0 and self.FSD_A_running == True:
@@ -669,6 +670,7 @@ class APGui():
                 self.lab_ck['AFK Combat Assist'].config(state='active')
                 self.lab_ck['Waypoint Assist'].config(state='active')
                 self.lab_ck['Robigo Assist'].config(state='active')
+                self.lab_ck['Fleet Carrier Assist'].config(state='active')
 
         if field == 'Fleet Carrier Assist':
             if self.checkboxvar['Fleet Carrier Assist'].get() == 1 and self.FC_A_running == False:
@@ -696,6 +698,7 @@ class APGui():
                 self.lab_ck['Waypoint Assist'].config(state='disabled')
                 self.lab_ck['Robigo Assist'].config(state='disabled')
                 self.lab_ck['DSS Assist'].config(state='disabled')
+                self.lab_ck['Fleet Carrier Assist'].config(state='disabled')
                 self.start_sc()
 
             elif self.checkboxvar['Supercruise Assist'].get() == 0 and self.SC_A_running == True:
@@ -705,6 +708,7 @@ class APGui():
                 self.lab_ck['Waypoint Assist'].config(state='active')
                 self.lab_ck['Robigo Assist'].config(state='active')
                 self.lab_ck['DSS Assist'].config(state='active')
+                self.lab_ck['Fleet Carrier Assist'].config(state='active')
 
         if field == 'Waypoint Assist':
             if self.checkboxvar['Waypoint Assist'].get() == 1 and self.WP_A_running == False:
@@ -713,6 +717,7 @@ class APGui():
                 self.lab_ck['AFK Combat Assist'].config(state='disabled')
                 self.lab_ck['Robigo Assist'].config(state='disabled')
                 self.lab_ck['DSS Assist'].config(state='disabled')
+                self.lab_ck['Fleet Carrier Assist'].config(state='disabled')
                 self.start_waypoint()
 
             elif self.checkboxvar['Waypoint Assist'].get() == 0 and self.WP_A_running == True:
@@ -722,6 +727,7 @@ class APGui():
                 self.lab_ck['AFK Combat Assist'].config(state='active')
                 self.lab_ck['Robigo Assist'].config(state='active')
                 self.lab_ck['DSS Assist'].config(state='active')
+                self.lab_ck['Fleet Carrier Assist'].config(state='active')
 
         if field == 'Robigo Assist':
             if self.checkboxvar['Robigo Assist'].get() == 1 and self.RO_A_running == False:
@@ -730,6 +736,7 @@ class APGui():
                 self.lab_ck['AFK Combat Assist'].config(state='disabled')
                 self.lab_ck['Waypoint Assist'].config(state='disabled')
                 self.lab_ck['DSS Assist'].config(state='disabled')
+                self.lab_ck['Fleet Carrier Assist'].config(state='disabled')
                 self.start_robigo()
 
             elif self.checkboxvar['Robigo Assist'].get() == 0 and self.RO_A_running == True:
@@ -739,6 +746,7 @@ class APGui():
                 self.lab_ck['AFK Combat Assist'].config(state='active')
                 self.lab_ck['Waypoint Assist'].config(state='active')
                 self.lab_ck['DSS Assist'].config(state='active')
+                self.lab_ck['Fleet Carrier Assist'].config(state='active')
 
         if field == 'AFK Combat Assist':
             if self.checkboxvar['AFK Combat Assist'].get() == 1:
@@ -749,6 +757,7 @@ class APGui():
                 self.lab_ck['Waypoint Assist'].config(state='disabled')
                 self.lab_ck['Robigo Assist'].config(state='disabled')
                 self.lab_ck['DSS Assist'].config(state='disabled')
+                self.lab_ck['Fleet Carrier Assist'].config(state='disabled')
 
             elif self.checkboxvar['AFK Combat Assist'].get() == 0:
                 self.ed_ap.set_afk_combat_assist(False)
@@ -758,6 +767,7 @@ class APGui():
                 self.lab_ck['Waypoint Assist'].config(state='active')
                 self.lab_ck['Robigo Assist'].config(state='active')
                 self.lab_ck['DSS Assist'].config(state='active')
+                self.lab_ck['Fleet Carrier Assist'].config(state='active')
 
         if field == 'DSS Assist':
             if self.checkboxvar['DSS Assist'].get() == 1:
@@ -766,6 +776,7 @@ class APGui():
                 self.lab_ck['Supercruise Assist'].config(state='disabled')
                 self.lab_ck['Waypoint Assist'].config(state='disabled')
                 self.lab_ck['Robigo Assist'].config(state='disabled')
+                self.lab_ck['Fleet Carrier Assist'].config(state='disabled')
                 self.start_dss()
 
             elif self.checkboxvar['DSS Assist'].get() == 0:
@@ -775,6 +786,7 @@ class APGui():
                 self.lab_ck['AFK Combat Assist'].config(state='active')
                 self.lab_ck['Waypoint Assist'].config(state='active')
                 self.lab_ck['Robigo Assist'].config(state='active')
+                self.lab_ck['Fleet Carrier Assist'].config(state='active')
 
         if self.checkboxvar['Enable Randomness'].get():
             self.ed_ap.set_randomness(True)
