@@ -53,6 +53,7 @@ class EDKeys:
             'UI_Select',
             'UI_Back',
             'CycleNextPanel',
+            'CyclePreviousPanel',
             'HeadLookReset',
             'PrimaryFire',
             'SecondaryFire',
@@ -273,7 +274,7 @@ class EDKeys:
         else:
             PressKey(key)
 
-    def send(self, key_binding, hold=None, repeat=1, repeat_delay=None, state=None):
+    def send(self, key_binding, hold=None, repeat=1, repeat_delay=None, state=None, fast=False):
         key = self.keys.get(key_binding)
         if key is None:
             logger.warning('SEND=NONE !!!!!!!!')
@@ -285,6 +286,10 @@ class EDKeys:
         logger.debug('\tsend=' + key_binding + ',key:' + str(key) + ',key_name:' + key_name + ',hold:' + str(
             hold) + ',repeat:' + str(
             repeat) + ',repeat_delay:' + str(repeat_delay) + ',state:' + str(state))
+
+        # Set delays for fast or normal speed
+        press_delay = 0.01 if fast else self.key_default_delay
+        release_delay = 0.01 if fast else self.key_repeat_delay
 
         for i in range(repeat):
             # Focus Elite window if configured.
@@ -303,7 +308,7 @@ class EDKeys:
                 if hold:
                     sleep(hold)
                 else:
-                    sleep(self.key_default_delay)
+                    sleep(press_delay)
 
             if 'hold' in key:
                 sleep(0.1)
@@ -318,7 +323,7 @@ class EDKeys:
             if repeat_delay:
                 sleep(repeat_delay)
             else:
-                sleep(self.key_repeat_delay)
+                sleep(release_delay)
 
     def get_collisions(self, key_name: str) -> list[str]:
         """ Get key name collisions (keys used for more than one binding).

@@ -160,7 +160,7 @@ class EDStationServicesInShip:
             keys.send('UI_Left', hold=4.0) # Reset to 1
             sleep(0.2)
             if act_qty > 1:
-                keys.send('UI_Right', repeat=act_qty - 1)
+                keys.send('UI_Right', repeat=act_qty - 1, fast=True)
         
         sleep(0.5)
 
@@ -181,9 +181,9 @@ class EDStationServicesInShip:
                 
                 diff = act_qty - current_qty
                 if diff > 0:
-                    keys.send('UI_Right', repeat=diff)
+                    keys.send('UI_Right', repeat=diff, fast=True)
                 else:
-                    keys.send('UI_Left', repeat=-diff)
+                    keys.send('UI_Left', repeat=-diff, fast=True)
                 sleep(0.5)
 
                 img_qty = self.ocr.capture_region_pct(scl_reg_qty)
