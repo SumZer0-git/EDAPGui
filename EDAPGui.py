@@ -896,7 +896,7 @@ class APGui():
         blk_region_cal.grid(row=0, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
         blk_region_cal.columnconfigure(1, weight=1)
 
-        region_keys = sorted([key for key in self.ocr_calibration_data.keys() if '.size.' not in key and 'compass' not in key and 'target' not in key])
+        region_keys = sorted([key for key, value in self.ocr_calibration_data.items() if isinstance(value, dict) and 'rect' in value and 'compass' not in key and 'target' not in key])
         self.calibration_region_var = tk.StringVar()
         self.calibration_region_combo = ttk.Combobox(blk_region_cal, textvariable=self.calibration_region_var, values=region_keys)
         self.calibration_region_combo.grid(row=0, column=1, padx=5, pady=5, sticky=(tk.W, tk.E))
@@ -938,6 +938,11 @@ class APGui():
 
         btn_calibrate_target = ttk.Button(blk_other_cal, text="Calibrate Target", command=self.calibrate_callback)
         btn_calibrate_target.pack(side=tk.LEFT, padx=5, pady=5)
+
+        self.checkboxvar['CUDA OCR'] = tk.BooleanVar()
+        cb_cuda_ocr = ttk.Checkbutton(blk_other_cal, text='CUDA OCR', variable=self.checkboxvar['CUDA OCR'], command=(lambda field='CUDA OCR': self.check_cb(field)))
+        cb_cuda_ocr.pack(side=tk.LEFT, padx=5, pady=5)
+        tip_cuda_ocr = ToolTip(cb_cuda_ocr, msg=self.tooltips['CUDA OCR'], delay=1.0, bg="#808080", fg="#FFFFFF")
 
         # Value Calibration
         blk_value_cal = ttk.LabelFrame(tab, text="Value Calibration")
@@ -1312,10 +1317,6 @@ class APGui():
         self.checkboxvar['Automatic logout'] = tk.BooleanVar()
         cb_logout = ttk.Checkbutton(blk_ap, text='Automatic logout', variable=self.checkboxvar['Automatic logout'], command=(lambda field='Automatic logout': self.check_cb(field)))
         cb_logout.grid(row=7, column=0, columnspan=2, sticky=(tk.W))
-        self.checkboxvar['CUDA OCR'] = tk.BooleanVar()
-        cb_cuda_ocr = ttk.Checkbutton(blk_ap, text='CUDA OCR', variable=self.checkboxvar['CUDA OCR'], command=(lambda field='CUDA OCR': self.check_cb(field)))
-        cb_cuda_ocr.grid(row=8, column=0, columnspan=2, sticky=(tk.W))
-        tip_cuda_ocr = ToolTip(cb_cuda_ocr, msg=self.tooltips['CUDA OCR'], delay=1.0, bg="#808080", fg="#FFFFFF")
 
         # buttons settings block
         blk_buttons = ttk.LabelFrame(blk_settings, text="BUTTONS")
