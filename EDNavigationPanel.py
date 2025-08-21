@@ -43,8 +43,7 @@ class EDNavigationPanel:
 
         # The rect is [L, T, R, B], top left x, y, and bottom right x, y in fraction of screen resolution
         # Nav Panel region covers the entire navigation panel.
-        self.reg = {'nav_panel': {'rect': [0.11, 0.21, 0.70, 0.86]},
-                    'tab_bar': {'rect': [0.0, 0.2, 0.7, 0.35]},
+        self.reg = {'tab_bar': {'rect': [0.0, 0.2, 0.7, 0.35]},
                     'nav_list': {'rect': [0.2218, 0.3, 0.8, 1.0]}}
 
         self.load_calibrated_regions()

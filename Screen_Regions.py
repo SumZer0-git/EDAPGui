@@ -120,7 +120,6 @@ class Screen_Regions:
         self.reg['fss']       = {'rect': [0.5045, 0.7545, 0.532, 0.7955], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
         self.reg['mission_dest']  = {'rect': [0.46, 0.38, 0.65, 0.86], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}    
         self.reg['missions']    = {'rect': [0.50, 0.78, 0.65, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}   
-        self.reg['nav_panel']   = {'rect': [0.25, 0.36, 0.60, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}  
         
         self.load_calibrated_regions()
 

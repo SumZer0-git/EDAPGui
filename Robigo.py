@@ -131,35 +131,8 @@ class Robigo:
         
 
     # Goto Nav Panel and do image matching on the passed in image template
-    def lock_target(self, ap, templ) -> bool:
-        found = False
-        tries = 0
-        
-        # get to the Left Panel menu: Navigation
-        ap.keys.send("UI_Back", repeat=10)
-        ap.keys.send("HeadLookReset")
-        ap.keys.send("UIFocus", state=1)
-        ap.keys.send("UI_Left")
-        ap.keys.send("UIFocus", state=0)   # this gets us over to the Nav panel
-        sleep(0.5)
-
-        # 
-        ap.keys.send("UI_Down", hold=2)  # got to bottom row
-
-        # tries is the number of rows to go through to find the item looking for
-        # the Nav Panel should be filtered to reduce the number of rows in the list
-        while not found and tries < 50:
-            found = self.is_found(ap, "nav_panel", templ)   
-            if found:
-                ap.keys.send("UI_Select", repeat=2)  # Select it and lock target
-            else:
-                tries += 1
-                ap.keys.send("UI_Up")   # up to next item
-                sleep(0.2)
-
-        ap.keys.send("UI_Back", repeat=10)  # go back and drop Nav Panel
-        ap.keys.send("HeadLookReset")
-        return found
+    def lock_target(self, ap, station_name) -> bool:
+        return ap.nav_panel.select_station_by_ocr(station_name)
         
 
     # Finish the selection of the mission by assigning to a Cabin
@@ -353,7 +326,7 @@ class Robigo:
                 ap.update_ap_status("Target Sirius")
                 # [In Sothis]
                 # select Siruis Atmos
-                found = self.lock_target(ap, 'sirius_atmos')  
+                found = self.lock_target(ap, 'SIRIUS ATMOSPHERICS')
                 
                 if found == False:
                     ap.update_ap_status("No Sirius Atmos in Nav Panel")
@@ -392,7 +365,7 @@ class Robigo:
                 # In Robigo System, select Robigo Mines in the Nav Panel, which should 1 down (we select in the blind)
                 #   The Robigo Mines position in the list is dependent on distance from current location
                 #   The Speed50 above and waiting 2 seconds ensures Robigo Mines is 2 down from top
-                found = self.lock_target(ap, 'robigo_mines')
+                found = self.lock_target(ap, 'ROBIGO MINES')
                 
                 if found == False:
                     ap.update_ap_status("No lock on Robigo Mines in Nav Panel")
