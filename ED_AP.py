@@ -217,6 +217,7 @@ class EDAutopilot:
         self.keys = EDKeys(cb)
         self.keys.activate_window = self.config['ActivateEliteEachKey']
         self.afk_combat = AFK_Combat(self.keys, self.jn, self.vce)
+        self.ap_ckb = cb
         self.waypoint = EDWayPoint(self, self.jn.ship_state()['odyssey'])
         self.robigo = Robigo(self)
         self.status = StatusParser()
@@ -254,8 +255,6 @@ class EDAutopilot:
         self.refuel_cnt = 0
         self.current_ship_type = None
         self.gui_loaded = False
-
-        self.ap_ckb = cb
 
         # Overlay vars
         self.ap_state = "Idle"
