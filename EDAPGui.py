@@ -102,8 +102,6 @@ class APGui():
             "EDSystemMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
             "EDNavigationPanel.nav_panel": {"rect": [0.11, 0.21, 0.70, 0.86]},
             "EDNavigationPanel.temp_tab_bar": {"rect": [0.0, 0.2, 0.7, 0.35]},
-            "EDNavigationPanel.sub_reg.tab_bar": {"rect": [0.0, 0.0, 1.0, 0.08]},
-            "EDNavigationPanel.sub_reg.location_panel": {"rect": [0.2218, 0.3, 0.8, 1.0]},
             "EDNavigationPanel.size.nav_pnl_tab": {"width": 260, "height": 35},
             "EDNavigationPanel.size.nav_pnl_location": {"width": 500, "height": 35},
             "EDNavigationPanel.deskew_angle": -1.0
