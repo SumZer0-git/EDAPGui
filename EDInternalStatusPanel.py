@@ -377,6 +377,14 @@ class EDInternalStatusPanel:
         sleep(0.1)
         ap.keys.send('UI_Select')  # Click >> TRANSFER
         sleep(0.1)
+        ap.keys.send('UI_Up', hold=4)  # To FILTERS
+        sleep(0.1)
+        ap.keys.send('UI_Up')  # To FILTERS
+        sleep(0.1)
+        ap.keys.send('UI_Select')  # To FILTERS
+        sleep(0.1)
+        ap.keys.send('UI_Select')  # To FILTERS
+        sleep(2)
 
         inventory_list_region = self.reg.get('inventory_list', {'rect': [0.2, 0.3, 0.8, 0.9]})
         abs_rect = self.screen.screen_rect_to_abs(inventory_list_region['rect'])
