@@ -121,8 +121,8 @@ class EDInternalStatusPanel:
             cv2.imwrite(f'test/internal-panel/int_panel_full.png', image)
             return active, active_tab_name
         else:
-            print("Open Internal Panel")
-            logger.debug("show_right_panel_fallback: Open Internal Panel")
+            print("Open Internal Panel (FALLBACK)")
+            logger.debug("show_right_panel_fallback: Open Internal Panel (FALLBACK)")
 
             self.keys.send("HeadLookReset")
             self.keys.send('UIFocus', state=1)
