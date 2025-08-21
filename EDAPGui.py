@@ -1486,6 +1486,12 @@ def main():
     app = APGui(root)
 
     sv_ttk.set_theme("dark")
+
+    # Remove focus outline from tabs by setting focuscolor to the background color
+    style = ttk.Style()
+    bg_color = "#1c1c1c" if sv_ttk.get_theme() == "dark" else "#fafafa"
+    style.configure("TNotebook.Tab", focuscolor=bg_color)
+
     if sys.platform == "win32":
         apply_theme_to_titlebar(root)
     root.mainloop()
