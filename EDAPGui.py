@@ -73,6 +73,70 @@ def hyperlink_callback(url):
 
 
 class APGui():
+    def load_ocr_calibration_data(self):
+        self.ocr_calibration_data = {}
+        calibration_file = 'configs/ocr_calibration.json'
+
+        default_regions = {
+            "Screen_Regions.sun": {"rect": [0.30, 0.30, 0.70, 0.68]},
+            "Screen_Regions.disengage": {"rect": [0.42, 0.65, 0.60, 0.80]},
+            "Screen_Regions.sco": {"rect": [0.42, 0.65, 0.60, 0.80]},
+            "Screen_Regions.fss": {"rect": [0.5045, 0.7545, 0.532, 0.7955]},
+            "Screen_Regions.mission_dest": {"rect": [0.46, 0.38, 0.65, 0.86]},
+            "Screen_Regions.missions": {"rect": [0.50, 0.78, 0.65, 0.85]},
+            "Screen_Regions.nav_panel": {"rect": [0.25, 0.36, 0.60, 0.85]},
+            "EDInternalStatusPanel.right_panel": {"rect": [0.35, 0.2, 0.85, 0.26]},
+            "EDInternalStatusPanel.inventory_list": {"rect": [0.2, 0.3, 0.8, 0.9]},
+            "EDInternalStatusPanel.size.inventory_item": {"width": 100, "height": 20},
+            "EDInternalStatusPanel.size.nav_pnl_tab": {"width": 100, "height": 20},
+            "EDStationServicesInShip.connected_to": {"rect": [0.0, 0.0, 0.30, 0.30]},
+            "EDStationServicesInShip.stn_svc_layout": {"rect": [0.05, 0.40, 0.60, 0.76]},
+            "EDStationServicesInShip.commodities_market": {"rect": [0.0, 0.0, 0.25, 0.25]},
+            "EDStationServicesInShip.services_list": {"rect": [0.1, 0.4, 0.5, 0.9]},
+            "EDStationServicesInShip.carrier_admin_header": {"rect": [0.4, 0.1, 0.6, 0.2]},
+            "EDStationServicesInShip.commodities_list": {"rect": [0.2, 0.2, 0.8, 0.9]},
+            "EDStationServicesInShip.commodity_quantity": {"rect": [0.4, 0.5, 0.6, 0.6]},
+            "EDStationServicesInShip.size.commodity_item": {"width": 100, "height": 15},
+            "EDGalaxyMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
+            "EDGalaxyMap.galaxy_map_header": {"rect": [0.0, 0.0, 0.2, 0.1]},
+            "EDSystemMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
+            "EDNavigationPanel.nav_panel": {"rect": [0.11, 0.21, 0.70, 0.86]},
+            "EDNavigationPanel.temp_tab_bar": {"rect": [0.0, 0.2, 0.7, 0.35]},
+            "EDNavigationPanel.sub_reg.tab_bar": {"rect": [0.0, 0.0, 1.0, 0.08]},
+            "EDNavigationPanel.sub_reg.location_panel": {"rect": [0.2218, 0.3, 0.8, 1.0]},
+            "EDNavigationPanel.size.nav_pnl_tab": {"width": 260, "height": 35},
+            "EDNavigationPanel.size.nav_pnl_location": {"width": 500, "height": 35},
+            "EDNavigationPanel.deskew_angle": -1.0
+        }
+
+        if not os.path.exists(calibration_file):
+            # Create the file with default values if it doesn't exist
+            with open(calibration_file, 'w') as f:
+                json.dump(default_regions, f, indent=4)
+            self.ocr_calibration_data = default_regions
+        else:
+            with open(calibration_file, 'r') as f:
+                self.ocr_calibration_data = json.load(f)
+
+            # Check for missing keys and add them
+            updated = False
+            for key, value in default_regions.items():
+                if key not in self.ocr_calibration_data:
+                    self.ocr_calibration_data[key] = value
+                    updated = True
+
+            # If we updated the data, save it back to the file
+            if updated:
+                with open(calibration_file, 'w') as f:
+                    json.dump(self.ocr_calibration_data, f, indent=4)
+
+    def save_ocr_calibration_data(self):
+        calibration_file = 'configs/ocr_calibration.json'
+        with open(calibration_file, 'w') as f:
+            json.dump(self.ocr_calibration_data, f, indent=4)
+        self.log_msg("OCR calibration data saved.")
+        messagebox.showinfo("Saved", "OCR calibration data saved.\nPlease restart the application for changes to take effect.")
+
     def __init__(self, root):
         self.root = root
         root.title("EDAutopilot " + EDAP_VERSION)
@@ -89,6 +153,7 @@ class APGui():
             'Robigo Assist': "",
             'DSS Assist': "When selected, will perform DSS scans while you are traveling between stars.",
             'Single Waypoint Assist': "",
+            'CUDA OCR': "RESTART REQUIRED! This requires an NVIDIA GPU with CUDA Cores. you must install CUDA 11.8 and CUDNN for CUDA 11.8.  performance difference is probably minimal.",
             'ELW Scanner': "Will perform FSS scans while FSD Assist is traveling between stars. \nIf the FSS shows a signal in the region of Earth, \nWater or Ammonia type worlds, it will announce that discovery.",
             'AFK Combat Assist': "Used with a AFK Combat ship in a Rez Zone.",
             'Fleet Carrier Assist': "Automates fleet carrier jumps along a waypoint route.",
@@ -121,7 +186,9 @@ class APGui():
         self.log_buffer = queue.Queue()
         self.callback('log', f'Starting ED Autopilot {EDAP_VERSION}.')
 
-        self.ed_ap = EDAutopilot(cb=self.callback)
+        self.load_ocr_calibration_data()
+        use_gpu = self.ocr_calibration_data.get('use_gpu_ocr', False)
+        self.ed_ap = EDAutopilot(cb=self.callback, use_gpu_ocr=use_gpu)
         self.ed_ap.robigo.set_single_loop(self.ed_ap.config['Robigo_Single_Loop'])
 
         self.mouse = MousePoint()
@@ -153,6 +220,7 @@ class APGui():
         self.checkboxvar['Automatic logout'].set(self.ed_ap.config['AutomaticLogout'])
         self.checkboxvar['Enable Overlay'].set(self.ed_ap.config['OverlayTextEnable'])
         self.checkboxvar['Enable Voice'].set(self.ed_ap.config['VoiceEnable'])
+        self.checkboxvar['CUDA OCR'].set(self.ocr_calibration_data.get('use_gpu_ocr', False))
 
         self.radiobuttonvar['dss_button'].set(self.ed_ap.config['DSSButton'])
 
@@ -543,6 +611,7 @@ class APGui():
         self.entry_update()
         self.ed_ap.update_config()
         self.ed_ap.update_ship_configs()
+        self.save_ocr_calibration_data()
 
     def load_tce_dest(self):
         filename = self.ed_ap.config['TCEDestinationFilepath']
@@ -771,6 +840,9 @@ class APGui():
             else:
                 self.ed_ap.debug_overlay = False
 
+        if field == 'CUDA OCR':
+            self.ocr_calibration_data['use_gpu_ocr'] = self.checkboxvar['CUDA OCR'].get()
+
     def makeform(self, win, ftype, fields, r=0, inc=1, rfrom=0, rto=1000):
         entries = {}
         win.columnconfigure(1, weight=1)
@@ -797,69 +869,7 @@ class APGui():
             r += 1
         return entries
 
-    def load_ocr_calibration_data(self):
-        self.ocr_calibration_data = {}
-        calibration_file = 'configs/ocr_calibration.json'
-
-        default_regions = {
-            "Screen_Regions.sun": {"rect": [0.30, 0.30, 0.70, 0.68]},
-            "Screen_Regions.disengage": {"rect": [0.42, 0.65, 0.60, 0.80]},
-            "Screen_Regions.sco": {"rect": [0.42, 0.65, 0.60, 0.80]},
-            "Screen_Regions.fss": {"rect": [0.5045, 0.7545, 0.532, 0.7955]},
-            "Screen_Regions.mission_dest": {"rect": [0.46, 0.38, 0.65, 0.86]},
-            "Screen_Regions.missions": {"rect": [0.50, 0.78, 0.65, 0.85]},
-            "Screen_Regions.nav_panel": {"rect": [0.25, 0.36, 0.60, 0.85]},
-            "EDInternalStatusPanel.right_panel": {"rect": [0.35, 0.2, 0.85, 0.26]},
-            "EDInternalStatusPanel.inventory_list": {"rect": [0.2, 0.3, 0.8, 0.9]},
-            "EDInternalStatusPanel.size.inventory_item": {"width": 100, "height": 20},
-            "EDInternalStatusPanel.size.nav_pnl_tab": {"width": 100, "height": 20},
-            "EDStationServicesInShip.connected_to": {"rect": [0.0, 0.0, 0.30, 0.30]},
-            "EDStationServicesInShip.stn_svc_layout": {"rect": [0.05, 0.40, 0.60, 0.76]},
-            "EDStationServicesInShip.commodities_market": {"rect": [0.0, 0.0, 0.25, 0.25]},
-            "EDStationServicesInShip.services_list": {"rect": [0.1, 0.4, 0.5, 0.9]},
-            "EDStationServicesInShip.carrier_admin_header": {"rect": [0.4, 0.1, 0.6, 0.2]},
-            "EDStationServicesInShip.commodities_list": {"rect": [0.2, 0.2, 0.8, 0.9]},
-            "EDStationServicesInShip.commodity_quantity": {"rect": [0.4, 0.5, 0.6, 0.6]},
-            "EDStationServicesInShip.size.commodity_item": {"width": 100, "height": 15},
-            "EDGalaxyMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
-            "EDGalaxyMap.galaxy_map_header": {"rect": [0.0, 0.0, 0.2, 0.1]},
-            "EDSystemMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
-            "EDNavigationPanel.nav_panel": {"rect": [0.11, 0.21, 0.70, 0.86]},
-            "EDNavigationPanel.temp_tab_bar": {"rect": [0.0, 0.2, 0.7, 0.35]},
-            "EDNavigationPanel.sub_reg.tab_bar": {"rect": [0.0, 0.0, 1.0, 0.08]},
-            "EDNavigationPanel.sub_reg.location_panel": {"rect": [0.2218, 0.3, 0.8, 1.0]},
-            "EDNavigationPanel.size.nav_pnl_tab": {"width": 260, "height": 35},
-            "EDNavigationPanel.size.nav_pnl_location": {"width": 500, "height": 35},
-            "EDNavigationPanel.deskew_angle": -1.0
-        }
-
-        if not os.path.exists(calibration_file):
-            # Create the file with default values if it doesn't exist
-            with open(calibration_file, 'w') as f:
-                json.dump(default_regions, f, indent=4)
-            self.ocr_calibration_data = default_regions
-        else:
-            with open(calibration_file, 'r') as f:
-                self.ocr_calibration_data = json.load(f)
-
-            # Check for missing keys and add them
-            updated = False
-            for key, value in default_regions.items():
-                if key not in self.ocr_calibration_data:
-                    self.ocr_calibration_data[key] = value
-                    updated = True
-
-            # If we updated the data, save it back to the file
-            if updated:
-                with open(calibration_file, 'w') as f:
-                    json.dump(self.ocr_calibration_data, f, indent=4)
-
-    def save_ocr_calibration_data(self):
-        calibration_file = 'configs/ocr_calibration.json'
-        with open(calibration_file, 'w') as f:
-            json.dump(self.ocr_calibration_data, f, indent=4)
-        self.log_msg("OCR calibration data saved.")
-        messagebox.showinfo("Saved", "OCR calibration data saved.\nPlease restart the application for changes to take effect.")
+    # OCR calibration methods moved to before __init__
 
     def on_region_select(self, event):
         selected_region = self.calibration_region_var.get()
@@ -1292,6 +1302,10 @@ class APGui():
         self.checkboxvar['Automatic logout'] = tk.BooleanVar()
         cb_logout = ttk.Checkbutton(blk_ap, text='Automatic logout', variable=self.checkboxvar['Automatic logout'], command=(lambda field='Automatic logout': self.check_cb(field)))
         cb_logout.grid(row=7, column=0, columnspan=2, sticky=(tk.W))
+        self.checkboxvar['CUDA OCR'] = tk.BooleanVar()
+        cb_cuda_ocr = ttk.Checkbutton(blk_ap, text='CUDA OCR', variable=self.checkboxvar['CUDA OCR'], command=(lambda field='CUDA OCR': self.check_cb(field)))
+        cb_cuda_ocr.grid(row=8, column=0, columnspan=2, sticky=(tk.W))
+        tip_cuda_ocr = Hovertip(cb_cuda_ocr, self.tooltips['CUDA OCR'], hover_delay=1000)
 
         # buttons settings block
         blk_buttons = ttk.LabelFrame(blk_settings, text="BUTTONS")

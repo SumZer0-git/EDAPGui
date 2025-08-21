@@ -59,7 +59,7 @@ class ScTargetAlignReturn(Enum):
 
 class EDAutopilot:
 
-    def __init__(self, cb, doThread=True):
+    def __init__(self, cb, use_gpu_ocr=False, doThread=True):
 
         # NOTE!!! When adding a new config value below, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
@@ -210,7 +210,7 @@ class EDAutopilot:
         self.scr.scaleX = self.config['TargetScale']
         self.scr.scaleY = self.config['TargetScale']
 
-        self.ocr = OCR(self.scr, self.config['OCRLanguage'])
+        self.ocr = OCR(self.scr, self.config['OCRLanguage'], use_gpu=use_gpu_ocr)
         self.templ = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
         self.scrReg = Screen_Regions.Screen_Regions(self.scr, self.templ)
         self.jn = EDJournal(cb)
