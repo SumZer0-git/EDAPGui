@@ -46,8 +46,6 @@ class EDNavigationPanel:
         self.reg = {'nav_panel': {'rect': [0.11, 0.21, 0.70, 0.86]},
                     'temp_tab_bar': {'rect': [0.0, 0.2, 0.7, 0.35]},
                     'nav_list': {'rect': [0.2218, 0.3, 0.8, 1.0]}}
-        self.sub_reg = {'tab_bar': {'rect': [0.0, 0.0, 1.0, 0.08]},
-                        'location_panel': {'rect': [0.2218, 0.3, 0.8, 1.0]}}
 
         self.load_calibrated_regions()
 
@@ -280,7 +278,7 @@ class EDNavigationPanel:
                 break
 
             self.keys.send('UI_Down') # Scroll down
-            sleep(0.1)
+            sleep(0.05)
 
         if self.ap.debug_overlay:
             sleep(1)
@@ -349,10 +347,6 @@ class EDNavigationPanel:
                 if calibrated_key in calibrated_regions:
                     self.reg[key]['rect'] = calibrated_regions[calibrated_key]['rect']
 
-            for key, value in self.sub_reg.items():
-                calibrated_key = f"EDNavigationPanel.sub_reg.{key}"
-                if calibrated_key in calibrated_regions:
-                    self.sub_reg[key]['rect'] = calibrated_regions[calibrated_key]['rect']
 
     def hide_nav_panel(self):
         """ Hides the Nav Panel if open.
