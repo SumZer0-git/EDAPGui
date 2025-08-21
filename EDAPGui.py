@@ -896,7 +896,7 @@ class APGui():
         blk_region_cal.grid(row=0, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
         blk_region_cal.columnconfigure(1, weight=1)
 
-        region_keys = sorted([key for key in self.ocr_calibration_data.keys() if '.size.' not in key and 'compass' not in key and 'target' not in key])
+        region_keys = sorted([key for key, value in self.ocr_calibration_data.items() if isinstance(value, dict) and 'rect' in value and 'compass' not in key and 'target' not in key])
         self.calibration_region_var = tk.StringVar()
         self.calibration_region_combo = ttk.Combobox(blk_region_cal, textvariable=self.calibration_region_var, values=region_keys)
         self.calibration_region_combo.grid(row=0, column=1, padx=5, pady=5, sticky=(tk.W, tk.E))
