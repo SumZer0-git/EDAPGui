@@ -191,22 +191,15 @@ class WaypointEditorTab:
         # Create the tabs
         self.waypoints_tab = ttk.Frame(self.notebook)
         self.global_shopping_list_tab = ttk.Frame(self.notebook)
-        self.settings_tab = ttk.Frame(self.notebook)
-        self.inara_tab = ttk.Frame(self.notebook)
 
         self.notebook.add(self.waypoints_tab, text="Waypoints")
         self.notebook.add(self.global_shopping_list_tab, text="Global Shopping List")
-        self.notebook.add(self.settings_tab, text="Settings")
-        self.notebook.add(self.inara_tab, text="Inara")
 
         # --- Waypoints Tab ---
         self.create_waypoints_tab()
 
         # --- Global Shopping List Tab ---
         self.create_global_shopping_list_tab()
-
-        # --- Inara Tab ---
-        self.create_inara_tab()
 
     def create_waypoints_tab(self):
         # Main container for the waypoints tab
@@ -223,6 +216,7 @@ class WaypointEditorTab:
         self.save_button.config(state="disabled")
         ttk.Button(file_ops_frame, text="Save As", command=self.save_as_file).pack(side="left", padx=2)
         ttk.Button(file_ops_frame, text="Import Spansh CSV", command=self.import_spansh_csv).pack(side="left", padx=2)
+        ttk.Button(file_ops_frame, text="Import from Inara", command=self.open_inara_import_window).pack(side="left", padx=2)
 
         # Top frame for waypoints list and buttons
         top_frame = ttk.Frame(waypoints_container)
@@ -310,16 +304,25 @@ class WaypointEditorTab:
         frame.pack(fill="both", expand=True, padx=5, pady=5)
         self.global_shopping_list_tree = self.create_commodity_list(frame, "global")
 
-    def create_inara_tab(self):
-        frame = ttk.Frame(self.inara_tab)
-        frame.pack(fill="both", expand=True, padx=5, pady=5)
+    def open_inara_import_window(self):
+        inara_window = tk.Toplevel(self.frame)
+        inara_window.title("Import from Inara")
+        inara_window.transient(self.root)
+        inara_window.grab_set()
+
+        frame = ttk.Frame(inara_window)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         ttk.Label(frame, text="Paste Inara trade route data here:").pack(anchor="w")
-        self.inara_text = tk.Text(frame, height=10)
-        self.inara_text.pack(fill="x", pady=5)
+        inara_text = tk.Text(frame, height=10)
+        inara_text.pack(fill="x", pady=5)
+        inara_text.focus_set()
 
-        ttk.Button(frame, text="Add to Waypoints", command=self.add_inara_route).pack(pady=5)
+        def on_add():
+            self.add_inara_route(inara_text.get("1.0", "end-1c"))
+            inara_window.destroy()
 
+        ttk.Button(frame, text="Add to Waypoints", command=on_add).pack(pady=5)
 
     def create_commodity_list(self, parent, list_type):
         frame = ttk.Frame(parent)
@@ -880,8 +883,7 @@ class WaypointEditorTab:
                     self.waypoints.global_shopping_list.buy_commodities.insert(index + 1, self.waypoints.global_shopping_list.buy_commodities.pop(index))
             self.update_commodity_list(self.waypoints.global_shopping_list.buy_commodities, self.global_shopping_list_tree)
 
-    def add_inara_route(self):
-        text = self.inara_text.get("1.0", "end-1c")
+    def add_inara_route(self, text):
         lines = text.splitlines()
 
         from_waypoint = InternalWaypoint()
