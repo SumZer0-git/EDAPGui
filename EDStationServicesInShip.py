@@ -166,7 +166,16 @@ class EDStationServicesInShip:
 
         # Verify final quantity
         img_qty = self.ocr.capture_region_pct(scl_reg_qty)
-        ocr_text = self.ocr.image_simple_ocr(img_qty)
+        
+        # --- Custom Image Processing ---
+        gray_image = cv2.cvtColor(img_qty, cv2.COLOR_BGR2GRAY)
+        # For black text on a bright background, we invert the threshold.
+        # This creates a white-on-black image which is ideal for OCR.
+        _, processed_img = cv2.threshold(gray_image, 128, 255, cv2.THRESH_BINARY_INV)
+        # cv2.imwrite(f'test/station-services/qty-processed-{time.time()}.png', processed_img)
+        # --- End Custom Image Processing ---
+
+        ocr_text = self.ocr.image_simple_ocr(processed_img)
         current_qty = self._parse_quantity(ocr_text)
 
         if self.ap.debug_overlay:
@@ -187,7 +196,14 @@ class EDStationServicesInShip:
                 sleep(0.5)
 
                 img_qty = self.ocr.capture_region_pct(scl_reg_qty)
-                ocr_text = self.ocr.image_simple_ocr(img_qty)
+                
+                # --- Custom Image Processing ---
+                gray_image = cv2.cvtColor(img_qty, cv2.COLOR_BGR2GRAY)
+                _, processed_img = cv2.threshold(gray_image, 128, 255, cv2.THRESH_BINARY_INV)
+                # cv2.imwrite(f'test/station-services/qty-processed-{time.time()}.png', processed_img)
+                # --- End Custom Image Processing ---
+                
+                ocr_text = self.ocr.image_simple_ocr(processed_img)
                 current_qty = self._parse_quantity(ocr_text)
 
                 if self.ap.debug_overlay:

@@ -4,6 +4,7 @@ import time
 import cv2
 import numpy as np
 from paddleocr import PaddleOCR
+import logging
 from strsimpy import SorensenDice
 from strsimpy.jaro_winkler import JaroWinkler
 
@@ -22,8 +23,9 @@ Author: Stumpii
 class OCR:
     def __init__(self, screen, language: str = 'en', use_gpu: bool = False):
         self.screen = screen
-        self.paddleocr = PaddleOCR(use_angle_cls=True, lang=language, use_gpu=use_gpu, show_log=False, use_dilation=True,
+        self.paddleocr = PaddleOCR(use_angle_cls=False, lang=language, use_gpu=use_gpu, show_log=False, use_dilation=True,
                                    use_space_char=True)
+        logging.getLogger('ppocr').setLevel(logging.ERROR)
         # Class for text similarity metrics
         self.jarowinkler = JaroWinkler()
         self.sorensendice = SorensenDice()
