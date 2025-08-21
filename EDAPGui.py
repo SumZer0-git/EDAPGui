@@ -1252,12 +1252,12 @@ class APGui():
         blk_main.columnconfigure([0, 1], weight=1, minsize=100, uniform="group1")
 
         # ap mode checkboxes block
-        blk_modes = ttk.LabelFrame(blk_main, text="MODE")
+        blk_modes = ttk.LabelFrame(blk_main, text="MODE", padding=(10, 5))
         blk_modes.grid(row=0, column=0, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
         self.makeform(blk_modes, FORM_TYPE_CHECKBOX, modes_check_fields)
 
         # ship values block
-        blk_ship = ttk.LabelFrame(blk_main, text="SHIP")
+        blk_ship = ttk.LabelFrame(blk_main, text="SHIP", padding=(10, 5))
         blk_ship.grid(row=0, column=1, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
         self.entries['ship'] = self.makeform(blk_ship, FORM_TYPE_SPINBOX, ship_entry_fields, 0, 0.5)
 
@@ -1276,7 +1276,7 @@ class APGui():
         btn_tst_yaw.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
 
         # waypoints button block
-        blk_wp_buttons = ttk.LabelFrame(page0, text="Waypoints")
+        blk_wp_buttons = ttk.LabelFrame(page0, text="Waypoints", padding=(10, 5))
         blk_wp_buttons.grid(row=1, column=0, padx=10, pady=5, columnspan=2, sticky=(tk.N, tk.S, tk.E, tk.W))
         blk_wp_buttons.columnconfigure([0, 1], weight=1, minsize=100, uniform="group1")
 
@@ -1291,7 +1291,7 @@ class APGui():
         tip_reset = ToolTip(btn_reset, msg=self.tooltips['Reset Waypoint List'], delay=1.0, bg="#808080", fg="#FFFFFF")
 
         # log window
-        log = ttk.LabelFrame(page0, text="LOG")
+        log = ttk.LabelFrame(page0, text="LOG", padding=(10, 5))
         log.grid(row=3, column=0, padx=12, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
         scrollbar = ttk.Scrollbar(log)
         scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
@@ -1305,7 +1305,7 @@ class APGui():
         blk_main.columnconfigure([0, 1], weight=1, minsize=100, uniform="group1")
 
         # autopilot settings block
-        blk_ap = ttk.LabelFrame(blk_settings, text="AUTOPILOT")
+        blk_ap = ttk.LabelFrame(blk_settings, text="AUTOPILOT", padding=(10, 5))
         blk_ap.grid(row=0, column=0, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
         self.entries['autopilot'] = self.makeform(blk_ap, FORM_TYPE_SPINBOX, autopilot_entry_fields)
         self.checkboxvar['Enable Randomness'] = tk.BooleanVar()
@@ -1319,7 +1319,7 @@ class APGui():
         cb_logout.grid(row=7, column=0, columnspan=2, sticky=(tk.W))
 
         # buttons settings block
-        blk_buttons = ttk.LabelFrame(blk_settings, text="BUTTONS")
+        blk_buttons = ttk.LabelFrame(blk_settings, text="BUTTONS", padding=(10, 5))
         blk_buttons.grid(row=0, column=1, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
         blk_dss = ttk.Frame(blk_buttons)
         blk_dss.grid(row=0, column=0, columnspan=2, padx=0, pady=0, sticky=(tk.N, tk.S, tk.E, tk.W))
@@ -1333,12 +1333,12 @@ class APGui():
         self.entries['buttons'] = self.makeform(blk_buttons, FORM_TYPE_ENTRY, buttons_entry_fields, 2)
 
         # refuel settings block
-        blk_fuel = ttk.LabelFrame(blk_settings, text="FUEL")
+        blk_fuel = ttk.LabelFrame(blk_settings, text="FUEL", padding=(10, 5))
         blk_fuel.grid(row=1, column=0, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
         self.entries['refuel'] = self.makeform(blk_fuel, FORM_TYPE_SPINBOX, refuel_entry_fields)
 
         # overlay settings block
-        blk_overlay = ttk.LabelFrame(blk_settings, text="OVERLAY")
+        blk_overlay = ttk.LabelFrame(blk_settings, text="OVERLAY", padding=(10, 5))
         blk_overlay.grid(row=1, column=1, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
         self.checkboxvar['Enable Overlay'] = tk.BooleanVar()
         cb_enable = ttk.Checkbutton(blk_overlay, text='Enable (requires restart)', variable=self.checkboxvar['Enable Overlay'], command=(lambda field='Enable Overlay': self.check_cb(field)))
@@ -1346,14 +1346,14 @@ class APGui():
         self.entries['overlay'] = self.makeform(blk_overlay, FORM_TYPE_SPINBOX, overlay_entry_fields, 1, 1.0, 0.0, 3000.0)
 
         # tts / voice settings block
-        blk_voice = ttk.LabelFrame(blk_settings, text="VOICE")
+        blk_voice = ttk.LabelFrame(blk_settings, text="VOICE", padding=(10, 5))
         blk_voice.grid(row=2, column=0, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
         self.checkboxvar['Enable Voice'] = tk.BooleanVar()
         cb_enable = ttk.Checkbutton(blk_voice, text='Enable', variable=self.checkboxvar['Enable Voice'], command=(lambda field='Enable Voice': self.check_cb(field)))
         cb_enable.grid(row=0, column=0, columnspan=2, sticky=(tk.W))
 
         # Scanner settings block
-        blk_voice = ttk.LabelFrame(blk_settings, text="ELW SCANNER")
+        blk_voice = ttk.LabelFrame(blk_settings, text="ELW SCANNER", padding=(10, 5))
         blk_voice.grid(row=2, column=1, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
         self.checkboxvar['ELW Scanner'] = tk.BooleanVar()
         cb_enable = ttk.Checkbutton(blk_voice, text='Enable', variable=self.checkboxvar['ELW Scanner'], command=(lambda field='ELW Scanner': self.check_cb(field)))
@@ -1367,7 +1367,7 @@ class APGui():
         btn_save.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
 
         # File Actions
-        blk_file_actions = ttk.LabelFrame(page2, text="File Actions")
+        blk_file_actions = ttk.LabelFrame(page2, text="File Actions", padding=(10, 5))
         blk_file_actions.grid(row=0, column=0, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
         self.checkboxvar['Enable CV View'] = tk.IntVar()
         self.checkboxvar['Enable CV View'].set(int(self.ed_ap.config['Enable_CV_View']))
@@ -1380,7 +1380,7 @@ class APGui():
 
 
         # Help Actions
-        blk_help_actions = ttk.LabelFrame(page2, text="Help Actions")
+        blk_help_actions = ttk.LabelFrame(page2, text="Help Actions", padding=(10, 5))
         blk_help_actions.grid(row=0, column=1, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
         btn_check_updates = ttk.Button(blk_help_actions, text="Check for Updates", command=self.check_updates)
         btn_check_updates.grid(row=0, column=0, padx=2, pady=2, sticky=tk.W)
@@ -1397,7 +1397,7 @@ class APGui():
         blk_debug.columnconfigure([0, 1], weight=1, minsize=100, uniform="group2")
 
         # debug settings block
-        blk_debug_settings = ttk.LabelFrame(blk_debug, text="DEBUG")
+        blk_debug_settings = ttk.LabelFrame(blk_debug, text="DEBUG", padding=(10, 5))
         blk_debug_settings.grid(row=0, column=0, padx=2, pady=2, sticky=(tk.N, tk.S, tk.E, tk.W))
         self.radiobuttonvar['debug_mode'] = tk.StringVar()
         rb_debug_debug = ttk.Radiobutton(blk_debug_settings, text="Debug + Info + Errors", variable=self.radiobuttonvar['debug_mode'], value="Debug", command=(lambda field='debug_mode': self.check_cb(field)))
@@ -1410,7 +1410,7 @@ class APGui():
         btn_open_logfile.grid(row=3, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
 
         # debug settings block
-        blk_single_waypoint_asst = ttk.LabelFrame(page2, text="Single Waypoint Assist")
+        blk_single_waypoint_asst = ttk.LabelFrame(page2, text="Single Waypoint Assist", padding=(10, 5))
         blk_single_waypoint_asst.grid(row=1, column=1, padx=10, pady=5, sticky=(tk.N, tk.S, tk.E, tk.W))
         blk_single_waypoint_asst.columnconfigure(0, weight=1, minsize=10, uniform="group1")
         blk_single_waypoint_asst.columnconfigure(1, weight=3, minsize=10, uniform="group1")
