@@ -564,7 +564,13 @@ class WaypointEditorTab:
 
         entry_var = tk.StringVar()
         entry = ttk.Entry(self.waypoints_tree, textvariable=entry_var, font=ttk.Style().lookup('TEntry', 'font'))
-        entry.place(x=x, y=y, width=width, height=height, anchor='nw')
+
+        # Ensure the entry is tall enough and centered
+        entry_req_height = entry.winfo_reqheight()
+        final_height = max(height, entry_req_height)
+        y_centered = y + (height - final_height) // 2
+
+        entry.place(x=x, y=y_centered, width=width, height=final_height, anchor='nw')
 
         current_value = self.waypoints_tree.item(item_id, "values")[column_index]
         entry_var.set(current_value)
@@ -622,7 +628,13 @@ class WaypointEditorTab:
 
             entry = SearchableCombobox(treeview, ALL_COMMODITIES, on_select_callback)
             entry.entry.config(font=ttk.Style().lookup('TEntry', 'font'))
-            entry.place(x=x, y=y, width=width, height=height, anchor='nw')
+
+            # Ensure the entry is tall enough and centered
+            entry_req_height = entry.entry.winfo_reqheight()
+            final_height = max(height, entry_req_height)
+            y_centered = y + (height - final_height) // 2
+
+            entry.place(x=x, y=y_centered, width=width, height=final_height, anchor='nw')
             current_value = treeview.item(item_id, "values")[column_index]
             entry.set(current_value)
             entry.show_dropdown()
@@ -661,7 +673,13 @@ class WaypointEditorTab:
         elif column_index == 1: # Quantity column
             entry_var = tk.StringVar()
             entry = ttk.Entry(treeview, textvariable=entry_var, font=ttk.Style().lookup('TEntry', 'font'))
-            entry.place(x=x, y=y, width=width, height=height, anchor='nw')
+
+            # Ensure the entry is tall enough and centered
+            entry_req_height = entry.winfo_reqheight()
+            final_height = max(height, entry_req_height)
+            y_centered = y + (height - final_height) // 2
+
+            entry.place(x=x, y=y_centered, width=width, height=final_height, anchor='nw')
             entry_var.set(treeview.item(item_id, "values")[column_index])
             entry.focus_set()
             entry.select_range(0, 'end')
