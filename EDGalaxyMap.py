@@ -22,7 +22,6 @@ class EDGalaxyMap:
         self.ap_ckb = cb
         # The rect is top left x, y, and bottom right x, y in fraction of screen resolution
         self.reg = {'cartographics': {'rect': [0.0, 0.0, 0.25, 0.25]},
-                    'galaxy_map_header': {'rect': [0.0, 0.0, 0.2, 0.1]},
                     }
 
         self.load_calibrated_regions()

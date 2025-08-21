@@ -34,9 +34,6 @@ class EDStationServicesInShip:
         self.market_parser = MarketParser()
         # The rect is top left x, y, and bottom right x, y in fraction of screen resolution
         self.reg = {'connected_to': {'rect': [0.0, 0.0, 0.30, 0.30]},
-                    'stn_svc_layout': {'rect': [0.05, 0.40, 0.60, 0.76]},
-                    'commodities_market': {'rect': [0.0, 0.0, 0.25, 0.25]},
-                    'services_list': {'rect': [0.1, 0.4, 0.5, 0.9]},
                     'carrier_admin_header': {'rect': [0.4, 0.1, 0.6, 0.2]},
                     'commodities_list': {'rect': [0.2, 0.2, 0.8, 0.9]},
                     'commodity_quantity': {'rect': [0.4, 0.5, 0.6, 0.6]},
