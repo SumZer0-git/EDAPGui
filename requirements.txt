@@ -22,3 +22,4 @@ xmltodict~=0.14.2
 scipy
 sv-ttk
 pywinstyles
+tkinter-tooltip

@@ -21,7 +21,7 @@ from tkinter import ttk
 import sv_ttk
 import pywinstyles
 import sys
-from idlelib.tooltip import Hovertip
+from tktooltip import ToolTip
 
 from Voice import *
 from MousePt import MousePoint
@@ -865,7 +865,7 @@ class APGui():
                 ent.grid(row=r, column=1, padx=2, pady=2, sticky=tk.E)
                 entries[field] = ent
 
-            lab = Hovertip(lab, self.tooltips[field], hover_delay=1000)
+            lab = ToolTip(lab, msg=self.tooltips[field], delay=1.0, bg="#808080", fg="#FFFFFF")
             r += 1
         return entries
 
@@ -1269,11 +1269,11 @@ class APGui():
         self.wp_filelabel.set("<no list loaded>")
         btn_wp_file = ttk.Button(blk_wp_buttons, textvariable=self.wp_filelabel, command=self.open_wp_file)
         btn_wp_file.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
-        tip_wp_file = Hovertip(btn_wp_file, self.tooltips['Waypoint List Button'], hover_delay=1000)
+        tip_wp_file = ToolTip(btn_wp_file, msg=self.tooltips['Waypoint List Button'], delay=1.0, bg="#808080", fg="#FFFFFF")
 
         btn_reset = ttk.Button(blk_wp_buttons, text='Reset List', command=self.reset_wp_file)
         btn_reset.grid(row=1, column=0, padx=2, pady=2, columnspan=2, sticky=(tk.N, tk.E, tk.W, tk.S))
-        tip_reset = Hovertip(btn_reset, self.tooltips['Reset Waypoint List'], hover_delay=1000)
+        tip_reset = ToolTip(btn_reset, msg=self.tooltips['Reset Waypoint List'], delay=1.0, bg="#808080", fg="#FFFFFF")
 
         # log window
         log = ttk.LabelFrame(page0, text="LOG")
@@ -1305,7 +1305,7 @@ class APGui():
         self.checkboxvar['CUDA OCR'] = tk.BooleanVar()
         cb_cuda_ocr = ttk.Checkbutton(blk_ap, text='CUDA OCR', variable=self.checkboxvar['CUDA OCR'], command=(lambda field='CUDA OCR': self.check_cb(field)))
         cb_cuda_ocr.grid(row=8, column=0, columnspan=2, sticky=(tk.W))
-        tip_cuda_ocr = Hovertip(cb_cuda_ocr, self.tooltips['CUDA OCR'], hover_delay=1000)
+        tip_cuda_ocr = ToolTip(cb_cuda_ocr, msg=self.tooltips['CUDA OCR'], delay=1.0, bg="#808080", fg="#FFFFFF")
 
         # buttons settings block
         blk_buttons = ttk.LabelFrame(blk_settings, text="BUTTONS")
