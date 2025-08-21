@@ -167,14 +167,6 @@
             0.1713178294573644
         ]
     },
-    "EDGalaxyMap.galaxy_map_header": {
-        "rect": [
-            0.0,
-            0.0,
-            0.2,
-            0.1
-        ]
-    },
     "EDNavigationPanel.deskew_angle": -1.0,
     "EDStationServicesInShip.commodities_list": {
         "rect": [

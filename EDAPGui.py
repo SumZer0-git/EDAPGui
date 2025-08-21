@@ -98,7 +98,6 @@ class APGui():
             "EDStationServicesInShip.commodity_quantity": {"rect": [0.4, 0.5, 0.6, 0.6]},
             "EDStationServicesInShip.size.commodity_item": {"width": 100, "height": 15},
             "EDGalaxyMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
-            "EDGalaxyMap.galaxy_map_header": {"rect": [0.0, 0.0, 0.2, 0.1]},
             "EDSystemMap.cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
             "EDNavigationPanel.nav_panel": {"rect": [0.11, 0.21, 0.70, 0.86]},
             "EDNavigationPanel.temp_tab_bar": {"rect": [0.0, 0.2, 0.7, 0.35]},
