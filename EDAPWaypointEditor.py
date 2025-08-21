@@ -396,8 +396,36 @@ class WaypointEditorTab:
             messagebox.showerror("Error", f"Failed to load waypoint file: {e}")
 
     def save_waypoint_file(self, filepath):
-        raw_waypoints = self.convert_to_raw_waypoints()
-        self.ed_waypoint.write_waypoints(raw_waypoints, filepath)
+        waypoints_to_save = {}
+
+        # Add or preserve GlobalShoppingList at the top
+        if 'GlobalShoppingList' in self.ed_waypoint.waypoints:
+            waypoints_to_save['GlobalShoppingList'] = self.ed_waypoint.waypoints['GlobalShoppingList']
+        else:
+            # Add default GlobalShoppingList for new files
+            waypoints_to_save['GlobalShoppingList'] = {
+                "SystemName": "",
+                "StationName": "",
+                "GalaxyBookmarkType": "",
+                "GalaxyBookmarkNumber": 0,
+                "SystemBookmarkType": "",
+                "SystemBookmarkNumber": 0,
+                "SellCommodities": {},
+                "BuyCommodities": {},
+                "Comment": None,
+                "UpdateCommodityCount": True,
+                "FleetCarrierTransfer": False,
+                "Skip": True,
+                "Completed": False
+            }
+
+        # Add the rest of the waypoints
+        other_waypoints = self.convert_to_raw_waypoints()
+        if 'GlobalShoppingList' in other_waypoints:
+            del other_waypoints['GlobalShoppingList']
+        waypoints_to_save.update(other_waypoints)
+
+        self.ed_waypoint.write_waypoints(waypoints_to_save, filepath)
         self.ed_waypoint.filename = filepath
         self.mesg_client.publish(LoadWaypointFileAction(filepath=filepath))
 
