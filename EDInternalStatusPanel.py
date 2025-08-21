@@ -107,6 +107,39 @@ class EDInternalStatusPanel:
             else:
                 return False, ""
 
+    def show_right_panel_fallback(self):
+        """ Shows the Internal (Right) Panel.
+        Returns True if successful, else False.
+        """
+        logger.debug("show_right_panel_fallback: entered")
+
+        # Is nav panel active?
+        active, active_tab_name = self.is_right_panel_active()
+        if active:
+            # Store image
+            image = self.screen.get_screen_full()
+            cv2.imwrite(f'test/internal-panel/int_panel_full.png', image)
+            return active, active_tab_name
+        else:
+            print("Open Internal Panel")
+            logger.debug("show_right_panel_fallback: Open Internal Panel")
+
+            self.keys.send("HeadLookReset")
+            self.keys.send('UIFocus', state=1)
+            self.keys.send('UI_Right')
+            self.keys.send('UIFocus', state=0)
+            sleep(0.5)
+
+            # Check if it opened
+            active, active_tab_name = self.is_right_panel_active()
+            if active:
+                # Store image
+                image = self.screen.get_screen_full()
+                cv2.imwrite(f'test/internal-panel/internal_panel_full.png', image)
+                return active, active_tab_name
+            else:
+                return False, ""
+
     def show_inventory_tab(self) -> bool | None:
         """ Shows the INVENTORY tab of the Nav Panel. Opens the Nav Panel if not already open.
         Returns True if successful, else False.
@@ -137,6 +170,38 @@ class EDInternalStatusPanel:
             return True
         elif active_tab_name is self.status_tab_text:
             self.keys.send('CycleNextPanel', repeat=6)
+            return True
+
+    def show_home_tab(self) -> bool | None:
+        """ Shows the home tab of the Nav Panel. Opens the Nav Panel if not already open.
+        Returns True if successful, else False.
+        """
+        logger.debug("show_home_tab: entered")
+
+        # Show nav panel
+        active, active_tab_name = self.show_right_panel_fallback()
+        if active is None:
+            return None
+        if not active:
+            print("Internal (Right) Panel could not be opened")
+            return False
+        elif active_tab_name is self.inventory_tab_text:
+            self.keys.send('CycleNextPanel', repeat=4)
+            return True
+        elif active_tab_name is self.modules_tab_text:
+            self.keys.send('CyclePreviousPanel', repeat=1)
+            return True
+        elif active_tab_name is self.fire_groups_tab_text:
+            self.keys.send('CyclePreviousPanel', repeat=2)
+            return True
+        elif active_tab_name is self.ship_tab_text:
+            self.keys.send('CyclePreviousPanel', repeat=3)
+            return True
+        elif active_tab_name is self.storage_tab_text:
+            self.keys.send('CycleNextPanel', repeat=3)
+            return True
+        elif active_tab_name is self.status_tab_text:
+            self.keys.send('CycleNextPanel', repeat=2)
             return True
 
     def is_right_panel_active(self) -> (bool, str):
