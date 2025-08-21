@@ -159,17 +159,9 @@ class InternalWaypoint:
         self.completed = tk.BooleanVar()
         self.comment = tk.StringVar()
 
-class InternaGlobalshoppinglist:
-    def __init__(self):
-        self.buy_commodities = []
-        self.update_commodity_count = tk.BooleanVar()
-        self.skip = tk.BooleanVar()
-        self.completed = tk.BooleanVar()
-
 class InternalWaypoints:
     def __init__(self):
         self.waypoints = []
-        self.global_shopping_list = InternaGlobalshoppinglist()
 
 
 class WaypointEditorTab:
@@ -184,26 +176,12 @@ class WaypointEditorTab:
 
         self.root = self.frame.winfo_toplevel()
 
-        # Create the main notebook
-        self.notebook = ttk.Notebook(self.frame)
-        self.notebook.pack(fill="both", expand=True, padx=10, pady=10)
-
-        # Create the tabs
-        self.waypoints_tab = ttk.Frame(self.notebook)
-        self.global_shopping_list_tab = ttk.Frame(self.notebook)
-
-        self.notebook.add(self.waypoints_tab, text="Waypoints")
-        self.notebook.add(self.global_shopping_list_tab, text="Global Shopping List")
-
         # --- Waypoints Tab ---
         self.create_waypoints_tab()
 
-        # --- Global Shopping List Tab ---
-        self.create_global_shopping_list_tab()
-
     def create_waypoints_tab(self):
         # Main container for the waypoints tab
-        waypoints_container = ttk.Frame(self.waypoints_tab)
+        waypoints_container = ttk.Frame(self.frame)
         waypoints_container.pack(fill="both", expand=True, padx=5, pady=5)
 
         # File operations buttons
@@ -299,11 +277,6 @@ class WaypointEditorTab:
         sell_commodities_frame.pack(side="right", fill="both", expand=True, padx=(5, 0))
         self.sell_commodities_list = self.create_commodity_list(sell_commodities_frame, "sell")
 
-    def create_global_shopping_list_tab(self):
-        frame = ttk.Frame(self.global_shopping_list_tab)
-        frame.pack(fill="both", expand=True, padx=5, pady=5)
-        self.global_shopping_list_tree = self.create_commodity_list(frame, "global")
-
     def open_inara_import_window(self):
         inara_window = tk.Toplevel(self.frame)
         inara_window.title("Import from Inara")
@@ -351,11 +324,6 @@ class WaypointEditorTab:
             ttk.Button(buttons_frame, text="Down", command=self.move_sell_commodity_down).pack(padx=5, pady=2, fill="x")
             ttk.Button(buttons_frame, text="Add", command=self.add_sell_commodity).pack(padx=5, pady=2, fill="x")
             ttk.Button(buttons_frame, text="Del", command=self.delete_sell_commodity).pack(padx=5, pady=2, fill="x")
-        elif list_type == "global":
-            ttk.Button(buttons_frame, text="Up", command=self.move_global_commodity_up).pack(padx=5, pady=2, fill="x")
-            ttk.Button(buttons_frame, text="Down", command=self.move_global_commodity_down).pack(padx=5, pady=2, fill="x")
-            ttk.Button(buttons_frame, text="Add", command=self.add_global_commodity).pack(padx=5, pady=2, fill="x")
-            ttk.Button(buttons_frame, text="Del", command=self.delete_global_commodity).pack(padx=5, pady=2, fill="x")
 
         return tree
 
@@ -466,11 +434,7 @@ class WaypointEditorTab:
 
         for key, value in raw_waypoints.items():
             if key == "GlobalShoppingList":
-                gsl = self.waypoints.global_shopping_list
-                gsl.update_commodity_count.set(value.get('UpdateCommodityCount', False))
-                gsl.skip.set(value.get('Skip', False))
-                gsl.completed.set(value.get('Completed', False))
-                gsl.buy_commodities = [ShoppingItem(k, v) for k, v in value.get('BuyCommodities', {}).items()]
+                continue
             else:
                 wp = InternalWaypoint(name=key)
                 wp.system_name.set(value.get('SystemName', ''))
@@ -490,16 +454,6 @@ class WaypointEditorTab:
 
     def convert_to_raw_waypoints(self):
         raw_waypoints = {}
-
-        # Global Shopping List
-        gsl = self.waypoints.global_shopping_list
-        raw_gsl = {
-            'BuyCommodities': {item.name.get(): item.quantity.get() for item in gsl.buy_commodities},
-            'UpdateCommodityCount': gsl.update_commodity_count.get(),
-            'Skip': gsl.skip.get(),
-            'Completed': gsl.completed.get()
-        }
-        raw_waypoints['GlobalShoppingList'] = raw_gsl
 
         # Waypoints
         for i, wp in enumerate(self.waypoints.waypoints):
@@ -634,7 +588,7 @@ class WaypointEditorTab:
 
     def on_commodity_cell_double_click(self, event, list_type):
         selected_waypoint = self.get_selected_waypoint()
-        if not selected_waypoint and list_type != "global":
+        if not selected_waypoint:
             return
 
         treeview = event.widget  # Capture the treeview widget
@@ -655,8 +609,6 @@ class WaypointEditorTab:
             commodity_list = self.get_selected_waypoint().buy_commodities
         elif list_type == "sell":
             commodity_list = self.get_selected_waypoint().sell_commodities
-        elif list_type == "global":
-            commodity_list = self.waypoints.global_shopping_list.buy_commodities
         else:
             return # Should not happen
 
@@ -852,36 +804,6 @@ class WaypointEditorTab:
                     if index < len(wp.sell_commodities) - 1:
                         wp.sell_commodities.insert(index + 1, wp.sell_commodities.pop(index))
                 self.update_commodity_list(wp.sell_commodities, self.sell_commodities_list)
-
-    def add_global_commodity(self):
-        self.waypoints.global_shopping_list.buy_commodities.append(ShoppingItem("New Commodity", 1))
-        self.update_commodity_list(self.waypoints.global_shopping_list.buy_commodities, self.global_shopping_list_tree)
-
-    def delete_global_commodity(self):
-        selected_item = self.global_shopping_list_tree.selection()
-        if selected_item:
-            for item in selected_item:
-                index = self.global_shopping_list_tree.index(item)
-                del self.waypoints.global_shopping_list.buy_commodities[index]
-            self.update_commodity_list(self.waypoints.global_shopping_list.buy_commodities, self.global_shopping_list_tree)
-
-    def move_global_commodity_up(self):
-        selected_item = self.global_shopping_list_tree.selection()
-        if selected_item:
-            for item in selected_item:
-                index = self.global_shopping_list_tree.index(item)
-                if index > 0:
-                    self.waypoints.global_shopping_list.buy_commodities.insert(index - 1, self.waypoints.global_shopping_list.buy_commodities.pop(index))
-            self.update_commodity_list(self.waypoints.global_shopping_list.buy_commodities, self.global_shopping_list_tree)
-
-    def move_global_commodity_down(self):
-        selected_item = self.global_shopping_list_tree.selection()
-        if selected_item:
-            for item in reversed(selected_item):
-                index = self.global_shopping_list_tree.index(item)
-                if index < len(self.waypoints.global_shopping_list.buy_commodities) - 1:
-                    self.waypoints.global_shopping_list.buy_commodities.insert(index + 1, self.waypoints.global_shopping_list.buy_commodities.pop(index))
-            self.update_commodity_list(self.waypoints.global_shopping_list.buy_commodities, self.global_shopping_list_tree)
 
     def add_inara_route(self, text):
         lines = text.splitlines()
