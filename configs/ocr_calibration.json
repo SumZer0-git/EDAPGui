@@ -143,15 +143,6 @@
             0.1713178294573644
         ]
     },
-    "EDNavigationPanel.deskew_angle": -1.0,
-    "EDStationServicesInShip.commodities_list": {
-        "rect": [
-            0.2683139534883721,
-            0.2917312661498708,
-            0.44069767441860463,
-            0.7987080103359173
-        ]
-    },
     "EDStationServicesInShip.commodity_quantity": {
         "rect": [
             0.3470930232558139,
@@ -163,6 +154,15 @@
     "EDStationServicesInShip.size.commodity_item": {
         "width": 100,
         "height": 15
+    },
+    "EDNavigationPanel.deskew_angle": -1.0,
+    "EDStationServicesInShip.commodities_list": {
+        "rect": [
+            0.2683139534883721,
+            0.2917312661498708,
+            0.44069767441860463,
+            0.7987080103359173
+        ]
     },
     "use_gpu_ocr": true
 }
