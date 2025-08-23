@@ -126,32 +126,41 @@ class OCR:
         upper_range = np.array([255, 255, 255])
         mask = cv2.inRange(hsv, lower_range, upper_range)
         masked_image = cv2.bitwise_and(image, image, mask=mask)
-        cv2.imwrite('test/nav-panel/out/masked.png', masked_image)
+        cv2.imwrite('test/nav-panel/out/1-masked.png', masked_image)
 
         # Convert to gray scale and invert
         gray = cv2.cvtColor(masked_image, cv2.COLOR_BGR2GRAY)
-        cv2.imwrite('test/nav-panel/out/gray.png', gray)
+        cv2.imwrite('test/nav-panel/out/2-gray.png', gray)
+
+        # Blur slightly to remove thin lines
+        blur = cv2.GaussianBlur(gray, (3, 3), cv2.BORDER_DEFAULT)
+        cv2.imwrite('test/nav-panel/out/3-blur.png', blur)
 
         # Convert to B&W to allow FindContours to find rectangles.
-        ret, thresh1 = cv2.threshold(gray, 0, 255, cv2.THRESH_OTSU)  # | cv2.THRESH_BINARY_INV)
-        cv2.imwrite('test/nav-panel/out/thresh1.png', thresh1)
+        ret, thresh1 = cv2.threshold(blur, 0, 255, cv2.THRESH_OTSU)  # | cv2.THRESH_BINARY_INV)
+        cv2.imwrite('test/nav-panel/out/4-thresh1.png', thresh1)
 
         # Finding contours in B&W image. White are the areas detected
         contours, hierarchy = cv2.findContours(thresh1, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+        output = image
+        cv2.drawContours(output, contours, -1, (0, 255, 0), 2)
+        cv2.imwrite('test/nav-panel/out/5-contours.png', output)
+
+        # bounds = image
         cropped = image
         for cnt in contours:
             x, y, w, h = cv2.boundingRect(cnt)
             # Check the item is greater than 90% of the minimum width or height. Which allows for some variation.
             if w > (min_w * 0.9) and h > (min_h * 0.9):
                 # Drawing a rectangle on the copied image
-                # rect = cv2.rectangle(crop, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                # bounds = cv2.rectangle(bounds, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
                 # Crop to leave only the contour (the selected rectangle)
                 cropped = image[y:y + h, x:x + w]
 
                 # cv2.imshow("cropped", cropped)
-                # cv2.imwrite('test/selected_item.png', cropped)
+                cv2.imwrite('test/nav-panel/out/6-selected_item.png', cropped)
                 return cropped, x, y
 
         # No good matches, then return None
@@ -249,7 +258,11 @@ class OCR:
         @param region: The region to check in % (0.0 - 1.0).
         @param timeout: Time to wait for screen in seconds
         """
+        # Draw box around region
         abs_rect = self.screen.screen_rect_to_abs(region['rect'])
+        if ap.debug_overlay:
+            ap.overlay.overlay_rect1('wait_for_text', abs_rect, (0, 255, 0), 2)
+            ap.overlay.overlay_paint()
 
         start_time = time.time()
         text_found = False
@@ -262,6 +275,11 @@ class OCR:
             for text in texts:
                 text_found, ocr_text = self.is_text_in_region(text, region)
 
+                # Over OCR result
+                if ap.debug_overlay:
+                    ap.overlay.overlay_floating_text('wait_for_text', f'{ocr_text}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
+                    ap.overlay.overlay_paint()
+
                 if text_found:
                     break
 
@@ -269,5 +287,12 @@ class OCR:
                 break
 
             time.sleep(0.25)
+
+        # Clean up screen
+        if ap.debug_overlay:
+            time.sleep(2)
+            ap.overlay.overlay_remove_rect('wait_for_text')
+            ap.overlay.overlay_remove_floating_text('wait_for_text')
+            ap.overlay.overlay_paint()
 
         return text_found

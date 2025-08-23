@@ -11,6 +11,7 @@ from xml.etree.ElementTree import parse
 import win32gui
 import xmltodict
 
+from Screen import set_focus_elite_window
 from directinput import *
 from EDlogger import logger
 
@@ -20,14 +21,6 @@ Description:  Pulls the keybindings for specific controls from the ED Key Bindin
 
 Constraints:  This file will use the latest modified *.binds file
 """
-
-
-def set_focus_elite_window():
-    """ set focus to the ED window, if ED does not have focus then the keystrokes will go to the window
-    that does have focus. """
-    handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
-    if handle != 0:
-        win32gui.SetForegroundWindow(handle)  # give focus to ED
 
 
 @final
@@ -112,22 +105,16 @@ class EDKeys:
                 logger.warning("\tget_bindings_<{}>= does not have a valid keyboard keybind.".format(key).upper())
                 self.missing_keys.append(key)
 
-        # Check for known key collisions
-        collisions = self.get_collisions('UI_Up')
-        if 'CamTranslateForward' in collisions:
-            warn_text = ("Up arrow key is used for 'UI Panel Up' and 'Galaxy Cam Translate Fwd'. "
-                         "This will cause problems in the Galaxy Map. Change the keybinding for "
-                         "'Galaxy Cam Translate' to Shift + WASD under General Controls in ED Controls.")
-            self.ap_ckb('log', f"WARNING: {warn_text}")
-            logger.warning(f"{warn_text}")
-
-        collisions = self.get_collisions('UI_Right')
-        if 'CamTranslateRight' in collisions:
-            warn_text = ("Up arrow key is used for 'UI Panel Up' and 'Galaxy Cam Translate Right'. "
-                         "This will cause problems in the Galaxy Map. Change the keybinding for"
-                         " 'Galaxy Cam Translate' to Shift + WASD under General Controls in ED Controls.")
-            self.ap_ckb('log', f"WARNING: {warn_text}")
-            logger.warning(f"{warn_text}")
+        # Check for key collisions with the keys EDAP uses.
+        for key in self.keys_to_obtain:
+            collisions = self.get_collisions(key)
+            if len(collisions) > 1:
+                # lookup the keyname in the SCANCODE reverse dictionary and output that key name
+                keyname = self.reversed_dict.get(self.keys[key]['key'], "Key not found")
+                warn_text = (f"Key '{keyname}' is used for the following bindings: {collisions}. "
+                             "This MAY causes issues when using EDAP. Monitor and adjust accordingly.")
+                self.ap_ckb('log', f"WARNING: {warn_text}")
+                logger.warning(f"{warn_text}")
 
         # Check if the hotkeys are used in ED
         binding_name = self.check_hotkey_in_bindings('Key_End')

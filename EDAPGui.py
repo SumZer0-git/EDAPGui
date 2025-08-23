@@ -55,7 +55,7 @@ Author: sumzer0@yahoo.com
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
 # contains the names of the release.
-EDAP_VERSION = "V1.6.1"
+EDAP_VERSION = "V1.7.0"
 # depending on how release versions are best marked you could also change it to the release tag, see function check_update.
 # ---------------------------------------------------------------------------
 
@@ -203,6 +203,8 @@ class APGui():
         else:
             self.radiobuttonvar['debug_mode'].set("Error")
 
+        self.checkboxvar['Debug Overlay'].set(self.ed_ap.config['DebugOverlay'])
+
         # global trap for these keys, the 'end' key will stop any current AP action
         # the 'home' key will start the FSD Assist.  May want another to start SC Assist
 
@@ -315,7 +317,7 @@ class APGui():
         self.entries['ship']['SunPitchUp+Time'].insert(0, self.ed_ap.sunpitchuptime)
 
     def calibrate_callback(self):
-        self.ed_ap.calibrate()
+        self.ed_ap.calibrate_target()
 
     def calibrate_compass_callback(self):
         self.ed_ap.calibrate_compass()
@@ -548,6 +550,7 @@ class APGui():
             self.ed_ap.config['HotKey_StopAllAssists'] = str(self.entries['buttons']['Stop All'].get())
             self.ed_ap.config['VoiceEnable'] = self.checkboxvar['Enable Voice'].get()
             self.ed_ap.config['TCEDestinationFilepath'] = str(self.TCE_Destination_Filepath.get())
+            self.ed_ap.config['DebugOverlay'] = self.checkboxvar['Debug Overlay'].get()
         except:
             messagebox.showinfo("Exception", "Invalid float entered")
 
@@ -716,6 +719,11 @@ class APGui():
             elif self.checkboxvar['Single Waypoint Assist'].get() == 0 and self.SWP_A_running == True:
                 self.stop_single_waypoint_assist()
 
+        if field == 'Debug Overlay':
+            if self.checkboxvar['Debug Overlay'].get():
+                self.ed_ap.debug_overlay = True
+            else:
+                self.ed_ap.debug_overlay = False
 
     def makeform(self, win, ftype, fields, r=0, inc=1, rfrom=0, rto=1000):
         entries = {}
@@ -962,6 +970,10 @@ class APGui():
         blk_debug_buttons = tk.Frame(page2)
         blk_debug_buttons.grid(row=3, column=0, padx=10, pady=5, columnspan=2, sticky=(N, S, E, W))
         blk_debug_buttons.columnconfigure([0, 1], weight=1, minsize=100)
+
+        self.checkboxvar['Debug Overlay'] = BooleanVar()
+        cb_debug_overlay = Checkbutton(blk_debug_buttons, text='Debug Overlay', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['Debug Overlay'], command=(lambda field='Debug Overlay': self.check_cb(field)))
+        cb_debug_overlay.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
 
         btn_save = Button(blk_debug_buttons, text='Save All Settings', command=self.save_settings)
         btn_save.grid(row=7, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))

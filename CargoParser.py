@@ -69,7 +69,7 @@ class CargoParser:
         backoff = 1
         while True:
             try:
-                with open(self.file_path, 'r') as file:
+                with open(self.file_path, 'r', encoding='utf-8') as file:
                     data = json.load(file)
                     break
             except Exception as e:
@@ -89,8 +89,9 @@ class CargoParser:
         """ Get details of one item. Returns the item detail as below, or None if item does not exist.
             Will not trigger a read of the json file.
         {
-            "Name":"tritium",
-            "Count":356,
+            "Name":"cmmcomposite",
+            "Name_Localised":"CMM Composite", {This is optional}
+            "Count":1236,
             "Stolen":0
         }
         @param item_name: The commodity name.
@@ -100,7 +101,10 @@ class CargoParser:
             if good['Name'].upper() == item_name.upper():
                 # print(json.dumps(good, indent=4))
                 return good
-
+            if 'Name_Localised' in good:
+                if good['Name_Localised'].upper() == item_name.upper():
+                    # print(json.dumps(good, indent=4))
+                    return good
         return None
 
 

@@ -3,14 +3,10 @@ from __future__ import annotations
 import json
 import os
 import time
-from datetime import datetime, timedelta
-import queue
 from operator import itemgetter
 from sys import platform
-import threading
 from time import sleep
 from EDlogger import logger
-from WindowsKnownPaths import *
 
 
 class MarketParser:
@@ -56,7 +52,7 @@ class MarketParser:
         return os.path.getmtime(self.file_path)
 
     def get_market_data(self):
-        """Loads data from the JSON file and returns the data.
+        """Loads data from the JSON file and returns the data, or None if the file does not exist.
         {
         "timestamp": "2024-09-21T14:53:38Z",
         "event": "Market",
@@ -83,17 +79,20 @@ class MarketParser:
                 "Rare": false
             }, { etc. } ]
         """
+        # Check file if exists
+        if not os.path.exists(self.file_path):
+            return None
 
         # Check if file changed
         if self.get_file_modified_time() == self.last_mod_time:
-            #logger.debug(f'Market.json mod timestamp {self.last_mod_time} unchanged.')
+            # logger.debug(f'Market.json mod timestamp {self.last_mod_time} unchanged.')
             return self.current_data
 
         # Read file
         backoff = 1
         while True:
             try:
-                with open(self.file_path, 'r') as file:
+                with open(self.file_path, 'r', encoding='utf-8') as file:
                     data = json.load(file)
                     break
             except Exception as e:
@@ -109,7 +108,7 @@ class MarketParser:
         # print(json.dumps(data, indent=4))
         return data
 
-    def get_sellable_items(self, cargo_parser) -> list:
+    def get_sellable_items(self, cargo_parser) -> list | None:
         """ Get a list of items that can be sold to the station.
         Will trigger a read of the json file.
         {
@@ -133,11 +132,14 @@ class MarketParser:
         @return: A list of commodities that can be sold.
         """
         data = self.get_market_data()
+        if data is None:
+            return None
+
         sellable_items = [x for x in data['Items'] if x['Consumer'] or
                           ((x['Demand'] > 1 or x['Demand']) and cargo_parser.get_item(x['Name_Localised']) is not None)]
         # DemandBracket: 0=Not listed, 1=Low Demand, 2=Medium Demand, 3=High Demand
         # sellable_items = [x for x in data['Items'] if x['DemandBracket'] > 0]
-        #sellable_items = [x for x in data['Items'] if self.can_sell_item(x['Name_Localised'])]
+        # sellable_items = [x for x in data['Items'] if self.can_sell_item(x['Name_Localised'])]
         # print(json.dumps(newlist, indent=4))
 
         # Sort by name, then category
@@ -151,7 +153,7 @@ class MarketParser:
 
         return sorted_list2
 
-    def get_buyable_items(self):
+    def get_buyable_items(self) -> list | None:
         """ Get a list of items that can be bought from the station.
         Will trigger a read of the json file.
         {
@@ -173,6 +175,9 @@ class MarketParser:
         }
         """
         data = self.get_market_data()
+        if data is None:
+            return None
+
         # buyable_items = [x for x in data['Items'] if x['Producer'] and x['Stock'] > 0]
         # StockBracket: 0=Not listed, 1=Low Stock, 2=Medium Stock, 3=High Stock
         # buyable_items = [x for x in data['Items'] if x['StockBracket'] > 0]
@@ -194,6 +199,9 @@ class MarketParser:
         """ Gets the current market (station) name.
         Will not trigger a read of the json file.
         """
+        if self.current_data is None:
+            return ""
+
         return self.current_data['StationName']
 
     def get_item(self, item_name) -> dict[any] | None:
@@ -217,6 +225,9 @@ class MarketParser:
             "Rare": false
         }
         """
+        if self.current_data is None:
+            return None
+
         for good in self.current_data['Items']:
             if good['Name_Localised'].upper() == item_name.upper():
                 # print(json.dumps(good, indent=4))

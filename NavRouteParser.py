@@ -79,7 +79,7 @@ class NavRouteParser:
         backoff = 1
         while True:
             try:
-                with open(self.file_path, 'r') as file:
+                with open(self.file_path, 'r', encoding='utf-8') as file:
                     data = json.load(file)
                     break
             except Exception as e:

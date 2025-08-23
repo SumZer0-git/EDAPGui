@@ -1,7 +1,24 @@
-# 7/28/2025 Stumpii: Debug_overlay bug.
+# 8/19/2025 v1.7.0: General updates.
+ - Changed all Parser files to UTF-8 format.
+ - Fixed CARTOGRAPHICS detection.
+ - Improved key collision reporting.
+ - Fixed nav point directly behind us causing ship to roll continually.
+ - Added simple OCR detection to Nav Panel tab
+ - Reworked internal (right) panel with OCR and debug overlay.
+ - Added OCR checks for Gal map and Sys map.
+ - Added Debug Overlay option.
+ - Fix not selling CMM Composites and any other item with space in name.
+ - Improved nav point behind logic.
+ - Added new template matching mode with separate H, S and V channel detection.
+ - Changed timeout for auto dock.
+ - Speed/simplify docking request.
+ - Added additional checks when market.json is not available (never been docked at station).
+ - Added startup and requirements batch files from Glasses branch.
+
+# 7/28/2025 v1.6.1: Debug_overlay bug.
  - Removed debug_overlay bug.
 
-# 7/28/2025 Stumpii: Panther Clipper + small improvements.
+# 7/28/2025 v1.6.0: Panther Clipper + small improvements.
  - Added quick fix for Robigo issue not selecting the system.
  - Changed logger level on startup to INFO to allow logging of startup info before the user settings are read. Added mostly so we can log the version of EDAP that is started.
  - Updated Russian language file.

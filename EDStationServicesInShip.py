@@ -115,16 +115,18 @@ class EDStationServicesInShip:
             logger.debug(f"Item '{name}' is not sold or has no stock at {self.market_parser.get_market_name()}.")
             return False, 0
 
-        # Find commodity in market and return the index
-        buyable_items = self.market_parser.get_buyable_items()
+        # Find commodity in mar
+        # ket and return the index
         index = -1
         stock = 0
-        for i, value in enumerate(buyable_items):
-            if value['Name_Localised'].upper() == name.upper():
-                index = i
-                stock = value['Stock']
-                logger.debug(f"Execute trade: Buy {name} (want {qty} of {stock} avail.) at position {index + 1}.")
-                break
+        buyable_items = self.market_parser.get_buyable_items()
+        if buyable_items is not None:
+            for i, value in enumerate(buyable_items):
+                if value['Name_Localised'].upper() == name.upper():
+                    index = i
+                    stock = value['Stock']
+                    logger.debug(f"Execute trade: Buy {name} (want {qty} of {stock} avail.) at position {index + 1}.")
+                    break
 
         # Actual qty we can sell
         act_qty = min(qty, stock, free_cargo)
@@ -183,15 +185,16 @@ class EDStationServicesInShip:
             return False, 0
 
         # Find commodity in market and return the index
-        sellable_items = self.market_parser.get_sellable_items(cargo_parser)
         index = -1
         demand = 0
-        for i, value in enumerate(sellable_items):
-            if value['Name_Localised'].upper() == name.upper():
-                index = i
-                demand = value['Demand']
-                logger.debug(f"Execute trade: Sell {name} ({qty} of {demand} demanded) at position {index + 1}.")
-                break
+        sellable_items = self.market_parser.get_sellable_items(cargo_parser)
+        if sellable_items is not None:
+            for i, value in enumerate(sellable_items):
+                if value['Name_Localised'].upper() == name.upper():
+                    index = i
+                    demand = value['Demand']
+                    logger.debug(f"Execute trade: Sell {name} ({qty} of {demand} demanded) at position {index + 1}.")
+                    break
 
         # Qty we can sell. Unlike buying, we can sell more than the demand
         # But maybe not at all stations!

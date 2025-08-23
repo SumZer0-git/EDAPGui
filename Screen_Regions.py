@@ -1,3 +1,4 @@
+import numpy as np
 from numpy import array, sum
 import cv2
 
@@ -90,7 +91,7 @@ class Screen_Regions:
         self.templates = templ
 
         # Define the thresholds for template matching to be consistent throughout the program
-        self.compass_match_thresh = 0.5
+        self.compass_match_thresh = 0.35
         self.navpoint_match_thresh = 0.8
         self.target_thresh = 0.54
         self.target_occluded_thresh = 0.55
@@ -136,12 +137,12 @@ class Screen_Regions:
         """ Grab screen region and call its filter routine.
         Returns the filtered image. """
         scr = screen.get_screen_region(self.reg[region_name]['rect'], inv_col)
-        if self.reg[region_name]['filterCB'] == None:
+        if self.reg[region_name]['filterCB'] is None:
             # return the screen region untouched in BGRA format.
             return scr
         else:
             # return the screen region in the format returned by the filter.
-            return self.reg[region_name]['filterCB'] (scr, self.reg[region_name]['filter'])          
+            return self.reg[region_name]['filterCB'](scr, self.reg[region_name]['filter'])
 
     def match_template_in_region(self, region_name, templ_name, inv_col=True):
         """ Attempt to match the given template in the given region which is filtered using the region filter.
@@ -149,15 +150,79 @@ class Screen_Regions:
         img_region = self.capture_region_filtered(self.screen, region_name, inv_col)    # which would call, reg.capture_region('compass') and apply defined filter
         match = cv2.matchTemplate(img_region, self.templates.template[templ_name]['image'], cv2.TM_CCOEFF_NORMED)
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(match)
-        return img_region, (minVal, maxVal, minLoc, maxLoc), match 
-    
+        return img_region, (minVal, maxVal, minLoc, maxLoc), match
+
+    def match_template_in_region_x3(self, region_name, templ_name, inv_col=True):
+        """ Attempt to match the given template in the given region which is unfiltered.
+        The region's image is split into separate HSV channels, each channel tested and the best result kept.
+        Returns the image, detail of match and the match mask. """
+        img_region = self.screen.get_screen_region(self.reg[region_name]['rect'], rgb=False)
+        templ = self.templates.template[templ_name]['image']
+
+        # Convert to HSV and split.
+        img_hsv = cv2.cvtColor(img_region, cv2.COLOR_BGR2HSV)
+        h, s, v = cv2.split(img_hsv)
+        # hsv_comb = np.concatenate((h, s, v), axis=1)  # Combine 3 images
+        # cv2.imshow("Split HSV", hsv_comb)
+
+        # Perform matches
+        match_h = cv2.matchTemplate(h, templ, cv2.TM_CCOEFF_NORMED)
+        match_s = cv2.matchTemplate(s, templ, cv2.TM_CCOEFF_NORMED)
+        match_v = cv2.matchTemplate(v, templ, cv2.TM_CCOEFF_NORMED)
+        (minVal_h, maxVal_h, minLoc_h, maxLoc_h) = cv2.minMaxLoc(match_h)
+        (minVal_s, maxVal_s, minLoc_s, maxLoc_s) = cv2.minMaxLoc(match_s)
+        (minVal_v, maxVal_v, minLoc_v, maxLoc_v) = cv2.minMaxLoc(match_v)
+        # match_comb = np.concatenate((match_h, match_s, match_v), axis=1)  # Combine 3 images
+        # cv2.imshow("Split Matches", match_comb)
+
+        # Get best result
+        # V is likely the best match, so check it first
+        if maxVal_v > maxVal_s and maxVal_v > maxVal_h:
+            return img_region, (minVal_v, maxVal_v, minLoc_v, maxLoc_v), match_v
+        # S is likely the 2nd best match, so check it
+        if maxVal_s > maxVal_h:
+            return img_region, (minVal_s, maxVal_s, minLoc_s, maxLoc_s), match_s
+        # H must be the best match
+        return img_region, (minVal_h, maxVal_h, minLoc_h, maxLoc_h), match_h
+
     def match_template_in_image(self, image, template):
         """ Attempt to match the given template in the (unfiltered) image.
         Returns the original image, detail of match and the match mask. """
         match = cv2.matchTemplate(image, self.templates.template[template]['image'], cv2.TM_CCOEFF_NORMED)
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(match)
         return image, (minVal, maxVal, minLoc, maxLoc), match     
-    
+
+    def match_template_in_image_x3(self, image, templ_name):
+        """ Attempt to match the given template in the (unfiltered) image.
+        The image is split into separate HSV channels, each channel tested and the best result kept.
+        Returns the original image, detail of match and the match mask. """
+        templ = self.templates.template[templ_name]['image']
+
+        # Convert to HSV and split.
+        img_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        h, s, v = cv2.split(img_hsv)
+        # hsv_comb = np.concatenate((h, s, v), axis=1)  # Combine 3 images
+        # cv2.imshow("Split HSV", hsv_comb)
+
+        # Perform matches
+        match_h = cv2.matchTemplate(h, templ, cv2.TM_CCOEFF_NORMED)
+        match_s = cv2.matchTemplate(s, templ, cv2.TM_CCOEFF_NORMED)
+        match_v = cv2.matchTemplate(v, templ, cv2.TM_CCOEFF_NORMED)
+        (minVal_h, maxVal_h, minLoc_h, maxLoc_h) = cv2.minMaxLoc(match_h)
+        (minVal_s, maxVal_s, minLoc_s, maxLoc_s) = cv2.minMaxLoc(match_s)
+        (minVal_v, maxVal_v, minLoc_v, maxLoc_v) = cv2.minMaxLoc(match_v)
+        # match_comb = np.concatenate((match_h, match_s, match_v), axis=1)  # Combine 3 images
+        # cv2.imshow("Split Matches", match_comb)
+
+        # Get best result
+        # V is likely the best match, so check it first
+        if maxVal_v > maxVal_s and maxVal_v > maxVal_h:
+            return image, (minVal_v, maxVal_v, minLoc_v, maxLoc_v), match_v
+        # S is likely the 2nd best match, so check it
+        if maxVal_s > maxVal_h:
+            return image, (minVal_s, maxVal_s, minLoc_s, maxLoc_s), match_s
+        # H must be the best match
+        return image, (minVal_h, maxVal_h, minLoc_h, maxLoc_h), match_h
 
     def equalize(self, image=None, noOp=None):
         # Load the image in greyscale
