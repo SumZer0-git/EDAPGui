@@ -9,22 +9,25 @@ on:
 
 jobs:
   build:
-    if: false
     runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
-        
+        python-version: '3.12'
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        
+        # Install paddlex with OCR extras (required for OCR pipeline)
+        pip install "paddlex[ocr]"
+        # Also ensure paddleocr has all dependencies
+        pip install "paddleocr[all]"
+
     # Custom PyInstaller installation with bootloader recompilation
     - name: Install custom PyInstaller
       run: |
@@ -32,7 +35,7 @@ jobs:
         $Env:PYINSTALLER_COMPILE_BOOTLOADER = "true"
         python -m pip install --force-reinstall --ignore-installed --no-binary :all: --no-cache pyinstaller@git+https://github.com/pyinstaller/pyinstaller.git@0d562b5
         $Env:CL = ""
-        
+
     # Add version info file
     - name: Create Version Info
       run: |
@@ -63,7 +66,7 @@ jobs:
             VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
           ]
         )" > version_info.txt
-        
+
     - name: List directory contents for debugging
       run: |
         echo "Root directory:"
@@ -78,6 +81,30 @@ jobs:
         echo "Recursive listing of all directories:"
         Get-ChildItem -Path . -Directory -Recurse | Select-Object FullName
 
+    - name: Prepare paddlex version file
+      run: |
+        # Get paddlex version from pip and create .version file
+        $version = (pip show paddlex | Select-String "^Version:").ToString().Split(":")[1].Trim()
+        echo "Paddlex version: $version"
+        
+        # Find paddlex location and ensure .version exists there
+        $paddlexPath = python -c "import importlib.util; spec = importlib.util.find_spec('paddlex'); print(spec.submodule_search_locations[0] if spec else '')"
+        $versionFile = Join-Path $paddlexPath ".version"
+        
+        # Create the .version file in the source package if it doesn't exist
+        if (-not (Test-Path $versionFile)) {
+          Set-Content -Path $versionFile -Value $version -NoNewline
+          echo "Created .version file at: $versionFile"
+        } else {
+          echo ".version file already exists at: $versionFile"
+        }
+        Get-Content $versionFile
+        
+        # Update the runtime hook with the actual version
+        $hookFile = "hooks\runtime_hook_paddlex.py"
+        (Get-Content $hookFile) -replace "f\.write\('.*'\)", "f.write('$version')" | Set-Content $hookFile
+        echo "Updated runtime hook with version: $version"
+
     - name: Build executable
       run: |
         # Create a default config.json if it doesn't exist
@@ -89,36 +116,167 @@ jobs:
         $buildDate = Get-Date -Format "yyyy-MM-dd"
         echo "Build date: $buildDate" > build_info.txt
         
+        # Get paddlex path for explicit data inclusion
+        $paddlexPath = python -c "import importlib.util; spec = importlib.util.find_spec('paddlex'); print(spec.submodule_search_locations[0] if spec else '')"
+        $versionFile = Join-Path $paddlexPath ".version"
+        
         # Run PyInstaller with options to reduce false positives
         # Using --onedir instead of --onefile significantly reduces false positives
         pyinstaller --onedir --windowed --icon="screen\edap.ico" `
           --add-data "screen\edap.ico;screen" `
           --add-data "screen\*.png;screen" `
+          --add-data "locales;locales" `
+          --add-data "templates;templates" `
+          --add-data "configs;configs" `
+          --add-data "waypoints;waypoints" `
           --add-data "*.py;." `
           --add-data "build_info.txt;." `
           --add-data "config.json;." `
+          --add-data "${versionFile};paddlex" `
+          --runtime-hook "hooks\runtime_hook_paddlex.py" `
+          --additional-hooks-dir "hooks" `
           --collect-data "paddle" `
           --collect-all "paddleocr" `
+          --collect-all "paddlex" `
+          --collect-all "pyclipper" `
+          --collect-all "shapely" `
           --hidden-import=PIL `
           --hidden-import=PIL._imagingtk `
           --hidden-import=PIL._tkinter_finder `
+          --hidden-import=pyclipper `
+          --hidden-import=shapely `
+          --hidden-import=shapely.geometry `
+          --hidden-import=paddlex `
+          --hidden-import=paddlex.utils `
+          --hidden-import=paddlex.utils.deps `
+          --hidden-import=paddlex.inference `
+          --hidden-import=paddlex.inference.utils `
+          --hidden-import=paddlex.inference.utils.benchmark `
+          --hidden-import=paddlex.inference.pipelines `
+          --hidden-import=paddlex.inference.pipelines.ocr `
+          --hidden-import=paddlex.modules `
           --version-file="version_info.txt" `
-          --name "EDAP-Autopilot-$buildDate" `
+          --name "EDAP-Autopilot" `
           --clean `
           --noupx `
           --noconfirm `
           EDAPGui.py
         
-        # Create zip archive of the directory for distribution
-        Compress-Archive -Path ".\dist\EDAP-Autopilot-$buildDate" -DestinationPath ".\dist\EDAP-Autopilot-$buildDate.zip"
-        
         # Check if build was successful
-        if (Test-Path ".\dist\EDAP-Autopilot-$buildDate.zip") {
-          echo "Build successful: EDAP-Autopilot-$buildDate.zip"
+        if (Test-Path ".\dist\EDAP-Autopilot\EDAP-Autopilot.exe") {
+          echo "Build successful: EDAP-Autopilot"
         } else {
           echo "Build failed or file not found at expected location"
           exit 1
         }
+
+    - name: Patch PaddleX dependency checks in bundle
+      run: |
+        # Run the post-build patch script to disable paddlex dependency checks
+        python hooks/patch_paddlex_bundle.py ".\dist\EDAP-Autopilot"
+
+    - name: Verify and fix bundle files
+      shell: python
+      run: |
+        import os
+        import subprocess
+        import shutil
+        
+        internal_dir = r'.\dist\EDAP-Autopilot\_internal'
+        
+        # === Verify and fix paddlex version file ===
+        dest_dir = os.path.join(internal_dir, 'paddlex')
+        dest_file = os.path.join(dest_dir, '.version')
+        
+        # Get version from pip
+        result = subprocess.run(['pip', 'show', 'paddlex'], capture_output=True, text=True)
+        version = '3.3.10'  # default
+        for line in result.stdout.split('\n'):
+            if line.startswith('Version:'):
+                version = line.split(':')[1].strip()
+                break
+        
+        print(f'Paddlex version: {version}')
+        
+        # Create directory
+        os.makedirs(dest_dir, exist_ok=True)
+        print(f'Paddlex directory exists: {os.path.exists(dest_dir)}')
+        
+        # List directory contents
+        print('=== _internal directory structure ===')
+        if os.path.exists(internal_dir):
+            for item in sorted(os.listdir(internal_dir)):
+                item_path = os.path.join(internal_dir, item)
+                if os.path.isdir(item_path):
+                    print(f'  [DIR] {item}')
+        
+        # === Verify configs directory ===
+        configs_dir = os.path.join(internal_dir, 'configs')
+        print(f'\n=== Checking configs directory: {configs_dir} ===')
+        if os.path.exists(configs_dir):
+            print('configs directory exists!')
+            for f in os.listdir(configs_dir):
+                print(f'  - {f}')
+        else:
+            print('WARNING: configs directory NOT found! Copying from source...')
+            src_configs = 'configs'
+            if os.path.exists(src_configs):
+                shutil.copytree(src_configs, configs_dir)
+                print('Copied configs directory')
+            else:
+                print('ERROR: Source configs directory not found!')
+        
+        # === Verify other directories ===
+        for dir_name in ['locales', 'templates', 'waypoints', 'screen']:
+            dir_path = os.path.join(internal_dir, dir_name)
+            print(f'\n=== Checking {dir_name} directory ===')
+            if os.path.exists(dir_path):
+                files = os.listdir(dir_path)
+                print(f'{dir_name} exists with {len(files)} files')
+            else:
+                print(f'WARNING: {dir_name} NOT found! Copying from source...')
+                if os.path.exists(dir_name):
+                    shutil.copytree(dir_name, dir_path)
+                    print(f'Copied {dir_name} directory')
+        
+        # List paddlex directory contents
+        print('=== paddlex directory contents ===')
+        if os.path.exists(dest_dir):
+            for item in sorted(os.listdir(dest_dir)):
+                print(f'  {item}')
+        
+        # Create or verify .version file
+        if os.path.exists(dest_file):
+            print(f'.version file already exists')
+            with open(dest_file, 'r') as f:
+                print(f'Content: {f.read()}')
+        else:
+            print(f'Creating .version file...')
+            with open(dest_file, 'w', encoding='utf-8') as f:
+                f.write(version)
+            print(f'Created .version file with version: {version}')
+        
+        # Final verification
+        if os.path.exists(dest_file):
+            print(f'SUCCESS: .version file exists at {dest_file}')
+            with open(dest_file, 'r') as f:
+                print(f'Content: {f.read()}')
+        else:
+            print(f'ERROR: .version file was not created!')
+            exit(1)
+        
+        # === Verify paddlex deps patch was applied ===
+        deps_file = os.path.join(dest_dir, 'utils', 'deps.py')
+        print(f'\n=== Checking paddlex deps patch ===')
+        if os.path.exists(deps_file):
+            with open(deps_file, 'r') as f:
+                content = f.read()
+                if 'PATCHED' in content or 'No-op' in content or 'Stub module' in content:
+                    print('SUCCESS: paddlex deps module is patched')
+                else:
+                    print('WARNING: paddlex deps module may not be patched correctly')
+        else:
+            print(f'deps.py not found at expected location: {deps_file}')
 
     - name: Check build with Windows Defender
       continue-on-error: true
@@ -132,8 +290,7 @@ jobs:
         }
         
         # Scan using direct command line tool
-        $buildDate = Get-Date -Format "yyyy-MM-dd"
-        $buildPath = Resolve-Path ".\dist\EDAP-Autopilot-$buildDate"
+        $buildPath = Resolve-Path ".\dist\EDAP-Autopilot"
         
         echo "Scanning path: $buildPath"
         
@@ -161,5 +318,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: EDAP-Autopilot
-        path: ./dist/EDAP-Autopilot-*.zip
+        path: ./dist/EDAP-Autopilot/
         retention-days: 90

@@ -1,5 +1,8 @@
 from __future__ import annotations
+import os
+import sys
 import typing
+import threading
 import cv2
 import win32con
 import win32gui
@@ -8,6 +11,13 @@ import mss
 import json
 
 from EDlogger import logger
+
+
+def get_resource_path(relative_path: str) -> str:
+    """Get absolute path to resource, works for dev and PyInstaller bundles."""
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
 
 
 """
@@ -48,11 +58,27 @@ def set_focus_elite_window():
 
 
 class Screen:
+    # Thread-local storage for mss instances (mss 10.x requires per-thread instances)
+    _thread_local = threading.local()
+
+    @property
+    def mss(self):
+        """Get thread-local mss instance. Creates one if it doesn't exist for this thread."""
+        if not hasattr(Screen._thread_local, 'mss_instance'):
+            Screen._thread_local.mss_instance = mss.mss()
+        return Screen._thread_local.mss_instance
+
     def __init__(self, cb):
         self.ap_ckb = cb
-        self.mss = mss.mss()
+        # Note: self.mss is now a property that returns thread-local mss instance
         self.using_screen = True  # True to use screen, false to use an image. Set screen_image to the image
         self._screen_image = None  # Screen image captured from screen, or loaded by user for testing.
+
+        # 16:9 crop offsets (for non-16:9 screens)
+        self.crop_offset_x = 0
+        self.crop_offset_y = 0
+        self.raw_screen_width = 0
+        self.raw_screen_height = 0
 
         # Find ED window position to determine which monitor it is on
         ed_rect = self.get_elite_window_rect()
@@ -72,8 +98,8 @@ class Screen:
                     self.monitor_number = mon_num
                     self.mon = self.mss.monitors[self.monitor_number]
                     logger.debug(f'Defaulting to monitor {mon_num}.')
-                    self.screen_width = item['width']
-                    self.screen_height = item['height']
+                    self.raw_screen_width = item['width']
+                    self.raw_screen_height = item['height']
                     break
                 else:
                     if item['left'] == ed_rect[0] and item['top'] == ed_rect[1]:
@@ -81,58 +107,65 @@ class Screen:
                         self.monitor_number = mon_num
                         self.mon = self.mss.monitors[self.monitor_number]
                         logger.debug(f'Elite Dangerous is on monitor {mon_num}.')
-                        self.screen_width = item['width']
-                        self.screen_height = item['height']
+                        self.raw_screen_width = item['width']
+                        self.raw_screen_height = item['height']
 
             # Next monitor
             mon_num = mon_num + 1
 
+        # Calculate 16:9 crop area (for non-16:9 screens like ultrawide or 4:3)
+        self._calculate_16_9_crop()
+
+        logger.debug(f'Raw screen: {self.raw_screen_width}x{self.raw_screen_height}, '
+                     f'16:9 area: {self.screen_width}x{self.screen_height}, '
+                     f'Offset: ({self.crop_offset_x}, {self.crop_offset_y})')
+
         # Add new screen resolutions here with tested scale factors
         # this table will be default, overwritten when loading resolution.json file
         self.scales = {  # scaleX, scaleY
-            '1024x768':   [0.39, 0.39],  # tested, but not has high match % 
-            '1080x1080':  [0.5, 0.5],    # fix, not tested
-            '1280x800':   [0.48, 0.48],  # tested
-            '1280x1024':  [0.5, 0.5],    # tested
-            '1600x900':   [0.6, 0.6],    # tested
-            '1920x1080':  [0.75, 0.75],  # tested
-            '1920x1200':  [0.73, 0.73],  # tested
-            '1920x1440':  [0.8, 0.8],    # tested
-            '2560x1080':  [0.75, 0.75],  # tested
-            '2560x1440':  [1.0, 1.0],    # tested
-            '3440x1440':  [1.0, 1.0],    # tested
+            '1024x768': [0.39, 0.39],  # tested, but not has high match %
+            '1080x1080': [0.5, 0.5],  # fix, not tested
+            '1280x800': [0.48, 0.48],  # tested
+            '1280x1024': [0.5, 0.5],  # tested
+            '1600x900': [0.6, 0.6],  # tested
+            '1920x1080': [0.75, 0.75],  # tested
+            '1920x1200': [0.73, 0.73],  # tested
+            '1920x1440': [0.8, 0.8],  # tested
+            '2560x1080': [0.75, 0.75],  # tested
+            '2560x1440': [1.0, 1.0],  # tested
+            '3440x1440': [1.0, 1.0],  # tested
             # 'Calibrated': [-1.0, -1.0]
         }
 
         # used this to write the self.scales table to the json file
         # self.write_config(self.scales)
-        
+
         ss = self.read_config()
 
         # if we read it then point to it, otherwise use the default table above
         if ss is not None:
             self.scales = ss
-            logger.debug("read json:"+str(ss))
+            logger.debug("read json:" + str(ss))
 
         # try to find the resolution/scale values in table
         # if not, then take current screen size and divide it out by 3440 x1440
         try:
-            scale_key = str(self.screen_width)+"x"+str(self.screen_height)
+            scale_key = str(self.screen_width) + "x" + str(self.screen_height)
             self.scaleX = self.scales[scale_key][0]
             self.scaleY = self.scales[scale_key][1]
-        except:            
+        except:
             # if we don't have a definition for the resolution then use calculation
             self.scaleX = self.screen_width / 3440.0
             self.scaleY = self.screen_height / 1440.0
-            
+
         # if the calibration scale values are not -1, then use those regardless of above
         # if self.scales['Calibrated'][0] != -1.0:
         #     self.scaleX = self.scales['Calibrated'][0]
         # if self.scales['Calibrated'][1] != -1.0:
         #     self.scaleY = self.scales['Calibrated'][1]
-        
-        logger.debug('screen size: '+str(self.screen_width)+" "+str(self.screen_height))
-        logger.debug('Default scale X, Y: '+str(self.scaleX)+", "+str(self.scaleY))
+
+        logger.debug('screen size: ' + str(self.screen_width) + " " + str(self.screen_height))
+        logger.debug('Default scale X, Y: ' + str(self.scaleX) + ", " + str(self.scaleY))
 
     @staticmethod
     def get_elite_window_rect() -> typing.Tuple[int, int, int, int] | None:
@@ -156,34 +189,66 @@ class Screen:
         else:
             return False
 
-    def write_config(self, data, fileName='./configs/resolution.json'):
+    def write_config(self, data, fileName='configs/resolution.json'):
         if data is None:
             data = self.scales
         try:
-            with open(fileName,"w") as fp:
-                json.dump(data,fp, indent=4)
+            with open(get_resource_path(fileName), "w") as fp:
+                json.dump(data, fp, indent=4)
         except Exception as e:
-            logger.warning("Screen.py write_config error:"+str(e))
+            logger.warning("Screen.py write_config error:" + str(e))
 
-    def read_config(self, fileName='./configs/resolution.json'):
+    def read_config(self, fileName='configs/resolution.json'):
         s = None
         try:
-            with open(fileName,"r") as fp:
+            with open(get_resource_path(fileName), "r") as fp:
                 s = json.load(fp)
-        except  Exception as e:
-            logger.warning("Screen.py read_config error :"+str(e))
+        except Exception as e:
+            logger.warning("Screen.py read_config error :" + str(e))
 
         return s
+
+    def _calculate_16_9_crop(self):
+        """Calculate the 16:9 crop area for non-16:9 screens.
+        Centers the 16:9 area within the actual screen dimensions.
+        """
+        target_aspect = 16 / 9
+        current_aspect = self.raw_screen_width / self.raw_screen_height if self.raw_screen_height > 0 else target_aspect
+
+        if abs(current_aspect - target_aspect) < 0.01:
+            # Already 16:9 (within tolerance)
+            self.screen_width = self.raw_screen_width
+            self.screen_height = self.raw_screen_height
+            self.crop_offset_x = 0
+            self.crop_offset_y = 0
+            logger.debug('Screen is already 16:9, no cropping needed.')
+        elif current_aspect > target_aspect:
+            # Screen is wider than 16:9 (e.g., ultrawide 21:9)
+            # Crop the sides, keep full height
+            self.screen_height = self.raw_screen_height
+            self.screen_width = int(self.raw_screen_height * target_aspect)
+            self.crop_offset_x = (self.raw_screen_width - self.screen_width) // 2
+            self.crop_offset_y = 0
+            logger.debug(f'Screen is wider than 16:9 (aspect {current_aspect:.2f}), cropping sides.')
+        else:
+            # Screen is taller than 16:9 (e.g., 4:3, 5:4)
+            # Crop top and bottom, keep full width
+            self.screen_width = self.raw_screen_width
+            self.screen_height = int(self.raw_screen_width / target_aspect)
+            self.crop_offset_x = 0
+            self.crop_offset_y = (self.raw_screen_height - self.screen_height) // 2
+            logger.debug(f'Screen is taller than 16:9 (aspect {current_aspect:.2f}), cropping top/bottom.')
 
     # reg defines a box as a percentage of screen width and height
     def get_screen_region(self, reg, rgb=True):
         image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]), rgb)
         return image
 
-    def get_screen(self, x_left, y_top, x_right, y_bot, rgb=True):    # if absolute need to scale??
+    def get_screen(self, x_left, y_top, x_right, y_bot, rgb=True):  # if absolute need to scale??
+        # Apply 16:9 crop offsets to capture from the centered 16:9 region
         monitor = {
-            "top": self.mon["top"] + y_top,
-            "left": self.mon["left"] + x_left,
+            "top": self.mon["top"] + self.crop_offset_y + y_top,
+            "left": self.mon["left"] + self.crop_offset_x + x_left,
             "width": x_right - x_left,
             "height": y_bot - y_top,
             "mon": self.monitor_number,
@@ -193,7 +258,7 @@ class Screen:
         if rgb:
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         return image
-        
+
     def get_screen_rect_pct(self, rect):
         """ Grabs a screenshot and returns the selected region as an image.
         @param rect: A rect array ([L, T, R, B]) in percent (0.0 - 1.0)
@@ -208,18 +273,46 @@ class Screen:
         else:
             if self._screen_image is None:
                 return None
-       
+
             image = self.crop_image_by_pct(self._screen_image, rect)
             return image
 
     def screen_rect_to_abs(self, rect):
-        """ Converts and array of real percentage screen values to int absolutes.
+        """ Converts an array of real percentage screen values to int absolutes.
+        These coordinates are relative to the 16:9 cropped area, for use with screen capture.
         @param rect: A rect array ([L, T, R, B]) in percent (0.0 - 1.0)
-        @return: A rect array ([L, T, R, B]) in pixels
+        @return: A rect array ([L, T, R, B]) in pixels (relative to 16:9 area)
         """
         abs_rect = [int(rect[0] * self.screen_width), int(rect[1] * self.screen_height),
                     int(rect[2] * self.screen_width), int(rect[3] * self.screen_height)]
         return abs_rect
+
+    def screen_rect_to_abs_overlay(self, rect):
+        """ Converts an array of real percentage screen values to int absolutes for overlay drawing.
+        These coordinates include the crop offset, for use with the overlay on the full screen.
+        @param rect: A rect array ([L, T, R, B]) in percent (0.0 - 1.0)
+        @return: A rect array ([L, T, R, B]) in pixels (relative to full screen with crop offset)
+        """
+        abs_rect = [
+            int(rect[0] * self.screen_width) + self.crop_offset_x,
+            int(rect[1] * self.screen_height) + self.crop_offset_y,
+            int(rect[2] * self.screen_width) + self.crop_offset_x,
+            int(rect[3] * self.screen_height) + self.crop_offset_y
+        ]
+        return abs_rect
+
+    def abs_rect_to_overlay(self, rect):
+        """ Adds crop offset to already-absolute pixel coordinates for overlay drawing.
+        Use this when the rect is already in pixels (e.g., from Screen_Regions).
+        @param rect: A rect array ([L, T, R, B]) already in pixels
+        @return: A rect array ([L, T, R, B]) in pixels with crop offset added
+        """
+        return [
+            rect[0] + self.crop_offset_x,
+            rect[1] + self.crop_offset_y,
+            rect[2] + self.crop_offset_x,
+            rect[3] + self.crop_offset_y
+        ]
 
     def get_screen_full(self):
         """ Grabs a full screenshot and returns the image.

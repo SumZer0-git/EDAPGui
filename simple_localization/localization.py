@@ -1,5 +1,15 @@
 import os
+import sys
 import json
+
+
+def get_resource_path(relative_path: str) -> str:
+    """Get the absolute path to a resource, works for dev and PyInstaller bundles."""
+    if hasattr(sys, '_MEIPASS'):
+        # Running as PyInstaller bundle
+        return os.path.join(sys._MEIPASS, relative_path)
+    # Running as normal Python script
+    return os.path.join(os.path.abspath("."), relative_path)
 
 
 class LocalizationManager:
@@ -14,7 +24,8 @@ class LocalizationManager:
     """
 
     def __init__(self, folder_path: str, language: str) -> None:
-        self.folder_path = folder_path
+        # Resolve path for PyInstaller bundles
+        self.folder_path = get_resource_path(folder_path)
         self.available_languages = []
         self.language = language
 

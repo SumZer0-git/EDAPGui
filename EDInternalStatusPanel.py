@@ -116,8 +116,8 @@ class EDInternalStatusPanel:
 
         logger.debug("is_right_panel_active: right panel is focused")
 
-        # Draw box around region
-        abs_rect = self.screen.screen_rect_to_abs(self.reg['right_panel']['rect'])
+        # Draw box around region (use overlay coords which include crop offset)
+        abs_rect = self.screen.screen_rect_to_abs_overlay(self.reg['right_panel']['rect'])
         if self.ap.debug_overlay:
             self.ap.overlay.overlay_rect1('right_panel_active', abs_rect, (0, 255, 0), 2)
             self.ap.overlay.overlay_paint()

@@ -1,8 +1,16 @@
 from __future__ import annotations
 
+import os
+import sys
 import time
 import cv2
 import numpy as np
+
+# Note: PaddleX dependency patching is handled by the runtime hook
+# (hooks/runtime_hook_paddlex.py) which runs before any imports.
+# The runtime hook injects a fake paddlex.utils.deps module into sys.modules
+# to prevent DependencyError when running as a PyInstaller bundle.
+
 from paddleocr import PaddleOCR
 from strsimpy import SorensenDice
 from strsimpy.jaro_winkler import JaroWinkler
@@ -22,8 +30,7 @@ Author: Stumpii
 class OCR:
     def __init__(self, screen, language: str = 'en'):
         self.screen = screen
-        self.paddleocr = PaddleOCR(use_angle_cls=True, lang=language, use_gpu=False, show_log=False, use_dilation=True,
-                                   use_space_char=True)
+        self.paddleocr = PaddleOCR(lang=language, use_doc_orientation_classify=True, use_textline_orientation=True)
         # Class for text similarity metrics
         self.jarowinkler = JaroWinkler()
         self.sorensendice = SorensenDice()
@@ -34,7 +41,7 @@ class OCR:
         @param s2: The second string to compare.
         @return: The similarity from 0.0 (no match) to 1.0 (identical).
         """
-        #return self.jarowinkler.similarity(s1, s2)
+        # return self.jarowinkler.similarity(s1, s2)
         return self.sorensendice.similarity(s1, s2)
 
     def image_ocr(self, image):
@@ -58,7 +65,7 @@ class OCR:
                 for line in res:
                     ocr_textlist.append(line[1][0])
 
-            #print(ocr_textlist)
+            # print(ocr_textlist)
             return ocr_data, ocr_textlist
 
     def image_simple_ocr(self, image) -> list[str] | None:
@@ -258,8 +265,8 @@ class OCR:
         @param region: The region to check in % (0.0 - 1.0).
         @param timeout: Time to wait for screen in seconds
         """
-        # Draw box around region
-        abs_rect = self.screen.screen_rect_to_abs(region['rect'])
+        # Draw box around region (use overlay coords which include crop offset)
+        abs_rect = self.screen.screen_rect_to_abs_overlay(region['rect'])
         if ap.debug_overlay:
             ap.overlay.overlay_rect1('wait_for_text', abs_rect, (0, 255, 0), 2)
             ap.overlay.overlay_paint()

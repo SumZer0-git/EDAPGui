@@ -81,8 +81,8 @@ class EDNavigationPanel:
         self.keys.send('UIFocus', state=0)
         sleep(0.5)
 
-        # Draw box around region
-        abs_rect = self.screen.screen_rect_to_abs(self.reg['temp_tab_bar']['rect'])
+        # Draw box around region (use overlay coords which include crop offset)
+        abs_rect = self.screen.screen_rect_to_abs_overlay(self.reg['temp_tab_bar']['rect'])
         if self.ap.debug_overlay:
             self.ap.overlay.overlay_rect1('nav_panel_active', abs_rect, (0, 255, 0), 2)
             self.ap.overlay.overlay_paint()
