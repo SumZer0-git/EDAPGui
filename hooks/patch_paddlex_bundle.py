@@ -332,15 +332,15 @@ def main():
         try:
             patched_content = deps_path.read_text(encoding='utf-8')
             if 'PATCHED_FOR_PYINSTALLER' in patched_content or 'PATCHED_FOR_PYINSTALLER_OVERRIDE' in patched_content:
-                print("✓ Patch verification: Override code found in file")
+                print("[OK] Patch verification: Override code found in file")
             if 'def require_extra' in patched_content:
                 # Check if it's been patched
                 if 'return None' in patched_content or 'return  # Skip' in patched_content or 'PATCHED' in patched_content:
-                    print("✓ Patch verification: require_extra appears to be patched")
+                    print("[OK] Patch verification: require_extra appears to be patched")
                 else:
-                    print("⚠ Warning: require_extra found but may not be fully patched")
+                    print("[WARN] Warning: require_extra found but may not be fully patched")
         except Exception as e:
-            print(f"⚠ Warning: Could not verify patch: {e}")
+            print(f"[WARN] Warning: Could not verify patch: {e}")
     else:
         print("deps.py not found, creating stub module")
         if not create_deps_stub(internal_dir):
