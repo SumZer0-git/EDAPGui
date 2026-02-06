@@ -155,7 +155,7 @@ def check_station_type(station_type: str, station_name: str, station_services: l
 
     if station_type_upper == 'SurfaceStation'.upper():
         # Special case, for some reason the colonisation ship is a SurfaceStation in the journal.
-        if station_name_upper == 'ColonisationShip'.upper():
+        if 'COLONISATIONSHIP' in station_name_upper:
             return StationType.ColonisationShip
         else:
             return StationType.SurfaceStation
