@@ -398,7 +398,7 @@ commodities = {
         "Biowaste", "Chemical Waste", "Scrap", "Toxic Waste"
     ],
     "Weapons": [
-        "Battle Weapons", "Landmines", "Non Lethal Weapons", "Personal Weapons", "Reactive Armour"
+        "Battle Weapons", "Landmines", "Non-Lethal Weapons", "Personal Weapons", "Reactive Armour"
     ]
 }
 
