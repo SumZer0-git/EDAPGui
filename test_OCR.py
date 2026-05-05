@@ -98,8 +98,7 @@ class OCRTestCase(unittest.TestCase):
         self.assertGreater(actual, 0.8)  # add assertion here
 
     def test_similarity_test4e(self):
-        ocr = OCR(self.ed_ap,
-                  screen=None)
+        ocr = OCR(self.ed_ap, screen=None)
         s1 = "['NAV BEACON']"
         s2 = "['<NAVBEACON>']"
         actual = ocr.string_similarity(s1, s2)

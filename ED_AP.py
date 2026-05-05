@@ -313,6 +313,7 @@ class EDAutopilot:
             "OCDepartureAngle": 90.0,  # Angle to pitch up when leaving an Orbital Construction Site
             "Language": 'en',  # Language (matching ./locales/xx.json file)
             "OCRLanguage": 'en',  # Language for OCR detection (see OCR language doc in \docs)
+            "OCRMobile": False,  # Use the mobile (light) version which is smaller and faster, but less accurate.
             "EnableEDMesg": False,
             "EDMesgActionsPort": 15570,
             "EDMesgEventsPort": 15571,
@@ -357,6 +358,8 @@ class EDAutopilot:
                 cnf['Language'] = 'en'
             if 'OCRLanguage' not in cnf:
                 cnf['OCRLanguage'] = 'en'
+            if 'OCRMobile' not in cnf:
+                cnf['OCRMobile'] = False
             if 'EnableEDMesg' not in cnf:
                 cnf['EnableEDMesg'] = False
             if 'EDMesgActionsPort' not in cnf:

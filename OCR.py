@@ -27,12 +27,27 @@ Author: Stumpii
 
 class OCR:
     def __init__(self, ed_ap, screen):
+        """
+        Initialise the OCR class.
+        @param ed_ap:
+        @param screen:
+        @param mobile: Use the mobile (light) version which is smaller and faster, but less accurate.
+        """
         self.ap = ed_ap
         self.screen = screen
-        self.paddleocr = PaddleOCR(
-            use_doc_orientation_classify=False,
-            use_doc_unwarping=False,
-            use_textline_orientation=False)  # text detection + text recognition
+        if self.ap.config['OCRMobile']:
+            self.paddleocr = PaddleOCR(
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=False,
+                text_detection_model_name="PP-OCRv5_mobile_det",
+                text_recognition_model_name="en_PP-OCRv5_mobile_rec")  # text detection + text recognition
+        else:
+            self.paddleocr = PaddleOCR(
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=False)  # text detection + text recognition
+
         # Class for text similarity metrics
         self.jarowinkler = JaroWinkler()
         self.sorensendice = SorensenDice()
@@ -45,10 +60,19 @@ class OCR:
         Creating a fresh instance prevents this. """
         try:
             logger.warning("Reinitializing PaddleOCR after failure.")
-            self.paddleocr = PaddleOCR(
-                use_doc_orientation_classify=False,
-                use_doc_unwarping=False,
-                use_textline_orientation=False)
+            if self.ap.config['OCRMobile']:
+                self.paddleocr = PaddleOCR(
+                    use_doc_orientation_classify=False,
+                    use_doc_unwarping=False,
+                    use_textline_orientation=False,
+                    text_detection_model_name="PP-OCRv5_mobile_det",
+                    text_recognition_model_name="en_PP-OCRv5_mobile_rec")  # text detection + text recognition
+            else:
+                self.paddleocr = PaddleOCR(
+                    use_doc_orientation_classify=False,
+                    use_doc_unwarping=False,
+                    use_textline_orientation=False)  # text detection + text recognition
+
         except Exception as e:
             logger.error(f"Failed to reinitialize PaddleOCR: {e}")
 
