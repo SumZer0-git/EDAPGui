@@ -1,3 +1,8 @@
+# 5/4/2026 v1.9.0 b15
+- Adding set throttle log entry.
+- Added new ap.json setting 'OPCMobile' to use mobile (light) version of OCR. Thanks Bulli.
+- Fix missing hyphen in 'Non-Lethal Weapons'. Thanks Skream.
+
 # 5/2/2026 v1.9.0 b14
 - Fixed pitch up to remove the 1.25 multiplier. Thanks Patrick.
 - Added 2 sec time delay after setting throttle on surface launch. Thanks Patrick.
