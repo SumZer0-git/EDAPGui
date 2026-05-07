@@ -589,7 +589,7 @@ class EDAutopilot:
 
         if wid < 20:
             # cv2.rectangle(screen, pt, (pt[0] + compass_width, pt[1] + compass_height),  (0,0,255), 2)
-            cv2.rectangle(img, pt1, pt2, color, thick)
+            cv2.rectangle(img, (int(pt1[0]), int(pt1[1])), (int(pt2[0]), int(pt2[1])), color, thick)
         else:
             len_wid = wid/5
             len_hgt = hgt/5
@@ -1173,12 +1173,11 @@ class EDAutopilot:
             self.overlay.overlay_paint()
 
         if self.cv_view:
-            dst_image_d = cv2.cvtColor(dst_image, cv2.COLOR_GRAY2RGB)
             try:
-                self.draw_match_rect(dst_image_d, sel_pt, (sel_pt[0]+tar_quad.width, sel_pt[1]+tar_quad.height), (0, 0, 255), 2)
+                self.draw_match_rect(dst_image, sel_pt, (sel_pt[0]+tar_quad.width, sel_pt[1]+tar_quad.height), (0, 0, 255), 2)
                 dim = (int(target_region.width/2), int(target_region.height/2))
 
-                img = cv2.resize(dst_image_d, dim, interpolation=cv2.INTER_AREA)
+                img = cv2.resize(dst_image, dim, interpolation=cv2.INTER_AREA)
                 img = cv2.rectangle(img, (0, 0), (1000, 25), (0, 0, 0), -1)
                 cv2.putText(img, f'{max_val:5.4f} > {scr_reg.target_thresh:5.2f}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
                 cv2.putText(img, f'p: {round(final_pit_deg, 4)} y: {round(final_yaw_deg, 4)}',
