@@ -912,7 +912,7 @@ class EDAutopilot:
         self.jn.ship_state()['interdicted'] = False  # reset flag
         return True
 
-    def get_nav_offset(self, scr_reg):
+    def get_nav_offset(self, scr_reg) -> CompassOffset | None:
         """ Determine the x,y offset from center of the compass of the nav point.
         @return: Returns the x,y,z value as x,y in degrees (-90 to 90) and z as 1 or -1.
         {'x': x.xx, 'y': y.yy, 'z': -1.0|0.0|+1.0,'roll': r.rr, 'pit': p.pp, 'yaw': y.yy} | None
@@ -1099,7 +1099,7 @@ class EDAutopilot:
 
         return result
 
-    def get_target_offset(self, scr_reg, disable_auto_cal: bool = False):
+    def get_target_offset(self, scr_reg, disable_auto_cal: bool = False) -> TargetOffset | None:
         """ Determine how far off we are from the target being in the middle of the screen
         (in this case the specified region).
         @return: {'roll': r.rr, 'pit': p.pp, 'yaw': y.yy, 'occ': True|False}, where all are in degrees
@@ -1814,41 +1814,42 @@ class EDAutopilot:
         target_align_inner_lim = self.target_align_inner_lim
 
         off = None
-        tar_off1 = None
+        tar_off1: CompassTargetOffset | None = None
         nav_off1 = None
-        tar_off2 = None
+        tar_off2: CompassTargetOffset | None = None
         nav_off2 = None
 
         # Try to get the target 5 times before quiting
         for i in range(5):
             # Check Target and Compass
-            nav_off1 = self.get_nav_offset(scr_reg)
-            tar_off1 = self.get_target_offset(scr_reg)
+            # nav_off1 = self.get_nav_offset(scr_reg)
+            tar_off1 = self.get_compass_target_offset()
             if tar_off1:
                 # Target detected
                 off = tar_off1
                 # logger.debug(f"sc_target_align x: {str(off['x'])} y:{str(off['y'])}")
                 # Apply offset to keep target above center
                 off['pit'] = off['pit'] - target_align_pit_off
-            elif nav_off1:
-                # Try to use the compass data if the target is not visible.
-                off = nav_off1
-                self.ap_ckb('log', 'Using Compass for Target Align')
+                # elif nav_off1:
+                #     # Try to use the compass data if the target is not visible.
+                #     off = nav_off1
+                #     self.ap_ckb('log', 'Using Compass for Target Align')
 
                 # We are using compass align, increase the values as compass is much less accurate
-                target_align_outer_lim = target_align_outer_lim * target_align_compass_mult
-                target_align_inner_lim = target_align_inner_lim * target_align_compass_mult
-                target_align_pit_off = target_align_pit_off * target_align_compass_mult
+                if off['used_nav']:
+                    target_align_outer_lim = target_align_outer_lim * target_align_compass_mult
+                    target_align_inner_lim = target_align_inner_lim * target_align_compass_mult
+                    target_align_pit_off = target_align_pit_off * target_align_compass_mult
 
                 # Check if Target is now behind us
-                if nav_off1['z'] < 0:
+                if off['tar_behind']:
                     self.ap_ckb('log', 'Target is behind us')
                     return ScTargetAlignReturn.Lost
 
-            # Check if target occluded
-            if tar_off1 and tar_off1['occ']:
-                self.occluded_reposition(scr_reg)
-                self.ap_ckb('log+vce', 'Target Align')
+                # Check if target occluded
+                if tar_off1['tar_occ']:
+                    self.occluded_reposition(scr_reg)
+                    self.ap_ckb('log+vce', 'Target Align')
 
             # if self.is_destination_occluded(scr_reg):
             #     self.occluded_reposition(scr_reg)
@@ -1868,7 +1869,7 @@ class EDAutopilot:
                 break
 
         # Target could not be found, return
-        if tar_off1 is None and nav_off1 is None:
+        if tar_off1 is None:
             logger.debug("sc_target_align not finding target")
             self.ap_ckb('log', 'Target Align failed - target not found')
             return ScTargetAlignReturn.Lost
@@ -1911,19 +1912,19 @@ class EDAutopilot:
             sleep(1.0)
 
             # Check Target and Compass
-            nav_off2 = self.get_nav_offset(scr_reg)  # For cv view only
-            tar_off2 = self.get_target_offset(scr_reg)
+            # nav_off2 = self.get_nav_offset(scr_reg)
+            tar_off2 = self.get_compass_target_offset()
             if tar_off2:
                 off = tar_off2
                 logger.debug(f"sc_target_align after: pit:{off['pit']} yaw: {off['yaw']} ")
                 # Apply offset to keep target above center
                 off['pit'] = off['pit'] - target_align_pit_off
-            elif nav_off2:
-                # Try to use the compass data if the target is not visible.
-                off = nav_off2
-                self.ap_ckb('log', 'Using Compass for Target Align')
+            # elif nav_off2:
+            #     # Try to use the compass data if the target is not visible.
+            #     off = nav_off2
+            #     self.ap_ckb('log', 'Using Compass for Target Align')
                 # Check if Target is now behind us
-                if nav_off2['z'] < 0:
+                if tar_off2['tar_behind'] < 0:
                     self.ap_ckb('log', 'Target is behind us')
                     return ScTargetAlignReturn.Lost
 
@@ -1938,7 +1939,7 @@ class EDAutopilot:
                 tar_off1 = tar_off2.copy()
 
             # Check if target occluded
-            if tar_off2 and tar_off2['occ']:
+            if tar_off2 and tar_off2['tar_occ']:
                 self.occluded_reposition(scr_reg)
                 self.ap_ckb('log+vce', 'Target Align')
 
@@ -1956,7 +1957,7 @@ class EDAutopilot:
                 return ScTargetAlignReturn.Disengage
 
             # Check if target is outside the target region (behind us) and break loop
-            if tar_off2 is None and nav_off2 is None:
+            if tar_off2 is None:
                 logger.debug("sc_target_align lost target")
                 self.ap_ckb('log', 'Target Align failed - lost target.')
                 return ScTargetAlignReturn.Lost
