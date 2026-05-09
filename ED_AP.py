@@ -208,7 +208,11 @@ class EDAutopilot:
         self.cv_view_x = 10
         self.cv_view_y = 10
 
-        #start the engine thread
+        # Load waypoints
+        # TODO - Enable this at some point to auto load the previous waypoints on startup
+        # self.ap_ckb('load_waypoints', self.config['WaypointFilepath'])
+
+        # start the engine thread
         self.terminate = False  # terminate used by the thread to exit its loop
         if do_thread:
             self.ap_thread = kthread.KThread(target=self.engine_loop, name="EDAutopilot")
