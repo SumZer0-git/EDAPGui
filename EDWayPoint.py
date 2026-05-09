@@ -708,31 +708,31 @@ def main():
     wp.ap.stn_svcs_in_ship.commodities_market.sell_commodity(keys, "Aluminium", 1, wp.cargo_parser)
     wp.ap.stn_svcs_in_ship.commodities_market.sell_commodity(keys, "Beryllium", 1, wp.cargo_parser)
     wp.ap.stn_svcs_in_ship.commodities_market.sell_commodity(keys, "Cobalt", 1, wp.cargo_parser)
-    #wp.ap.stn_svcs_in_ship.buy_commodity(keys, "Titanium", 5, 200)
+    # wp.ap.stn_svcs_in_ship.buy_commodity(keys, "Titanium", 5, 200)
 
     # dest = 'Enayex'
-    #print(dest)
+    # print(dest)
 
-    #print("In waypoint_assist, at:"+str(dest))
+    # print("In waypoint_assist, at:"+str(dest))
 
     # already in doc config, test the trade
-    #wp.execute_trade(keys, dest)
+    # wp.execute_trade(keys, dest)
 
     # Set the Route for the waypoint^#
-    #dest = wp.waypoint_next(ap=None)
+    # dest = wp.waypoint_next(ap=None)
 
-    #while dest != "":
+    # while dest != "":
 
     #  print("Doing: "+str(dest))
     #  print(wp.waypoints[dest])
 
-    #wp.set_station_target(None, dest)
+    # wp.set_station_target(None, dest)
 
     # Mark this waypoint as complated
-    #wp.mark_waypoint_complete(dest)
+    # wp.mark_waypoint_complete(dest)
 
     # set target to next waypoint and loop
-    #dest = wp.waypoint_next(ap=None)
+    # dest = wp.waypoint_next(ap=None)
 
 
 if __name__ == "__main__":
