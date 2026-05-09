@@ -2431,7 +2431,14 @@ class EDAutopilot:
             self.keys.send('UseBoostJuice')
 
             # Wait until out of orbit.
-            res = self.status.wait_for_flag_off(FlagsHasLatLong, timeout=60)
+            res = self.status.wait_for_flag_off(FlagsHasLatLong, timeout=60)  # This takes too long to update
+            # TODO - wait_for_flag_off(FlagsHasLatLong) takes too long when SCO is active and sends us far from the
+            #  planet which is not useful when we are doing exobiology stuff and want to go back to the planet.
+            #  The below tries to help do this, but is not very effective. Maybe another flag would be useful?
+            # dly = self.config['PlanetDepartureSCOTime']
+            # if dly > 0.0:
+            #     sleep(dly)
+
             # TODO - do we need to check if we never leave orbit?
 
             # Disable SCO. If SCO not fitted, this will do nothing.
