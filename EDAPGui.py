@@ -290,6 +290,12 @@ class APGui:
             keyboard.add_hotkey(self.ed_ap.config['HotKey_StartSC'], self.callback, args=('sc_start', None))
             keyboard.add_hotkey(self.ed_ap.config['HotKey_StartRobigo'], self.callback, args=('robigo_start', None))
 
+            # TODO - Enable these to allow pips to be controlled by EDAP when using the defined keys (tbd).
+            # keyboard.add_hotkey('up', self.callback, args=('up', None))
+            # keyboard.add_hotkey('down', self.callback, args=('down', None))
+            # keyboard.add_hotkey('left', self.callback, args=('left', None))
+            # keyboard.add_hotkey('right', self.callback, args=('right', None))
+
     # callback from the EDAP, to configure GUI items
     def callback(self, msg, body=None):
         if msg == 'log':
@@ -371,7 +377,34 @@ class APGui:
         elif msg == 'jumpcount':
             self.update_jumpcount(body)
         elif msg == 'update_ship_cfg':
-            self.update_ship_cfg()
+            self.root.after(0, self.update_ship_cfg)
+        elif msg == 'load_waypoints':
+            # TODO - Enable this at some point to auto load the previous waypoints on startup. Not called at the moment.
+            self.waypoint_editor_tab.editor_load_waypoint_file(body)
+        elif msg == 'up':
+            # TODO - Enable these to allow pips to be controlled by EDAP when using the defined keys (tbd). Not called at the moment.
+            print('up')
+            if ((self.ed_ap.status.get_flag(FlagsInMainShip) or self.ed_ap.status.get_flag(FlagsInFighter))
+                    and self.ed_ap.status.get_gui_focus() == GuiFocusNoFocus):
+                self.ed_ap.keys.send('ResetPowerDistribution')
+                self.ed_ap.keys.send('IncreaseEnginesPower', repeat=3)
+        elif msg == 'down':
+            print('down')
+            if ((self.ed_ap.status.get_flag(FlagsInMainShip) or self.ed_ap.status.get_flag(FlagsInFighter))
+                    and self.ed_ap.status.get_gui_focus() == GuiFocusNoFocus):
+                self.ed_ap.keys.send('ResetPowerDistribution')
+        elif msg == 'left':
+            print('left')
+            if ((self.ed_ap.status.get_flag(FlagsInMainShip) or self.ed_ap.status.get_flag(FlagsInFighter))
+                    and self.ed_ap.status.get_gui_focus() == GuiFocusNoFocus):
+                self.ed_ap.keys.send('ResetPowerDistribution')
+                self.ed_ap.keys.send('IncreaseSystemsPower', repeat=3)
+        elif msg == 'right':
+            print('right')
+            if ((self.ed_ap.status.get_flag(FlagsInMainShip) or self.ed_ap.status.get_flag(FlagsInFighter))
+                    and self.ed_ap.status.get_gui_focus() == GuiFocusNoFocus):
+                self.ed_ap.keys.send('ResetPowerDistribution')
+                self.ed_ap.keys.send('IncreaseWeaponsPower', repeat=3)
 
     def update_ship_cfg(self):
         # load up the display with what we read from ED_AP for the current ship
