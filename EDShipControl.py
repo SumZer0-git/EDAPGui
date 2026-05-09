@@ -45,7 +45,7 @@ class EDShipControl:
     def roll_clockwise_anticlockwise(self, deg: float) -> float:
         """ Roll in deg. (> 0.0 for roll right, < 0.0 for roll left)
         @param deg: The angle to turn in degrees
-        @return: The hold time for the movement in seconds.
+        @return: The calculated hold time for the movement in seconds.
         """
         abs_deg = abs(deg)
         htime = abs_deg / self.ap.rollrate
@@ -64,11 +64,11 @@ class EDShipControl:
                     for key, value in speed_demand['RollRate'].items():
                         key_deg = float(key)
                         if abs_deg <= key_deg:
-                            # Ratio based on the last value and this value
+                            # Interpolate based on the last value and this value
                             ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
                             # print(f"Roll demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
                             # logger.info(f"Roll demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
-                            self.ap_ckb('log', f"Roll demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
+                            self.ap_ckb('log', f"Roll demand: {round(deg, 1)}. Interp value: {round(ratio_val, 2)} deg/s")
 
                             htime = abs_deg / ratio_val
 
@@ -85,6 +85,7 @@ class EDShipControl:
                         # print(f"Roll demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
                         # logger.info(f"Roll demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
                         self.ap_ckb('log', f"Roll demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
+                        self.ap_ckb('log', f"Roll demand: {round(deg, 1)}. Extrap value: {round(last_val, 2)} deg/s")
 
         # Check if we are rolling right or left
         if deg > 0.0:
@@ -121,7 +122,7 @@ class EDShipControl:
                             ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
                             # print(f"Pitch demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
                             # logger.info(f"Pitch demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
-                            self.ap_ckb('log', f"Pitch demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
+                            self.ap_ckb('log', f"Pitch demand: {round(deg, 1)}. Calc value: {round(ratio_val, 2)} deg/s")
 
                             htime = abs_deg / ratio_val
 
@@ -137,7 +138,7 @@ class EDShipControl:
                         htime = abs_deg / last_val
                         # print(f"Pitch demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
                         # logger.info(f"Pitch demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
-                        self.ap_ckb('log', f"Pitch demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
+                        self.ap_ckb('log', f"Pitch demand: {round(deg, 1)}. Calc value: {round(last_val, 2)} deg/s")
 
         # Check if we are pitching up or down
         if deg > 0.0:
@@ -174,7 +175,7 @@ class EDShipControl:
                             ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
                             # print(f"Yaw demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
                             # logger.info(f"Yaw demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
-                            self.ap_ckb('log', f"Yaw demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
+                            self.ap_ckb('log', f"Yaw demand: {round(deg, 1)}. Calc value: {round(ratio_val, 2)} deg/s")
 
                             htime = abs_deg / ratio_val
 
@@ -190,7 +191,7 @@ class EDShipControl:
                         htime = abs_deg / last_val
                         # print(f"Yaw demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
                         # logger.info(f"Yaw demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
-                        self.ap_ckb('log', f"Yaw demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
+                        self.ap_ckb('log', f"Yaw demand: {round(deg, 1)}. Calc value: {round(last_val, 2)} deg/s")
 
         # Check if we are yawing right or left
         if deg > 0.0:
@@ -202,14 +203,14 @@ class EDShipControl:
         return htime
 
     def ship_calibrate_roll(self):
-        """ Performs a ship roll test by pitching 360 degrees.
+        """ Performs ship roll tuning by pitching 360 degrees.
         If the ship does not rotate enough, decrease the roll value.
         If the ship rotates too much, increase the roll value.
         """
-        self.ap_ckb('log', "Starting Roll Calibration.")
+        self.ap_ckb('log', "Starting Roll Tuning.")
 
         if not self.ap.speed_demand or self.ap.speed_demand == '':
-            self.ap_ckb('log', "WARNING: Set speed before calibrating.")
+            self.ap_ckb('log', "WARNING: Set speed before tuning.")
             return
 
         if not self.ap.current_ship_cfg:
@@ -272,17 +273,17 @@ class EDShipControl:
         #     self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][str(60.0)] = rate
         #     self.ap_ckb('log', f"Default: Roll Angle: 45: Rate: {self.ap.rollrate}")
 
-        self.ap_ckb('log', "Completed Roll Calibration. Remember to Save.")
+        self.ap_ckb('log', "Completed Roll Tuning. Remember to Save.")
 
     def ship_calibrate_pitch(self):
-        """ Performs a ship pitch test by pitching 360 degrees.
+        """ Performs a ship pitch tuning by pitching 360 degrees.
         If the ship does not rotate enough, decrease the pitch value.
         If the ship rotates too much, increase the pitch value.
         """
-        self.ap_ckb('log', "Starting Pitch Calibration.")
+        self.ap_ckb('log', "Starting Pitch Tuning.")
 
         if not self.ap.speed_demand or self.ap.speed_demand == '':
-            self.ap_ckb('log', "WARNING: Set speed before calibrating.")
+            self.ap_ckb('log', "WARNING: Set speed before tuning.")
             return
 
         if not self.ap.current_ship_cfg:
@@ -346,17 +347,17 @@ class EDShipControl:
             self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][str(60.0)] = rate
             self.ap_ckb('log', f"Default: Pitch Angle: 30: Rate: {self.ap.pitchrate}")
 
-        self.ap_ckb('log', "Completed Pitch Calibration. Remember to Save.")
+        self.ap_ckb('log', "Completed Pitch Tuning. Remember to Save.")
 
     def ship_calibrate_yaw(self):
-        """ Performs a ship yaw test by pitching 360 degrees.
+        """ Performs a ship yaw tuning by pitching 360 degrees.
         If the ship does not rotate enough, decrease the yaw value.
         If the ship rotates too much, increase the yaw value.
         """
-        self.ap_ckb('log', "Starting Yaw Calibration.")
+        self.ap_ckb('log', "Starting Yaw Tuning.")
 
         if not self.ap.speed_demand or self.ap.speed_demand == '':
-            self.ap_ckb('log', "WARNING: Set speed before calibrating.")
+            self.ap_ckb('log', "WARNING: Set speed before tuning.")
             return
 
         if not self.ap.current_ship_cfg:
@@ -418,7 +419,7 @@ class EDShipControl:
             self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][str(60.0)] = rate
             self.ap_ckb('log', f"Default: Yaw Angle: 30: Rate: {self.ap.yawrate}")
 
-        self.ap_ckb('log', "Completed Yaw Calibration. Remember to Save.")
+        self.ap_ckb('log', "Completed Yaw Tuning. Remember to Save.")
 
     def ship_tst_roll(self, angle: float):
         """ Performs a ship roll test by pitching 360 degrees.
