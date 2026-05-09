@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from typing import TypedDict
+
 from EDAP_data import *
+from RPYLineEditor import convert_curve_to_float, convert_curve_to_str
 from Screen import set_focus_elite_window
 from StatusParser import StatusParser
 from time import sleep
@@ -18,6 +21,15 @@ def scale(inp: float, in_min: float, in_max: float, out_min: float, out_max: flo
     return (inp - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
 
 
+class ThrottleDemand(TypedDict):
+    """
+    Dictionary containing target information.
+    """
+    RollRate: dict[str, float]
+    PitchRate: dict[str, float]
+    YawRate: dict[str, float]
+
+
 class EDShipControl:
     """ Handles ship control, FSD, SC, etc. """
 
@@ -28,6 +40,25 @@ class EDShipControl:
         self.keys = keys
         self.ap_ckb = cb
         self.status_parser = StatusParser()
+
+
+    def get_throttle_demand_dict(self) -> ThrottleDemand | None:
+        """
+        Gets the current RPY tuning curve for the current ship. Or None if neither are valid.
+        @return: The ThrottleDemand dict containing the RPY curves:
+            {   'RollRate': dict[str, float],
+                'PitchRate': dict[str, float],
+                'YawRate': dict[str, float] }
+        """
+        # Check if a ship config loaded
+        if self.ap.current_ship_cfg:
+            # Check the throttle demand is in the ship config
+            if self.ap.speed_demand in self.ap.current_ship_cfg:
+                # Select the throttle demand
+                throttle_demand = self.ap.current_ship_cfg[self.ap.speed_demand]
+                return throttle_demand
+
+        return None
 
     def goto_cockpit_view(self) -> bool:
         """ Goto cockpit view.
