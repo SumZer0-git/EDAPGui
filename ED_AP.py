@@ -1634,7 +1634,6 @@ class EDAutopilot:
         pitching to put the nav point in the middle of the compass, i.e. target right in front of us.
         @return: True if aligned, else False.
         """
-        close = 5.0  # in degrees
         if not self._is_in_supercruise_or_space():
             logger.error('align=err1, nav_align not in super or space')
             raise Exception('nav_align not in super or space')
@@ -1653,10 +1652,16 @@ class EDAutopilot:
 
             logger.debug(f"Compass position: yaw: {str(off['yaw'])} pit: {str(off['pit'])}")
 
+            # Reduce the closeness as we are using the target instead of compass
+            close = 3.0  # in degrees
+
             # Check if we are close enough already
             if abs(off['yaw']) < close and abs(off['pit']) < close:
                 self.ap_ckb('log', 'Compass Align complete')
                 return True
+
+            # Increase the closeness as we are using the compass only
+            close = 8.0  # in degrees
 
             # Roll if the nav point is not directly behind us.
             if ((-180 + close) < off['yaw'] < (180 - close) and
@@ -1682,6 +1687,9 @@ class EDAutopilot:
                         off = self.get_nav_offset(scr_reg)
                     else:
                         break
+
+            # Reduce the closeness as we are using the target instead of compass
+            close = 3.0  # in degrees
 
             for i in range(20):
                 # Calc pitch time based on nav point location
