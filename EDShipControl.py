@@ -255,7 +255,6 @@ class EDShipControl:
 
         test_time = 0.05
         delta = 0.0
-        rate = self.ap.rollrate
         for targ_ang in [2.0, 3.0, 5.0, 8.0, 13.0, 21.0, 34.0, 55.0, 89.0, 144.0]:
             while 1:
                 set_focus_elite_window()
@@ -288,7 +287,6 @@ class EDShipControl:
 
                 test_time = test_time * 1.04
                 rate = round(delta / test_time, 2)
-                # rate = min(rate, self.ap.rollrate)  # Limit rate to no higher than the default
                 if delta >= targ_ang and delta > delta_lst:
                     self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][str(delta)] = rate
 
@@ -297,12 +295,6 @@ class EDShipControl:
                     break
                 else:
                     print(f"Ignored Roll Angle: {round(delta, 1)}: Time: {round(test_time, 2)} Rate: {rate}")
-
-        # If we have logged values, add the last rate for 45 and 60 deg
-        # if len(self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate']) > 0:
-        #     self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][str(45.0)] = rate
-        #     self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][str(60.0)] = rate
-        #     self.ap_ckb('log', f"Default: Roll Angle: 45: Rate: {self.ap.rollrate}")
 
         self.ap_ckb('log', "Completed Roll Tuning. Remember to Save.")
 
@@ -328,7 +320,6 @@ class EDShipControl:
 
         test_time = 0.05
         delta = 0.0
-        rate = self.ap.pitchrate
         for targ_ang in [0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 16.0, 32.0, 60.0, 90.0, 120.0]:
             while 1:
                 set_focus_elite_window()
@@ -362,7 +353,6 @@ class EDShipControl:
 
                 test_time = test_time * 1.04
                 rate = round(delta / test_time, 2)
-                # rate = min(rate, self.ap.pitchrate)  # Limit rate to no higher than the default
                 if delta >= targ_ang and delta > delta_lst:
                     self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][str(delta)] = rate
 
@@ -371,12 +361,6 @@ class EDShipControl:
                     break
                 else:
                     print(f"Ignored Pitch Angle: {delta}: Time: {round(test_time, 2)} Rate: {rate}")
-
-        # # If we have logged values, add the last rate for 30 and 60 deg
-        # if len(self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate']) > 0:
-        #     self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][str(30.0)] = rate
-        #     self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][str(60.0)] = rate
-        #     self.ap_ckb('log', f"Default: Pitch Angle: 30: Rate: {self.ap.pitchrate}")
 
         self.ap_ckb('log', "Completed Pitch Tuning. Remember to Save.")
 
@@ -402,7 +386,6 @@ class EDShipControl:
 
         test_time = 0.07
         delta = 0.0
-        rate = self.ap.yawrate
         for targ_ang in [0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 16.0, 32.0, 60.0, 90.0, 120.0]:
             while 1:
                 set_focus_elite_window()
@@ -434,7 +417,6 @@ class EDShipControl:
 
                 test_time = test_time * 1.05
                 rate = round(delta / test_time, 2)
-                # rate = min(rate, self.ap.yawrate)  # Limit rate to no higher than the default
                 if delta >= targ_ang and delta > delta_lst:
                     self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][str(delta)] = rate
 
@@ -443,12 +425,6 @@ class EDShipControl:
                     break
                 else:
                     print(f"Ignored Yaw Angle: {delta}: Time: {round(test_time, 2)} Rate: {rate}")
-
-        # # If we have logged values, add the last rate for 30 and 60 deg
-        # if len(self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate']) > 0:
-        #     self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][str(30.0)] = rate
-        #     self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][str(60.0)] = rate
-        #     self.ap_ckb('log', f"Default: Yaw Angle: 30: Rate: {self.ap.yawrate}")
 
         self.ap_ckb('log', "Completed Yaw Tuning. Remember to Save.")
 
