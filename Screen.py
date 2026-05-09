@@ -1,10 +1,12 @@
 from __future__ import annotations
+import time
 import typing
 from copy import copy
 
 import cv2
 import win32con
 import win32gui
+import numpy as np
 from numpy import array
 import mss
 import json
@@ -86,6 +88,10 @@ class Screen:
         self.monitor_number = 0
         self.aspect_ratio = 0
         self.mon = None
+        # Throttle state for repeated screen-capture failure messages so the log is not flooded.
+        self._last_capture_warn_ts = 0.0
+        self._capture_warn_interval = 5.0  # seconds between repeated warnings
+        self._capture_failure_count = 0
 
         # Find ED window position to determine which monitor it is on
         ed_rect = self.get_elite_window_rect()
@@ -221,7 +227,7 @@ class Screen:
         try:
             with open(fileName,"r") as fp:
                 s = json.load(fp)
-        except  Exception as e:
+        except Exception as e:
             logger.warning("Screen.py read_config error :"+str(e))
 
         return s
@@ -232,7 +238,10 @@ class Screen:
         return image
 
     def get_screen(self, x_left, y_top, x_right, y_bot, rgb=True):    # if absolute need to scale??
-        """ Get screen from co-ords in pixels."""
+        """ Get screen from co-ords in pixels.
+        Returns the captured image, or None if capture failed (empty grab, no monitor, etc.).
+        Callers must tolerate None.
+        """
         monitor = {
             "top": self.mon["top"] + int(y_top),
             "left": self.mon["left"] + int(x_left),
@@ -240,22 +249,46 @@ class Screen:
             "height": int(y_bot - y_top),
             "mon": self.monitor_number,
         }
-        image = array(self.mss.grab(monitor))
+        try:
+            image = array(self.mss.grab(monitor))
+        except Exception as e:
+            self._warn_capture_failure(f"mss.grab() raised {type(e).__name__}: {e}")
+            return None
+
+        if image is None or image.size == 0 or image.shape[0] == 0 or image.shape[1] == 0:
+            self._warn_capture_failure(
+                "mss.grab() returned an empty image. Most likely cause: Elite Dangerous is running "
+                "in exclusive 'Fullscreen' mode (set Display Mode to 'Borderless' in ED's graphics "
+                "options). Other causes: ED was moved to a different monitor after EDAP started "
+                "(restart EDAP), or HDR / DPI scaling issues."
+            )
+            return None
+
         # TODO - mss.grab returns the image in BGR format, so no need to convert to RGB2BGR
         if rgb:
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            try:
+                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            except cv2.error as e:
+                self._warn_capture_failure(f"cv2.cvtColor failed on captured image: {e}")
+                return None
         return image
         
     def get_screen_rect_pct(self, rect):
         """ Grabs a screenshot and returns the selected region as an image.
         @param rect: A rect array ([L, T, R, B]) in percent (0.0 - 1.0)
-        @return: An image defined by the region.
+        @return: An image defined by the region, or None if capture failed.
         """
         if self.using_screen:
             abs_rect = self.screen_rect_to_abs(rect)
             image = self.get_screen(abs_rect[0], abs_rect[1], abs_rect[2], abs_rect[3])
+            if image is None:
+                return None
             # TODO delete this line when COLOR_RGB2BGR is removed from get_screen()
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            try:
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            except cv2.error as e:
+                self._warn_capture_failure(f"cv2.cvtColor (BGR2RGB) failed: {e}")
+                return None
             return image
         else:
             if self._screen_image is None:
@@ -284,18 +317,42 @@ class Screen:
         return q
 
     def get_screen_full(self):
-        """ Grabs a full screenshot and returns the image.
+        """ Grabs a full screenshot and returns the image, or None if capture failed.
         """
         if self.using_screen:
             image = self.get_screen(0, 0, self.screen_width, self.screen_height)
+            if image is None:
+                return None
             # TODO delete this line when COLOR_RGB2BGR is removed from get_screen()
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            try:
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            except cv2.error as e:
+                self._warn_capture_failure(f"cv2.cvtColor (BGR2RGB) failed: {e}")
+                return None
             return image
         else:
             if self._screen_image is None:
                 return None
 
             return self._screen_image
+
+    def _warn_capture_failure(self, msg: str):
+        """ Log a screen-capture failure, throttled so we do not flood the log when
+        an assist loop polls the screen many times per second.
+        """
+        self._capture_failure_count += 1
+        now = time.time()
+        if now - self._last_capture_warn_ts < self._capture_warn_interval:
+            return
+        self._last_capture_warn_ts = now
+        full_msg = f"{msg} (suppressed {self._capture_failure_count - 1} similar warnings)"
+        logger.warning(full_msg)
+        try:
+            self.ap_ckb('log', f"WARNING: {msg}")
+        except Exception:
+            # ap_ckb can be None or fail during very early init; never let logging crash callers.
+            pass
+        self._capture_failure_count = 0
 
     def set_screen_image(self, image):
         """ Use an image instead of a screen capture. Sets the image and also sets the
