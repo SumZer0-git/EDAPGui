@@ -304,12 +304,14 @@ class StatusParser:
         self.last_data = self.current_data
         self.current_data = cleaned_data
         self.last_mod_time = self.get_file_modified_time()
-        #logger.debug(f'Status.json mod timestamp {self.last_mod_time} updated.')
+        # logger.debug(f'Status.json mod timestamp {self.last_mod_time} updated.')
         # print(f'Status.json mod timestamp {self.last_mod_time} updated.')
         # print(json.dumps(data, indent=4))
 
         # Enable the following to print all the changes to the status flags.
         # self.log_flag_diffs()
+        # TODO Enable the following to print all the changes to the destination. See function for details.
+        # self.log_destination_diffs()
 
         return cleaned_data
 
@@ -349,6 +351,30 @@ class StatusParser:
         flag_array2 = self.translate_flags2(flags_off2)
         for item in flag_array2:
             print(f"Status Flags2: '{item}' is OFF")
+
+    def log_destination_diffs(self):
+        """
+        Log destination differences when detected in the status file.
+        Could be used to determine if the final destination is a system, or a body or a station and give the user the
+        option to dock (if station) or drop from SC if a body or a star, or a space POI.
+        # TODO Idea was to use this to try to determine if the final destination is a system, or a body or a station.
+        @return: N/A
+        """
+        if self.last_data is None:
+            return
+        if self.current_data is None:
+            return
+
+        old_system = self.last_data['Destination_System']
+        old_body = self.last_data['Destination_Body']
+        old_name = self.last_data['Destination_Name']
+        new_system = self.current_data['Destination_System']
+        new_body = self.current_data['Destination_Body']
+        new_name = self.current_data['Destination_Name']
+
+        if (new_system != old_system) or (new_body != old_body) or (new_name != old_name):
+            logger.debug(f"Status Destination change: '{old_system} | {old_body} | {old_name}' to '{new_system} | {new_body} | {new_name}'")
+            print(f"Status Destination change: '{old_system} | {old_body} | {old_name}' to '{new_system} | {new_body} | {new_name}'")
 
     def get_gui_focus(self) -> int:
         """ Gets the value of the GUI Focus flag.
