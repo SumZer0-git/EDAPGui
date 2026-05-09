@@ -1489,10 +1489,11 @@ class EDAutopilot:
     def is_sun_dead_ahead(self, scr_reg):
         return scr_reg.sun_percent(scr_reg.screen) > 5
 
-    def sun_avoid(self, scr_reg):
+    def sun_avoid(self, scr_reg, scooping: bool):
         """ Use to orient the ship to not be pointing right at the Sun
         Checks brightness in the region in front of us, if brightness exceeds a threshold
         then will pitch up until below threshold.
+        @param scooping: Are we scooping this star?
         @param scr_reg:
         @return:
         """
@@ -1529,8 +1530,8 @@ class EDAutopilot:
             sleep(self.sunpitchuptime)
         self.keys.send('PitchUpButton', state=0)
 
-        # Some ships run cool so need to pitch down a little
-        if self.sunpitchuptime < 0.0:
+        # Some ships run cool so need to pitch down a little if we are scooping
+        if scooping and self.sunpitchuptime < 0.0:
             self.keys.send('PitchDownButton', state=1)
             sleep(-1.0 * self.sunpitchuptime)
             self.keys.send('PitchDownButton', state=0)
@@ -1667,7 +1668,7 @@ class EDAutopilot:
                 logger.error('align() not in sc or space')
                 raise Exception('align() not in sc or space')
 
-        self.sun_avoid(scr_reg)
+        self.sun_avoid(scr_reg, scooping=False)
 
         self.set_throttle_50()
         res = self.compass_align(scr_reg)
@@ -2053,7 +2054,7 @@ class EDAutopilot:
         self.vce.say("Avoiding star")
         self.update_ap_status("Avoiding star")
         self.ap_ckb('log', 'Avoiding star')
-        self.sun_avoid(scr_reg)
+        self.sun_avoid(scr_reg, scooping=True)
 
         if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and is_star_scoopable and has_fuel_scoop:
             logger.debug('refuel= start refuel')
