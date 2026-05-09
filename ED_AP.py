@@ -865,17 +865,13 @@ class EDAutopilot:
         return
 
     def have_destination(self, scr_reg) -> bool:
-        """ Check to see if the compass is on the screen. """
-        # icompass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region_x3('compass', 'compass')
-        #
-        # logger.debug("has_destination:"+str(maxVal))
-        #
-        # # need > x in the match to say we do have a destination
-        # if maxVal < scr_reg.compass_match_thresh:
-        #     return False
-        # else:
-        #     return True
-        res = self.get_nav_offset(scr_reg)
+        """
+        Check to see if the compass is on the screen.
+        # TODO - remove this and use the status file destination. However, the status file destination does not...
+        clear when the destination is unlocked, so it is possible to have the status with a destination and no...
+        compass displayed. Don't know a way around this. So this is the best there is at the moment.
+        """
+        res = self.get_compass_target_offset()
         if res:
             return True
         else:
