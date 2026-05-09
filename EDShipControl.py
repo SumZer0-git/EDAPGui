@@ -259,7 +259,7 @@ class EDShipControl:
         for targ_ang in [2.0, 3.0, 5.0, 8.0, 13.0, 21.0, 34.0, 55.0, 89.0, 144.0]:
             while 1:
                 set_focus_elite_window()
-                off = self.ap.get_nav_offset(self.ap.scrReg)
+                off = self.ap.get_compass_target_offset()
                 if not off:
                     break
 
@@ -279,7 +279,7 @@ class EDShipControl:
 
                 sleep(1)
 
-                off2 = self.ap.get_nav_offset(self.ap.scrReg)
+                off2 = self.ap.get_compass_target_offset()
                 if not off2:
                     break
 
@@ -329,10 +329,10 @@ class EDShipControl:
         test_time = 0.05
         delta = 0.0
         rate = self.ap.pitchrate
-        for targ_ang in [0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 16.0]:
+        for targ_ang in [0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 16.0, 32.0, 60.0, 90.0, 120.0]:
             while 1:
                 set_focus_elite_window()
-                off = self.ap.get_target_offset(self.ap.scrReg)
+                off = self.ap.get_compass_target_offset()
                 if not off:
                     print(f"Target lost")
                     break
@@ -352,7 +352,7 @@ class EDShipControl:
 
                 sleep(1)
 
-                off2 = self.ap.get_target_offset(self.ap.scrReg)
+                off2 = self.ap.get_compass_target_offset()
                 if not off2:
                     print(f"Target lost")
                     break
@@ -372,11 +372,11 @@ class EDShipControl:
                 else:
                     print(f"Ignored Pitch Angle: {delta}: Time: {round(test_time, 2)} Rate: {rate}")
 
-        # If we have logged values, add the last rate for 30 and 60 deg
-        if len(self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate']) > 0:
-            self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][str(30.0)] = rate
-            self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][str(60.0)] = rate
-            self.ap_ckb('log', f"Default: Pitch Angle: 30: Rate: {self.ap.pitchrate}")
+        # # If we have logged values, add the last rate for 30 and 60 deg
+        # if len(self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate']) > 0:
+        #     self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][str(30.0)] = rate
+        #     self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][str(60.0)] = rate
+        #     self.ap_ckb('log', f"Default: Pitch Angle: 30: Rate: {self.ap.pitchrate}")
 
         self.ap_ckb('log', "Completed Pitch Tuning. Remember to Save.")
 
@@ -403,10 +403,10 @@ class EDShipControl:
         test_time = 0.07
         delta = 0.0
         rate = self.ap.yawrate
-        for targ_ang in [0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 16.0]:
+        for targ_ang in [0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 16.0, 32.0, 60.0, 90.0, 120.0]:
             while 1:
                 set_focus_elite_window()
-                off = self.ap.get_target_offset(self.ap.scrReg)
+                off = self.ap.get_compass_target_offset()
                 if not off:
                     break
 
@@ -425,7 +425,7 @@ class EDShipControl:
 
                 sleep(1)
 
-                off2 = self.ap.get_target_offset(self.ap.scrReg)
+                off2 = self.ap.get_compass_target_offset()
                 if not off2:
                     break
 
@@ -444,11 +444,11 @@ class EDShipControl:
                 else:
                     print(f"Ignored Yaw Angle: {delta}: Time: {round(test_time, 2)} Rate: {rate}")
 
-        # If we have logged values, add the last rate for 30 and 60 deg
-        if len(self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate']) > 0:
-            self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][str(30.0)] = rate
-            self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][str(60.0)] = rate
-            self.ap_ckb('log', f"Default: Yaw Angle: 30: Rate: {self.ap.yawrate}")
+        # # If we have logged values, add the last rate for 30 and 60 deg
+        # if len(self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate']) > 0:
+        #     self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][str(30.0)] = rate
+        #     self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][str(60.0)] = rate
+        #     self.ap_ckb('log', f"Default: Yaw Angle: 30: Rate: {self.ap.yawrate}")
 
         self.ap_ckb('log', "Completed Yaw Tuning. Remember to Save.")
 
