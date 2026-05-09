@@ -642,8 +642,14 @@ class EDWayPoint:
                             _abort = True
                             break
 
-                    elif sys_bookmark_type == 'Nav Panel OCR' and next_wp_station != "":
-                        # Set destination via system name
+                    elif next_wp_station != "":
+                        # A system name is defined and 'Nav Panel OCR' is selected, or both gal bookmark and system
+                        # bookmark are empty, so we will default to using OCR.
+                        if sys_bookmark_type != 'Nav Panel OCR':
+                            # Log fall back to OCR message.
+                            self.ap.ap_ckb('log', f"No bookmark number configured for '{next_wp_station}'; defaulting "
+                                                  f"to Nav Panel OCR to set station by name.")
+                        # Locate the station by name in the in-game Nav Panel (left HUD) and lock onto it.
                         res = self.ap.nav_panel.lock_destination(next_wp_station)
                         if not res:
                             self.ap_ckb('log+vce', f"Unable to set Nav Panel OCR bookmark.")
@@ -651,7 +657,8 @@ class EDWayPoint:
                             break
 
                     else:
-                        self.ap_ckb('log+vce', f"No bookmark defined.")
+                        # No bookmark and no station name -- nothing to target.
+                        self.ap_ckb('log+vce', "No bookmark or station name defined for this waypoint.")
                         _abort = True
                         break
 
