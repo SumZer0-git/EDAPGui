@@ -2601,6 +2601,12 @@ class EDAutopilot:
                 self.honk_thread = threading.Thread(target=self.honk, daemon=True)
                 self.honk_thread.start()
 
+                # Rotate destination to roughly the top if we have a destination
+                # Should make it easier to get to the destination the other side of the star
+                off = self.get_compass_target_offset()
+                if off:
+                    self.ship_control.roll_clockwise_anticlockwise(off['roll'])
+
                 # Refuel
                 refueled = self.refuel(scr_reg)
                 refueled = self.refuel_new(scr_reg)
