@@ -877,7 +877,7 @@ class EDAutopilot:
     def get_nav_offset(self, scr_reg):
         """ Determine the x,y offset from center of the compass of the nav point.
         @return: Returns the x,y,z value as x,y in degrees (-90 to 90) and z as 1 or -1.
-        {'x': x.xx, 'y': y.yy, 'z': -1|0|+1,'roll': r.rr, 'pit': p.pp, 'yaw': y.yy} | None
+        {'x': x.xx, 'y': y.yy, 'z': -1.0|0.0|+1.0,'roll': r.rr, 'pit': p.pp, 'yaw': y.yy} | None
         Where 'roll' is:
            -180deg (6 o'clock anticlockwise) to
             0deg (12 o'clock) to
@@ -1537,7 +1537,7 @@ class EDAutopilot:
         @return: True if aligned, else False.
         """
         close = 5.0  # in degrees
-        if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
+        if not self._is_in_supercruise_or_space():
             logger.error('align=err1, nav_align not in super or space')
             raise Exception('nav_align not in super or space')
 
@@ -1635,13 +1635,33 @@ class EDAutopilot:
         self.ap_ckb('log+vce', 'Compass Align failed - exhausted all retries')
         return False
 
+    def _is_in_supercruise_or_space(self) -> bool:
+        """Check if the ship is in supercruise or normal space using both journal state and status.json flags.
+        The status.json flags update faster than the journal reader, so we check both to avoid race conditions.
+        @return: True if in SC or Space, else False.
+        """
+        jn_status = self.jn.ship_state()['status']
+        if jn_status == 'in_supercruise' or jn_status == 'in_space':
+            return True
+        if self.status.get_flag(FlagsSupercruise):
+            return True
+        if (not self.status.get_flag(FlagsDocked) and not self.status.get_flag(FlagsLanded)
+                and not self.status.get_flag(FlagsFsdJump) and not self.status.get_flag(FlagsFsdCharging)):
+            return True
+        return False
+
     def mnvr_to_target(self, scr_reg):
         """ Maneuver to Target using compass then target before performing a jump."""
         logger.debug('mnvr_to_target entered')
 
-        if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
-            logger.error('align() not in sc or space')
-            raise Exception('align() not in sc or space')
+        if not self._is_in_supercruise_or_space():
+            for _ in range(10):
+                sleep(0.5)
+                if self._is_in_supercruise_or_space():
+                    break
+            else:
+                logger.error('align() not in sc or space')
+                raise Exception('align() not in sc or space')
 
         self.sun_avoid(scr_reg)
 
@@ -1958,7 +1978,7 @@ class EDAutopilot:
         for i in range(jump_tries):
 
             logger.debug('jump= try:'+str(i))
-            if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
+            if not self._is_in_supercruise_or_space():
                 logger.error('Not ready to FSD jump. jump=err1')
                 raise Exception('not ready to jump')
             sleep(0.5)
@@ -2325,6 +2345,15 @@ class EDAutopilot:
             if self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
                 self.update_overlay()
                 self.waypoint_undock_seq()
+
+        # If we are already in supercruise (e.g. manual restart), check if the sun is ahead
+        # and perform the same post-jump sequence: refuel (which includes sun_avoid with
+        # correct brightness threshold), then position to fly past the star
+        # TODO - Add this to SC Assist and Waypoint Assist?
+        if self._is_in_supercruise_or_space() and self.is_sun_dead_ahead(scr_reg):
+            refueled = self.refuel(scr_reg)
+            self.update_ap_status("Maneuvering")
+            self.position(scr_reg, refueled)
 
         # Keep jumping as long as there is a system to jump to.
         # TODO - can we enable this? Seems like a better way
