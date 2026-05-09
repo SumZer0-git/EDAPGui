@@ -939,19 +939,21 @@ class APGui:
         if field == 'Debug Images':
             self.ed_ap.debug_images = self.checkboxvar['Debug Images'].get()
 
-    def makeform(self, win, ftype, fields, r: int = 0, inc: float = 1, r_from: float = 0, rto: float = 1000):
+    def makeform(self, win: ttk.LabelFrame, f_type: int, fields, r: int = 0, inc: float = 1, r_from: float = 0,
+                 rto: float = 1000):
         entries = {}
         win.columnconfigure(1, weight=1)
 
-        for field in fields:
-            if ftype == FORM_TYPE_CHECKBOX:
-                self.checkboxvar[field] = tk.IntVar()
-                lab = ttk.Checkbutton(win, text=field, variable=self.checkboxvar[field], command=(lambda field=field: self.check_cb(field)))
-                self.lab_ck[field] = lab
+        for fld in fields:
+            if f_type == FORM_TYPE_CHECKBOX:
+                self.checkboxvar[fld] = tk.IntVar()
+                lab = ttk.Checkbutton(win, text=fld, variable=self.checkboxvar[fld],
+                                      command=(lambda field=fld: self.check_cb(field)))
+                self.lab_ck[fld] = lab
                 lab.grid(row=r, column=0, columnspan=2, padx=2, pady=2, sticky=tk.W)
             else:
-                lab = ttk.Label(win, text=field + ": ")
-                if ftype == FORM_TYPE_SPINBOX:
+                lab = ttk.Label(win, text=fld + ": ")
+                if f_type == FORM_TYPE_SPINBOX:
                     ent = ttk.Spinbox(win, width=10, from_=r_from, to=rto, increment=inc, justify=tk.RIGHT)
                 else:
                     ent = ttk.Entry(win, width=10, justify=tk.RIGHT)
@@ -959,9 +961,9 @@ class APGui:
                 ent.insert(0, "0")
                 lab.grid(row=r, column=0, padx=2, pady=2, sticky=tk.W)
                 ent.grid(row=r, column=1, padx=2, pady=2, sticky=tk.E)
-                entries[field] = ent
+                entries[fld] = ent
 
-            lab = ToolTip(lab, msg=self.tooltips[field], delay=1.0, bg="#808080", fg="#FFFFFF")
+            lab = ToolTip(lab, msg=self.tooltips[fld], delay=1.0, bg="#808080", fg="#FFFFFF")
             r += 1
         return entries
 
