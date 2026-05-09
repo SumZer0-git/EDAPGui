@@ -178,8 +178,8 @@ class EDAutopilot:
         self.current_ship_type = None
         self.current_ship_cfg = None
         self.gui_loaded = False
-        self._nav_cor_x = 0.0  # Nav Point correction to pitch
-        self._nav_cor_y = 0.0  # Nav Point correction to yaw
+        # self._nav_cor_x = 0.0  # Nav Point correction to pitch
+        # self._nav_cor_y = 0.0  # Nav Point correction to yaw
         self.target_align_outer_lim = 1.0  # In deg. Anything outside of this range will cause alignment.
         self.target_align_inner_lim = 0.5  # In deg. Will stop alignment when in this range.
         self.debug_show_compass_overlay = False
@@ -1860,14 +1860,14 @@ class EDAutopilot:
                 self.ap_ckb('log', 'Target Align failed - lost target.')
                 return ScTargetAlignReturn.Lost
 
-        # We are aligned, so define the navigation correction as the current offset. This won't be 100% accurate, but
-        # will be within a few degrees.
-        if tar_off1 and nav_off1:
-            self._nav_cor_x = self._nav_cor_x + nav_off1['x']
-            self._nav_cor_y = self._nav_cor_y + nav_off1['y']
-        elif tar_off2 and nav_off2:
-            self._nav_cor_x = self._nav_cor_x + nav_off2['x']
-            self._nav_cor_y = self._nav_cor_y + nav_off2['y']
+        # # We are aligned, so define the navigation correction as the current offset. This won't be 100% accurate, but
+        # # will be within a few degrees.
+        # if tar_off1 and nav_off1:
+        #     self._nav_cor_x = self._nav_cor_x + nav_off1['x']
+        #     self._nav_cor_y = self._nav_cor_y + nav_off1['y']
+        # elif tar_off2 and nav_off2:
+        #     self._nav_cor_x = self._nav_cor_x + nav_off2['x']
+        #     self._nav_cor_y = self._nav_cor_y + nav_off2['y']
 
         # self.ap_ckb('log', 'Target Align complete.')
         return ScTargetAlignReturn.Found
