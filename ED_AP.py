@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import math
 import traceback
 from math import atan, degrees, tan, radians
 import random
 from string import Formatter
 from tkinter import messagebox
+from typing import TypedDict
 
 import cv2
 
@@ -63,6 +66,41 @@ class FSDAssistReturn(Enum):
     Failed = 0  # Failed to reach system
     Partial = 1  # Reached final system, but there is a local destination
     Complete = 2  # Reached final system and there is no local destination
+
+
+class TargetOffset(TypedDict):
+    """
+    Dictionary containing target information.
+    """
+    roll: float
+    pit: float
+    yaw: float
+    occ: bool
+
+
+class CompassOffset(TypedDict):
+    """
+    Dictionary containing navigation (compass) information.
+    """
+    x: float
+    y: float
+    z: float
+    roll: float
+    pit: float
+    yaw: float
+
+
+class CompassTargetOffset(TypedDict):
+    """
+    Dictionary containing navigation (compass) and/or Target information.
+    """
+    roll: float
+    pit: float
+    yaw: float
+    tar_occ: bool
+    tar_behind: bool
+    used_nav: bool
+    used_tar: bool
 
 
 class EDAutopilot:
@@ -1204,6 +1242,65 @@ class EDAutopilot:
             result = None
 
         return result
+
+    def get_compass_target_offset(self) -> CompassTargetOffset | None:
+        """
+        Gets the Navigation and Target offsets and determines the best match between the two.
+        @return: A TypedDict representing the compass and/or target information.
+        """
+        # Check Target and Compass
+        nav_off1 = self.get_nav_offset(self.scrReg)
+        tar_off1 = self.get_target_offset(self.scrReg)
+        if nav_off1 and not tar_off1:
+            # Compass detected and not target
+            # Try to use the compass data if the target is not visible.
+            # self.ap_ckb('log', 'Found Compass only for destination offset.')
+
+            behind = nav_off1['z'] < 0
+            result = {'roll': nav_off1['roll'], 'pit': nav_off1['pit'], 'yaw': nav_off1['yaw'],
+                      'tar_occ': False, 'tar_behind': behind, 'used_nav': True, 'used_tar': False}
+            return result
+
+        elif tar_off1 and not nav_off1:
+            # Target detected and not compass
+            # self.ap_ckb('log', 'Found Target only for destination offset.')
+
+            occ: bool = tar_off1['occ']
+            behind = False
+            result = {'roll': tar_off1['roll'], 'pit': tar_off1['pit'], 'yaw': tar_off1['yaw'],
+                      'tar_occ': occ, 'tar_behind': behind, 'used_nav': False, 'used_tar': True}
+            return result
+
+        elif tar_off1 and nav_off1:
+            # Target and Compass detected
+            # self.ap_ckb('log', 'Found Compass and Target for destination offset.')
+
+            # See what the error is between compass and target
+            roll_err = abs(nav_off1['roll'] - tar_off1['roll'])
+            pit_err = abs(nav_off1['pit'] - tar_off1['pit'])
+            yaw_err = abs(nav_off1['yaw'] - tar_off1['yaw'])
+
+            # Roll is not useful as a comparison because it goes wild when at p=0, y=0.
+            if pit_err > 2.0 or yaw_err > 2.0:
+                self.ap_ckb('log', f'Compass-Target error p: {round(pit_err, 2)}deg y: {round(yaw_err, 2)}deg')
+
+            # Prefer target (will be more accurate). Maybe add some additional logic to this later.
+            use_target = True
+            if use_target:
+                occ: bool = tar_off1['occ']
+                behind = nav_off1['z'] < 0
+                result = {'roll': tar_off1['roll'], 'pit': tar_off1['pit'], 'yaw': tar_off1['yaw'],
+                          'tar_occ': occ, 'tar_behind': behind, 'used_nav': False, 'used_tar': True}
+                return result
+            else:
+                result = {'roll': nav_off1['roll'], 'pit': nav_off1['pit'], 'yaw': nav_off1['yaw'],
+                          'tar_occ': False, 'tar_behind': False, 'used_nav': True, 'used_tar': False}
+                return result
+
+        else:
+            # Neither Target nor Compass detected
+            self.ap_ckb('log', 'Found neither Compass nor Target for destination offset.')
+            return None
 
     def sc_disengage_label_up(self, scr_reg) -> bool:
         """ look for messages like "PRESS [J] TO DISENGAGE" or "SUPERCRUISE OVERCHARGE ACTIVE",
