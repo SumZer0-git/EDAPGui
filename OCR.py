@@ -1,7 +1,5 @@
 from __future__ import annotations
 import time
-from datetime import datetime
-
 import cv2
 import numpy as np
 from cv2.typing import MatLike
@@ -10,9 +8,6 @@ from strsimpy import SorensenDice
 from strsimpy.jaro_winkler import JaroWinkler
 from strsimpy.normalized_levenshtein import NormalizedLevenshtein
 from EDlogger import logger
-from tkinter import messagebox
-import tkinter as tk
-
 from Screen_Regions import Quad
 
 """
@@ -31,7 +26,6 @@ class OCR:
         Initialise the OCR class.
         @param ed_ap:
         @param screen:
-        @param mobile: Use the mobile (light) version which is smaller and faster, but less accurate.
         """
         self.ap = ed_ap
         self.screen = screen
@@ -119,9 +113,13 @@ class OCR:
         'ocr_textlist' is returned in the following format, or None:
         ['DESTINATION', 'SIRIUS ATMOSPHERICS']
         """
-        # Remove Alpha channel if it exists
-        image2 = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+        # Defensive: callers may receive a None / empty image when screen capture fails
+        # (e.g., ED in exclusive Fullscreen). Treat that as "no text" instead of crashing.
+        if image is None or getattr(image, 'size', 0) == 0:
+            return None, None
         try:
+            # Remove Alpha channel if it exists
+            image2 = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
             ocr_data = self.paddleocr.predict(image2)
 
             if ocr_data is None:
@@ -157,19 +155,22 @@ class OCR:
         """ Perform OCR with no filtering. Returns a simplified list of strings with no positional data.
         This routine is faster than the function that returns the full data. Generally good when you
         expect to only return one or two lines of text.
-        @param name:
+        @param name: A name for the image for logging/debug purposes.
         @param image: The image to check.
         'ocr_textlist' is returned in the following format, or None:
         ['DESTINATION', 'SIRIUS ATMOSPHERICS']
         """
-        if image is None:
+        # Defensive: callers may receive a None / empty image when screen capture fails
+        # (e.g., ED in exclusive Fullscreen). Treat that as "no text" instead of crashing
+        # with an obscure cv::cvtColor "!_src.empty()" assertion.
+        if image is None or getattr(image, 'size', 0) == 0:
             return None
 
         # start_time = time.time()
 
-        # Remove Alpha channel if it exists
-        image2 = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
         try:
+            # Remove Alpha channel if it exists
+            image2 = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
             ocr_data = self.paddleocr.predict(image2)
 
             # elapsed_time = time.time() - start_time
@@ -239,6 +240,10 @@ class OCR:
         @param image: The image to check.
         @return: The highlighted image and the matching Quad position in percentage of the image size, or (None, None)
         """
+        # Defensive: an empty / None image (e.g., screen capture failure) must not crash.
+        if image is None or getattr(image, 'size', 0) == 0:
+            return None, None
+
         min_w = item.width
         min_h = item.height
 
@@ -348,11 +353,12 @@ class OCR:
         to include highlighted areas.
         Checks if text exists in an image using OCR.
         Return True if found, False if not and None if no item was selected.
+        @param name: A name for the image for logging/debug purposes.
         @param text: The text to check for.
         @param image: The image to check.
         @return: True with the string of results, or False with the string of results.
         """
-        if image is None:
+        if image is None or getattr(image, 'size', 0) == 0:
             logger.debug(f"is_text_in_image: No image supplied.")
             return None, ""
 
@@ -377,6 +383,7 @@ class OCR:
         @param keys:
         @param text: Text to find.
         @param region: The region to check in % (0.0 - 1.0).
+        @param name: A name for the image for logging/debug purposes.
         TODO - Move this to Region or Screen code. Make all funcs in OCR use rect/quad, not region.
         """
 
@@ -429,7 +436,8 @@ class OCR:
 
                 # Overlay OCR result
                 if ap.debug_overlay:
-                    ap.overlay.overlay_floating_text('wait_for_text', f'{ocr_text}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
+                    ap.overlay.overlay_floating_text('wait_for_text', f'{ocr_text}',
+                                                     abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
                     ap.overlay.overlay_paint()
 
                 if text_found:
@@ -514,7 +522,8 @@ class OCR:
 #     def on_calibration_press(self, event):
 #         self.start_x = event.x
 #         self.start_y = event.y
-#         self.current_rect = self.calibration_canvas.create_rectangle(self.start_x, self.start_y, self.start_x, self.start_y, outline='cyan', width=5)
+#         self.current_rect = self.calibration_canvas.create_rectangle(self.start_x, self.start_y,
+#                                                           self.start_x, self.start_y, outline='cyan', width=5)
 #
 #     def on_calibration_drag(self, event):
 #         if self.current_rect:
@@ -550,7 +559,8 @@ class OCR:
 #         raw_rect_pct = [left_pct, top_pct, right_pct, bottom_pct]
 #         raw_rect_pct = [round(left_pct, 4), round(top_pct, 4), round(right_pct, 4), round(bottom_pct, 4)]
 #
-#         # if self.selected_region.startswith("EDStationServicesInShip.") or self.selected_region in station_scaled_regions:
+#         # if self.selected_region.startswith("EDStationServicesInShip.") or
+#                                               self.selected_region in station_scaled_regions:
 #         #     new_rect_pct = self._normalize_for_station(raw_rect_pct, screen_w, screen_h)
 #         #     if new_rect_pct != raw_rect_pct:
 #         #         self.ap_ckb('log', f"Applying station-style normalization for {self.selected_region}.")
