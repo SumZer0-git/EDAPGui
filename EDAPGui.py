@@ -782,6 +782,7 @@ class APGui:
             self.ed_ap.config['Key_ModDelay'] = float(self.entries['keys']['Modifier Key Delay'].get())
             self.ed_ap.config['Key_DefHoldTime'] = float(self.entries['keys']['Default Hold Time'].get())
             self.ed_ap.config['Key_RepeatDelay'] = float(self.entries['keys']['Repeat Key Delay'].get())
+            self.ed_ap.config['AutoTuneRPYRates'] = self.checkboxvar['Enable Auto-tune RPY'].get()
 
             # Process config[] settings to update classes as necessary
             self.ed_ap.process_config_settings()
@@ -972,6 +973,9 @@ class APGui:
         if field == 'Debug Images':
             self.ed_ap.debug_images = self.checkboxvar['Debug Images'].get()
 
+        if field == 'Enable Auto-tune RPY':
+            self.ed_ap.config['AutoTuneRPYRates'] = self.checkboxvar['Enable Auto-tune RPY'].get()
+
     def makeform(self, win: ttk.LabelFrame, f_type: int, fields, r: int = 0, inc: float = 1, r_from: float = 0,
                  rto: float = 1000):
         entries = {}
@@ -1120,6 +1124,13 @@ class APGui:
         btn_tst_yaw.grid(row=13, column=0, padx=5, pady=2, columnspan=1, sticky="NSEW")
         btn_yaw_edit = ttk.Button(blk_ship, text='7. Edit Yaw Curve', command=self.edit_yaw_curve)
         btn_yaw_edit.grid(row=14, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
+
+        self.checkboxvar['Enable Auto-tune RPY'] = tk.BooleanVar()
+        self.checkboxvar['Enable Auto-tune RPY'].set(bool(self.ed_ap.config['AutoTuneRPYRates']))
+        cb_enable_cv_view = ttk.Checkbutton(blk_ship, text='Enable Auto-tune RPY',
+                                            variable=self.checkboxvar['Enable Auto-tune RPY'],
+                                            command=(lambda field='Enable Auto-tune RPY': self.check_cb(field)))
+        cb_enable_cv_view.grid(row=15, column=0, padx=2, pady=2, sticky=tk.W)
 
         # log window
         log = ttk.LabelFrame(page0, text="LOG", padding=(10, 5))

@@ -237,6 +237,7 @@ class EDAutopilot:
         self.debug_overlay = False
         self.debug_ocr = False
         self.debug_images = False
+        self.auto_tune_rpy = False
         self.debug_image_folder = './debug-output/images'
         if not os.path.exists(self.debug_image_folder):
             os.makedirs(self.debug_image_folder)
@@ -376,6 +377,7 @@ class EDAutopilot:
             "GalMap_SystemSelectDelay": 0.5,  # Delay selecting the system when in galaxy map
             "PlanetDepartureSCOTime": 5.0,  # SCO boost time when leaving planet in secs
             "FleetCarrierMonitorCAPIDataPath": "",  # EDMC Fleet Carrier Monitor plugin data export path
+            "AutoTuneRPYRates": False,  # Enable auto-tune for RPY rates.
         }
         # NOTE!!! When adding a new config value above, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
@@ -446,6 +448,8 @@ class EDAutopilot:
                 cnf['PlanetDepartureSCOTime'] = 5.0
             if 'FleetCarrierMonitorCAPIDataPath' not in cnf:
                 cnf['FleetCarrierMonitorCAPIDataPath'] = ""
+            if 'AutoTuneRPYRates' not in cnf:
+                cnf['AutoTuneRPYRates'] = ""
             self.config = cnf
             logger.debug("read AP json:" + str(cnf))
         else:
@@ -623,6 +627,7 @@ class EDAutopilot:
         self.debug_overlay = self.config['DebugOverlay']
         self.debug_ocr = self.config['DebugOCR']
         self.debug_images = self.config['DebugImages']
+        self.auto_tune_rpy = self.config['AutoTuneRPYRates']
 
     def draw_match_rect(self, img, pt1, pt2, color, thick):
         """ Draws the matching rectangle within the image. """
