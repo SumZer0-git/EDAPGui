@@ -1648,7 +1648,7 @@ class EDAutopilot:
         # try multiple times to get aligned.  If the sun is shining on console, this it will be hard to match
         # the vehicle should be positioned with the sun below us via the sun_avoid() routine after a jump
         for ii in range(self.config['NavAlignTries']):
-            off = self.get_nav_offset(scr_reg)
+            off = self.get_compass_target_offset()
             if off is None:
                 self.ap_ckb('log', 'Unable to detect compass. Rolling to new position.')
                 # Try rolling if star glare is obscuring the compass
@@ -1666,11 +1666,16 @@ class EDAutopilot:
                 return True
 
             # Increase the closeness as we are using the compass only
-            close = 8.0  # in degrees
+            close = 30.0  # in degrees
 
-            # Roll if the nav point is not directly behind us.
-            if ((-180 + close) < off['yaw'] < (180 - close) and
-                    (-180 + close) < off['pit'] < (180 - close)):
+            # Roll if the nav point is not directly behind us, or in front of us.
+            if ((((-180 + close) < off['yaw'] < (0 - close)) or
+                 ((0 + close) < off['yaw'] < (180 - close))) and
+                    (((-180 + close) < off['pit'] < (0 - close)) or
+                     ((0 + close) < off['pit'] < (180 - close)))):
+
+                # Increase the closeness as we are using the compass only
+                close = 8.0  # in degrees
 
                 for i in range(20):
                     # Calc roll time based on nav point location
@@ -1689,7 +1694,7 @@ class EDAutopilot:
 
                         self.ship_control.roll_clockwise_anticlockwise(off['roll'])
                         sleep(1)
-                        off = self.get_nav_offset(scr_reg)
+                        off = self.get_compass_target_offset()
                     else:
                         break
 
@@ -1713,7 +1718,7 @@ class EDAutopilot:
 
                     self.ship_control.pitch_up_down(off['pit'])
                     sleep(0.75)
-                    off = self.get_nav_offset(scr_reg)
+                    off = self.get_compass_target_offset()
                 else:
                     break
 
@@ -1734,7 +1739,7 @@ class EDAutopilot:
 
                     self.ship_control.yaw_right_left(off['yaw'])
                     sleep(0.5)
-                    off = self.get_nav_offset(scr_reg)
+                    off = self.get_compass_target_offset()
                 else:
                     break
 
