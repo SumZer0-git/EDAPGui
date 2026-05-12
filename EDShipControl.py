@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TypedDict
 
 from EDAP_data import *
-from RPYLineEditor import convert_curve_to_float, convert_curve_to_str
+from RPYLineEditor import convert_curve_to_float, convert_curve_to_str, closest_angle, round_to_multiple
 from Screen import set_focus_elite_window
 from StatusParser import StatusParser
 from time import sleep
@@ -41,6 +41,64 @@ class EDShipControl:
         self.ap_ckb = cb
         self.status_parser = StatusParser()
 
+    def add_to_roll_curve(self, angle: float, rate: float):
+        """
+        Add a point to the current curve of the current ship.
+        @param angle: The angle to add in degrees.
+        @param rate: The rate of movement to move that angle in deg/seconds.
+        @return: N/A
+        """
+        throttle = self.get_throttle_demand_dict()
+        if throttle:
+            c = convert_curve_to_float(throttle['RollRate'])
+            # Add the new item. Conversion will sort them.
+            a = closest_angle(angle)
+            c[a] = round(rate, 2)
+            # Convert back to str which will sort the values automatically.
+            s = convert_curve_to_str(c)
+            throttle['RollRate'] = s
+
+            self.ap_ckb('log', f'Added a point to the {self.ap.speed_demand} '
+                               f'Roll curve at {a} deg, {round(rate, 2)} deg/s.')
+
+    def add_to_pitch_curve(self, angle: float, rate: float):
+        """
+        Add a point to the current curve.
+        @param angle: The angle to add in degrees.
+        @param rate: The rate of movement to move that angle in deg/seconds.
+        @return: N/A
+        """
+        throttle = self.get_throttle_demand_dict()
+        if throttle:
+            c = convert_curve_to_float(throttle['PitchRate'])
+            # Add the new item. Conversion will sort them.
+            a = closest_angle(angle)
+            c[a] = round(rate, 2)
+            # Convert back to str which will sort the values automatically.
+            s = convert_curve_to_str(c)
+            throttle['PitchRate'] = s
+
+            self.ap_ckb('log', f'Added a point to the {self.ap.speed_demand} '
+                               f'Pitch curve at {a} deg, {round(rate, 2)} deg/s.')
+
+    def add_to_yaw_curve(self, angle: float, rate: float):
+        """
+        Add a point to the current curve.
+        @param angle: The angle to add in degrees.
+        @param rate: The rate of movement to move that angle in deg/seconds.
+        @return: N/A
+        """
+        throttle = self.get_throttle_demand_dict()
+        if throttle:
+            c = convert_curve_to_float(throttle['YawRate'])
+            # Add the new item. Conversion will sort them.
+            a = closest_angle(angle)
+            c[a] = round(rate, 2)
+            # Convert back to str which will sort the values automatically.
+            s = convert_curve_to_str(c)
+            throttle['YawRate'] = s
+            self.ap_ckb('log', f'Added a point to the {self.ap.speed_demand} '
+                               f'Yaw curve at {a} deg, {round(rate, 2)} deg/s.')
 
     def get_throttle_demand_dict(self) -> ThrottleDemand | None:
         """
