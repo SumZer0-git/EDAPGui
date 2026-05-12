@@ -1692,7 +1692,7 @@ class EDAutopilot:
                             self.overlay.overlay_remove_floating_text('compass_rpy')
                             self.overlay.overlay_paint()
 
-                        self.ship_control.roll_clockwise_anticlockwise(off['roll'])
+                        self.ship_control.roll_clockwise_anticlockwise(off['roll'], auto_tune=self.auto_tune_rpy, cur_deg=off['roll'])
                         sleep(1)
                         off = self.get_compass_target_offset()
                     else:
@@ -1716,7 +1716,7 @@ class EDAutopilot:
                         self.overlay.overlay_remove_floating_text('compass_rpy')
                         self.overlay.overlay_paint()
 
-                    self.ship_control.pitch_up_down(off['pit'])
+                    self.ship_control.pitch_up_down(off['pit'], auto_tune=self.auto_tune_rpy, cur_deg=off['pit'])
                     sleep(0.75)
                     off = self.get_compass_target_offset()
                 else:
@@ -1737,7 +1737,7 @@ class EDAutopilot:
                         self.overlay.overlay_remove_floating_text('compass_rpy')
                         self.overlay.overlay_paint()
 
-                    self.ship_control.yaw_right_left(off['yaw'])
+                    self.ship_control.yaw_right_left(off['yaw'], auto_tune=self.auto_tune_rpy, cur_deg=off['yaw'])
                     sleep(0.5)
                     off = self.get_compass_target_offset()
                 else:
@@ -1907,16 +1907,18 @@ class EDAutopilot:
             # Calc pitch time based on nav point location
             logger.debug(f"sc_target_align before: pit: {off['pit']} yaw: {off['yaw']} ")
 
-            p_deg = 0.0
+            # p_deg = 0.0
             if abs(off['pit']) > target_align_outer_lim:
-                p_deg = off['pit']
-                self.ship_control.pitch_up_down(p_deg)
+                # p_deg = off['pit']
+                # self.ship_control.pitch_up_down(p_deg)
+                self.ship_control.pitch_up_down(off['pit'], auto_tune=self.auto_tune_rpy, cur_deg=off['pit'])
 
             # Calc yaw time based on nav point location
-            y_deg = 0.0
+            # y_deg = 0.0
             if abs(off['yaw']) > target_align_outer_lim:
-                y_deg = off['yaw']
-                self.ship_control.yaw_right_left(y_deg)
+                # y_deg = off['yaw']
+                # self.ship_control.yaw_right_left(y_deg)
+                self.ship_control.yaw_right_left(off['yaw'], auto_tune=self.auto_tune_rpy, cur_deg=off['yaw'])
 
             # Wait for ship to finish moving and picture to stabilize
             sleep(1.0)
@@ -2631,8 +2633,7 @@ class EDAutopilot:
                 # Should make it easier to get to the destination the other side of the star
                 off = self.get_compass_target_offset()
                 if off:
-                    self.ship_control.roll_clockwise_anticlockwise(off['roll'])
-
+                    self.ship_control.roll_clockwise_anticlockwise(off['roll'], auto_tune=self.auto_tune_rpy, cur_deg=off['roll'])
                 # Refuel
                 refueled = self.refuel(scr_reg)
                 refueled = self.refuel_new(scr_reg)

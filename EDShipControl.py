@@ -131,18 +131,20 @@ class EDShipControl:
 
         return True
 
-    def roll_clockwise_anticlockwise(self, deg: float) -> float:
+    def roll_clockwise_anticlockwise(self, deg: float, auto_tune: bool = False, cur_deg: float = 0.0):
         """ Roll in deg. (> 0.0 for roll right, < 0.0 for roll left)
         @param deg: The angle to turn in degrees
-        @return: The calculated hold time for the movement in seconds.
+        @param auto_tune: Enable auto-tuning of ship
+        @param cur_deg: Our current angle used for tuning
+        @return: N/A.
         """
+        close = 8.0
         abs_deg = abs(deg)
         htime = abs_deg / self.ap.rollrate
 
         if self.ap.speed_demand is None:
             self.ap.set_throttle_50()
 
-        # Calculate rate for less than 45 degrees, else use default
         if self.ap.current_ship_cfg:
             # Roll rate from ship config
             if self.ap.speed_demand in self.ap.current_ship_cfg:
@@ -150,53 +152,82 @@ class EDShipControl:
                 if 'RollRate' in speed_demand:
                     last_deg = 0.0
                     last_val = 0.0
+                    last_deg1 = 0.0
+                    last_val1 = 0.0
                     for key, value in speed_demand['RollRate'].items():
                         key_deg = float(key)
+                        if last_val == 0.0:
+                            # We want to clamp at the min recorded value because interpolating starting at 0.0 will
+                            # produce a large rate which will cause oscillation.
+                            last_val = value
+                            last_val1 = value
+
                         if abs_deg <= key_deg:
                             # Interpolate based on the last value and this value
                             ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
-                            # print(f"Roll demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
-                            # logger.info(f"Roll demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
-                            self.ap_ckb('log', f"Roll demand: {round(deg, 1)}. Interp value: {round(ratio_val, 2)} deg/s")
+                            self.ap_ckb('log',
+                                        f"Roll demand: {round(deg, 1)}. Interp value: {round(ratio_val, 2)} deg/s")
 
                             htime = abs_deg / ratio_val
 
+                            last_deg1 = last_deg
+                            last_val1 = last_val
                             last_deg = key_deg
                             last_val = value
                             break
                         else:
+                            last_deg1 = last_deg
+                            last_val1 = last_val
                             last_deg = key_deg
                             last_val = value
 
                     # Check if found one curve point and we are off the scale
                     if abs_deg > last_deg and last_val > 0.0:
-                        htime = abs_deg / last_val
-                        # print(f"Roll demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
-                        # logger.info(f"Roll demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
-                        self.ap_ckb('log', f"Roll demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
-                        self.ap_ckb('log', f"Roll demand: {round(deg, 1)}. Extrap value: {round(last_val, 2)} deg/s")
+                        # Extrapolate based on the last value and the value before this value
+                        ratio_val = scale(abs_deg, last_deg1, last_deg, last_val1, last_val)
+                        self.ap_ckb('log', f"Roll demand: {round(deg, 1)}. Extrap value: {round(ratio_val, 2)} deg/s")
 
-        # Check if we are rolling right or left
+                        htime = abs_deg / ratio_val
+
+        # Check if we are rolling right or left and perform the movement.
         if deg > 0.0:
             self.keys.send('RollRightButton', hold=htime)
         else:
             self.keys.send('RollLeftButton', hold=htime)
 
-        # Return the hold time
-        return htime
+        # Auto-tune if necessary
+        if auto_tune:
+            # Calc the position we want to achieve
+            sp = cur_deg - deg
+            # Wait for ship to stabilize
+            sleep(1)
+            # Take current reading
+            off = self.ap.get_compass_target_offset()
+            if off:
+                # Are we still too far away?
+                err = sp - off['roll']
+                if abs(err) > close:
+                    # Add angle and time to curve
+                    act_ang = abs(cur_deg - off['roll'])
+                    rate = act_ang / htime
+                    self.add_to_roll_curve(act_ang, rate)
+                    # self.ap_ckb('log', f"Roll Tuning suggestion - Add {round(deg, 1)} deg with "
+                    #                    f"{round(rate, 2)} deg/s rate")
 
-    def pitch_up_down(self, deg: float) -> float:
+    def pitch_up_down(self, deg: float, auto_tune: bool = False, cur_deg: float = 0.0):
         """ Pitch in deg. (> 0.0 for pitch up, < 0.0 for pitch down)
         @param deg: The angle to turn in degrees
-        @return: The hold time for the movement in seconds.
+        @param auto_tune: Enable auto-tuning of ship
+        @param cur_deg: Our current angle used for tuning
+        @return: N/A.
         """
+        close = 0.5
         abs_deg = abs(deg)
         htime = abs_deg / self.ap.pitchrate
 
         if self.ap.speed_demand is None:
             self.ap.set_throttle_50()
 
-        # Calculate rate for less than 30 degrees, else use default
         if self.ap.current_ship_cfg:
             # Pitch rate from ship config
             if self.ap.speed_demand in self.ap.current_ship_cfg:
@@ -204,52 +235,82 @@ class EDShipControl:
                 if 'PitchRate' in speed_demand:
                     last_deg = 0.0
                     last_val = 0.0
+                    last_deg1 = 0.0
+                    last_val1 = 0.0
                     for key, value in speed_demand['PitchRate'].items():
                         key_deg = float(key)
+                        if last_val == 0.0:
+                            # We want to clamp at the min recorded value because interpolating starting at 0.0 will
+                            # produce a large rate which will cause oscillation.
+                            last_val = value
+                            last_val1 = value
+
                         if abs_deg <= key_deg:
-                            # Ratio based on the last value and this value
+                            # Interpolate based on the last value and this value
                             ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
-                            # print(f"Pitch demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
-                            # logger.info(f"Pitch demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
-                            self.ap_ckb('log', f"Pitch demand: {round(deg, 1)}. Calc value: {round(ratio_val, 2)} deg/s")
+                            self.ap_ckb('log',
+                                        f"Pitch demand: {round(deg, 1)}. Interp value: {round(ratio_val, 2)} deg/s")
 
                             htime = abs_deg / ratio_val
 
+                            last_deg1 = last_deg
+                            last_val1 = last_val
                             last_deg = key_deg
                             last_val = value
                             break
                         else:
+                            last_deg1 = last_deg
+                            last_val1 = last_val
                             last_deg = key_deg
                             last_val = value
 
                     # Check if found one curve point and we are off the scale
                     if abs_deg > last_deg and last_val > 0.0:
-                        htime = abs_deg / last_val
-                        # print(f"Pitch demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
-                        # logger.info(f"Pitch demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
-                        self.ap_ckb('log', f"Pitch demand: {round(deg, 1)}. Calc value: {round(last_val, 2)} deg/s")
+                        # Extrapolate based on the last value and the value before this value
+                        ratio_val = scale(abs_deg, last_deg1, last_deg, last_val1, last_val)
+                        self.ap_ckb('log', f"Pitch demand: {round(deg, 1)}. Extrap value: {round(ratio_val, 2)} deg/s")
 
-        # Check if we are pitching up or down
+                        htime = abs_deg / ratio_val
+
+        # Check if we are pitching up or down and perform the movement.
         if deg > 0.0:
             self.keys.send('PitchUpButton', hold=htime)
         else:
             self.keys.send('PitchDownButton', hold=htime)
 
-        # Return the hold time
-        return htime
+        # Auto-tune if necessary
+        if auto_tune:
+            # Calc the position we want to achieve
+            sp = cur_deg - deg
+            # Wait for ship to stabilize
+            sleep(0.75)
+            # Take current reading
+            off = self.ap.get_compass_target_offset()
+            if off:
+                # Are we still too far away?
+                err = sp - off['pit']
+                if abs(err) > close:
+                    # Add angle and time to curve
+                    act_ang = abs(cur_deg - off['pit'])
+                    rate = act_ang / htime
+                    self.add_to_pitch_curve(act_ang, rate)
+                    # self.ap_ckb('log', f"Pitch Tuning suggestion - Add {round(deg, 1)} deg with "
+                    #                    f"{round(rate, 2)} deg/s rate")
 
-    def yaw_right_left(self, deg: float) -> float:
+    def yaw_right_left(self, deg: float, auto_tune: bool = False, cur_deg: float = 0.0):
         """ Yaw in deg. (> 0.0 for yaw right, < 0.0 for yaw left)
         @param deg: The angle to turn in degrees
-        @return: The hold time for the movement in seconds.
+        @param auto_tune: Enable auto-tuning of ship
+        @param cur_deg: Our current angle used for tuning
+        @return: N/A.
         """
+        close = 0.5
         abs_deg = abs(deg)
         htime = abs_deg / self.ap.yawrate
 
         if self.ap.speed_demand is None:
             self.ap.set_throttle_50()
 
-        # Calculate rate for less than 30 degrees, else use default
         if self.ap.current_ship_cfg:
             # Yaw rate from ship config
             if self.ap.speed_demand in self.ap.current_ship_cfg:
@@ -257,39 +318,67 @@ class EDShipControl:
                 if 'YawRate' in speed_demand:
                     last_deg = 0.0
                     last_val = 0.0
+                    last_deg1 = 0.0
+                    last_val1 = 0.0
                     for key, value in speed_demand['YawRate'].items():
                         key_deg = float(key)
+                        if last_val == 0.0:
+                            # We want to clamp at the min recorded value because interpolating starting at 0.0 will
+                            # produce a large rate which will cause oscillation.
+                            last_val = value
+                            last_val1 = value
+
                         if abs_deg <= key_deg:
-                            # Ratio based on the last value and this value
+                            # Interpolate based on the last value and this value
                             ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
-                            # print(f"Yaw demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
-                            # logger.info(f"Yaw demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
-                            self.ap_ckb('log', f"Yaw demand: {round(deg, 1)}. Calc value: {round(ratio_val, 2)} deg/s")
+                            self.ap_ckb('log',
+                                        f"Yaw demand: {round(deg, 1)}. Interp value: {round(ratio_val, 2)} deg/s")
 
                             htime = abs_deg / ratio_val
 
+                            last_deg1 = last_deg
+                            last_val1 = last_val
                             last_deg = key_deg
                             last_val = value
                             break
                         else:
+                            last_deg1 = last_deg
+                            last_val1 = last_val
                             last_deg = key_deg
                             last_val = value
 
                     # Check if found one curve point and we are off the scale
                     if abs_deg > last_deg and last_val > 0.0:
-                        htime = abs_deg / last_val
-                        # print(f"Yaw demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
-                        # logger.info(f"Yaw demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
-                        self.ap_ckb('log', f"Yaw demand: {round(deg, 1)}. Calc value: {round(last_val, 2)} deg/s")
+                        # Extrapolate based on the last value and the value before this value
+                        ratio_val = scale(abs_deg, last_deg1, last_deg, last_val1, last_val)
+                        self.ap_ckb('log', f"Yaw demand: {round(deg, 1)}. Extrap value: {round(ratio_val, 2)} deg/s")
 
-        # Check if we are yawing right or left
+                        htime = abs_deg / ratio_val
+
+        # Check if we are yawing right or left and perform the movement.
         if deg > 0.0:
-            self.ap.keys.send('YawRightButton', hold=htime)
+            self.keys.send('YawRightButton', hold=htime)
         else:
-            self.ap.keys.send('YawLeftButton', hold=htime)
+            self.keys.send('YawLeftButton', hold=htime)
 
-        # Return the hold time
-        return htime
+        # Auto-tune if necessary
+        if auto_tune:
+            # Calc the position we want to achieve
+            sp = cur_deg - deg
+            # Wait for ship to stabilize
+            sleep(0.75)
+            # Take current reading
+            off = self.ap.get_compass_target_offset()
+            if off:
+                # Are we still too far away?
+                err = sp - off['yaw']
+                if abs(err) > close:
+                    # Add angle and time to curve
+                    act_ang = abs(cur_deg - off['yaw'])
+                    rate = act_ang / htime
+                    self.add_to_yaw_curve(act_ang, rate)
+                    # self.ap_ckb('log', f"Yaw Tuning suggestion - Add {round(deg, 1)} deg with "
+                    #                    f"{round(rate, 2)} deg/s rate")
 
     def ship_calibrate_roll(self):
         """ Performs ship roll tuning by pitching 360 degrees.
@@ -545,3 +634,11 @@ class EDShipControl:
         sleep(0.25)
         # self.ap.set_speed_50()
         self.yaw_right_left(angle)
+
+
+def main():
+    pass
+
+
+if __name__ == "__main__":
+    main()
