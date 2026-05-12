@@ -1,3 +1,18 @@
+# 5/11/2026 v1.9.0 b16
+- Added auto-tune feature.
+- Added Auto-tune RPY checkbox to GUI and ap.json.
+- Ship tuning now uses the new combined compass/target detection, allowing tuning greater than 45/30/30 deg for R/P/Y.
+- After honking, rotate the ship so that the target is at the top of the compass. When we go past the star, the target will be better aligned.
+- Added initial implementation of combined compass and target offset routine which uses both compass and target together to give a better result.
+- Added replacement refuel function that provides better control and logging.
+- Modified sun avoid to prevent those ships that overshoot the star and pitch down from pitching down if we are not fuel scooping.
+- Waypoint Assist now defaults to  station name for OCR if no bookmark index is supplied even when OCR is not the selected bookmark type.
+- Perform sun ahead check when starting FSD assist.
+- Fixed bug with cvview. Thanks InstaGibb.
+- Added additional image checks to OCR.py. Thanks Clippy.
+- Added additional checks to Screen.py. Thanks Clippy.
+- Added logging of the destination change for a future feature.
+
 # 5/4/2026 v1.9.0 b15
 - Adding set throttle log entry.
 - Added new ap.json setting 'OPCMobile' to use mobile (light) version of OCR. Thanks Bulli.
