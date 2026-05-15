@@ -3,22 +3,40 @@ from __future__ import annotations
 from typing import TypedDict
 
 from EDAP_data import *
-from RPYLineEditor import convert_curve_to_float, convert_curve_to_str, closest_angle, round_to_multiple
+from RPYLineEditor import convert_curve_to_float, convert_curve_to_str, closest_angle
 from Screen import set_focus_elite_window
 from StatusParser import StatusParser
 from time import sleep
 
 
-def scale(inp: float, in_min: float, in_max: float, out_min: float, out_max: float) -> float:
+def scale(inp: float, in_min: float, in_max: float, out_min: float, out_max: float, clamp: bool) -> float:
     """ Does scaling of the input based on input and output min/max.
     @param inp: The input, typically with the range in_min to in_max, but can extend outside.
     @param in_min: The min input value.
     @param in_max: The max input value.
     @param out_min: The min output value.
     @param out_max: The max output value.
+    @param clamp: Clamp the output to out_min and out_max.
     @return: The calculated input interpolated or extrapolated by the given ranges.
     """
-    return (inp - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
+    x = (inp - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
+    if clamp:
+        return max(min(x, out_max), out_min)
+    else:
+        return x
+
+
+class CompassTargetOffset(TypedDict):
+    """
+    Dictionary containing navigation (compass) and/or Target information.
+    """
+    roll: float
+    pit: float
+    yaw: float
+    tar_occ: bool
+    tar_behind: bool
+    used_nav: bool
+    used_tar: bool
 
 
 class ThrottleDemand(TypedDict):
@@ -131,7 +149,8 @@ class EDShipControl:
 
         return True
 
-    def roll_clockwise_anticlockwise(self, deg: float, auto_tune: bool = False, cur_deg: float = 0.0):
+    def roll_clockwise_anticlockwise(self, deg: float, auto_tune: bool = False, cur_deg: float = 0.0) -> (
+            CompassTargetOffset | None):
         """ Roll in deg. (> 0.0 for roll right, < 0.0 for roll left)
         @param deg: The angle to turn in degrees
         @param auto_tune: Enable auto-tuning of ship
@@ -164,7 +183,7 @@ class EDShipControl:
 
                         if abs_deg <= key_deg:
                             # Interpolate based on the last value and this value
-                            ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
+                            ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value, False)
                             self.ap_ckb('log',
                                         f"Roll demand: {round(deg, 1)}. Interp value: {round(ratio_val, 2)} deg/s")
 
@@ -184,7 +203,7 @@ class EDShipControl:
                     # Check if found one curve point and we are off the scale
                     if abs_deg > last_deg and last_val > 0.0:
                         # Extrapolate based on the last value and the value before this value
-                        ratio_val = scale(abs_deg, last_deg1, last_deg, last_val1, last_val)
+                        ratio_val = scale(abs_deg, last_deg1, last_deg, last_val1, last_val, False)
                         self.ap_ckb('log', f"Roll demand: {round(deg, 1)}. Extrap value: {round(ratio_val, 2)} deg/s")
 
                         htime = abs_deg / ratio_val
@@ -195,26 +214,33 @@ class EDShipControl:
         else:
             self.keys.send('RollLeftButton', hold=htime)
 
-        # Auto-tune if necessary
-        if auto_tune:
-            # Calc the position we want to achieve
-            sp = cur_deg - deg
-            # Wait for ship to stabilize
-            sleep(1)
-            # Take current reading
-            off = self.ap.get_compass_target_offset()
-            if off:
-                # Are we still too far away?
-                err = sp - off['roll']
-                if abs(err) > close:
-                    # Add angle and time to curve
-                    act_ang = abs(cur_deg - off['roll'])
-                    rate = act_ang / htime
-                    self.add_to_roll_curve(act_ang, rate)
-                    # self.ap_ckb('log', f"Roll Tuning suggestion - Add {round(deg, 1)} deg with "
-                    #                    f"{round(rate, 2)} deg/s rate")
+        # Calculate error
+        # Calc the position we want to achieve
+        sp = cur_deg - deg
+        # Wait for ship to stabilize. Calc the delay from the angle 0 - 45 deg = 0.1 - 0.75 Sec. 45 deg is where the
+        # rate no longer increases.
+        dly = scale(abs_deg, 0.0, 45.0, 0.5, 1.0, True)
+        sleep(dly)
 
-    def pitch_up_down(self, deg: float, auto_tune: bool = False, cur_deg: float = 0.0):
+        # Take current reading
+        off = self.ap.get_compass_target_offset()
+        if off:
+            # Are we still too far away?
+            err = sp - off['roll']
+            if abs(err) > close:
+                # Add angle and time to curve
+                act_ang = abs(cur_deg - off['roll'])
+                rate = act_ang / htime
+                if auto_tune:
+                    self.add_to_roll_curve(act_ang, rate)
+                else:
+                    c_ang = closest_angle(act_ang)
+                    # self.ap_ckb('log', f"Roll Tuning suggestion - Add {c_ang} deg with {round(rate, 2)} deg/s rate")
+
+        # Return compass/target data or None
+        return off
+
+    def pitch_up_down(self, deg: float, auto_tune: bool = False, cur_deg: float = 0.0) -> CompassTargetOffset | None:
         """ Pitch in deg. (> 0.0 for pitch up, < 0.0 for pitch down)
         @param deg: The angle to turn in degrees
         @param auto_tune: Enable auto-tuning of ship
@@ -247,7 +273,7 @@ class EDShipControl:
 
                         if abs_deg <= key_deg:
                             # Interpolate based on the last value and this value
-                            ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
+                            ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value, False)
                             self.ap_ckb('log',
                                         f"Pitch demand: {round(deg, 1)}. Interp value: {round(ratio_val, 2)} deg/s")
 
@@ -267,7 +293,7 @@ class EDShipControl:
                     # Check if found one curve point and we are off the scale
                     if abs_deg > last_deg and last_val > 0.0:
                         # Extrapolate based on the last value and the value before this value
-                        ratio_val = scale(abs_deg, last_deg1, last_deg, last_val1, last_val)
+                        ratio_val = scale(abs_deg, last_deg1, last_deg, last_val1, last_val, False)
                         self.ap_ckb('log', f"Pitch demand: {round(deg, 1)}. Extrap value: {round(ratio_val, 2)} deg/s")
 
                         htime = abs_deg / ratio_val
@@ -278,26 +304,33 @@ class EDShipControl:
         else:
             self.keys.send('PitchDownButton', hold=htime)
 
-        # Auto-tune if necessary
-        if auto_tune:
-            # Calc the position we want to achieve
-            sp = cur_deg - deg
-            # Wait for ship to stabilize
-            sleep(0.75)
-            # Take current reading
-            off = self.ap.get_compass_target_offset()
-            if off:
-                # Are we still too far away?
-                err = sp - off['pit']
-                if abs(err) > close:
-                    # Add angle and time to curve
-                    act_ang = abs(cur_deg - off['pit'])
-                    rate = act_ang / htime
-                    self.add_to_pitch_curve(act_ang, rate)
-                    # self.ap_ckb('log', f"Pitch Tuning suggestion - Add {round(deg, 1)} deg with "
-                    #                    f"{round(rate, 2)} deg/s rate")
+        # Calculate error
+        # Calc the position we want to achieve
+        sp = cur_deg - deg
+        # Wait for ship to stabilize. Calc the delay from the angle 0 - 30 deg = 0.1 - 0.5 Sec. 30 deg is where the
+        # rate no longer increases.
+        dly = scale(abs_deg, 0.0, 30.0, 0.5, 0.75, True)
+        sleep(dly)
 
-    def yaw_right_left(self, deg: float, auto_tune: bool = False, cur_deg: float = 0.0):
+        # Take current reading
+        off = self.ap.get_compass_target_offset()
+        if off:
+            # Are we still too far away?
+            err = sp - off['pit']
+            if abs(err) > close:
+                # Add angle and time to curve
+                act_ang = abs(cur_deg - off['pit'])
+                rate = act_ang / htime
+                if auto_tune:
+                    self.add_to_pitch_curve(act_ang, rate)
+                else:
+                    c_ang = closest_angle(act_ang)
+                    # self.ap_ckb('log', f"Pitch Tuning suggestion - Add {c_ang} deg with {round(rate, 2)} deg/s rate")
+
+        # Return compass/target data or None
+        return off
+
+    def yaw_right_left(self, deg: float, auto_tune: bool = False, cur_deg: float = 0.0) -> CompassTargetOffset | None:
         """ Yaw in deg. (> 0.0 for yaw right, < 0.0 for yaw left)
         @param deg: The angle to turn in degrees
         @param auto_tune: Enable auto-tuning of ship
@@ -330,7 +363,7 @@ class EDShipControl:
 
                         if abs_deg <= key_deg:
                             # Interpolate based on the last value and this value
-                            ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
+                            ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value, False)
                             self.ap_ckb('log',
                                         f"Yaw demand: {round(deg, 1)}. Interp value: {round(ratio_val, 2)} deg/s")
 
@@ -350,7 +383,7 @@ class EDShipControl:
                     # Check if found one curve point and we are off the scale
                     if abs_deg > last_deg and last_val > 0.0:
                         # Extrapolate based on the last value and the value before this value
-                        ratio_val = scale(abs_deg, last_deg1, last_deg, last_val1, last_val)
+                        ratio_val = scale(abs_deg, last_deg1, last_deg, last_val1, last_val, False)
                         self.ap_ckb('log', f"Yaw demand: {round(deg, 1)}. Extrap value: {round(ratio_val, 2)} deg/s")
 
                         htime = abs_deg / ratio_val
@@ -361,24 +394,32 @@ class EDShipControl:
         else:
             self.keys.send('YawLeftButton', hold=htime)
 
+        # Calculate error
         # Auto-tune if necessary
-        if auto_tune:
-            # Calc the position we want to achieve
-            sp = cur_deg - deg
-            # Wait for ship to stabilize
-            sleep(0.75)
-            # Take current reading
-            off = self.ap.get_compass_target_offset()
-            if off:
-                # Are we still too far away?
-                err = sp - off['yaw']
-                if abs(err) > close:
-                    # Add angle and time to curve
-                    act_ang = abs(cur_deg - off['yaw'])
-                    rate = act_ang / htime
+        # Calc the position we want to achieve
+        sp = cur_deg - deg
+        # Wait for ship to stabilize. Calc the delay from the angle 0 - 30 deg = 0.1 - 0.4 Sec. 30 deg is where the
+        # rate no longer increases.
+        dly = scale(abs_deg, 0.0, 30.0, 0.5, 0.75, True)
+        sleep(dly)
+
+        # Take current reading
+        off = self.ap.get_compass_target_offset()
+        if off:
+            # Are we still too far away?
+            err = sp - off['yaw']
+            if abs(err) > close:
+                # Add angle and time to curve
+                act_ang = abs(cur_deg - off['yaw'])
+                rate = act_ang / htime
+                if auto_tune:
                     self.add_to_yaw_curve(act_ang, rate)
-                    # self.ap_ckb('log', f"Yaw Tuning suggestion - Add {round(deg, 1)} deg with "
-                    #                    f"{round(rate, 2)} deg/s rate")
+                else:
+                    c_ang = closest_angle(act_ang)
+                    # self.ap_ckb('log', f"Yaw Tuning suggestion - Add {c_ang} deg with {round(rate, 2)} deg/s rate")
+
+        # Return compass/target data or None
+        return off
 
     def ship_calibrate_roll(self):
         """ Performs ship roll tuning by pitching 360 degrees.

@@ -18,7 +18,7 @@ from simple_localization import LocalizationManager
 from EDAP_EDMesg_Server import EDMesgServer
 from EDGalaxyMap import EDGalaxyMap
 from EDGraphicsSettings import EDGraphicsSettings
-from EDShipControl import EDShipControl
+from EDShipControl import EDShipControl, CompassTargetOffset
 from EDStationServicesInShip import EDStationServicesInShip
 from EDSystemMap import EDSystemMap
 from EDlogger import logging
@@ -88,19 +88,6 @@ class CompassOffset(TypedDict):
     roll: float
     pit: float
     yaw: float
-
-
-class CompassTargetOffset(TypedDict):
-    """
-    Dictionary containing navigation (compass) and/or Target information.
-    """
-    roll: float
-    pit: float
-    yaw: float
-    tar_occ: bool
-    tar_behind: bool
-    used_nav: bool
-    used_tar: bool
 
 
 class EDAutopilot:
@@ -1692,9 +1679,7 @@ class EDAutopilot:
                             self.overlay.overlay_remove_floating_text('compass_rpy')
                             self.overlay.overlay_paint()
 
-                        self.ship_control.roll_clockwise_anticlockwise(off['roll'], auto_tune=self.auto_tune_rpy, cur_deg=off['roll'])
-                        sleep(1)
-                        off = self.get_compass_target_offset()
+                        off = self.ship_control.roll_clockwise_anticlockwise(off['roll'], auto_tune=self.auto_tune_rpy, cur_deg=off['roll'])
                     else:
                         break
 
@@ -1716,9 +1701,7 @@ class EDAutopilot:
                         self.overlay.overlay_remove_floating_text('compass_rpy')
                         self.overlay.overlay_paint()
 
-                    self.ship_control.pitch_up_down(off['pit'], auto_tune=self.auto_tune_rpy, cur_deg=off['pit'])
-                    sleep(0.75)
-                    off = self.get_compass_target_offset()
+                    off = self.ship_control.pitch_up_down(off['pit'], auto_tune=self.auto_tune_rpy, cur_deg=off['pit'])
                 else:
                     break
 
@@ -1737,9 +1720,7 @@ class EDAutopilot:
                         self.overlay.overlay_remove_floating_text('compass_rpy')
                         self.overlay.overlay_paint()
 
-                    self.ship_control.yaw_right_left(off['yaw'], auto_tune=self.auto_tune_rpy, cur_deg=off['yaw'])
-                    sleep(0.5)
-                    off = self.get_compass_target_offset()
+                    off = self.ship_control.yaw_right_left(off['yaw'], auto_tune=self.auto_tune_rpy, cur_deg=off['yaw'])
                 else:
                     break
 
@@ -1920,11 +1901,7 @@ class EDAutopilot:
                 # self.ship_control.yaw_right_left(y_deg)
                 self.ship_control.yaw_right_left(off['yaw'], auto_tune=self.auto_tune_rpy, cur_deg=off['yaw'])
 
-            # Wait for ship to finish moving and picture to stabilize
-            sleep(1.0)
-
             # Check Target and Compass
-            # nav_off2 = self.get_nav_offset(scr_reg)
             tar_off2 = self.get_compass_target_offset()
             if tar_off2:
                 off = tar_off2
@@ -2634,8 +2611,8 @@ class EDAutopilot:
                 off = self.get_compass_target_offset()
                 if off:
                     self.ship_control.roll_clockwise_anticlockwise(off['roll'], auto_tune=self.auto_tune_rpy, cur_deg=off['roll'])
+
                 # Refuel
-                refueled = self.refuel(scr_reg)
                 refueled = self.refuel_new(scr_reg)
 
                 self.update_ap_status("Maneuvering")
