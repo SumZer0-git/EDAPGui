@@ -1381,6 +1381,10 @@ class EDAutopilot:
             sim = self.ocr.string_similarity(self.locale["PRESS_TO_DISENGAGE_MSG"], str(ocr_textlist))
             logger.info(f"Disengage similarity with {str(ocr_textlist)} is {sim}")
 
+        if sim > sim_match:
+            self.ap_ckb('log+vce', 'Disengage Supercruise')
+            self.keys.send('HyperSuperCombination')
+
         # Draw box around region
         if self.debug_overlay:
             elapsed_time = time.time() - start_time
@@ -1398,8 +1402,6 @@ class EDAutopilot:
             cv2.waitKey(30)
 
         if sim > sim_match:
-            # logger.info("'PRESS [] TO DISENGAGE' detected. Disengaging Supercruise")
-            # cv2.imwrite(f'test/disengage.png', image)
             return True
 
         return False
@@ -1461,9 +1463,11 @@ class EDAutopilot:
                 # self._sc_disengage_active = self.sc_disengage(self.scrReg)
 
                 # if self.sc_disengage_label_up(scr_reg):
-                self._sc_disengage_active = self.sc_disengage_ocr(self.scrReg)
-            else:
-                self._sc_disengage_active = False
+                # If active, latch active flag and let it be reset when out of SC
+                if not self._sc_disengage_active:
+                    self._sc_disengage_active = self.sc_disengage_ocr(self.scrReg)
+            # else:
+            #     self._sc_disengage_active = False
 
             # Sleep upto 1 sec max. If OCR takes > 1 sec, there will be no delay
             elapsed_time = time.time() - start_time
@@ -1850,8 +1854,8 @@ class EDAutopilot:
             # if self.sc_disengage_label_up(scr_reg):
             #     if self.sc_disengage_ocr(scr_reg):
             if self._sc_disengage_active:
-                self.ap_ckb('log+vce', 'Disengage Supercruise')
-                self.keys.send('HyperSuperCombination')
+                # self.ap_ckb('log+vce', 'Disengage Supercruise')
+                # self.keys.send('HyperSuperCombination')
                 self.stop_sco_monitoring()
                 return ScTargetAlignReturn.Disengage
 
@@ -1940,8 +1944,8 @@ class EDAutopilot:
             # if self.sc_disengage_label_up(scr_reg):
             #     if self.sc_disengage_ocr(scr_reg):
             if self._sc_disengage_active:
-                self.ap_ckb('log+vce', 'Disengage Supercruise')
-                self.keys.send('HyperSuperCombination')
+                # self.ap_ckb('log+vce', 'Disengage Supercruise')
+                # self.keys.send('HyperSuperCombination')
                 self.stop_sco_monitoring()
                 return ScTargetAlignReturn.Disengage
 
@@ -2680,7 +2684,8 @@ class EDAutopilot:
         # Loop forever keeping tight align to target, until we get SC Disengage popup
         while True:
             sleep(0.05)
-            if self.jn.ship_state()['status'] == 'in_supercruise':
+            if (self.jn.ship_state()['status'] == 'in_supercruise' or self.status.get_flag(FlagsSupercruise) or
+                    self._sc_disengage_active):
                 # Align and stay on target. If false is returned, we have lost the target behind us.
                 # self.set_speed_50()
                 align_res = self.sc_target_align(scr_reg)
@@ -2719,8 +2724,8 @@ class EDAutopilot:
             # if self.sc_disengage_label_up(scr_reg):
             #     if self.sc_disengage_ocr(scr_reg):
             if self._sc_disengage_active:
-                self.ap_ckb('log+vce', 'Disengage Supercruise')
-                self.keys.send('HyperSuperCombination')
+                # self.ap_ckb('log+vce', 'Disengage Supercruise')
+                # self.keys.send('HyperSuperCombination')
                 self.stop_sco_monitoring()
                 break
 

@@ -1,3 +1,7 @@
+# 5/14/2026 v1.9.0 b17
+- Added quick SC disengage, moving key action to detection function.
+- Ship moving now always calculates movement error, removing additional checks after the movement.
+
 # 5/11/2026 v1.9.0 b16
 - Added auto-tune feature.
 - Added Auto-tune RPY checkbox to GUI and ap.json.
