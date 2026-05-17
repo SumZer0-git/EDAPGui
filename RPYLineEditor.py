@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib.lines import Line2D
 
 
-def line_editor(curve: dict[str, float]) -> dict[str, float] | None:
+def line_editor(curve: dict[str, float], throttle_text: str) -> dict[str, float] | None:
     """ A line editor. The input data is in the following format.
     The key is a string representing the angle in degree:
         PitchRate = {
@@ -17,6 +17,7 @@ def line_editor(curve: dict[str, float]) -> dict[str, float] | None:
         "9.3": 27.22,
         "30.0": 39.7
     }
+    @param throttle_text: String to show in the title
     @param curve: The dict of line data.
     @return: The changed dict or None.
     """
@@ -42,12 +43,20 @@ def line_editor(curve: dict[str, float]) -> dict[str, float] | None:
 
     p = LineInteractor(ax1, line)
 
-    ax1.set_title('Click and drag a point to move it\n\'i\' to insert, \'d\' to delete a point')
+    ax1.set_title(f'{throttle_text}')
+    ax1.text(0.75, 0.25, 'Click and drag a point to move it\n\'i\' to insert, \'d\' to delete a point.',
+             horizontalalignment='center', verticalalignment='center', transform=ax1.transAxes)
     ax1.set_xlabel('Dist to Target (Deg)')
     ax1.set_ylabel('RPY Rate (Deg/Sec)')
     ax1.set_xlim(auto=True)
     ax1.set_ylim(auto=True)
-    ax1.autoscale_view()
+    ax1.autoscale()
+
+    # Clamp limits to 0.0 at bottom left.
+    l, r = ax1.get_xlim()
+    ax1.set_xlim(left=0.0, right=r)
+    b, t = ax1.get_ylim()
+    ax1.set_ylim(top=t, bottom=0.0)
 
     plt.show(block=True)
 
@@ -292,7 +301,7 @@ def main():
     y1 = convert_curve_to_float(PitchRate)
     x1 = convert_curve_to_str(y1)
 
-    new_arr = line_editor(PitchRate)
+    new_arr = line_editor(PitchRate, "SCSpeed50 - Pitch rate")
     if new_arr is not None:
         print("Line changed")
         # print(f"new arr: {new_arr}")

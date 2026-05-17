@@ -232,7 +232,10 @@ class EDShipControl:
                 act_ang = abs(cur_deg - off['roll'])
                 rate = act_ang / htime
                 if auto_tune:
+                    # Add a new point for the detected rate
                     self.add_to_roll_curve(act_ang, rate)
+                    # Update the existing point as well
+                    self.add_to_roll_curve(abs_deg, rate)
                 else:
                     c_ang = closest_angle(act_ang)
                     # self.ap_ckb('log', f"Roll Tuning suggestion - Add {c_ang} deg with {round(rate, 2)} deg/s rate")
@@ -322,7 +325,10 @@ class EDShipControl:
                 act_ang = abs(cur_deg - off['pit'])
                 rate = act_ang / htime
                 if auto_tune:
+                    # Add a new point for the detected rate
                     self.add_to_pitch_curve(act_ang, rate)
+                    # Update the existing point as well
+                    self.add_to_pitch_curve(abs_deg, rate)
                 else:
                     c_ang = closest_angle(act_ang)
                     # self.ap_ckb('log', f"Pitch Tuning suggestion - Add {c_ang} deg with {round(rate, 2)} deg/s rate")
@@ -413,7 +419,10 @@ class EDShipControl:
                 act_ang = abs(cur_deg - off['yaw'])
                 rate = act_ang / htime
                 if auto_tune:
+                    # Add a new point for the detected rate
                     self.add_to_yaw_curve(act_ang, rate)
+                    # Update the existing point as well
+                    self.add_to_yaw_curve(abs_deg, rate)
                 else:
                     c_ang = closest_angle(act_ang)
                     # self.ap_ckb('log', f"Yaw Tuning suggestion - Add {c_ang} deg with {round(rate, 2)} deg/s rate")
