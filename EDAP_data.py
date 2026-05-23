@@ -39,13 +39,13 @@ FlagsInFighter = 1 << 25
 FlagsInSRV = 1 << 26
 FlagsAnalysisMode = 1 << 27      # Hud in Analysis mode
 FlagsNightVision = 1 << 28
-FlagsAverageAltitude = 1 << 29   # Altitude from Average radius. On when altimeter shows OC/DRP, Off if altimeter is not shown or showing 2Km/SURF.
+FlagsAverageAltitude = 1 << 29   # Alt from Average radius. On if alt shows OC/DRP, Off if alt not shown or showing 2Km/SURF.
 FlagsFsdJump = 1 << 30           # While jumping to super-cruise or system jump. See also Flags2FsdHyperdriveCharging.
 FlagsSrvHighBeam = 1 << 31
 
 # Status.json / Dashboard Flags2 constants
 Flags2OnFoot = 1 << 0
-Flags2InTaxi = 1 << 1  # (or dropship/shuttle)
+Flags2InTaxi = 1 << 1  # (or drop-ship/shuttle)
 Flags2InMulticrew = 1 << 2  # (ie in someone else’s ship)
 Flags2OnFootInStation = 1 << 3
 Flags2OnFootOnPlanet = 1 << 4
@@ -127,12 +127,14 @@ ship_name_map = {
     'lakonminer':                   'Type-11 Prospector',
     'mamba':                        'Mamba',
     'mandalay':                     'Mandalay',
+    'mediumtransport01':            'Lynx Highliner',
     'orca':                         'Orca',
     'panthermkii':                  'Panther Clipper Mk II',
     'python':                       'Python',
     'python_nx':                    'Python Mk II',
     'scout':                        'Taipan Fighter',
     'sidewinder':                   'Sidewinder',
+    'smallcombat01_nx':             'Kestrel Mk II',
     'testbuggy':                    'Scarab',
     'type6':                        'Type-6 Transporter',
     'type7':                        'Type-7 Transporter',
@@ -183,12 +185,14 @@ ship_size_map = {
     'lakonminer':                    'M',
     'mamba':                         'M',
     'mandalay':                      'M',
+    'mediumtransport01':             'M',
     'orca':                          'L',
     'panthermkii':                   'L',
     'python':                        'M',
     'python_nx':                     'M',
     'scout':                         '',
     'sidewinder':                    'S',
+    'smallcombat01_nx':              'S',
     'testbuggy':                     '',
     'type6':                         'M',
     'type7':                         'L',
@@ -236,11 +240,13 @@ ship_rpy_sc_50 = {
     'lakonminer':                   {'RollRate': 60.0,  'PitchRate': 18.0,  'YawRate': 18.0,  'SunPitchUp+Time': 0.0},
     'mamba':                        {'RollRate': 72.0,  'PitchRate': 20.0,  'YawRate': 12.0,  'SunPitchUp+Time': 0.0},
     'mandalay':                     {'RollRate': 120.0, 'PitchRate': 40.0,  'YawRate': 24.0,  'SunPitchUp+Time': -1.0},
+    'mediumtransport01':            {'RollRate': 120.0, 'PitchRate': 40.0,  'YawRate': 24.0,  'SunPitchUp+Time': 0.0},
     'orca':                         {'RollRate': 60.0,  'PitchRate': 20.0,  'YawRate': 18.0,  'SunPitchUp+Time': 0.0},
     'panthermkii':                  {'RollRate': 25.0,  'PitchRate': 16.0,  'YawRate': 10.0,  'SunPitchUp+Time': 1.0},
     'python':                       {'RollRate': 90.0,  'PitchRate': 23.0,  'YawRate': 10.0,  'SunPitchUp+Time': 0.0},
     'python_nx':                    {'RollRate': 90.0,  'PitchRate': 22.0,  'YawRate': 10.0,  'SunPitchUp+Time': 0.0},
     'sidewinder':                   {'RollRate': 120.0, 'PitchRate': 40.0,  'YawRate': 12.0,  'SunPitchUp+Time': 0.0},
+    'smallcombat01_nx':             {'RollRate': 120.0, 'PitchRate': 40.0,  'YawRate': 12.0,  'SunPitchUp+Time': 0.0},
     'type6':                        {'RollRate': 90.0,  'PitchRate': 26.0,  'YawRate': 12.0,  'SunPitchUp+Time': 0.0},
     'type7':                        {'RollRate': 60.0,  'PitchRate': 17.0,  'YawRate': 18.0,  'SunPitchUp+Time': 0.0},
     'type8':                        {'RollRate': 60.0,  'PitchRate': 16.0,  'YawRate': 9.0,   'SunPitchUp+Time': 0.0},
@@ -287,11 +293,13 @@ ship_rpy_sc_100 = {
     'lakonminer':                   {'RollRate': 48.0,  'PitchRate': 10.9,  'YawRate': 10.9,  'SunPitchUp+Time': 0.0},
     'mamba':                        {'RollRate': 72.0,  'PitchRate': 13.0,  'YawRate': 8.0,   'SunPitchUp+Time': 0.0},
     'mandalay':                     {'RollRate': 90.0,  'PitchRate': 24.0,  'YawRate': 16.0,  'SunPitchUp+Time': -1.0},
+    'mediumtransport01':            {'RollRate': 90.0,  'PitchRate': 24.0,  'YawRate': 16.0,  'SunPitchUp+Time': 0.0},
     'orca':                         {'RollRate': 51.0,  'PitchRate': 14.0,  'YawRate': 12.0,  'SunPitchUp+Time': 0.0},
     'panthermkii':                  {'RollRate': 20.0,  'PitchRate': 9.7,   'YawRate': 6.0,   'SunPitchUp+Time': 1.0},
     'python':                       {'RollRate': 72.0,  'PitchRate': 14.0,  'YawRate': 6.0,   'SunPitchUp+Time': 0.0},
     'python_nx':                    {'RollRate': 90.0,  'PitchRate': 22.0,  'YawRate': 10.0,  'SunPitchUp+Time': 0.0},
     'sidewinder':                   {'RollRate': 90.0,  'PitchRate': 28.0,  'YawRate': 8.0,   'SunPitchUp+Time': 0.0},
+    'smallcombat01_nx':             {'RollRate': 90.0,  'PitchRate': 28.0,  'YawRate': 8.0,   'SunPitchUp+Time': 0.0},
     'type6':                        {'RollRate': 72.0,  'PitchRate': 16.0,  'YawRate': 8.0,   'SunPitchUp+Time': 0.0},
     'type7':                        {'RollRate': 45.0,  'PitchRate': 11.0,  'YawRate': 11.0,  'SunPitchUp+Time': 0.0},
     'type8':                        {'RollRate': 60.0,  'PitchRate': 16.0,  'YawRate': 9.0,   'SunPitchUp+Time': 0.0},
@@ -390,7 +398,7 @@ commodities = {
         "Biowaste", "Chemical Waste", "Scrap", "Toxic Waste"
     ],
     "Weapons": [
-        "Battle Weapons", "Landmines", "Non Lethal Weapons", "Personal Weapons", "Reactive Armour"
+        "Battle Weapons", "Landmines", "Non-Lethal Weapons", "Personal Weapons", "Reactive Armour"
     ]
 }
 

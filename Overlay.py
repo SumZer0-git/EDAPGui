@@ -278,15 +278,15 @@ class Overlay:
 
     @staticmethod 
     def overlay_draw_rect(hdc, pt1, pt2, line_type, color, thick):
-        wid = pt2[0] - pt1[0]
-        hgt = pt2[1] - pt1[1]
+        wid = int(pt2[0] - pt1[0])
+        hgt = int(pt2[1] - pt1[1])
 
         pin_thick = win32gui.CreatePen(line_type, thick, win32api.RGB(color[0], color[1], color[2]))
         pin_thin  = win32gui.CreatePen(line_type, 1, win32api.RGB(color[0], color[1], color[2]))
    
         if wid < 20:
             win32gui.SelectObject(hdc, pin_thin)
-            win32gui.Rectangle(hdc, pt1[0], pt1[1], pt2[0], pt2[1])
+            win32gui.Rectangle(hdc, int(pt1[0]), int(pt1[1]), int(pt2[0]), int(pt2[1]))
         else:
             len_wid = wid / 5
             len_hgt = hgt / 5

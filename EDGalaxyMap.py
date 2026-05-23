@@ -4,7 +4,7 @@ import json
 import os
 
 from EDAP_data import GuiFocusGalaxyMap
-from Screen_Regions import scale_region, Quad
+from Screen_Regions import Quad, load_calibrated_regions
 from StatusParser import StatusParser
 from time import sleep
 from EDlogger import logger
@@ -23,27 +23,12 @@ class EDGalaxyMap:
         self.ap_ckb = cb
         # The rect is top left x, y, and bottom right x, y in fraction of screen resolution
         self.reg = {'full_panel': {'rect': [0.1, 0.1, 0.9, 0.9]},
-                    'cartographics': {'rect': [0.0, 0.0, 0.25, 0.25]},
+                    'cartographics': {'rect': [0.0, 0.0, 0.15, 0.15]},
                     }
-        self.sub_reg = {'cartographics': {'rect': [0.0, 0.0, 0.15, 0.15]}}
         self.SystemSelectDelay = 0.5  # Delay selecting the system when in galaxy map
 
-        self.load_calibrated_regions()
-
-    def load_calibrated_regions(self):
-        calibration_file = 'configs/ocr_calibration.json'
-        if os.path.exists(calibration_file):
-            with open(calibration_file, 'r') as f:
-                calibrated_regions = json.load(f)
-
-            for key, value in self.reg.items():
-                calibrated_key = f"EDGalaxyMap.{key}"
-                if calibrated_key in calibrated_regions:
-                    self.reg[key]['rect'] = calibrated_regions[calibrated_key]['rect']
-
-            # Scale the regions based on the sub-region.
-            self.reg['cartographics']['rect'] = scale_region(self.reg['full_panel']['rect'],
-                                                             self.sub_reg['cartographics']['rect'])
+        # Load custom regions from file
+        load_calibrated_regions('EDGalaxyMap', self.reg)
 
     def set_gal_map_dest_bookmark(self, ap, bookmark_type: str, bookmark_position: int) -> bool:
         """ Set the gal map destination using a bookmark.

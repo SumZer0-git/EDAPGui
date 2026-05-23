@@ -106,7 +106,7 @@ class TceIntegration:
 
         except Exception as e:
             # By this way we can know about the type of error occurring
-            self.ap.ap_ckb('log', f"Error reading database '{db_path}': " + str(e))
+            self.ap_ckb('log', f"Error reading database '{db_path}': " + str(e))
             logger.error(f"Error reading database '{db_path}': " + str(e))
 
         finally:

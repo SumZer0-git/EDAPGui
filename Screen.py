@@ -1,10 +1,12 @@
 from __future__ import annotations
+import time
 import typing
 from copy import copy
 
 import cv2
 import win32con
 import win32gui
+import numpy as np
 from numpy import array
 import mss
 import json
@@ -68,8 +70,8 @@ def crop_image_pix(image, quad: Quad):
     """ Crop an image using a pixel values.
     Rect is an array of pixel values [100, 200, 1800, 1600] = [X0, Y0, X1, Y1] = [L, T, R, B]
     Returns the cropped image."""
-    cropped = image[int(quad.get_top()):int(quad.get_bottom()),
-                    int(quad.get_left()):int(quad.get_right())]  # i.e. [y:y+h, x:x+w]
+    cropped = image[int(quad.top):int(quad.bottom),
+                    int(quad.left):int(quad.right)]  # i.e. [y:y+h, x:x+w]
     return cropped
 
 
@@ -86,15 +88,19 @@ class Screen:
         self.monitor_number = 0
         self.aspect_ratio = 0
         self.mon = None
+        # Throttle state for repeated screen-capture failure messages so the log is not flooded.
+        self._last_capture_warn_ts = 0.0
+        self._capture_warn_interval = 5.0  # seconds between repeated warnings
+        self._capture_failure_count = 0
 
         # Find ED window position to determine which monitor it is on
-        ed_rect = self.get_elite_window_rect()
-        if ed_rect is None:
+        self.ed_rect = self.get_elite_window_rect()
+        if self.ed_rect is None:
             msg = f"Could not find window '{elite_dangerous_window}'. Once Elite Dangerous is running, restart EDAP."
             self.ap_ckb('log', f"ERROR: {msg}")
             logger.error(msg)
         else:
-            logger.debug(f'Found Elite Dangerous window position: {ed_rect}')
+            logger.debug(f'Found Elite Dangerous window position: {self.ed_rect}')
 
         # Examine all monitors to determine match with ED
         self.mons = self.mss.monitors
@@ -103,8 +109,8 @@ class Screen:
         for item in self.mons:
             logger.debug(f'Found monitor {mon_num} with details: {item}')
             if mon_num > 0:  # ignore monitor 0 as it is the complete desktop (dims of all monitors)
-                if ed_rect is not None:
-                    if item['left'] == ed_rect[0] and item['top'] == ed_rect[1]:
+                if self.ed_rect is not None:
+                    if item['left'] == self.ed_rect[0] and item['top'] == self.ed_rect[1]:
                         # Get information of monitor
                         self.monitor_number = mon_num
                         self.mon = self.mss.monitors[self.monitor_number]
@@ -156,13 +162,13 @@ class Screen:
 
         # used this to write the self.scales table to the json file
         # self.write_config(self.scales)
-        
+
         ss = self.read_config()
 
         # if we read it then point to it, otherwise use the default table above
         if ss is not None:
             self.scales = ss
-            logger.debug("read json:"+str(ss))
+            logger.debug("read json:" + str(ss))
 
         # try to find the resolution/scale values in table
         # if not, then take current screen size and divide it out by 3440 x1440
@@ -170,7 +176,7 @@ class Screen:
             scale_key = str(self.screen_width)+"x"+str(self.screen_height)
             self.scaleX = self.scales[scale_key][0]
             self.scaleY = self.scales[scale_key][1]
-        except:            
+        except:
             # if we don't have a definition for the resolution then use calculation
             self.scaleX = self.screen_width / 3440.0
             self.scaleY = self.screen_height / 1440.0
@@ -183,7 +189,7 @@ class Screen:
         
         logger.debug('screen size: w='+str(self.screen_width)+" h="+str(self.screen_height))
         logger.debug('screen position: x='+str(self.screen_left)+" y="+str(self.screen_top))
-        logger.debug('Default scale X, Y: '+str(self.scaleX)+", "+str(self.scaleY))
+        logger.debug('Default scale X, Y: ' + str(self.scaleX) + ", " + str(self.scaleY))
 
     @staticmethod
     def get_elite_window_rect() -> typing.Tuple[int, int, int, int] | None:
@@ -207,32 +213,47 @@ class Screen:
         else:
             return False
 
-    def write_config(self, data, fileName='./configs/resolution.json'):
+    def write_config(self, data, filename='./configs/resolution.json'):
         if data is None:
             data = self.scales
         try:
-            with open(fileName,"w") as fp:
-                json.dump(data,fp, indent=4)
+            with open(filename, "w") as fp:
+                json.dump(data, fp, indent=4)
         except Exception as e:
-            logger.warning("Screen.py write_config error:"+str(e))
+            logger.warning("Screen.py write_config error:" + str(e))
 
-    def read_config(self, fileName='./configs/resolution.json'):
+    @staticmethod
+    def read_config(filename='./configs/resolution.json'):
         s = None
         try:
-            with open(fileName,"r") as fp:
+            with open(filename, "r") as fp:
                 s = json.load(fp)
-        except  Exception as e:
-            logger.warning("Screen.py read_config error :"+str(e))
+        except Exception as e:
+            logger.warning("Screen.py read_config error :" + str(e))
 
         return s
 
-    # reg defines a box as a percentage of screen width and height
-    def get_screen_region(self, reg, rgb=True):
-        image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]), rgb)
+    def get_screen_size(self):
+        return self.screen_width, self.screen_height
+
+    def get_screen_region(self, rect, rgb=True):
+        """ Gets the screen region. Should be BGR only for CV2.
+        @param rect: Reg defines a box in pixels.
+        @param rgb: Returns RGB when true, else BGR when false.
+        """
+        image = self.get_screen(int(rect[0]), int(rect[1]), int(rect[2]), int(rect[3]), rgb)
         return image
 
     def get_screen(self, x_left, y_top, x_right, y_bot, rgb=True):    # if absolute need to scale??
-        """ Get screen from co-ords in pixels."""
+        """ Get screen from co-ords in pixels. Should be BGR only for CV2.
+        Returns the captured image, or None if capture failed (empty grab, no monitor, etc.).
+        Callers must tolerate None.
+        @param x_left:
+        @param y_top:
+        @param x_right:
+        @param y_bot:
+        @param rgb: Returns RGB when true, else BGR when false.
+        """
         monitor = {
             "top": self.mon["top"] + int(y_top),
             "left": self.mon["left"] + int(x_left),
@@ -240,22 +261,46 @@ class Screen:
             "height": int(y_bot - y_top),
             "mon": self.monitor_number,
         }
-        image = array(self.mss.grab(monitor))
+        try:
+            image = array(self.mss.grab(monitor))
+        except Exception as e:
+            self._warn_capture_failure(f"mss.grab() raised {type(e).__name__}: {e}")
+            return None
+
+        if image is None or image.size == 0 or image.shape[0] == 0 or image.shape[1] == 0:
+            self._warn_capture_failure(
+                "mss.grab() returned an empty image. Most likely cause: Elite Dangerous is running "
+                "in exclusive 'Fullscreen' mode (set Display Mode to 'Borderless' in ED's graphics "
+                "options). Other causes: ED was moved to a different monitor after EDAP started "
+                "(restart EDAP), or HDR / DPI scaling issues."
+            )
+            return None
+
         # TODO - mss.grab returns the image in BGR format, so no need to convert to RGB2BGR
         if rgb:
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            try:
+                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            except cv2.error as e:
+                self._warn_capture_failure(f"cv2.cvtColor failed on captured image: {e}")
+                return None
         return image
         
     def get_screen_rect_pct(self, rect):
         """ Grabs a screenshot and returns the selected region as an image.
         @param rect: A rect array ([L, T, R, B]) in percent (0.0 - 1.0)
-        @return: An image defined by the region.
+        @return: An image defined by the region, or None if capture failed.
         """
         if self.using_screen:
             abs_rect = self.screen_rect_to_abs(rect)
             image = self.get_screen(abs_rect[0], abs_rect[1], abs_rect[2], abs_rect[3])
+            if image is None:
+                return None
             # TODO delete this line when COLOR_RGB2BGR is removed from get_screen()
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            try:
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            except cv2.error as e:
+                self._warn_capture_failure(f"cv2.cvtColor (BGR2RGB) failed: {e}")
+                return None
             return image
         else:
             if self._screen_image is None:
@@ -270,9 +315,12 @@ class Screen:
         @param rect: A rect array ([L, T, R, B]) in percent (0.0 - 1.0)
         @return: A rect array ([L, T, R, B]) in pixels
         """
-        abs_rect = [int(rect[0] * self.screen_width), int(rect[1] * self.screen_height),
-                    int(rect[2] * self.screen_width), int(rect[3] * self.screen_height)]
-        return abs_rect
+        return [
+            int(rect[0] * self.screen_width),
+            int(rect[1] * self.screen_height),
+            int(rect[2] * self.screen_width),
+            int(rect[3] * self.screen_height)
+        ]
 
     def screen_region_pct_to_pix(self, quad: Quad) -> Quad:
         """ Converts and array of real percentage screen values to int absolutes.
@@ -284,12 +332,18 @@ class Screen:
         return q
 
     def get_screen_full(self):
-        """ Grabs a full screenshot and returns the image.
+        """ Grabs a full screenshot and returns the image, or None if capture failed.
         """
         if self.using_screen:
             image = self.get_screen(0, 0, self.screen_width, self.screen_height)
+            if image is None:
+                return None
             # TODO delete this line when COLOR_RGB2BGR is removed from get_screen()
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            try:
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            except cv2.error as e:
+                self._warn_capture_failure(f"cv2.cvtColor (BGR2RGB) failed: {e}")
+                return None
             return image
         else:
             if self._screen_image is None:
@@ -313,3 +367,30 @@ class Screen:
         self.screen_height = h
         self.screen_left = 0
         self.screen_top = 0
+
+    def _warn_capture_failure(self, msg: str):
+        """ Log a screen-capture failure, throttled so we do not flood the log when
+        an assist loop polls the screen many times per second.
+        """
+        self._capture_failure_count += 1
+        now = time.time()
+        if now - self._last_capture_warn_ts < self._capture_warn_interval:
+            return
+        self._last_capture_warn_ts = now
+        full_msg = f"{msg} (suppressed {self._capture_failure_count - 1} similar warnings)"
+        logger.warning(full_msg)
+        try:
+            self.ap_ckb('log', f"WARNING: {msg}")
+        except Exception:
+            # ap_ckb can be None or fail during very early init; never let logging crash callers.
+            pass
+        self._capture_failure_count = 0
+
+
+# Usage Example
+if __name__ == "__main__":
+    scr = Screen(cb=None)
+
+    #while True:
+    img = scr.get_screen_full()
+    ii = 0

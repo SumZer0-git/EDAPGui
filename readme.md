@@ -49,6 +49,9 @@ Note: this autopilot is based on https://github.com/skai2/EDAutopilot , some of 
  
 Also Note: This repository is provided for educational purposes as a in depth programming example of interacting with file based data, computer vision processing, user feedback via voice, win32 integration using python, threading interaction, and python classes.  
 
+## Colonization (Construction Projects) Editor
+Aids with colonization construction projects, determining what commodities are needed for each project. Additional information can be found [here](docs/ColonizationEditor.md). 
+
 # Limitations:
 * Will only work with Windows (not Linux)
 * Default HUD colors must be used, if you changed those colors, this autopilot will not work
@@ -103,10 +106,7 @@ If you just want to download and run EDAP and have no interest in the source cod
 ## Advanced
 If you are interested in Python and making changes to the code, or seeing how it works, use this method:
 
-1. Clone this repository
-```sh
-> git clone https://github.com/sumzer0-git/EDAPGui
-```
+1. Clone this repository using the methods available under the green '<> Code' button above.
 2. Install requirements
 ```sh
 > cd EDAPGui
@@ -133,6 +133,9 @@ The following error may occur:
 > AttributeError: '_thread._local' object has no attribute 'srcdc'
 
 The error is usually as a result of mss incompatibility. Try pip install mss==8.0.3 or pip install mss==8.0.3.
+
+## Upgrades
+If you install a new version, copy the **Configs** folder from the old version to the new version to retain the settings you have configured. Refer to the release notes to identify and configuration that needs to be changed for that version upgrade.
 
 # Running ED_AP
 * With Elite Dangerous (ED) running, start ED_AP:
@@ -162,7 +165,7 @@ Once ED_AP is running there are few steps to complete the first time ED AP is ru
 
 
 # Required Keybindings
-The following keybindings are required by AP, so make sure a key is assigned to each by going into the Elite Dangerous options and assigning a key. After changing keybindings run AP again for the chagnes to be read. An error will appear if any of the keybindings are missing in Elite Dangerous.
+The following keybindings are required by AP, so make sure a key is assigned to each by going into the Elite Dangerous options and assigning a key. After changing keybindings run AP again for the changes to be read. An error will appear if any of the keybindings are missing in Elite Dangerous.
 
 | Binding               | Name                     | Location under OPTIONS > CONTROLS            |
 |-----------------------|--------------------------|----------------------------------------------|
@@ -267,8 +270,9 @@ The following keybindings are required by AP, so make sure a key is assigned to 
 * Pg Up - Start Robigo Assist
 * End  - Terminate any running assistants
 
-Hot keys are now configurable in the config-AP.json file, so you can remap them. Be sure not to use any keys you have mapped in ED.  You can find the key names here:
-https://pythonhosted.org/pynput/keyboard.html
+Hot keys are now configurable in the config-AP.json file, so you can remap them. Be sure not to use any keys you have mapped in ED.
+The hotkey must be in the format 'ctrl+shift+a, s'. This would trigger when the user holds ctrl, shift and "a" at once, releases, and then presses "s". To represent literal commas, pluses, and spaces, use their names ('comma', 'plus', 'space').
+For those wanting a detailed list, refer to the [Keyboard](https://github.com/boppreh/keyboard/tree/master) module's [winkeyboard.py](https://github.com/boppreh/keyboard/blob/master/keyboard/_winkeyboard.py) file.
 
 ## Additional Configuration Settings
 The following settings from the AP.json file (in the configs folder) are **not** available through the GUI and must be changed directly within AP.json using any text editor:
@@ -293,9 +297,11 @@ The following settings from the AP.json file (in the configs folder) are **not**
     "target_align_outer_lim": 1.0,
     "target_align_inner_lim": 0.5,
 
-    "FCDepartureAngle": 90.0,      # Angle to pitch up when leaving a Fleet Carrier
     "FCDepartureTime": 30.0,       # When leaving a Fleet Carrier, the time in Secs to fly away after enabling SC.
+    "FCDepartureAngle": 90.0,      # Angle to pitch up when leaving a Fleet Carrier
     "OCDepartureAngle": 90.0       # Angle to pitch up when leaving an Orbital Construction Site
+
+    "OCRMobile": false,  # Use the mobile (light) version which is smaller and faster, but less accurate.
 ```
                                                               
 ## Elite Dangerous, Role Play and Autopilot

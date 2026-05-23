@@ -5,19 +5,22 @@ Calibration is performed from the Calibration tab:
 
 ![Calibration.png](../screen/Calibration.png)
 
-## Region Calibration
+## Region Calibration and Sub-Region Calibration
 This performs calibration of certain regions of the screen that may change bsed on resolution and FOV settings. It may be required to recalibrate if either of these settings change.
+
+The regions are all defined in percentage of the screen resolution, so the default value should be close for similar aspect ratios, regardless of the pixel count. The sub-regions are also defined in percentage of the parent region, so the default values should be close even if the parent region is different.
+
+Note: Calibrate a region before calibrating sub-regions. For most users, once the region calibration is complete, the sub-regions will **not** have to be changed. If a sub-region is changed and the region is incorrect, all sub-regions will need to be changed as well.
 
 ![CalibrationRegionCalibration.png](../screen/CalibrationRegionCalibration.png)
 
 The process is generally the same for each region:
 1. Select a region from the dropdown list. The region will be highlighted on the screen.
-2. Review the procedure which explains the process. It may be that the highlighted region is already correct. If the procedure states 'Do not change', then the region is read only, it will automatically be calculated when **Save All Calibrations** is clicked.
-3. Follow the pictures below, if unsure of the instructions.
-4. Click the **Calibrate Region** button.
-5. The current region will be highlighted in green.
-6. Left click and drag with the mouse to select a new region. It will be highlighted blue. Release the mouse button to complete the selection. To cancel selection, right click the mouse.
-7. Click **Save All Calibrations** and select the region again in the dropdown list to check the region is correct. Repeat until correct.
+1. Review the procedure which explains the process. It may be that the highlighted region is already correct. If the procedure states 'Do not change', then the region is read only, it will automatically be calculated when **Save All Calibrations** is clicked.
+1. Follow the pictures below, if unsure of the instructions.
+1. Use the number entry fields to change the region size and location. It will be highlighted as it changes.
+1. Once happy, click **Save All Calibrations** and select the region again in the dropdown list to check the region is correct. Repeat until correct.
+1. If the sub-region dropdown contains items, select an item and using the same process as above, check the sub-region and adjust as necessary.
 
 To further aid calibration, the following give examples of the correct region. Note that in the examples below, some additional space was added to make it easier to see where the region is. Try to get as close as possible to the line, without going over.
 
@@ -68,16 +71,12 @@ Note: Appears the Nav Panel changes per ship, so increase the region for each ne
 ![CalibrationStsPanel1.png](../screen/CalibrationStsPanel1.png)
 ![CalibrationStsPanel2.png](../screen/CalibrationStsPanel2.png)
 
-## Compass and Target Calibration
+## Target Calibration
 
 This document explains how to perform calibration for the Elite Dangerous Autopilot (GUI) version.  You will need to perform this calibration step if the behavior of EDAPGui on your system is endless Pitching up when activating the FSD Assist.  For some user systems this calibration is needed to determine the proper scaling value for the images in the template directory.  These are dependant on screen/game resolution.   The template images were created on a 3440x1440 resolution monitor and require scaling for other target computers.
 
 ![CalibrationCompassAndTarget.png](../screen/CalibrationCompassAndTarget.png)
 
-## Compass Calibration
-Not all ships have the same size compass, so it is necessary to calibrate the compass of each of your ships to take into account the resolution of the screen and FOV. Once saved, the correct scaling will automatically be loaded when changing ships.
-
-## Target Calibration
 A configuration file called _config-resolution.json_ contains standard Screen resolution and scaling values. The calibration sequence below will store the scaling configuration in the settings file AP.json. Otherwise it will look for another entry that matches the users screen resolution. This calibration exercise should only need to be done once on your system.  
 
 # Process
@@ -96,15 +95,15 @@ Also see:  HOWTO-RollPitchYaw.md on how to adjust your autopilot performance whi
 
 ![screen-cap-calibrate.png](../screen/screen-cap-calibrate.png)
 
-# To run the calibration (Target or Compass)
+# To run the Target calibration
 * Start EDAPGui
-* Under the File menu, click 'Calibrate Target' or 'Calibrate Compass'
+* Under the File menu, click 'Calibrate Target'
 * Select OK from the popup
-  * A blue boxes appears, either around the compass or around the center of the screen
-  * Ensure that the compass/target are visible within these areas
+  * A blue boxes appears, either around the center of the screen
+  * Ensure that the target is visible within these areas
   * The calibration will likely take less than 1 minute
   * A red box will appear in the blue box and will attempt to find matching images. When a match is found, a green box will appear over the match. This is the best match found so far
-  * The process is repeated a number of times with different matching thresholds. The green box will always indicate the best match and should be located around the compass and target
+  * The process is repeated a number of times with different matching thresholds. The green box will always indicate the best match and should be located around the target
   * The match percentabe (0.0 to 1.0) is shown above the green box. A match of > 0.5 for both compass and target is required for success
   * The GUI Window will show the results 
     * Also you can open config-resolution.json to see the selected scaling values for the 'Calibrated' key

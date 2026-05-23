@@ -1,7 +1,5 @@
 from __future__ import annotations
 import time
-from datetime import datetime
-
 import cv2
 import numpy as np
 from cv2.typing import MatLike
@@ -10,9 +8,6 @@ from strsimpy import SorensenDice
 from strsimpy.jaro_winkler import JaroWinkler
 from strsimpy.normalized_levenshtein import NormalizedLevenshtein
 from EDlogger import logger
-from tkinter import messagebox
-import tkinter as tk
-
 from Screen_Regions import Quad
 
 """
@@ -27,16 +22,53 @@ Author: Stumpii
 
 class OCR:
     def __init__(self, ed_ap, screen):
+        """
+        Initialise the OCR class.
+        @param ed_ap:
+        @param screen:
+        """
         self.ap = ed_ap
         self.screen = screen
-        self.paddleocr = PaddleOCR(
-            use_doc_orientation_classify=False,
-            use_doc_unwarping=False,
-            use_textline_orientation=False)  # text detection + text recognition
+        if self.ap.config['OCRMobile']:
+            self.paddleocr = PaddleOCR(
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=False,
+                text_detection_model_name="PP-OCRv5_mobile_det",
+                text_recognition_model_name="en_PP-OCRv5_mobile_rec")  # text detection + text recognition
+        else:
+            self.paddleocr = PaddleOCR(
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=False)  # text detection + text recognition
+
         # Class for text similarity metrics
         self.jarowinkler = JaroWinkler()
         self.sorensendice = SorensenDice()
         self.normalized_levenshtein = NormalizedLevenshtein()
+
+    def _reinit_paddleocr(self):
+        """ Reinitialize PaddleOCR after a failure. PaddleOCR's C++ layer can throw
+        an 'Unknown exception' which corrupts internal state. If the same instance is
+        reused, the next call will cause a hard process crash with no Python traceback.
+        Creating a fresh instance prevents this. """
+        try:
+            logger.warning("Reinitializing PaddleOCR after failure.")
+            if self.ap.config['OCRMobile']:
+                self.paddleocr = PaddleOCR(
+                    use_doc_orientation_classify=False,
+                    use_doc_unwarping=False,
+                    use_textline_orientation=False,
+                    text_detection_model_name="PP-OCRv5_mobile_det",
+                    text_recognition_model_name="en_PP-OCRv5_mobile_rec")  # text detection + text recognition
+            else:
+                self.paddleocr = PaddleOCR(
+                    use_doc_orientation_classify=False,
+                    use_doc_unwarping=False,
+                    use_textline_orientation=False)  # text detection + text recognition
+
+        except Exception as e:
+            logger.error(f"Failed to reinitialize PaddleOCR: {e}")
 
     def string_similarity(self, s1: str, s2: str) -> float:
         """ Performs a string similarity check and returns the result.
@@ -51,6 +83,8 @@ class OCR:
         s1_new = s1_new.replace("', '",  "")
         s1_new = s1_new.replace("<",  "")
         s1_new = s1_new.replace(">",  "")
+        s1_new = s1_new.replace("-",  "")
+        s1_new = s1_new.replace("—",  "")
         s1_new = s1_new.replace(" ",  "")
 
         s2_new = s2.replace("['",  "")
@@ -60,13 +94,15 @@ class OCR:
         s2_new = s2_new.replace("', '",  "")
         s2_new = s2_new.replace("<",  "")
         s2_new = s2_new.replace(">",  "")
+        s2_new = s2_new.replace("-",  "")
+        s2_new = s2_new.replace("—",  "")
         s2_new = s2_new.replace(" ",  "")
 
         # return self.jarowinkler.similarity(s1, s2)
         return self.normalized_levenshtein.similarity(s1_new, s2_new)
         # return self.sorensendice.similarity(s1_new, s2_new)
 
-    def image_ocr(self, image, name = ''):
+    def image_ocr(self, image, name=''):
         """ Perform OCR with no filtering. Returns the full OCR data and a simplified list of strings.
         This routine is slower than the simplified OCR.
         @param name:
@@ -77,9 +113,13 @@ class OCR:
         'ocr_textlist' is returned in the following format, or None:
         ['DESTINATION', 'SIRIUS ATMOSPHERICS']
         """
-        # Remove Alpha channel if it exists
-        image2 = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+        # Defensive: callers may receive a None / empty image when screen capture fails
+        # (e.g., ED in exclusive Fullscreen). Treat that as "no text" instead of crashing.
+        if image is None or getattr(image, 'size', 0) == 0:
+            return None, None
         try:
+            # Remove Alpha channel if it exists
+            image2 = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
             ocr_data = self.paddleocr.predict(image2)
 
             if ocr_data is None:
@@ -105,25 +145,32 @@ class OCR:
 
         except Exception as e:
             logger.error(f"OCR failed: {e}")
+            # Reinit to avoid hard crash on next call due to corrupted C++ state
+            self._reinit_paddleocr()
+            logger.error(f"Image stored to ocr_output folder.")
+            cv2.imwrite(f"./ocr_output/{name}", image)
             return None, None
 
     def image_simple_ocr(self, image, name='') -> list[str] | None:
         """ Perform OCR with no filtering. Returns a simplified list of strings with no positional data.
         This routine is faster than the function that returns the full data. Generally good when you
         expect to only return one or two lines of text.
-        @param name:
+        @param name: A name for the image for logging/debug purposes.
         @param image: The image to check.
         'ocr_textlist' is returned in the following format, or None:
         ['DESTINATION', 'SIRIUS ATMOSPHERICS']
         """
-        if image is None:
+        # Defensive: callers may receive a None / empty image when screen capture fails
+        # (e.g., ED in exclusive Fullscreen). Treat that as "no text" instead of crashing
+        # with an obscure cv::cvtColor "!_src.empty()" assertion.
+        if image is None or getattr(image, 'size', 0) == 0:
             return None
 
         # start_time = time.time()
 
-        # Remove Alpha channel if it exists
-        image2 = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
         try:
+            # Remove Alpha channel if it exists
+            image2 = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
             ocr_data = self.paddleocr.predict(image2)
 
             # elapsed_time = time.time() - start_time
@@ -154,19 +201,22 @@ class OCR:
 
         except Exception as e:
             logger.error(f"OCR failed: {e}")
+            # Reinit to avoid hard crash on next call due to corrupted C++ state
+            self._reinit_paddleocr()
+            logger.error(f"Image stored to ocr_output folder.")
+            cv2.imwrite(f"./ocr_output/{name}", image)
             return None
 
-    def get_highlighted_item_data(self, image, min_w, min_h, name=''):
+    def get_highlighted_item_data(self, image, item: Quad, name=''):
         """ Attempts to find a selected item in an image. The selected item is identified by being solid orange or blue
             rectangle with dark text, instead of orange/blue text on a dark background.
             The OCR daya of the first item matching the criteria is returned, otherwise None.
+            @param item: A Quad representing the item, in percentage.
             @param name:
             @param image: The image to check.
-            @param min_h: Minimum height in percent of the input image.
-            @param min_w: Minimum width in percent of the input image.
      """
         # Find the selected item/menu (solid orange)
-        img_selected, quad = self.get_highlighted_item_in_image(image, min_w, min_h)
+        img_selected, quad = self.get_highlighted_item_in_image(image, item)
         if img_selected is not None:
             # cv2.imshow("img", img_selected)
 
@@ -181,16 +231,22 @@ class OCR:
             return None, None, None, None
 
     @staticmethod
-    def get_highlighted_item_in_image(image, min_w, min_h) -> (MatLike, Quad):
+    def get_highlighted_item_in_image(image, item: Quad) -> (MatLike, Quad):
         """ Attempts to find a selected item in an image. The selected item is identified by being solid orange or blue
         rectangle with dark text, instead of orange/blue text on a dark background.
         The image of the first item matching the criteria and minimum width and height is returned
         with x and y co-ordinates, otherwise None.
+        @param item: A Quad representing the item in percent.
         @param image: The image to check.
-        @param min_h: Minimum height in percent of the input image.
-        @param min_w: Minimum width in percent of the input image.
         @return: The highlighted image and the matching Quad position in percentage of the image size, or (None, None)
         """
+        # Defensive: an empty / None image (e.g., screen capture failure) must not crash.
+        if image is None or getattr(image, 'size', 0) == 0:
+            return None, None
+
+        min_w = item.width
+        min_h = item.height
+
         # Existing size
         img_h, img_w, _ = image.shape
 
@@ -254,22 +310,22 @@ class OCR:
         """ Grab the image based on the region name/rect.
         Returns an unfiltered image, either from screenshot or provided image.
         @param region: The region to check in % (0.0 - 1.0).
+        TODO - Move this to Region or Screen code. Make all funcs in OCR use rect/quad, not region.
         """
         rect = region['rect']
         image = self.screen.get_screen_rect_pct(rect)
         return image
 
-    def is_text_in_selected_item_in_image(self, img, text, min_w, min_h, name=''):
+    def is_text_in_selected_item_in_image(self, img, text, item: Quad, name=''):
         """ Does the selected item in the region include the text being checked for.
         Checks if text exists in a region using OCR.
         Return True if found, False if not and None if no item was selected.
+        @param item: A quad representing the item in pct. 
         @param name:
         @param img: The image to check.
         @param text: The text to find.
-        @param min_h: Minimum height in percent of the input image.
-        @param min_w: Minimum width in percent of the input image.
         """
-        img_selected, _ = self.get_highlighted_item_in_image(img, min_w, min_h)
+        img_selected, _ = self.get_highlighted_item_in_image(img, item)
         if img_selected is None:
             logger.debug(f"Did not find a selected item in the region.")
             return None
@@ -284,6 +340,7 @@ class OCR:
         Return True if found, False if not and None if no item was selected.
         @param text: The text to check for.
         @param region: The region to check in % (0.0 - 1.0).
+        TODO - Move this to Region or Screen code. Make all funcs in OCR use rect/quad, not region.
         """
 
         img = self.capture_region_pct(region)
@@ -296,11 +353,12 @@ class OCR:
         to include highlighted areas.
         Checks if text exists in an image using OCR.
         Return True if found, False if not and None if no item was selected.
+        @param name: A name for the image for logging/debug purposes.
         @param text: The text to check for.
         @param image: The image to check.
         @return: True with the string of results, or False with the string of results.
         """
-        if image is None:
+        if image is None or getattr(image, 'size', 0) == 0:
             logger.debug(f"is_text_in_image: No image supplied.")
             return None, ""
 
@@ -318,14 +376,15 @@ class OCR:
             logger.debug(f"Did not find '{text}' text in item text '{str(ocr_textlist)}'.")
             return False, str(ocr_textlist)
 
-    def select_item_in_list(self, text, region, keys, min_w, min_h, name='') -> bool:
+    def select_item_in_list(self, text, region, keys, quad: Quad, name='') -> bool:
         """ Attempt to find the item by text in a list defined by the region.
         If found, leaves it selected for further actions.
+        @param quad: A quad representing the item in percentage.
         @param keys:
         @param text: Text to find.
         @param region: The region to check in % (0.0 - 1.0).
-        @param min_h: Minimum height in percent of the input image.
-        @param min_w: Minimum width in percent of the input image.
+        @param name: A name for the image for logging/debug purposes.
+        TODO - Move this to Region or Screen code. Make all funcs in OCR use rect/quad, not region.
         """
 
         in_list = False  # Have we seen one item yet? Prevents quiting if we have not selected the first item.
@@ -334,7 +393,7 @@ class OCR:
             if img is None:
                 return False
 
-            found = self.is_text_in_selected_item_in_image(img, text, min_w, min_h, name)
+            found = self.is_text_in_selected_item_in_image(img, text, quad, name)
 
             # Check if end of list.
             if found is None and in_list:
@@ -356,6 +415,7 @@ class OCR:
         @param region: The screen region to check in % (0.0 - 1.0) of the full screen.
         @param timeout: Time to wait for screen in seconds
         @return: True if text found, else False
+        TODO - Move this to Region or Screen code. Make all funcs in OCR use rect/quad, not region.
         """
         # Draw box around region
         abs_rect = self.screen.screen_rect_to_abs(region['rect'])
@@ -376,7 +436,8 @@ class OCR:
 
                 # Overlay OCR result
                 if ap.debug_overlay:
-                    ap.overlay.overlay_floating_text('wait_for_text', f'{ocr_text}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
+                    ap.overlay.overlay_floating_text('wait_for_text', f'{ocr_text}',
+                                                     abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
                     ap.overlay.overlay_paint()
 
                 if text_found:
@@ -461,7 +522,8 @@ class OCR:
 #     def on_calibration_press(self, event):
 #         self.start_x = event.x
 #         self.start_y = event.y
-#         self.current_rect = self.calibration_canvas.create_rectangle(self.start_x, self.start_y, self.start_x, self.start_y, outline='cyan', width=5)
+#         self.current_rect = self.calibration_canvas.create_rectangle(self.start_x, self.start_y,
+#                                                           self.start_x, self.start_y, outline='cyan', width=5)
 #
 #     def on_calibration_drag(self, event):
 #         if self.current_rect:
@@ -497,7 +559,8 @@ class OCR:
 #         raw_rect_pct = [left_pct, top_pct, right_pct, bottom_pct]
 #         raw_rect_pct = [round(left_pct, 4), round(top_pct, 4), round(right_pct, 4), round(bottom_pct, 4)]
 #
-#         # if self.selected_region.startswith("EDStationServicesInShip.") or self.selected_region in station_scaled_regions:
+#         # if self.selected_region.startswith("EDStationServicesInShip.") or
+#                                               self.selected_region in station_scaled_regions:
 #         #     new_rect_pct = self._normalize_for_station(raw_rect_pct, screen_w, screen_h)
 #         #     if new_rect_pct != raw_rect_pct:
 #         #         self.ap_ckb('log', f"Applying station-style normalization for {self.selected_region}.")

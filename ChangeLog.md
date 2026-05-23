@@ -1,3 +1,121 @@
+# 5/23/2026 v1.9.0 b19
+- Disengage stays active until disengage check loop is complete.
+
+- # 5/17/2026 v1.9.0 b18
+- Added throttle dropdown to allow any RPY curve to be edited.
+- Deleted RPY rates entry boxes.
+- Edit curves button changes selected throttle, not current throttle.
+
+# 5/14/2026 v1.9.0 b17
+- Added quick SC disengage, moving key action to detection function.
+- Ship moving now always calculates movement error, removing additional checks after the movement.
+
+# 5/11/2026 v1.9.0 b16
+- Added auto-tune feature.
+- Added Auto-tune RPY checkbox to GUI and ap.json.
+- Ship tuning now uses the new combined compass/target detection, allowing tuning greater than 45/30/30 deg for R/P/Y.
+- After honking, rotate the ship so that the target is at the top of the compass. When we go past the star, the target will be better aligned.
+- Added initial implementation of combined compass and target offset routine which uses both compass and target together to give a better result.
+- Added replacement refuel function that provides better control and logging.
+- Modified sun avoid to prevent those ships that overshoot the star and pitch down from pitching down if we are not fuel scooping.
+- Waypoint Assist now defaults to  station name for OCR if no bookmark index is supplied even when OCR is not the selected bookmark type.
+- Perform sun ahead check when starting FSD assist.
+- Fixed bug with cvview. Thanks InstaGibb.
+- Added additional image checks to OCR.py. Thanks Clippy.
+- Added additional checks to Screen.py. Thanks Clippy.
+- Added logging of the destination change for a future feature.
+
+# 5/4/2026 v1.9.0 b15
+- Adding set throttle log entry.
+- Added new ap.json setting 'OPCMobile' to use mobile (light) version of OCR. Thanks Bulli.
+- Fix missing hyphen in 'Non-Lethal Weapons'. Thanks Skream.
+
+# 5/2/2026 v1.9.0 b14
+- Fixed pitch up to remove the 1.25 multiplier. Thanks Patrick.
+- Added 2 sec time delay after setting throttle on surface launch. Thanks Patrick.
+
+# 4/29/2026 v1.9.0 b13
+- Breaking Change: Ship PRY rates now stored in float instead of int*10 format. This will require recalibration or manual editing of ships config json file.
+- Added Speed0, Speed50, Speed100, SCSpeed0, Speed100 to the ship config to allow each to be tuned.
+- Added Set Speed buttons for 0/50/100% for ship tuning.
+- Added additional steps to the ship RPY tuning.
+- Added Lynx Highliner.
+
+# 4/26/2026 v1.9.0 b12
+- Fixed template reload issue. Thanks Patrick.
+
+# 4/25/2026 v1.9.0 b11
+- Updated cal doc.
+- Quick RPY bug fix.
+- Updated readme.
+- Included some of Wauxadd's changes (below). Thanks Wauxadd.
+- Prevent reload of waypoint file on internal change.
+- Reinit OCR on an internal failure.
+- Minor change to Status file checking.
+
+# 4/25/2026 v1.9.0 b10
+- Changed layout of RPY test buttons.
+- Ship RPY now uses the last curve data value instead of defaulting to the default value when after the last curve point.
+
+# 4/19/2026 v1.9.0 b9
+- Removed 30 and 45 degree limits from RPY calculation to allow wider range on curves.
+- Added 60 deg to default curve.
+- Added auto sorting of calibration curves.
+- Moved some ship functions to ship control.
+- Removed templates that are no longer used (compass and target).
+- Removed compass scale and target scale. Not needed with ML.
+- Removed calibrate compass.
+
+# 4/12/2026 v1.9.0 b8
+- Added a RPY curve editor accessible via 3 new edit buttons under the RPY rates.
+- Removed the unused RPY Factor constants and code.
+- Updated compass ML model.
+- Added some extra logging when checking station names.
+- Added extra debug (save input image) for OCR errors. Image saved to ocr_output folder.
+
+# 3/30/2026 v1.9.0 b7
+- Fixed some crashes thanks to clippy.
+- Fixed issue with loss of target and target occluded at the same time. 
+
+# 3/29/2026 v1.9.0 b6
+- Default debug on for new users.
+- Added logging of FSS tuning screenshot to debug image folder.
+- Added all remaining screen regions into new screen region dictionary to allow user to configure them.
+- Improved ML model type selection.
+- Enabled ML detection for target occluded.
+- Added Kestrel Mk II to data files.
+- Fixed ELW Scanning selection not appearing in GUI.
+- Updated compass model.
+
+# 2/10/2026 v1.9.0 b5
+- Expanded ML for target and compass navpoint.
+- Fixed save not working.
+
+# 2/10/2026 v1.9.0 b4
+- Added Machine Learning for compass.
+- 
+# 2/4/2026 v1.9.0 b3
+- Improved calibration by adding sub-regions to the calibration tab to allow easier identification of the sub-regions.
+- Enable/disable hotkeys now no longer needs a restart.
+- Added current station to log when docking.
+- Changed detection of colonisation ship.
+- Additional OCR replacements.
+- Added Squad Carrier to leaving SC code.
+- Added cargo test when selling commodities to sell all when cargo is less than sell qty.
+- Added button for REPEAT waypoint.
+- Added FleetCarrier monitor class.
+
+# 1/4/2026 v1.9.0 b2
+- Added load last wp function.
+- Added Load Settings button to main form.
+- Refactor colonization editor.
+- Add Fleet Carrier data to colonization editor.
+- Consolidated json reading/writing for ship configs.
+- Added Colonization Editor to docs.
+
+# 12/30/2025 v1.9.0 b1
+- Added Colonization Tab.
+
 # 12/21/2025 v1.8.0
 - Minor update for release.
 

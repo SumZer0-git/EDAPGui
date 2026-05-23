@@ -3,7 +3,7 @@ Waypoints editor allows you to edit Waypoints.
 
 ## Waypoint Editor
 
-![Alt text](../screen/WaypointEditorWaypoints.png?raw=true "Waypoint Editor - Waypoints")
+![Waypoint Editor - Waypoints](../screen/WaypointEditorWaypoints.png)
 
 ### Main buttons
 
@@ -17,7 +17,7 @@ Waypoints editor allows you to edit Waypoints.
 ### Import from Inara
 Select with the mouse the data from one 'row' as shown below.
 
-![Alt text](../screen/InaraTradeRoute.png?raw=true "Inara Trade Route")
+![Inara Trade Route](../screen/InaraTradeRoute.png)
 
 When pasted into the window, the data should look like this, with the data To, From, Buy, Buy Price, Sell, Sell Price on separate rows:
 
@@ -36,13 +36,13 @@ Station distance	4 Ls
 
 ### Waypoints List
 
-![Alt text](../screen/WaypointEditorWaypoints1.png?raw=true "Waypoint Editor - Waypoints")
+![Waypoint Editor - Waypoints](../screen/WaypointEditorWaypoints1.png)
 
 The list...
 
 ### Waypoints Options
 
-![Alt text](../screen/WaypointEditorWaypoints2.png?raw=true "Waypoint Editor - Waypoints")
+![Waypoint Editor - Waypoints](../screen/WaypointEditorWaypoints2.png)
 
 * Gal
   * Typ
@@ -55,7 +55,7 @@ The list...
 
 ### Buy/Sell Commodities
 
-![Alt text](../screen/WaypointEditorWaypoints3.png?raw=true "Waypoint Editor - Waypoints")
+![Waypoint Editor - Waypoints](../screen/WaypointEditorWaypoints3.png)
 
 * Name
 * Qua
@@ -66,17 +66,17 @@ The list...
 ## Global Shopping List
 A set of waypoints can be endlessly repeated by using a special row at the end of the waypoint file with the system name as **'REPEAT'**. When hitting this record and as long as **Skip** is not ture, the Waypoint Assist will start from the top jumping through the defined Systems until the user ends the Waypoint Assist.
 
-![Alt text](../screen/WaypointEditorShoppingList.png?raw=true "Waypoint Editor - Global Shopping List")
+![Waypoint Editor - Global Shopping List](../screen/WaypointEditorShoppingList.png)
 
 ### Options
 
-![Alt text](../screen/WaypointEditorShoppingList1.png?raw=true "Waypoint Editor - Global Shopping List")
+![Waypoint Editor - Global Shopping List](../screen/WaypointEditorShoppingList1.png)
 
-* Upda
+* Update Commodity Count
 
 ### Global Buy Commodities
 
-![Alt text](../screen/WaypointEditorShoppingList2.png?raw=true "Waypoint Editor - Global Shopping List")
+![Waypoint Editor - Global Shopping List](../screen/WaypointEditorShoppingList2.png)
 
 * Name
 * Qua

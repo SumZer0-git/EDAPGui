@@ -41,7 +41,6 @@ def main():
     # template_matching_test('compass', 'compass')
     # template_matching_test('compass','navpoint')
     # template_matching_test('target', 'target')
-    template_matching_test('target_occluded', 'target_occluded')
 
     # More complicated specific test cases...
     # =======================================
@@ -51,20 +50,22 @@ def main():
     # Shows regions on the Elite window...
     # Requires Elite Dangerous to be running.
     # =======================================
-    #wanted_regions = ["compass", "target", "nav_panel", "disengage", "fss", "mission_dest", "missions", "sun"]
-    # wanted_regions = ["compass", "target", "nav_panel", "disengage"]  # The more common regions for navigation
+    #wanted_regions = ['compass', 'target', 'nav_panel', 'disengage', 'fss', 'mission_dest', 'missions', 'sun']
+    # wanted_regions = ['compass', 'target', 'nav_panel', 'disengage']  # The more common regions for navigation
     #show_regions(wanted_regions)
 
     # HSV Tester...
     #
     # Does NOT require Elite Dangerous to be running.
     # ===============================================
-    # hsv_tester("test/compass/Screenshot 2024-07-04 20-01-49.png")
+    #hsv_tester("test/compass/Screenshot 2024-07-04 20-01-49.png")
+    # hsv_tester("test/compass/Screenshot_2025-08-02 15-13-43.png")
     # hsv_tester("test/disengage/Screenshot 2024-08-13 21-32-58.png")
     # hsv_tester("test/navpoint/Screenshot 2024-07-04 20-02-01.png")
     # hsv_tester("test/navpoint-behind/Screenshot 2024-07-04 20-01-33.png")
     # hsv_tester("test/target/Screenshot 2024-07-04 23-22-02.png")
-    # hsv_tester("test/target-occluded/Screenshot 2025-05-04 16-07-09_cr.png")
+    hsv_tester("test/target-occluded/Screenshot 2024-08-25 16-25-21.png")
+    # hsv_tester("test/target-occluded/Screenshot_0002 2025-10-11 21-19-03.png")
 
 def draw_match_rect(img, pt1, pt2, color, thick):
     """ Utility function to add a rectangle to an image. """
@@ -115,14 +116,14 @@ def compass_test():
     ed_ap = EDAutopilot(cb=None)
     scr = ed_ap.scr
 
-    templ = Image_Templates(scr.scaleX, scr.scaleY, ed_ap.compass_scale)
+    templ = Image_Templates(scr.scaleX, scr.scaleY)
     scr_reg = Screen_Regions(scr, templ)
 
     while True:
         region_name = 'compass'
         template = 'compass'
 
-        img_region, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region(region_name, template)
+        img_region, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region_x3(region_name, template)
         pt = maxLoc
         c_wid = scr_reg.templates.template['compass']['width']
         c_hgt = scr_reg.templates.template['compass']['height']
@@ -145,7 +146,7 @@ def template_matching_test(region_name, template):
     #scr = ed_ap.scr
     scr = Screen(cb=None)
 
-    templ = Image_Templates(scr.scaleX, scr.scaleY, scr.scaleX)
+    templ = Image_Templates(scr.scaleX, scr.scaleY)
 
     scr_reg = Screen_Regions(scr, templ)
 
@@ -168,7 +169,7 @@ def show_regions(region_names):
     scr = ed_ap.scr
     ov = ed_ap.overlay
 
-    templ = Image_Templates(scr.scaleX, scr.scaleY, scr.scaleX)
+    templ = Image_Templates(scr.scaleX, scr.scaleY)
     scrReg = Screen_Regions(scr, templ)
 
     overlay_colors = [
@@ -196,7 +197,7 @@ def show_regions(region_names):
         if key in region_names:
             ov.overlay_rect(key, (scrReg.reg[key]['rect'][0], scrReg.reg[key]['rect'][1]),
                             (scrReg.reg[key]['rect'][2], scrReg.reg[key]['rect'][3]),
-                            overlay_colors[i+1], 2)
+                            overlay_colors[i+1], 2 , -1)
             ov.overlay_floating_text(key, key, scrReg.reg[key]['rect'][0], scrReg.reg[key]['rect'][1],
                                      overlay_colors[i+1])
 

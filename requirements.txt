@@ -3,24 +3,29 @@ colorlog==6.5.0
 keyboard==0.13.5
 kthread==0.2.2
 logger==1.4
+matplotlib~=3.9.4
 mss==8.0.3
 numpy==2.0.2
-opencv_python==4.5.5.64
 paddleocr==3.3.2
 paddlepaddle==3.2.2
 paddlex==3.3.10
 Pillow==10.4.0
-PyAutoGUI==0.9.54
+PyAutoGUI~=0.9.53
 pydantic>=2.9.1 # For EDMesg
 pynput==1.7.6
 pyttsx3==2.90
 pywin32==303
 pyzmq>=26.2.0 # For EDMesg
 protobuf==6.32.1
-requests~=2.32.5
+requests~=2.32.3
 strsimpy~=0.2.1
 xmltodict~=0.14.2
 
 pywinstyles~=1.8
 sv_ttk
 tkinter-tooltip
+
+# For Yolo ML
+opencv-python~=4.13.0.90
+future~=1.0.0
+ultralytics~=8.4.14

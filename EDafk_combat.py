@@ -53,7 +53,7 @@ class AFK_Combat:
         # boost and prep for supercruise
         if self.voice is not None:
             self.voice.say("Boosting, reconfiguring")
-        self.ap.set_speed_100(repeat=2)
+        self.ap.set_throttle_100(repeat=2)
         self.k.send('DeployHardpointToggle')
         self.k.send('IncreaseEnginesPower', repeat=4)
         self.k.send('UseBoostJuice')
@@ -66,16 +66,16 @@ class AFK_Combat:
         # Engage Supercruise
         self.ap.sc_engage(True)
 
-        self.ap.set_speed_100()
+        self.ap.set_throttle_100()
 
         # in supercruise, wait a bit to get away, then throttle 0 and exit supercruise, full pips to system   
         if self.voice is not None:
             self.voice.say("In supercruise, retreating from site")
 
         sleep(1)
-        self.ap.set_speed_100(repeat=2)
+        self.ap.set_throttle_100(repeat=2)
         sleep(20)
-        self.ap.set_speed_0()
+        self.ap.set_throttle_0()
         sleep(10)
         if self.voice is not None:
             self.voice.say("Exiting supercruise, all power to system and weapons")
@@ -131,7 +131,7 @@ class AFK_Combat:
         # Command fighter to attack at will
         if self.ap.config['AFKCombat_AttackAtWill']:
             self.k.send('OrderAggressiveBehaviour')
-        self.ap.set_speed_0()
+        self.ap.set_throttle_0()
 
 
 """

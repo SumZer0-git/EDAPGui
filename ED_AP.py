@@ -1,21 +1,24 @@
+from __future__ import annotations
+
 import math
-import os
 import traceback
-from datetime import timedelta
-from enum import Enum
-from math import atan, degrees
+from math import atan, degrees, tan, radians
 import random
 from string import Formatter
 from tkinter import messagebox
+from typing import TypedDict
 
 import cv2
 
+from EDAPColonizeEditor import read_json_file, write_json_file
+from EDFSS import EDFSS
+from MachineLearning import MachLearn, ModelType
 from simple_localization import LocalizationManager
 
 from EDAP_EDMesg_Server import EDMesgServer
 from EDGalaxyMap import EDGalaxyMap
 from EDGraphicsSettings import EDGraphicsSettings
-from EDShipControl import EDShipControl
+from EDShipControl import EDShipControl, CompassTargetOffset
 from EDStationServicesInShip import EDStationServicesInShip
 from EDSystemMap import EDSystemMap
 from EDlogger import logging
@@ -64,81 +67,33 @@ class FSDAssistReturn(Enum):
     Partial = 1  # Reached final system, but there is a local destination
     Complete = 2  # Reached final system and there is no local destination
 
-def scale(inp: float, in_min: float, in_max: float, out_min: float, out_max: float) -> float:
-    """ Does scaling of the input based on input and output min/max."""
-    return (inp - in_min)/(in_max - in_min) * (out_max - out_min) + out_min
+
+class TargetOffset(TypedDict):
+    """
+    Dictionary containing target information.
+    """
+    roll: float
+    pit: float
+    yaw: float
+    occ: bool
+
+
+class CompassOffset(TypedDict):
+    """
+    Dictionary containing navigation (compass) information.
+    """
+    x: float
+    y: float
+    z: float
+    roll: float
+    pit: float
+    yaw: float
+
 
 class EDAutopilot:
 
-    def __init__(self, cb, doThread=True):
-
-        # NOTE!!! When adding a new config value below, add the same after read_config() to set
-        # a default value or an error will occur reading the new value!
-        self.config = {
-            "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS
-            "JumpTries": 3,                #
-            "NavAlignTries": 3,            #
-            "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel
-            "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
-            "WaitForAutoDockTimer": 240,   # After docking granted, wait this amount of time for us to get docked with autodocking
-            "SunBrightThreshold": 125,     # The low level for brightness detection, range 0-255, want to mask out darker items
-            "FuelScoopTimeOut": 35,        # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
-            "DockingRetries": 30,          # number of time to attempt docking
-            "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
-            "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
-            "HotKey_StartRobigo": "pgup",  #
-            "HotKey_StopAllAssists": "end",
-            "Robigo_Single_Loop": False,   # True means only 1 loop will executed and then terminate the Robigo, will not perform mission processing
-            "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
-            "ActivateEliteEachKey": False, # Activate Elite window before each key or group of keys
-            "OverlayTextEnable": False,    # Experimental at this stage
-            "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
-            "OverlayTextXOffset": 50,      # offset left the screen to start place overlay text
-            "OverlayTextFont": "Eurostyle",
-            "OverlayTextFontSize": 14,
-            "OverlayGraphicEnable": False, # not implemented yet
-            "DiscordWebhook": False,       # discord not implemented yet
-            "DiscordWebhookURL": "",
-            "DiscordUserID": "",
-            "VoiceEnable": False,
-            "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
-            "ElwScannerEnable": False,
-            "LogDEBUG": False,             # enable for debug messages
-            "LogINFO": True,
-            "Enable_CV_View": 0,           # Should CV View be enabled by default
-            "ShipConfigFile": None,        # Ship config to load on start - deprecated
-            "TargetScale": 1.0,            # Scaling of the target when a system is selected
-            "ScreenScale": 1.0,            # Scaling of the target when a system is selected
-            "TCEDestinationFilepath": "C:\\TCE\\DUMP\\Destination.json",  # Destination file for TCE
-            "TCEInstallationPath": "C:\\TCE",
-            "AutomaticLogout": False,      # Logout when we are done with the mission
-            "FCDepartureTime": 5.0,        # Extra time to fly away from a Fleet Carrier
-            "FCDepartureAngle": 90.0,      # Angle to pitch up when leaving a Fleet Carrier
-            "OCDepartureAngle": 90.0,      # Angle to pitch up when leaving an Orbital Construction Site
-            "Language": 'en',              # Language (matching ./locales/xx.json file)
-            "OCRLanguage": 'en',           # Language for OCR detection (see OCR language doc in \docs)
-            "EnableEDMesg": False,
-            "EDMesgActionsPort": 15570,
-            "EDMesgEventsPort": 15571,
-            "DebugOverlay": False,
-            "AFKCombat_AttackAtWill": False,
-            "HotkeysEnable": False,        # Enable hotkeys
-            "WaypointFilepath": "",        # The previous waypoint file path
-            "DebugOCR": False,             # For debug, write all OCR data to output folder
-            "DebugImages": False,          # For debug, write debug images to output folder
-            "Key_ModDelay": 0.01,          # Delay for key modifiers to ensure modifier is detected before/after the key
-            "Key_DefHoldTime": 0.2,        # Default hold time for a key press
-            "Key_RepeatDelay": 0.1,        # Delay between key press repeats
-            "DisengageUseMatch": False,    # For 'Disengage' use old image match instead of OCR
-            "target_align_outer_lim": 1.0, # For test
-            "target_align_inner_lim": 0.5, # For test
-            "Debug_ShowCompassOverlay": False, # For test
-            "Debug_ShowTargetOverlay": False, # For test
-            "GalMap_SystemSelectDelay": 0.5,  # Delay selecting the system when in galaxy map
-        }
-        # NOTE!!! When adding a new config value above, add the same after read_config() to set
-        # a default value or an error will occur reading the new value!
-
+    def __init__(self, cb, do_thread=True):
+        self.config = {}
         self.ship_configs = {
             "Ship_Configs": {},  # Dictionary of ship types with additional settings
         }
@@ -150,83 +105,18 @@ class EDAutopilot:
         self._single_waypoint_system = None
         self._prev_star_system = None
         self.honk_thread = None
-        self.speed_demand = None
+        self.speed_demand = None  # 'Speed0', 'Speed50', 'Speed100', 'SCSpeed0', 'SCSpeed50' or 'SCSpeed100'
         self._tce_integration = None
         self._ocr = None
+        self._fss_screen = None
+        self._mach_learn = None
         self._sc_disengage_active = False  # Is SC Disengage active
         self.ship_tst_roll_enabled = False
         self.ship_tst_pitch_enabled = False
         self.ship_tst_yaw_enabled = False
 
-        # used this to write the self.config table to the json file
-        # self.write_config(self.config)
-
-        cnf = self.read_config()
-        # if we read it then point to it, otherwise use the default table above
-        if cnf is not None:
-            # NOTE!!! Add default values for new entries below!
-            if 'SunBrightThreshold' not in cnf:
-                cnf['SunBrightThreshold'] = 125
-            if 'TargetScale' not in cnf:
-                cnf['TargetScale'] = 1.0
-            if 'ScreenScale' not in cnf:
-                cnf['ScreenScale'] = 1.0
-            if 'TCEDestinationFilepath' not in cnf:
-                cnf['TCEDestinationFilepath'] = "C:\\TCE\\DUMP\\Destination.json"
-            if 'TCEInstallationPath' not in cnf:
-                cnf['TCEInstallationPath'] = "C:\\TCE"
-            if 'AutomaticLogout' not in cnf:
-                cnf['AutomaticLogout'] = False
-            if 'FCDepartureTime' not in cnf:
-                cnf['FCDepartureTime'] = 5.0
-            if 'Language' not in cnf:
-                cnf['Language'] = 'en'
-            if 'OCRLanguage' not in cnf:
-                cnf['OCRLanguage'] = 'en'
-            if 'EnableEDMesg' not in cnf:
-                cnf['EnableEDMesg'] = False
-            if 'EDMesgActionsPort' not in cnf:
-                cnf['EDMesgActionsPort'] = 15570
-            if 'EDMesgEventsPort' not in cnf:
-                cnf['EDMesgEventsPort'] = 15571
-            if 'DebugOverlay' not in cnf:
-                cnf['DebugOverlay'] = False
-            if 'AFKCombat_AttackAtWill' not in cnf:
-                cnf['AFKCombat_AttackAtWill'] = False
-            if 'HotkeysEnable' not in cnf:
-                cnf['HotkeysEnable'] = False
-            if 'WaypointFilepath' not in cnf:
-                cnf['WaypointFilepath'] = ""
-            if 'DebugOCR' not in cnf:
-                cnf['DebugOCR'] = False
-            if 'DebugImages' not in cnf:
-                cnf['DebugImages'] = False
-            if 'Key_ModDelay' not in cnf:
-                cnf['Key_ModDelay'] = 0.01
-            if 'Key_DefHoldTime' not in cnf:
-                cnf['Key_DefHoldTime'] = 0.2
-            if 'Key_RepeatDelay' not in cnf:
-                cnf['Key_RepeatDelay'] = 0.1
-            if 'DisengageUseMatch' not in cnf:
-                cnf['DisengageUseMatch'] = False
-            if 'target_align_outer_lim' not in cnf:
-                cnf['target_align_outer_lim'] = 1.0 # For test
-            if 'target_align_inner_lim' not in cnf:
-                cnf['target_align_inner_lim'] = 0.5 # For test
-            if 'Debug_ShowCompassOverlay' not in cnf:
-                cnf['Debug_ShowCompassOverlay'] = False # For test
-            if 'Debug_ShowTargetOverlay' not in cnf:
-                cnf['Debug_ShowTargetOverlay'] = False # For test
-            if 'GalMap_SystemSelectDelay' not in cnf:
-                cnf['GalMap_SystemSelectDelay'] = 0.5
-            if 'FCDepartureAngle' not in cnf:
-                cnf['FCDepartureAngle'] = 90.0
-            if 'OCDepartureAngle' not in cnf:
-                cnf['OCDepartureAngle'] = 90.0
-            self.config = cnf
-            logger.debug("read AP json:"+str(cnf))
-        else:
-            self.write_config(self.config)
+        # Load AP.json config
+        self.load_config()
 
         # Load selected language
         self.locale = LocalizationManager('locales', self.config['Language'])
@@ -257,7 +147,6 @@ class EDAutopilot:
         self.scr = Screen.Screen(cb)
         self.scr.scaleX = self.config['ScreenScale']
         self.scr.scaleY = self.config['ScreenScale']
-        self.target_scale = self.config['TargetScale']
 
         self.gfx_settings = EDGraphicsSettings()
         # Aspect ratio greater than 1920/1080 (1.7777) seems to be the magic cutoff. At > 1920/1080 (1.7777), the FOV
@@ -273,12 +162,12 @@ class EDAutopilot:
             self.hor_fov = round(self.ver_fov * self.scr.aspect_ratio, 4)
             logger.debug(f'Horizontal FOV: {self.hor_fov} deg (-{self.hor_fov / 2} to {self.hor_fov / 2}).')
 
-        self.templ = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX, self.scr.scaleX)
+        self.templ = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY)
         self.scrReg = Screen_Regions.Screen_Regions(self.scr, self.templ)
         self.jn = EDJournal(cb)
         self.keys = EDKeys(cb)
         self.afk_combat = AFK_Combat(self, self.keys, self.jn, self.vce)
-        self.waypoint = EDWayPoint(self, self.jn.ship_state()['odyssey'])
+        self.waypoint = EDWayPoint(self, cb, self.jn.ship_state()['odyssey'])
         self.robigo = Robigo(self)
         self.status = StatusParser()
         self.nav_route = NavRouteParser()
@@ -296,14 +185,10 @@ class EDAutopilot:
             self.mesg_server.start_server()
 
         # Set defaults for data read from ships config
-        self.compass_scale = 1.0
-        self.yawrate   = 8.0
-        self.rollrate  = 80.0
+        self.yawrate = 8.0
+        self.rollrate = 80.0
         self.pitchrate = 33.0
         self.sunpitchuptime = 0.0
-        self.yawfactor = 0.0
-        self.rollfactor = 0.0
-        self.pitchfactor = 0.0
 
         self.ap_ckb = cb
 
@@ -316,9 +201,10 @@ class EDAutopilot:
         self.total_jumps = 0
         self.refuel_cnt = 0
         self.current_ship_type = None
+        self.current_ship_cfg = None
         self.gui_loaded = False
-        self._nav_cor_x = 0.0  # Nav Point correction to pitch
-        self._nav_cor_y = 0.0  # Nav Point correction to yaw
+        # self._nav_cor_x = 0.0  # Nav Point correction to pitch
+        # self._nav_cor_y = 0.0  # Nav Point correction to yaw
         self.target_align_outer_lim = 1.0  # In deg. Anything outside of this range will cause alignment.
         self.target_align_inner_lim = 0.5  # In deg. Will stop alignment when in this range.
         self.debug_show_compass_overlay = False
@@ -335,21 +221,26 @@ class EDAutopilot:
         # must be called after we initialized the objects above
         self.update_overlay()
 
-        self.debug_overlay = self.config['DebugOverlay']
-        self.debug_ocr = self.config['DebugOCR']
-        self.debug_images = self.config['DebugImages']
+        self.debug_overlay = False
+        self.debug_ocr = False
+        self.debug_images = False
+        self.auto_tune_rpy = False
         self.debug_image_folder = './debug-output/images'
         if not os.path.exists(self.debug_image_folder):
             os.makedirs(self.debug_image_folder)
 
         # debug window
-        self.cv_view = self.config['Enable_CV_View']
+        self.cv_view = False
         self.cv_view_x = 10
         self.cv_view_y = 10
 
-        #start the engine thread
+        # Load waypoints
+        # TODO - Enable this at some point to auto load the previous waypoints on startup
+        # self.ap_ckb('load_waypoints', self.config['WaypointFilepath'])
+
+        # start the engine thread
         self.terminate = False  # terminate used by the thread to exit its loop
-        if doThread:
+        if do_thread:
             self.ap_thread = kthread.KThread(target=self.engine_loop, name="EDAutopilot")
             self.ap_thread.start()
 
@@ -368,23 +259,25 @@ class EDAutopilot:
         return self._tce_integration
 
     @property
+    def mach_learn(self) -> MachLearn:
+        """ Load Machine Learning class when needed. """
+        if not self._mach_learn:
+            self._mach_learn = MachLearn(self, self.ap_ckb)
+        return self._mach_learn
+
+    @property
     def ocr(self) -> OCR:
         """ Load OCR class when needed. """
         if not self._ocr:
             self._ocr = OCR(self, self.scr)
         return self._ocr
 
-    # Loads the configuration file
-    #
-    def read_config(self, fileName='./configs/AP.json'):
-        s = None
-        try:
-            with open(fileName, "r") as fp:
-                s = json.load(fp)
-        except  Exception as e:
-            logger.warning("EDAPGui.py read_config error :"+str(e))
-
-        return s
+    @property
+    def fss_screen(self) -> EDFSS:
+        """ Load FSS class when needed. """
+        if not self._fss_screen:
+            self._fss_screen = EDFSS(self, self.ap_ckb)
+        return self._fss_screen
 
     def update_config(self):
         # Get values from classes
@@ -394,47 +287,178 @@ class EDAutopilot:
             self.config['Key_DefHoldTime'] = self.keys.key_def_hold_time
             self.config['Key_RepeatDelay'] = self.keys.key_repeat_delay
 
+        if self.waypoint:
+            self.config['WaypointFilepath'] = self.waypoint.filename
+
         # Delete old settings
         self.config.pop('target_align_inertia_pitch_factor', None)
         self.config.pop('target_align_inertia_yaw_factor', None)
 
-        self.write_config(self.config)
+        write_json_file(self.config, filepath='./configs/AP.json')
 
-    def write_config(self, data, fileName='./configs/AP.json'):
-        try:
-            with open(fileName, "w") as fp:
-                json.dump(data, fp, indent=4)
-        except Exception as e:
-            logger.warning("EDAPGui.py write_config error:"+str(e))
+    def load_config(self):
+        """ Load AP.Json Config File. """
+        # NOTE!!! When adding a new config value below, add the same after read_config() to set
+        # a default value or an error will occur reading the new value!
+        self.config = {
+            "DSSButton": "Primary",  # if anything other than "Primary", it will use the Secondary Fire button for DSS
+            "JumpTries": 3,  #
+            "NavAlignTries": 3,  #
+            "RefuelThreshold": 65,  # if fuel level get below this level, it will attempt refuel
+            "FuelThreasholdAbortAP": 10,  # level at which AP will terminate, because we are not scooping well
+            "WaitForAutoDockTimer": 240,  # After docking granted, wait this amount of time for us to get docked with autodocking
+            "SunBrightThreshold": 125,  # The low level for brightness detection, range 0-255, want to mask out darker items
+            "FuelScoopTimeOut": 35,  # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
+            "DockingRetries": 30,  # number of time to attempt docking
+            "HotKey_StartFSD": "home",  # if going to use other keys, need to look at the python keyboard package
+            "HotKey_StartSC": "ins",  # to determine other keynames, make sure these keys are not used in ED bindings
+            "HotKey_StartRobigo": "pgup",  #
+            "HotKey_StopAllAssists": "end",
+            "Robigo_Single_Loop": False,  # True means only 1 loop will executed and then terminate the Robigo, will not perform mission processing
+            "EnableRandomness": False,  # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
+            "ActivateEliteEachKey": False,  # Activate Elite window before each key or group of keys
+            "OverlayTextEnable": False,  # Experimental at this stage
+            "OverlayTextYOffset": 400,  # offset down the screen to start place overlay text
+            "OverlayTextXOffset": 50,  # offset left the screen to start place overlay text
+            "OverlayTextFont": "Eurostyle",
+            "OverlayTextFontSize": 14,
+            "OverlayGraphicEnable": False,  # not implemented yet
+            "DiscordWebhook": False,  # discord not implemented yet
+            "DiscordWebhookURL": "",
+            "DiscordUserID": "",
+            "VoiceEnable": False,
+            "VoiceID": 1,  # my Windows only have 3 defined (0-2)
+            "ElwScannerEnable": False,
+            "LogDEBUG": True,  # enable for debug messages
+            "LogINFO": True,
+            "Enable_CV_View": 0,  # Should CV View be enabled by default
+            "ShipConfigFile": None,  # Ship config to load on start - deprecated
+            "TargetScale": 1.0,  # Scaling of the target when a system is selected
+            "ScreenScale": 1.0,  # Scaling of the target when a system is selected
+            "TCEDestinationFilepath": "C:\\TCE\\DUMP\\Destination.json",  # Destination file for TCE
+            "TCEInstallationPath": "C:\\TCE",
+            "AutomaticLogout": False,  # Logout when we are done with the mission
+            "FCDepartureTime": 5.0,  # Extra time to fly away from a Fleet Carrier
+            "FCDepartureAngle": 90.0,  # Angle to pitch up when leaving a Fleet Carrier
+            "OCDepartureAngle": 90.0,  # Angle to pitch up when leaving an Orbital Construction Site
+            "Language": 'en',  # Language (matching ./locales/xx.json file)
+            "OCRLanguage": 'en',  # Language for OCR detection (see OCR language doc in \docs)
+            "OCRMobile": False,  # Use the mobile (light) version which is smaller and faster, but less accurate.
+            "EnableEDMesg": False,
+            "EDMesgActionsPort": 15570,
+            "EDMesgEventsPort": 15571,
+            "DebugOverlay": False,
+            "AFKCombat_AttackAtWill": False,
+            "HotkeysEnable": False,  # Enable hotkeys
+            "WaypointFilepath": "",  # The previous waypoint file path
+            "DebugOCR": False,  # For debug, write all OCR data to output folder
+            "DebugImages": False,  # For debug, write debug images to output folder
+            "Key_ModDelay": 0.01,  # Delay for key modifiers to ensure modifier is detected before/after the key
+            "Key_DefHoldTime": 0.2,  # Default hold time for a key press
+            "Key_RepeatDelay": 0.1,  # Delay between key press repeats
+            "DisengageUseMatch": False,  # For 'Disengage' use old image match instead of OCR
+            "target_align_outer_lim": 1.0,  # For test
+            "target_align_inner_lim": 0.5,  # For test
+            "Debug_ShowCompassOverlay": False,  # For test
+            "Debug_ShowTargetOverlay": False,  # For test
+            "GalMap_SystemSelectDelay": 0.5,  # Delay selecting the system when in galaxy map
+            "PlanetDepartureSCOTime": 5.0,  # SCO boost time when leaving planet in secs
+            "FleetCarrierMonitorCAPIDataPath": "",  # EDMC Fleet Carrier Monitor plugin data export path
+            "AutoTuneRPYRates": False,  # Enable auto-tune for RPY rates.
+        }
+        # NOTE!!! When adding a new config value above, add the same after read_config() to set
+        # a default value or an error will occur reading the new value!
 
-    def read_ship_configs(self, filename='./configs/ship_configs.json'):
-        """ Read the user's ship configuration file."""
-        s = None
-        try:
-            with open(filename, "r") as fp:
-                s = json.load(fp)
-        except  Exception as e:
-            logger.warning("EDAPGui.py read_ship_configs error :"+str(e))
-
-        return s
+        cnf = read_json_file(filepath='./configs/AP.json')
+        # if we read it then point to it, otherwise use the default table above
+        if cnf is not None:
+            # NOTE!!! Add default values for new entries below!
+            if 'SunBrightThreshold' not in cnf:
+                cnf['SunBrightThreshold'] = 125
+            if 'ScreenScale' not in cnf:
+                cnf['ScreenScale'] = 1.0
+            if 'TCEDestinationFilepath' not in cnf:
+                cnf['TCEDestinationFilepath'] = "C:\\TCE\\DUMP\\Destination.json"
+            if 'TCEInstallationPath' not in cnf:
+                cnf['TCEInstallationPath'] = "C:\\TCE"
+            if 'AutomaticLogout' not in cnf:
+                cnf['AutomaticLogout'] = False
+            if 'FCDepartureTime' not in cnf:
+                cnf['FCDepartureTime'] = 5.0
+            if 'Language' not in cnf:
+                cnf['Language'] = 'en'
+            if 'OCRLanguage' not in cnf:
+                cnf['OCRLanguage'] = 'en'
+            if 'OCRMobile' not in cnf:
+                cnf['OCRMobile'] = False
+            if 'EnableEDMesg' not in cnf:
+                cnf['EnableEDMesg'] = False
+            if 'EDMesgActionsPort' not in cnf:
+                cnf['EDMesgActionsPort'] = 15570
+            if 'EDMesgEventsPort' not in cnf:
+                cnf['EDMesgEventsPort'] = 15571
+            if 'DebugOverlay' not in cnf:
+                cnf['DebugOverlay'] = False
+            if 'AFKCombat_AttackAtWill' not in cnf:
+                cnf['AFKCombat_AttackAtWill'] = False
+            if 'HotkeysEnable' not in cnf:
+                cnf['HotkeysEnable'] = False
+            if 'WaypointFilepath' not in cnf:
+                cnf['WaypointFilepath'] = ""
+            if 'DebugOCR' not in cnf:
+                cnf['DebugOCR'] = False
+            if 'DebugImages' not in cnf:
+                cnf['DebugImages'] = False
+            if 'Key_ModDelay' not in cnf:
+                cnf['Key_ModDelay'] = 0.01
+            if 'Key_DefHoldTime' not in cnf:
+                cnf['Key_DefHoldTime'] = 0.2
+            if 'Key_RepeatDelay' not in cnf:
+                cnf['Key_RepeatDelay'] = 0.1
+            if 'DisengageUseMatch' not in cnf:
+                cnf['DisengageUseMatch'] = False
+            if 'target_align_outer_lim' not in cnf:
+                cnf['target_align_outer_lim'] = 1.0  # For test
+            if 'target_align_inner_lim' not in cnf:
+                cnf['target_align_inner_lim'] = 0.5  # For test
+            if 'Debug_ShowCompassOverlay' not in cnf:
+                cnf['Debug_ShowCompassOverlay'] = False  # For test
+            if 'Debug_ShowTargetOverlay' not in cnf:
+                cnf['Debug_ShowTargetOverlay'] = False  # For test
+            if 'GalMap_SystemSelectDelay' not in cnf:
+                cnf['GalMap_SystemSelectDelay'] = 0.5
+            if 'FCDepartureAngle' not in cnf:
+                cnf['FCDepartureAngle'] = 90.0
+            if 'OCDepartureAngle' not in cnf:
+                cnf['OCDepartureAngle'] = 90.0
+            if 'PlanetDepartureSCOTime' not in cnf:
+                cnf['PlanetDepartureSCOTime'] = 5.0
+            if 'FleetCarrierMonitorCAPIDataPath' not in cnf:
+                cnf['FleetCarrierMonitorCAPIDataPath'] = ""
+            if 'AutoTuneRPYRates' not in cnf:
+                cnf['AutoTuneRPYRates'] = ""
+            self.config = cnf
+            logger.debug("read AP json:" + str(cnf))
+        else:
+            write_json_file(self.config, filepath='./configs/AP.json')
 
     def load_ship_configs(self):
-        shp_cnf = self.read_ship_configs()
-        # if we read it then point to it, otherwise use the default table above
+        """
+        Load all the ship configs from the ship_configs.json file.
+        @return: N/A
+        """
+        shp_cnf = read_json_file(filepath='./configs/ship_configs.json')
+
+        # if we read
+        # it then point to it, otherwise use the default table above
         if shp_cnf is not None:
-            if len(shp_cnf) != len(self.ship_configs):
-                # If configs of different lengths, then a new parameter was added.
-                # self.write_config(self.config)
-                # Add default values for new entries
-                if 'Ship_Configs' not in shp_cnf:
-                    shp_cnf['Ship_Configs'] = dict()
-                self.ship_configs = shp_cnf
-                logger.debug("read Ships Config json:" + str(shp_cnf))
-            else:
-                self.ship_configs = shp_cnf
-                logger.debug("read Ships Config json:" + str(shp_cnf))
+            # Add default values for new entries
+            if 'Ship_Configs' not in shp_cnf:
+                shp_cnf['Ship_Configs'] = dict()
+            self.ship_configs = shp_cnf
+            logger.debug("read Ships Config json:" + str(shp_cnf))
         else:
-            self.write_ship_configs(self.ship_configs)
+            write_json_file(self.ship_configs, filepath='./configs/ship_configs.json')
 
         # Load ship configuration with proper hierarchy
         if self.jn:
@@ -450,26 +474,16 @@ class EDAutopilot:
             if self.current_ship_type not in self.ship_configs['Ship_Configs']:
                 self.ship_configs['Ship_Configs'][self.current_ship_type] = {}
                 logger.debug(f"Created new ship config entry for: {self.current_ship_type}")
-            
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['compass_scale'] = round(self.compass_scale, 4)
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['PitchRate'] = self.pitchrate
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['RollRate'] = self.rollrate
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['YawRate'] = self.yawrate
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['SunPitchUp+Time'] = self.sunpitchuptime
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['PitchFactor'] = self.pitchfactor
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['RollFactor'] = self.rollfactor
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['YawFactor'] = self.yawfactor
 
-            self.write_ship_configs(self.ship_configs)
+            self.current_ship_cfg = self.ship_configs['Ship_Configs'][self.current_ship_type]
+
+            self.current_ship_cfg['PitchRate'] = self.pitchrate
+            self.current_ship_cfg['RollRate'] = self.rollrate
+            self.current_ship_cfg['YawRate'] = self.yawrate
+            self.current_ship_cfg['SunPitchUp+Time'] = self.sunpitchuptime
+
+            write_json_file(self.ship_configs, filepath='./configs/ship_configs.json')
             logger.debug(f"Saved ship config for: {self.current_ship_type}")
-
-    def write_ship_configs(self, data, filename='./configs/ship_configs.json'):
-        """ Write the user's ship configuration file."""
-        try:
-            with open(filename, "w") as fp:
-                json.dump(data, fp, indent=4)
-        except Exception as e:
-            logger.warning("EDAPGui.py write_ship_configs error:"+str(e))
 
     def load_ship_configuration(self, ship_type):
         """ Load ship configuration with the following priority:
@@ -480,71 +494,62 @@ class EDAutopilot:
         self.ap_ckb('log', f"Loading ship configuration for your {ship_type}")
 
         # Step 1: Use hardcoded defaults
-        self.compass_scale = self.scr.scaleX
         self.rollrate = 80.0
         self.pitchrate = 33.0
         self.yawrate = 8.0
         self.sunpitchuptime = 0.0
-        self.rollfactor = 20.0
-        self.pitchfactor = 12.0
-        self.yawfactor = 12.0
         logger.info(f"Loaded hardcoded default configuration for {ship_type}")
 
         # Step 2: Try to load defaults from ship file
         if ship_type in ship_rpy_sc_50:
             ship_defaults = ship_rpy_sc_50[ship_type]
             # Use default configuration - this means it's been modified and saved to ship_configs.json
-            self.compass_scale = self.scr.scaleX  # Always use current scale for compass
             self.rollrate = ship_defaults.get('RollRate', 80.0)
             self.pitchrate = ship_defaults.get('PitchRate', 33.0)
             self.yawrate = ship_defaults.get('YawRate', 8.0)
             self.sunpitchuptime = ship_defaults.get('SunPitchUp+Time', 0.0)
             logger.info(f"Loaded default configuration for {ship_type} from default ship cfg file")
 
-        # if ship_type in ship_rpy_factor_sc_50:
-        #     ship_defaults = ship_rpy_factor_sc_50[ship_type]
-        #     # Use default configuration - this means it's been modified and saved to ship_configs.json
-        #     self.rollfactor = ship_defaults.get('RollFactor', 20.0)
-        #     self.pitchfactor = ship_defaults.get('PitchFactor', 12.0)
-        #     self.yawfactor = ship_defaults.get('YawFactor', 12.0)
-        #     # return
-
-        # Step 3: Check if we have custom config in ship_configs.json (skip if forcing defaults)
-        if ship_type in self.ship_configs['Ship_Configs']:
-            current_ship_cfg = self.ship_configs['Ship_Configs'][ship_type]
-            # Check if the custom config has actual values (not just empty dict)
-            if any(key in current_ship_cfg for key in ['compass_scale', 'RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time']):
-                # Use custom configuration - this means it's been modified and saved to ship_configs.json
-                self.compass_scale = current_ship_cfg.get('compass_scale', self.scr.scaleX)
-                self.rollrate = current_ship_cfg.get('RollRate', 80.0)
-                self.pitchrate = current_ship_cfg.get('PitchRate', 33.0)
-                self.yawrate = current_ship_cfg.get('YawRate', 8.0)
-                self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
-                logger.info(f"Loaded your custom configuration for {ship_type} from ship_configs.json")
-
-            if any(key in current_ship_cfg for key in ['RollFactor', 'PitchFactor', 'YawFactor']):
-                # Use custom configuration - this means it's been modified and saved to ship_configs.json
-                self.rollfactor = current_ship_cfg.get('RollFactor', 20.0)
-                self.pitchfactor = current_ship_cfg.get('PitchFactor', 12.0)
-                self.yawfactor = current_ship_cfg.get('YawFactor', 12.0)
-                # return
-
-            # Check RPY Calibration
-            spd_dmd = 'SCSpeed50'
-            if spd_dmd not in current_ship_cfg:
-                self.ap_ckb('log', "WARNING: Perform Roll/Pitch/Yaw Calibration on this ship.")
-            else:
-                speed_demand = current_ship_cfg[spd_dmd]
-                if 'RollRate' not in speed_demand:
-                    self.ap_ckb('log', "WARNING: Perform Roll Calibration on this ship.")
-                if 'PitchRate' not in speed_demand:
-                    self.ap_ckb('log', "WARNING: Perform Pitch Calibration on this ship.")
-                if 'YawRate' not in speed_demand:
-                    self.ap_ckb('log', "WARNING: Perform Yaw Calibration on this ship.")
-
         # Add empty entry to ship_configs for future customization
         if ship_type not in self.ship_configs['Ship_Configs']:
             self.ship_configs['Ship_Configs'][ship_type] = dict()
+
+        # Step 3: Check if we have custom config in ship_configs.json (skip if forcing defaults)
+        current_ship_cfg = self.ship_configs['Ship_Configs'][ship_type]
+        # Check if the custom config has actual values (not just empty dict)
+        if any(key in current_ship_cfg for key in ['RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time']):
+            # Use custom configuration - this means it's been modified and saved to ship_configs.json
+            self.rollrate = current_ship_cfg.get('RollRate', 80.0)
+            self.pitchrate = current_ship_cfg.get('PitchRate', 33.0)
+            self.yawrate = current_ship_cfg.get('YawRate', 8.0)
+            self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
+            logger.info(f"Loaded your custom configuration for {ship_type} from ship_configs.json")
+
+        for spd_dmd in ['Speed0', 'Speed50', 'Speed100', 'SCSpeed0', 'SCSpeed50', 'SCSpeed100']:
+            # Check RPY Calibration
+            if spd_dmd not in current_ship_cfg:
+                self.ap_ckb('log', "WARNING: Perform Roll/Pitch/Yaw Calibration on this ship.")
+                current_ship_cfg[spd_dmd] = dict()
+
+            spd_dmd_dict = current_ship_cfg[spd_dmd]
+            if 'RollRate' not in spd_dmd_dict:
+                self.ap_ckb('log', "WARNING: Perform Roll Calibration on this ship.")
+                # Default roll rates at 5, 45 and 90 deg
+                spd_dmd_dict['RollRate'] = {"5.0": self.rollrate / 2,
+                                            "45.0": self.rollrate,
+                                            "60.0": self.rollrate}
+            if 'PitchRate' not in spd_dmd_dict:
+                self.ap_ckb('log', "WARNING: Perform Pitch Calibration on this ship.")
+                # Default pitch rates at 0.5, 30 and 90 deg
+                spd_dmd_dict['PitchRate'] = {"0.5": self.pitchrate / 2,
+                                             "30.0": self.pitchrate,
+                                             "60.0": self.pitchrate}
+            if 'YawRate' not in spd_dmd_dict:
+                self.ap_ckb('log', "WARNING: Perform Yaw Calibration on this ship.")
+                # Default yaw rates at 0.5, 30 and 90 deg
+                spd_dmd_dict['YawRate'] = {"0.5": self.yawrate / 2,
+                                           "30.0": self.yawrate,
+                                           "60.0": self.yawrate}
 
     def update_overlay(self):
         """ Draw the overlay data on the ED Window """
@@ -602,8 +607,14 @@ class EDAutopilot:
 
         self.target_align_outer_lim = self.config['target_align_outer_lim']
         self.target_align_inner_lim = self.config['target_align_inner_lim']
+
+        self.cv_view = self.config['Enable_CV_View']
         self.debug_show_compass_overlay = self.config['Debug_ShowCompassOverlay']
         self.debug_show_target_overlay = self.config['Debug_ShowTargetOverlay']
+        self.debug_overlay = self.config['DebugOverlay']
+        self.debug_ocr = self.config['DebugOCR']
+        self.debug_images = self.config['DebugImages']
+        self.auto_tune_rpy = self.config['AutoTuneRPYRates']
 
     def draw_match_rect(self, img, pt1, pt2, color, thick):
         """ Draws the matching rectangle within the image. """
@@ -611,8 +622,8 @@ class EDAutopilot:
         hgt = pt2[1]-pt1[1]
 
         if wid < 20:
-            #cv2.rectangle(screen, pt, (pt[0] + compass_width, pt[1] + compass_height),  (0,0,255), 2)
-            cv2.rectangle(img, pt1, pt2, color, thick)
+            # cv2.rectangle(screen, pt, (pt[0] + compass_width, pt[1] + compass_height),  (0,0,255), 2)
+            cv2.rectangle(img, (int(pt1[0]), int(pt1[1])), (int(pt2[0]), int(pt2[1])), color, thick)
         else:
             len_wid = wid/5
             len_hgt = hgt/5
@@ -663,7 +674,7 @@ class EDAutopilot:
             scale_y = scale_x
 
             # reload the templates with this scale value
-            self.templ.reload_templates(scale_x, scale_y, scale_x, scale_x)
+            self.templ.reload_templates(scale_x, scale_y)
 
             # do image matching on the compass and the target
             image, (minVal, maxVal, minLoc, maxLoc), match = self.scrReg.match_template_in_region_x3(reg_name, templ_name)
@@ -692,7 +703,7 @@ class EDAutopilot:
                 if maxVal > max_pick:
                     max_pick = maxVal
                     scale = i
-                    #self.ap_ckb('log', 'Cal: Found match:' + f'{max_pick:5.4f}' + "% with scale:" + f'{self.scr.scaleX:5.4f}')
+                    # self.ap_ckb('log', 'Cal: Found match:' + f'{max_pick:5.4f}' + "% with scale:" + f'{self.scr.scaleX:5.4f}')
 
             # Next range
             i = i + range_step
@@ -724,35 +735,6 @@ class EDAutopilot:
         # Clean up
         self.overlay.overlay_remove_rect('calib_target')
         self.overlay.overlay_remove_floating_text('calib_target')
-        self.overlay.overlay_paint()
-
-        self.ap_ckb('log+vce', 'Calibration complete.')
-
-    def calibrate_compass(self):
-        """ Routine to find the optimal scaling values for the template images. """
-        msg = 'Select OK to begin Calibration. You must be in space and have the compass visible.'
-        self.vce.say(msg)
-        ans = messagebox.askokcancel('Calibration', msg)
-        if not ans:
-            return
-
-        self.ap_ckb('log+vce', 'Calibration starting.')
-
-        set_focus_elite_window()
-
-        # Draw the target and compass regions on the screen
-        key = 'compass'
-        targ_region = self.scrReg.reg[key]
-        self.overlay.overlay_rect1('calib_compass', targ_region['rect'], (0, 0, 255), 2, -1)
-        self.overlay.overlay_floating_text('calib_compass', key, targ_region['rect'][0], targ_region['rect'][1], (0, 0, 255), -1)
-        self.overlay.overlay_paint()
-
-        # Calibrate compass
-        self.calibrate_compass_worker()
-
-        # Clean up
-        self.overlay.overlay_remove_rect('calib_compass')
-        self.overlay.overlay_remove_floating_text('calib_compass')
         self.overlay.overlay_paint()
 
         self.ap_ckb('log+vce', 'Calibration complete.')
@@ -792,9 +774,7 @@ class EDAutopilot:
             self.ap_ckb('log', f'Target Cal: Best match: {max_val:5.4f}(%) at scale: {self.scr.scaleX:5.4f}')
             self.scr.scaleX = float(scale_max / 100)
             self.scr.scaleY = self.scr.scaleX
-            self.target_scale = self.scr.scaleX
             self.config['ScreenScale'] = round(self.scr.scaleX, 4)
-            self.config['TargetScale'] = round(self.target_scale, 4)
 
             self.scr.write_config(
                 data=None)  # None means the writer will use its own scales variable which we modified
@@ -803,115 +783,13 @@ class EDAutopilot:
                         f'Target Cal: Insufficient matching to meet reliability, max % match: {max_val:5.4f}(%)')
 
         # reload the templates with the new (or previous value)
-        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale, self.target_scale)
-
-    def quick_calibrate_target(self):
-        """ Quick Calibrate Target (not the screen) based on current scaling, without overlay. """
-        self.ap_ckb('log+vce', 'Performing quick target calibration.')
-
-        cur_scale = self.scr.scaleX * 100
-        range_low = cur_scale - 15  # Current scale - 15%
-        range_high = cur_scale + 15  # Current scale + 15%
-        range_step = 0.25  # Scale increment to step (0.25%)
-
-        # loop through the test.
-        threshold = 0.5  # Minimum match is constant. Result will always be the highest match.
-        no_overlay = not self.debug_overlay
-        scale_max, max_val = self.calibrate_region(range_low, range_high, range_step, threshold, 'target','target', no_overlay)
-        # if we found a scaling factor that meets our criteria, then save it to the resolution.json file
-        if max_val != 0:
-            self.ap_ckb('log', f'Target Cal: Best match: {max_val:5.4f}(%) at scale: {self.scr.scaleX:5.4f}')
-            # self.scr.scaleX = float(scale_max / 100)
-            # self.scr.scaleY = self.scr.scaleX
-            self.target_scale = float(scale_max / 100)
-            self.config['TargetScale'] = round(self.target_scale, 4)
-
-            self.scr.write_config(
-                data=None)  # None means the writer will use its own scales variable which we modified
-        else:
-            self.ap_ckb('log', f'Target Cal: Insufficient matching to meet reliability, max % match: {max_val:5.4f}(%)')
-
-        # reload the templates with the new (or previous value)
-        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale, self.target_scale)
-
-    def calibrate_compass_worker(self):
-        """ Calibrate Compass """
-        range_low = 50  # Minimum scale (30%)
-        range_high = 200  # Maximum scale (200%)
-        range_step = 1  # Scale increment to step (1%)
-        scale_max = 0
-        max_val = 0
-
-        # loop through the test twice. Once over the wide scaling range at 1% increments and once over a
-        # small scaling range at 0.1% increments.
-        # Find out which scale factor meets the highest threshold value.
-        for i in range(1):
-            threshold = 0.0  # Minimum match is constant. Result will always be the highest match.
-            scale, max_pick = self.calibrate_region(range_low, range_high, range_step, threshold, 'compass','compass')
-            if scale != 0:
-                scale_max = scale
-                max_val = max_pick
-                range_low = scale - 5  # Current scale - 5%
-                range_high = scale + 5  # Current scale + 5%
-                range_step = 0.1  # Scale increment to step (0.1%)
-                if i == 1:
-                    self.ap_ckb('log',
-                                f'Target Cal: Best rough match: {max_val * 100:5.2f}% at scale: {float(scale_max / 100):5.4f}')
-                else:
-                    self.ap_ckb('log',
-                                f'Target Cal: Best fine match: {max_val * 100:5.2f}% at scale: {float(scale_max / 100):5.4f}')
-
-            else:
-                break  # no match found with threshold
-
-        # if we found a scaling factor that meets our criteria, then save it to the resolution.json file
-        if max_val != 0:
-            c_scale_x = float(scale_max / 100)
-            self.ap_ckb('log',
-                        f'Compass Cal: Max best match: {max_val * 100:5.2f}% with scale: {c_scale_x:5.4f}')
-            # Keep new value
-            self.compass_scale = c_scale_x
-
-        else:
-            self.ap_ckb('log',
-                        f'Compass Cal: Insufficient matching to meet reliability, max % match: {max_val * 100:5.2f}%')
-
-        # reload the templates with the new (or previous value)
-        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale, self.target_scale)
-
-    def quick_calibrate_compass(self):
-        """ Quick Calibrate Compass based on current scaling, without overlay. """
-        self.ap_ckb('log+vce', 'Performing quick compass calibration.')
-
-        cur_scale = self.compass_scale * 100
-        range_low = cur_scale - 15  # Current scale - 15%
-        range_high = cur_scale + 15  # Current scale + 15%
-        range_step = 0.25  # Scale increment to step (0.25%)
-
-        # loop through the test.
-        threshold = 0.5  # Minimum match is constant. Result will always be the highest match.
-        no_overlay = not self.debug_overlay
-        scale_max, max_val = self.calibrate_region(range_low, range_high, range_step, threshold, 'compass','compass', no_overlay)
-        # if we found a scaling factor that meets our criteria, then save it to the resolution.json file
-        if max_val != 0:
-            c_scale_x = float(scale_max / 100)
-            self.ap_ckb('log',
-                        f'Compass Cal: Max best match: {max_val * 100:5.2f}% with scale: {c_scale_x:5.4f}')
-            # Keep new value
-            self.compass_scale = c_scale_x
-
-        else:
-            self.ap_ckb('log',
-                        f'Compass Cal: Insufficient matching to meet reliability, max % match: {max_val * 100:5.2f}%')
-
-        # reload the templates with the new (or previous value)
-        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale, self.target_scale)
+        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY)
 
     def fss_detect_elw(self, scr_reg):
         """ Go into FSS, check to see if we have a signal waveform in the Earth, Water or Ammonia zone
         if so, announce finding and log the type of world found. """
         # open fss
-        self.set_speed_0()
+        self.set_throttle_0()
         sleep(0.1)
         self.keys.send('ExplorationFSSEnter')
         sleep(2.5)
@@ -919,6 +797,14 @@ class EDAutopilot:
         # look for a circle or signal in this region
         elw_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('fss', 'elw')
         elw_sig_image, (minVal1, maxVal1, minLoc1, maxLoc1), match = scr_reg.match_template_in_image(elw_image, 'elw_sig')
+
+        # Scale the regions based on the target resolution.
+        region = self.fss_screen.reg['analysis']
+        img = self.ocr.capture_region_pct(region)
+
+        # Log screenshot for diagnostics/training
+        f = get_timestamped_filename(f'[fss_detect_elw] {self.jn.ship_state()["cur_star_system"]}', '', 'png')
+        cv2.imwrite(f'{self.debug_image_folder}/{f}', img)
 
         # dvide the region in thirds.  Earth, then Water, then Ammonio
         wid_div3 = scr_reg.reg['fss']['width']/3
@@ -928,14 +814,14 @@ class EDAutopilot:
 
         # Uncomment this to show on the ED Window where the region is define.  Must run this file as an App, so uncomment out
         # the main at the bottom of file
-        #self.overlay.overlay_rect('fss', (scr_reg.reg['fss']['rect'][0], scr_reg.reg['fss']['rect'][1]),
+        # self.overlay.overlay_rect('fss', (scr_reg.reg['fss']['rect'][0], scr_reg.reg['fss']['rect'][1]),
         #                (scr_reg.reg['fss']['rect'][2],  scr_reg.reg['fss']['rect'][3]), (120, 255, 0),2)
-        #self.overlay.overlay_paint()
+        # self.overlay.overlay_paint()
 
         if self.cv_view:
             elw_image_d = elw_image.copy()
             elw_image_d = cv2.cvtColor(elw_image_d, cv2.COLOR_GRAY2RGB)
-            #self.draw_match_rect(elw_image_d, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1)
+            # self.draw_match_rect(elw_image_d, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1)
             self.draw_match_rect(elw_image_d, maxLoc1, (maxLoc1[0]+15, maxLoc1[1]+25), (0, 0, 255), 1)
             cv2.putText(elw_image_d, f'{maxVal1:5.2f}> .70', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.30, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('fss', elw_image_d)
@@ -945,8 +831,8 @@ class EDAutopilot:
         logger.info("elw detected:{0:6.2f} ".format(maxVal)+" sig:{0:6.2f}".format(maxVal1))
 
         # check if the circle or the signal meets probability number, if so, determine which type by its region
-        #if (maxVal > 0.65 or (maxVal1 > 0.60 and maxLoc1[1] < 30) ):
-        # only check for singal
+        # if (maxVal > 0.65 or (maxVal1 > 0.60 and maxLoc1[1] < 30) ):
+        # only check for single
         if maxVal1 > 0.70 and maxLoc1[1] < 30:
             if maxLoc1[0] < wid_div3:
                 sstr = "Earth"
@@ -956,8 +842,8 @@ class EDAutopilot:
                 sstr = "Ammonia"
             # log the entry into the elw.txt file
             f = open("elw.txt", 'a')
-            f.write(self.jn.ship_state()["location"]+", Type: "+sstr+
-                    ", Probabilty: {0:3.0f}% ".format((maxVal1*100))+
+            f.write(self.jn.ship_state()["location"]+", Type: "+sstr +
+                    ", Probabilty: {0:3.0f}% ".format((maxVal1*100)) +
                     ", Date: "+str(datetime.now())+str("\n"))
             f.close()
             self.vce.say(sstr+" like world detected ")
@@ -966,21 +852,22 @@ class EDAutopilot:
         else:
             self.fss_detected = "nothing found"
 
-        self.set_speed_100()
+        self.set_throttle_100()
 
         return
 
     def have_destination(self, scr_reg) -> bool:
-        """ Check to see if the compass is on the screen. """
-        icompass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region_x3('compass', 'compass')
-
-        logger.debug("has_destination:"+str(maxVal))
-
-        # need > x in the match to say we do have a destination
-        if maxVal < scr_reg.compass_match_thresh:
-            return False
-        else:
+        """
+        Check to see if the compass is on the screen.
+        # TODO - remove this and use the status file destination. However, the status file destination does not...
+        clear when the destination is unlocked, so it is possible to have the status with a destination and no...
+        compass displayed. Don't know a way around this. So this is the best there is at the moment.
+        """
+        res = self.get_compass_target_offset()
+        if res:
             return True
+        else:
+            return False
 
     def interdiction_check(self) -> bool:
         """ Checks if we are being interdicted. This can occur in SC and maybe in system jump by Thargoids
@@ -997,11 +884,11 @@ class EDAutopilot:
 
         # Keep setting speed to zero to submit while in supercruise or system jump.
         while self.status.get_flag(FlagsSupercruise) or self.status.get_flag2(Flags2FsdHyperdriveCharging):
-            self.set_speed_0()  # Submit.
+            self.set_throttle_0()  # Submit.
             sleep(0.5)
 
         # Set speed to 100%.
-        self.set_speed_100()
+        self.set_throttle_100()
 
         # Wait for cooldown to start.
         self.status.wait_for_flag_on(FlagsFsdCooldown)
@@ -1017,81 +904,107 @@ class EDAutopilot:
         self.jn.ship_state()['interdicted'] = False  # reset flag
         return True
 
-    def get_nav_offset(self, scr_reg, disable_auto_cal: bool = False):
+    def get_nav_offset(self, scr_reg) -> CompassOffset | None:
         """ Determine the x,y offset from center of the compass of the nav point.
         @return: Returns the x,y,z value as x,y in degrees (-90 to 90) and z as 1 or -1.
-        {'x': x.xx, 'y': y.yy, 'z': -1|0|+1,'roll': r.rr, 'pit': p.pp, 'yaw': y.yy} | None
+        {'x': x.xx, 'y': y.yy, 'z': -1.0|0.0|+1.0,'roll': r.rr, 'pit': p.pp, 'yaw': y.yy} | None
         Where 'roll' is:
            -180deg (6 o'clock anticlockwise) to
             0deg (12 o'clock) to
             180deg (6 o'clock clockwise)
         """
         full_compass_image = None
-        maxLoc = 0
-        maxVal = 0
-        # for i in range(2):
-        full_compass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region_x3('compass', 'compass')
+        # full_compass_image = scr_reg.capture_region(self.scr, 'compass', inv_col=False)
+        full_compass_image = scr_reg.capture_region_percent(self.scr, 'compass')
 
-            # # need > x in the match to say we do have a destination
-            # if maxVal < (scr_reg.compass_match_thresh / 2):
-            #     # If we are so far below threshold, then compass must not be up
-            #     return None
-            # if maxVal < scr_reg.compass_match_thresh:
-            #     # We are below match, but only just, recalibrate
-            #     if not disable_auto_cal:
-            #         self.ap_ckb('log', f'Compass Offset below threshold: {maxVal:5.4f} with scale: {self.compass_scale:5.4f}')
-            #         self.quick_calibrate_compass()
+        # ML test
+        max_val = 0.0
+        compass_quad = Quad()
+        # pt = [0.0, 0.0]
+        n_max_val = 0.0
+        n_compass_quad = Quad()
+        # n_pt = [0.0, 0.0]
+        b_max_val = 0.0
+        b_compass_quad = Quad()
+        # b_pt = [0.0, 0.0]
+        full_compass_image2 = cv2.cvtColor(full_compass_image, cv2.COLOR_BGRA2BGR)
+        ml_res = self.mach_learn.model_predict(ModelType.Compass, full_compass_image2, '')
+        if ml_res and len(ml_res) > 0:
+            for ml in ml_res:
+                if ml.class_name == 'compass':
+                    max_val = ml.match_pct
+                    compass_quad = ml.bounding_quad
+                    # pt = [compass_quad.left, compass_quad.top]
+                if ml.class_name == 'navpoint':
+                    n_max_val = ml.match_pct
+                    n_compass_quad = ml.bounding_quad
+                    # n_pt = [n_compass_quad.left, n_compass_quad.top]
+                if ml.class_name == 'navpoint-behind':
+                    b_max_val = ml.match_pct
+                    b_compass_quad = ml.bounding_quad
+                    # b_pt = [b_compass_quad.left, b_compass_quad.top]
 
-        # need > x in the match to say we do have a destination
-        if maxVal < scr_reg.compass_match_thresh:
+        # Check compass
+        if max_val == 0.0:
+            # Log screenshot for diagnostics/training
             if self.debug_images:
-                f = get_timestamped_filename('[get_nav_offset] no_compass_match', '', '.png')
-                cv2.imwrite(f'{self.debug_image_folder}/{f}', full_compass_image)
+                f = get_timestamped_filename('[get_nav_offset] no_compass_match', '', 'png')
+                cv2.imwrite(f'{self.debug_image_folder}/{f}', full_compass_image2)
+            return None
+        # Check navpoint
+        if n_max_val == 0.0 and b_max_val == 0.0:
+            # Log screenshot for diagnostics/training
+            if self.debug_images:
+                f = get_timestamped_filename('[get_nav_offset] no_navpoint_match', '', 'png')
+                cv2.imwrite(f'{self.debug_image_folder}/{f}', full_compass_image2)
             return None
 
-        pt = maxLoc
-
-        # get wid/hgt of templates
-        c_left = scr_reg.reg['compass']['rect'][0]
-        c_top = scr_reg.reg['compass']['rect'][1]
-        c_wid = scr_reg.templates.template['compass']['width']
-        c_hgt = scr_reg.templates.template['compass']['height']
-        wid = scr_reg.templates.template['navpoint']['width']
-        hgt = scr_reg.templates.template['navpoint']['height']
-
-        # cut out the compass from the region
-        pad = 5
-        compass_image = full_compass_image[abs(pt[1]-pad): pt[1]+c_hgt+pad, abs(pt[0]-pad): pt[0]+c_wid+pad].copy()
-        #compass_image_gray = cv2.cvtColor(compass_image, cv2.COLOR_BGR2GRAY)
-        compass_image_gray = self.scrReg.equalize(compass_image)
-
-        # find the nav point within the compass box
-        navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = scr_reg.match_template_in_image_x3(compass_image, 'navpoint')
-        navpt_image_beh, (n_minVal, n_maxVal_beh, n_minLoc, n_maxLoc_beh), match_beh = scr_reg.match_template_in_image_x3(compass_image, 'navpoint-behind')
-
-        n_pt = n_maxLoc
-        n_pt_beh = n_maxLoc_beh
-
-        compass_x_min = pad
-        compass_x_max = c_wid + pad - wid
-        compass_y_min = pad
-        compass_y_max = c_hgt + pad - hgt
-
         # Check if the Nav Point is visible. If not, the Nav Point Behind may be visible
-        if n_maxVal > scr_reg.navpoint_match_thresh:
+        if n_max_val > b_max_val:
             final_z_pct = 1.0  # Ahead
-            n_pt = n_maxLoc
+            n_compass_quad = n_compass_quad
         else:
             final_z_pct = -1.0  # Behind
-            n_pt = n_maxLoc_beh
+            n_compass_quad = b_compass_quad
+
+        # get wid/hgt of templates
+        # c_left = scr_reg.reg['compass']['rect'][0]
+        # c_top = scr_reg.reg['compass']['rect'][1]
+        compass_region = Quad.from_rect(scr_reg.reg['compass']['rect'])
+        # wid = scr_reg.templates.template['navpoint']['width']
+        # hgt = scr_reg.templates.template['navpoint']['height']
+
+        # cut out the compass from the region
+        # pad = 5
+        # compass_image = Screen.crop_image_pix(full_compass_image, compass_quad)
+
+        # find the nav point within the compass box
+        # navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = scr_reg.match_template_in_image_x3(compass_image, 'navpoint')
+        # navpt_image_beh, (n_minVal, n_maxVal_beh, n_minLoc, n_maxLoc_beh), match_beh = scr_reg.match_template_in_image_x3(compass_image, 'navpoint-behind')
+
+        # n_pt = n_maxLoc
+        # n_pt_beh = n_maxLoc_beh
+
+        # compass_x_min = 0
+        # compass_x_max = compass_quad.get_width() - n_compass_quad.get_width()
+        # compass_y_min = 0
+        # compass_y_max = compass_quad.get_height() - n_compass_quad.get_height()
+
+        # Check if the Nav Point is visible. If not, the Nav Point Behind may be visible
+        # if n_maxVal > scr_reg.navpoint_match_thresh:
+        #     final_z_pct = 1.0  # Ahead
+        #     n_pt = n_maxLoc
+        # else:
+        #     final_z_pct = -1.0  # Behind
+        #     n_pt = n_maxLoc_beh
 
         # Continue calc
-        final_x_pct = 2*(((n_pt[0]-compass_x_min)/(compass_x_max-compass_x_min))-0.5)  # X as percent (-1.0 to 1.0, 0.0 in the center)
-        final_x_pct = final_x_pct - self._nav_cor_x
+        final_x_pct = 2*(((n_compass_quad.left-compass_quad.left) / (compass_quad.width - n_compass_quad.width)) - 0.5)  # X as percent (-1.0 to 1.0, 0.0 in the center)
+        # final_x_pct = final_x_pct - self._nav_cor_x
         final_x_pct = max(min(final_x_pct, 1.0), -1.0)
 
-        final_y_pct = -2*(((n_pt[1]-compass_y_min)/(compass_y_max-compass_y_min))-0.5)  # Y as percent (-1.0 to 1.0, 0.0 in the center)
-        final_y_pct = final_y_pct - self._nav_cor_y
+        final_y_pct = -2*(((n_compass_quad.top-compass_quad.top) / (compass_quad.height - n_compass_quad.height)) - 0.5)  # Y as percent (-1.0 to 1.0, 0.0 in the center)
+        # final_y_pct = final_y_pct - self._nav_cor_y
         final_y_pct = max(min(final_y_pct, 1.0), -1.0)
 
         # Calc angle in degrees starting at 0 deg at 12 o'clock and increasing clockwise
@@ -1136,31 +1049,40 @@ class EDAutopilot:
         # Draw box around region
         if self.debug_overlay:
             border = 10  # border to prevent the box from interfering with future matches
-            left = c_left + maxLoc[0]
-            top = c_top + maxLoc[1]
-            self.overlay.overlay_rect('compass', (left - border, top - border), (left + c_wid + border, top + c_hgt + border), (0, 255, 0), 2)
-            self.overlay.overlay_floating_text('compass', f'Com: {maxVal:5.2f} > {scr_reg.compass_match_thresh}', left - border, top - border - 65, (0, 255, 0))
-            self.overlay.overlay_floating_text('nav', f'Nav: {n_maxVal:5.2f} > {scr_reg.navpoint_match_thresh}', left - border, top - border - 45, (0, 255, 0))
-            self.overlay.overlay_floating_text('nav_beh', f'NavB: {n_maxVal_beh:5.2f}', left - border, top - border - 25, (0, 255, 0))
-            self.overlay.overlay_floating_text('compass_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', left - border, top + c_hgt + border, (0, 255, 0))
+            # left = c_left + compass_quad.left
+            # top = c_top + compass_quad.top
+            # Copy compass quad and offset to screen co-ords
+            compass_to_screen = copy(compass_quad)
+            compass_to_screen.offset(compass_region.left, compass_region.top)
+            compass_with_border = copy(compass_to_screen)
+            compass_with_border.inflate(border, border)
+            nav_to_screen = copy(n_compass_quad)
+            nav_to_screen.offset(compass_region.left, compass_region.top)
+
+            self.overlay.overlay_rect('compass', (compass_with_border.left, compass_with_border.top), (compass_with_border.right, compass_with_border.bottom), (0, 255, 0), 2)
+            self.overlay.overlay_rect('nav', (nav_to_screen.left, nav_to_screen.top), (nav_to_screen.right, nav_to_screen.bottom), (0, 255, 0), 2)
+            self.overlay.overlay_floating_text('compass', f'Com: {max_val:5.2f} > {scr_reg.compass_match_thresh}', compass_with_border.left, compass_with_border.top - 85, (0, 255, 0))
+            self.overlay.overlay_floating_text('nav', f'Nav: {n_max_val:5.2f} > {scr_reg.navpoint_match_thresh}', compass_with_border.left, compass_with_border.top - 65, (0, 255, 0))
+            self.overlay.overlay_floating_text('nav_beh', f'NavB: {b_max_val:5.2f}', compass_with_border.left, compass_with_border.top - 45, (0, 255, 0))
+            self.overlay.overlay_floating_text('compass_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', compass_with_border.left, compass_with_border.bottom, (0, 255, 0))
             self.overlay.overlay_paint()
 
         if self.cv_view:
-            #icompass_image_d = cv2.cvtColor(compass_image_gray, cv2.COLOR_GRAY2RGB)
+            # icompass_image_d = cv2.cvtColor(compass_image_gray, cv2.COLOR_GRAY2RGB)
             icompass_image_d = full_compass_image
-            self.draw_match_rect(icompass_image_d, pt, (pt[0]+c_wid, pt[1]+c_hgt), (0, 0, 255), 2)
-            #cv2.rectangle(icompass_image_display, pt, (pt[0]+c_wid, pt[1]+c_hgt), (0, 0, 255), 2)
-            #self.draw_match_rect(compass_image, n_pt, (n_pt[0] + wid, n_pt[1] + hgt), (255,255,255), 2)
-            self.draw_match_rect(icompass_image_d, (pt[0]+n_pt[0]-pad, pt[1]+n_pt[1]-pad), (pt[0]+n_pt[0]+wid-pad, pt[1]+n_pt[1]+hgt-pad), (0, 255, 0), 1)
-            #cv2.rectangle(icompass_image_display, (pt[0]+n_pt[0]-pad, pt[1]+n_pt[1]-pad), (pt[0]+n_pt[0] + wid-pad, pt[1]+n_pt[1] + hgt-pad), (0, 0, 255), 2)
+            self.draw_match_rect(icompass_image_d, (compass_quad.left, compass_quad.top), (compass_quad.right, compass_quad.bottom), (0, 0, 255), 2)
+            # cv2.rectangle(icompass_image_display, pt, (pt[0]+c_wid, pt[1]+c_hgt), (0, 0, 255), 2)
+            # self.draw_match_rect(compass_image, n_pt, (n_pt[0] + wid, n_pt[1] + hgt), (255,255,255), 2)
+            self.draw_match_rect(icompass_image_d, (n_compass_quad.left, n_compass_quad.top), (n_compass_quad.right, n_compass_quad.bottom), (0, 255, 0), 1)
+            # cv2.rectangle(icompass_image_display, (pt[0]+n_pt[0]-pad, pt[1]+n_pt[1]-pad), (pt[0]+n_pt[0] + wid-pad, pt[1]+n_pt[1] + hgt-pad), (0, 0, 255), 2)
 
             #   dim = (int(destination_width/3), int(destination_height/3))
 
             #   img = cv2.resize(dst_image, dim, interpolation =cv2.INTER_AREA)
             icompass_image_d = cv2.rectangle(icompass_image_d, (0, 0), (1000, 60), (0, 0, 0), -1)
-            cv2.putText(icompass_image_d, f'Compass: {maxVal:5.4f} > {scr_reg.compass_match_thresh:5.2f}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.putText(icompass_image_d, f'Nav Point: {n_maxVal:5.4f} > {scr_reg.navpoint_match_thresh:5.2f}', (1, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
-            #cv2.putText(icompass_image_d, f'Result: {result}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(icompass_image_d, f'Compass: {max_val:5.4f} > {scr_reg.compass_match_thresh:5.2f}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(icompass_image_d, f'Nav Point: {n_max_val:5.4f} > {scr_reg.navpoint_match_thresh:5.2f}', (1, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            # cv2.putText(icompass_image_d, f'Result: {result}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.putText(icompass_image_d, f'x: {final_x_pct:5.2f} y: {final_y_pct:5.2f} z: {final_z_pct:5.2f}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.putText(icompass_image_d, f'r: {final_roll_deg:5.2f}deg p: {final_pit_deg:5.2f}deg y: {final_yaw_deg:5.2f}deg', (1, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('compass', icompass_image_d)
@@ -1169,7 +1091,7 @@ class EDAutopilot:
 
         return result
 
-    def get_target_offset(self, scr_reg, disable_auto_cal: bool = False):
+    def get_target_offset(self, scr_reg, disable_auto_cal: bool = False) -> TargetOffset | None:
         """ Determine how far off we are from the target being in the middle of the screen
         (in this case the specified region).
         @return: {'roll': r.rr, 'pit': p.pp, 'yaw': y.yy, 'occ': True|False}, where all are in degrees
@@ -1186,53 +1108,70 @@ class EDAutopilot:
         #     self.overlay.overlay_remove_floating_text('target_rpy')
         #     self.overlay.overlay_paint()
 
-        dst_image = None
-        maxLoc = 0
-        maxVal = 0
-        # for i in range(2):
-        dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('target', 'target')
-        dst_image_occ, (minVal, maxVal_occ, minLoc, maxLoc_occ), match_occ = scr_reg.match_template_in_region('target_occluded', 'target_occluded', inv_col=False)
-        #
-        #     # need > x in the match to say we do have a destination
-        #     if maxVal < (scr_reg.target_thresh / 2):
-        #         # If we are so far below threshold, then target must not be up
-        #         return None
-        #     elif maxVal < scr_reg.target_thresh:
-        #         # We are below match, but only just, recalibrate
-        #         if not disable_auto_cal:
-        #             self.ap_ckb('log', f'Target Offset below threshold: {maxVal:5.4f} with scale: {self.scr.scaleX:5.4f}')
-        #             self.quick_calibrate_target()
+        # dst_image_unfiltered = scr_reg.capture_region(self.scr, 'target', inv_col=False)
+        dst_image_unfiltered = scr_reg.capture_region_percent(self.scr, 'target')
 
-        pt = maxLoc
-        pt_occ = maxLoc_occ
+        # ML test
+        max_val = 0.0
+        maxVal_occ = 0.0
+        target_quad = Quad()
+        sel_pt = [0.0, 0.0]
+        pt = [0.0, 0.0]
+        pt_occ = [0.0, 0.0]
+        target_occ_quad = Quad()
+        target_image2 = cv2.cvtColor(dst_image_unfiltered, cv2.COLOR_BGRA2BGR)
+        ml_res = self.mach_learn.model_predict(ModelType.Target, target_image2, '')
+        if ml_res and len(ml_res) > 0:
+            for ml in ml_res:
+                if ml.class_name == 'target':
+                    max_val = ml.match_pct
+                    target_quad = ml.bounding_quad
+                    pt = [target_quad.left, target_quad.top]
+                if ml.class_name == 'target-occluded':
+                    maxVal_occ = ml.match_pct
+                    target_occ_quad = ml.bounding_quad
+                    pt_occ = [target_occ_quad.left, target_occ_quad.top]
+
+        dst_image = target_image2
 
         # Check if target is occluded
-        if maxVal > maxVal_occ:
-            sel_pt = pt
-            sel_loc = maxLoc
-            occluded = False
+        tar_quad = Quad()
+        occluded = False
+        if max_val > 0.0 or maxVal_occ > 0.0:
+            if max_val >= maxVal_occ:
+                sel_pt = pt
+                sel_loc = pt
+                tar_quad = target_quad
+                occluded = False
+            elif maxVal_occ > max_val:
+                sel_pt = pt_occ
+                sel_loc = pt_occ
+                tar_quad = target_occ_quad
+                occluded = True
         else:
-            sel_pt = pt_occ
-            sel_loc = maxLoc_occ
-            occluded = True
+            if self.debug_images:
+                f = get_timestamped_filename('[get_target_offset] no_target_match', '', 'png')
+                cv2.imwrite(f'{self.debug_image_folder}/{f}', dst_image_unfiltered)
+            return None
 
-        destination_left = scr_reg.reg['target']['rect'][0]
-        destination_top = scr_reg.reg['target']['rect'][1]
-        destination_width = scr_reg.reg['target']['width']
-        destination_height = scr_reg.reg['target']['height']
+        target_region = Quad.from_rect(scr_reg.reg['target']['rect'])
+        # destination_left = scr_reg.reg['target']['rect'][0]
+        # destination_top = scr_reg.reg['target']['rect'][1]
+        # destination_width = scr_reg.reg['target']['width']
+        # destination_height = scr_reg.reg['target']['height']
 
-        width = scr_reg.templates.template['target']['width']
-        height = scr_reg.templates.template['target']['height']
+        # width = scr_reg.templates.template['target']['width']
+        # height = scr_reg.templates.template['target']['height']
 
-        target_x_max = self.scr.screen_width - width
-        target_y_max = self.scr.screen_height - height
+        target_x_max = self.scr.screen_width - tar_quad.width
+        target_y_max = self.scr.screen_height - tar_quad.height
 
         # X as percent (-1.0 to 1.0, 0.0 in the center)
-        final_x_pct = 2.0*(((sel_pt[0]+destination_left) / target_x_max) - 0.5)
+        final_x_pct = 2.0*(((tar_quad.left+target_region.left) / target_x_max) - 0.5)
         final_x_pct = 100 * max(min(final_x_pct, 1.0), -1.0)
 
         # Y as percent (-1.0 to 1.0, 0.0 in the center)
-        final_y_pct = -2.0*(((sel_pt[1]+destination_top) / target_y_max) - 0.5)
+        final_y_pct = -2.0*(((tar_quad.top+target_region.top) / target_y_max) - 0.5)
         final_y_pct = 100 * max(min(final_y_pct, 1.0), -1.0)
 
         final_yaw_deg = final_x_pct / 100 * (self.hor_fov / 2)  # X in deg (-90.0 to 90.0, 0.0 in the center)
@@ -1242,32 +1181,35 @@ class EDAutopilot:
         # so 3 o'clock is +90° and 9 o'clock is -90°.
         final_roll_deg = 0.0
         if final_x_pct > 0.0:
-            final_roll_deg = 90 - degrees(atan(final_pit_deg/final_yaw_deg))
+            final_roll_deg = 90 - degrees(atan(radians(final_pit_deg)/radians(final_yaw_deg)))
         elif final_x_pct < 0.0:
-            final_roll_deg = -90 - degrees(atan(final_pit_deg/final_yaw_deg))
+            final_roll_deg = -90 - degrees(atan(radians(final_pit_deg)/radians(final_yaw_deg)))
         elif final_y_pct < 0.0:
             final_roll_deg = 180.0
 
         # Draw box around region
         if self.debug_overlay:
             border = 10  # border to prevent the box from interfering with future matches
-            left = destination_left + sel_loc[0]
-            top = destination_top + sel_loc[1]
-            self.overlay.overlay_rect('target', (left - border, top - border), (left + width + border, top + height + border), (0, 255, 0), 2)
-            self.overlay.overlay_floating_text('target', f'Tar: {maxVal:5.2f} > {scr_reg.target_thresh}', left - border, top - border - 45, (0, 255, 0))
-            self.overlay.overlay_floating_text('target_occ', f'TarOcc: {maxVal_occ:5.2f} > {scr_reg.target_occluded_thresh}', left - border, top - border - 25, (0, 255, 0))
-            self.overlay.overlay_floating_text('target_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', left - border, top + height + border, (0, 255, 0))
+            # Copy compass quad and offset to screen co-ords
+            target_to_screen = copy(tar_quad)
+            target_to_screen.offset(target_region.left, target_region.top)
+            target_with_border = copy(target_to_screen)
+            target_with_border.inflate(border, border)
+
+            self.overlay.overlay_rect('target', (target_with_border.left, target_with_border.top), (target_with_border.right, target_with_border.bottom), (0, 255, 0), 2)
+            self.overlay.overlay_floating_text('target', f'Tar: {max_val:5.2f} > {scr_reg.target_thresh}', target_with_border.left, target_with_border.top - 45, (0, 255, 0))
+            self.overlay.overlay_floating_text('target_occ', f'TarOcc: {maxVal_occ:5.2f} > {scr_reg.target_occluded_thresh}', target_with_border.left, target_with_border.top - 25, (0, 255, 0))
+            self.overlay.overlay_floating_text('target_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', target_with_border.left, target_with_border.top , (0, 255, 0))
             self.overlay.overlay_paint()
 
         if self.cv_view:
-            dst_image_d = cv2.cvtColor(dst_image, cv2.COLOR_GRAY2RGB)
             try:
-                self.draw_match_rect(dst_image_d, sel_pt, (sel_pt[0]+width, sel_pt[1]+height), (0, 0, 255), 2)
-                dim = (int(destination_width/2), int(destination_height/2))
+                self.draw_match_rect(dst_image, sel_pt, (sel_pt[0]+tar_quad.width, sel_pt[1]+tar_quad.height), (0, 0, 255), 2)
+                dim = (int(target_region.width/2), int(target_region.height/2))
 
-                img = cv2.resize(dst_image_d, dim, interpolation=cv2.INTER_AREA)
+                img = cv2.resize(dst_image, dim, interpolation=cv2.INTER_AREA)
                 img = cv2.rectangle(img, (0, 0), (1000, 25), (0, 0, 0), -1)
-                cv2.putText(img, f'{maxVal:5.4f} > {scr_reg.target_thresh:5.2f}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+                cv2.putText(img, f'{max_val:5.4f} > {scr_reg.target_thresh:5.2f}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
                 cv2.putText(img, f'p: {round(final_pit_deg, 4)} y: {round(final_yaw_deg, 4)}',
                             (1, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
                 cv2.imshow('target', img)
@@ -1277,52 +1219,76 @@ class EDAutopilot:
             cv2.waitKey(30)
 
         # must be > x to have solid hit, otherwise we are facing wrong way (empty circle)
-        if maxVal < scr_reg.target_thresh and maxVal_occ < scr_reg.target_occluded_thresh:
-            if self.debug_images:
-                f = get_timestamped_filename('[get_target_offset] no_target_match', '', '.png')
-                cv2.imwrite(f'{self.debug_image_folder}/{f}', dst_image)
-            result = None
-        else:
+        # Added max_val ==0 as ML gives any match > 0
+        # if max_val == 0 and max_val < scr_reg.target_thresh and maxVal_occ < scr_reg.target_occluded_thresh:
+        if max_val > 0.0 or maxVal_occ > 0.0:
             result = {'roll': round(final_roll_deg, 2), 'pit': round(final_pit_deg, 2), 'yaw': round(final_yaw_deg, 2), 'occ': occluded}
+        else:
+            if self.debug_images:
+                f = get_timestamped_filename('[get_target_offset] no_target_match', '', 'png')
+                cv2.imwrite(f'{self.debug_image_folder}/{f}', dst_image_unfiltered)
+            result = None
 
         return result
 
-    # def is_destination_occluded(self, scr_reg) -> bool:
-    #     """ Looks to see if the 'dashed' line of the target is present indicating the target
-    #     is occluded by the planet.
-    #     @param scr_reg: The screen region to check.
-    #     @return: True if target occluded (meets threshold), else False.
-    #     """
-    #     dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('target_occluded', 'target_occluded', inv_col=False)
-    #
-    #     pt = maxLoc
-    #
-    #     if self.cv_view:
-    #         dst_image_d = cv2.cvtColor(dst_image, cv2.COLOR_GRAY2RGB)
-    #         destination_width = scr_reg.reg['target']['width']
-    #         destination_height = scr_reg.reg['target']['height']
-    #
-    #         width  = scr_reg.templates.template['target_occluded']['width']
-    #         height = scr_reg.templates.template['target_occluded']['height']
-    #         try:
-    #             self.draw_match_rect(dst_image_d, pt, (pt[0]+width, pt[1]+height), (0, 0, 255), 2)
-    #             dim = (int(destination_width/2), int(destination_height/2))
-    #
-    #             img = cv2.resize(dst_image_d, dim, interpolation=cv2.INTER_AREA)
-    #             img = cv2.rectangle(img, (0, 0), (1000, 25), (0, 0, 0), -1)
-    #             cv2.putText(img, f'{maxVal:5.4f} > {scr_reg.target_occluded_thresh:5.2f}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
-    #             cv2.imshow('occluded', img)
-    #             cv2.moveWindow('occluded', self.cv_view_x, self.cv_view_y+650)
-    #         except Exception as e:
-    #             print("exception in getdest: "+str(e))
-    #         cv2.waitKey(30)
-    #
-    #     if maxVal > scr_reg.target_occluded_thresh:
-    #         logger.debug(f"Target is occluded ({maxVal:5.4f} > {scr_reg.target_occluded_thresh:5.2f})")
-    #         return True
-    #     else:
-    #         #logger.debug(f"Target is not occluded ({maxVal:5.4f} < {scr_reg.target_occluded_thresh:5.2f})")
-    #         return False
+    def get_compass_target_offset(self) -> CompassTargetOffset | None:
+        """
+        Gets the Navigation and Target offsets and determines the best match between the two.
+        @return: A TypedDict representing the compass and/or target information.
+        """
+        # Check Target and Compass
+        nav_off1 = self.get_nav_offset(self.scrReg)
+        tar_off1 = self.get_target_offset(self.scrReg)
+        if nav_off1 and not tar_off1:
+            # Compass detected and not target
+            # Try to use the compass data if the target is not visible.
+            # self.ap_ckb('log', 'Found Compass only for destination offset.')
+
+            behind = nav_off1['z'] < 0
+            result = {'roll': nav_off1['roll'], 'pit': nav_off1['pit'], 'yaw': nav_off1['yaw'],
+                      'tar_occ': False, 'tar_behind': behind, 'used_nav': True, 'used_tar': False}
+            return result
+
+        elif tar_off1 and not nav_off1:
+            # Target detected and not compass
+            # self.ap_ckb('log', 'Found Target only for destination offset.')
+
+            occ: bool = tar_off1['occ']
+            behind = False
+            result = {'roll': tar_off1['roll'], 'pit': tar_off1['pit'], 'yaw': tar_off1['yaw'],
+                      'tar_occ': occ, 'tar_behind': behind, 'used_nav': False, 'used_tar': True}
+            return result
+
+        elif tar_off1 and nav_off1:
+            # Target and Compass detected
+            # self.ap_ckb('log', 'Found Compass and Target for destination offset.')
+
+            # See what the error is between compass and target
+            roll_err = abs(nav_off1['roll'] - tar_off1['roll'])
+            pit_err = abs(nav_off1['pit'] - tar_off1['pit'])
+            yaw_err = abs(nav_off1['yaw'] - tar_off1['yaw'])
+
+            # Roll is not useful as a comparison because it goes wild when at p=0, y=0.
+            if pit_err > 2.0 or yaw_err > 2.0:
+                self.ap_ckb('log', f'Compass-Target error p: {round(pit_err, 2)}deg y: {round(yaw_err, 2)}deg')
+
+            # Prefer target (will be more accurate). Maybe add some additional logic to this later.
+            use_target = True
+            if use_target:
+                occ: bool = tar_off1['occ']
+                behind = nav_off1['z'] < 0
+                result = {'roll': tar_off1['roll'], 'pit': tar_off1['pit'], 'yaw': tar_off1['yaw'],
+                          'tar_occ': occ, 'tar_behind': behind, 'used_nav': False, 'used_tar': True}
+                return result
+            else:
+                result = {'roll': nav_off1['roll'], 'pit': nav_off1['pit'], 'yaw': nav_off1['yaw'],
+                          'tar_occ': False, 'tar_behind': False, 'used_nav': True, 'used_tar': False}
+                return result
+
+        else:
+            # Neither Target nor Compass detected
+            self.ap_ckb('log', 'Found neither Compass nor Target for destination offset.')
+            return None
 
     def sc_disengage_label_up(self, scr_reg) -> bool:
         """ look for messages like "PRESS [J] TO DISENGAGE" or "SUPERCRUISE OVERCHARGE ACTIVE",
@@ -1376,11 +1342,11 @@ class EDAutopilot:
             self.overlay.overlay_paint()
 
         if self.cv_view:
-            self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
+            self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0, 255, 0), 2)
             dis_image = cv2.rectangle(dis_image, (0, 0), (1000, 25), (0, 0, 0), -1)
             cv2.putText(dis_image, f'{maxVal:5.4f} > {scr_reg.disengage_thresh}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('disengage', dis_image)
-            cv2.moveWindow('disengage', self.cv_view_x-460,self.cv_view_y+575)
+            cv2.moveWindow('disengage', self.cv_view_x-460, self.cv_view_y+575)
             cv2.waitKey(1)
 
         if maxVal > scr_reg.disengage_thresh:
@@ -1415,6 +1381,10 @@ class EDAutopilot:
             sim = self.ocr.string_similarity(self.locale["PRESS_TO_DISENGAGE_MSG"], str(ocr_textlist))
             logger.info(f"Disengage similarity with {str(ocr_textlist)} is {sim}")
 
+        if sim > sim_match:
+            self.ap_ckb('log+vce', 'Disengage Supercruise')
+            self.keys.send('HyperSuperCombination')
+
         # Draw box around region
         if self.debug_overlay:
             elapsed_time = time.time() - start_time
@@ -1432,8 +1402,6 @@ class EDAutopilot:
             cv2.waitKey(30)
 
         if sim > sim_match:
-            # logger.info("'PRESS [] TO DISENGAGE' detected. Disengaging Supercruise")
-            # cv2.imwrite(f'test/disengage.png', image)
             return True
 
         return False
@@ -1450,7 +1418,6 @@ class EDAutopilot:
     def stop_sco_monitoring(self):
         """ Stop Supercruise Overcharge Monitoring. """
         self._sc_sco_active_loop_enable = False
-        self._sc_disengage_active = False
 
     def _sc_sco_active_loop(self):
         """ A loop to determine is Supercruise Overcharge is active.
@@ -1495,14 +1462,19 @@ class EDAutopilot:
                 # self._sc_disengage_active = self.sc_disengage(self.scrReg)
 
                 # if self.sc_disengage_label_up(scr_reg):
-                self._sc_disengage_active = self.sc_disengage_ocr(self.scrReg)
-            else:
-                self._sc_disengage_active = False
+                # If active, latch active flag and let it be reset when out of SC
+                if not self._sc_disengage_active:
+                    self._sc_disengage_active = self.sc_disengage_ocr(self.scrReg)
+            # else:
+            #     self._sc_disengage_active = False
 
             # Sleep upto 1 sec max. If OCR takes > 1 sec, there will be no delay
             elapsed_time = time.time() - start_time
             if elapsed_time < 1.0:
                 sleep(1.0 - elapsed_time)
+
+        # Reset disengage latch, in case it was latched.
+        self._sc_disengage_active = False
 
     def undock(self):
         """ Performs menu action to undock from Station """
@@ -1516,7 +1488,7 @@ class EDAutopilot:
         self.keys.send('UI_Down')
         self.keys.send('UI_Down')
         self.keys.send('UI_Select')
-        self.set_speed_0(repeat=2)
+        self.set_throttle_0(repeat=2)
 
         # Performs left menu ops to request docking
 
@@ -1537,17 +1509,17 @@ class EDAutopilot:
             logger.error('In dock(), after wait, but still not in_space')
 
         sleep(5)  # wait 5 seconds to get to 7.5km to request docking
-        self.set_speed_50()
+        self.set_throttle_50()
 
         if self.jn.ship_state()['status'] != "in_space":
-            self.set_speed_0()
+            self.set_throttle_0()
             logger.error('In dock(), after long wait, but still not in_space')
             raise Exception('Docking failed (not in space)')
 
         sleep(12)
         # At this point (of sleep()) we should be < 7.5km from the station.  Go 0 speed
         # if we get docking granted ED's docking computer will take over
-        self.set_speed_0(repeat=2)
+        self.set_throttle_0(repeat=2)
         sleep(3)  # Wait for ship to come to stop
         self.ap_ckb('log+vce', "Initiating Docking Procedure")
         # Request docking through Nav panel.
@@ -1561,19 +1533,19 @@ class EDAutopilot:
         else:
             for i in range(tries):
                 if self.jn.ship_state()['no_dock_reason'] == "Distance":
-                    self.set_speed_50()
+                    self.set_throttle_50()
                     sleep(5)
-                    self.set_speed_0(repeat=2)
+                    self.set_throttle_0(repeat=2)
                 sleep(3)  # Wait for ship to come to stop
                 # Request docking through Nav panel.
                 self.request_docking()
-                self.set_speed_0(repeat=2)
+                self.set_throttle_0(repeat=2)
 
                 sleep(1.5)
                 if self.jn.ship_state()['status'] == "dockinggranted":
                     granted = True
                     # Go back to navigation tab
-                    #self.request_docking_cleanup()
+                    # self.request_docking_cleanup()
                     break
                 if self.jn.ship_state()['status'] == "dockingdenied":
                     pass
@@ -1608,19 +1580,22 @@ class EDAutopilot:
     def is_sun_dead_ahead(self, scr_reg):
         return scr_reg.sun_percent(scr_reg.screen) > 5
 
-    # use to orient the ship to not be pointing right at the Sun
-    # Checks brightness in the region in front of us, if brightness exceeds a threshold
-    # then will pitch up until below threshold.
-    #
-    def sun_avoid(self, scr_reg):
+    def sun_avoid(self, scr_reg, scooping: bool):
+        """ Use to orient the ship to not be pointing right at the Sun
+        Checks brightness in the region in front of us, if brightness exceeds a threshold
+        then will pitch up until below threshold.
+        @param scooping: Are we scooping this star?
+        @param scr_reg:
+        @return:
+        """
         logger.debug('align= avoid sun')
 
         sleep(0.5)
 
         # close to core the 'sky' is very bright with close stars, if we are pitch due to a non-scoopable star
         #  which is dull red, the star field is 'brighter' than the sun, so our sun avoidance could pitch up
-        #  endlessly. So we will have a fail_safe_timeout to kick us out of pitch up if we've pitch past 110 degrees, but
-        #  we'll add 3 more second for pad in case the user has a higher pitch rate than the vehicle can do
+        #  endlessly. So we will have a fail_safe_timeout to kick us out of pitch up if we've pitch past 110 degrees,
+        #  but we'll add 3 more second for pad in case the user has a higher pitch rate than the vehicle can do
         fail_safe_timeout = (120/self.pitchrate)+3
         starttime = time.time()
 
@@ -1632,10 +1607,10 @@ class EDAutopilot:
             interdicted = self.interdiction_check()
             if interdicted:
                 # Continue journey after interdiction
-                self.set_speed_0()
+                self.set_throttle_0()
 
             # if we are pitching more than N seconds break, may be in high density area star area (close to core)
-            if ((time.time()-starttime) > fail_safe_timeout):
+            if (time.time()-starttime) > fail_safe_timeout:
                 logger.debug('sun avoid failsafe timeout')
                 print("sun avoid failsafe timeout")
                 break
@@ -1646,8 +1621,8 @@ class EDAutopilot:
             sleep(self.sunpitchuptime)
         self.keys.send('PitchUpButton', state=0)
 
-        # Some ships run cool so need to pitch down a little
-        if self.sunpitchuptime < 0.0:
+        # Some ships run cool so need to pitch down a little if we are scooping
+        if scooping and self.sunpitchuptime < 0.0:
             self.keys.send('PitchDownButton', state=1)
             sleep(-1.0 * self.sunpitchuptime)
             self.keys.send('PitchDownButton', state=0)
@@ -1657,8 +1632,7 @@ class EDAutopilot:
         pitching to put the nav point in the middle of the compass, i.e. target right in front of us.
         @return: True if aligned, else False.
         """
-        close = 5.0  # in degrees
-        if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
+        if not self._is_in_supercruise_or_space():
             logger.error('align=err1, nav_align not in super or space')
             raise Exception('nav_align not in super or space')
 
@@ -1667,23 +1641,34 @@ class EDAutopilot:
         # try multiple times to get aligned.  If the sun is shining on console, this it will be hard to match
         # the vehicle should be positioned with the sun below us via the sun_avoid() routine after a jump
         for ii in range(self.config['NavAlignTries']):
-            off = self.get_nav_offset(scr_reg)
+            off = self.get_compass_target_offset()
             if off is None:
                 self.ap_ckb('log', 'Unable to detect compass. Rolling to new position.')
                 # Try rolling if star glare is obscuring the compass
-                self.roll_clockwise_anticlockwise(90)
+                self.ship_control.roll_clockwise_anticlockwise(90)
                 continue
 
             logger.debug(f"Compass position: yaw: {str(off['yaw'])} pit: {str(off['pit'])}")
+
+            # Reduce the closeness as we are using the target instead of compass
+            close = 3.0  # in degrees
 
             # Check if we are close enough already
             if abs(off['yaw']) < close and abs(off['pit']) < close:
                 self.ap_ckb('log', 'Compass Align complete')
                 return True
 
-            # Roll if the nav point is not directly behind us.
-            if ((-180 + close) < off['yaw'] < (180 - close) and
-                    (-180 + close) < off['pit'] < (180 - close)):
+            # Increase the closeness as we are using the compass only
+            close = 30.0  # in degrees
+
+            # Roll if the nav point is not directly behind us, or in front of us.
+            if ((((-180 + close) < off['yaw'] < (0 - close)) or
+                 ((0 + close) < off['yaw'] < (180 - close))) and
+                    (((-180 + close) < off['pit'] < (0 - close)) or
+                     ((0 + close) < off['pit'] < (180 - close)))):
+
+                # Increase the closeness as we are using the compass only
+                close = 8.0  # in degrees
 
                 for i in range(20):
                     # Calc roll time based on nav point location
@@ -1700,11 +1685,12 @@ class EDAutopilot:
                             self.overlay.overlay_remove_floating_text('compass_rpy')
                             self.overlay.overlay_paint()
 
-                        self.roll_clockwise_anticlockwise(off['roll'])
-                        sleep(1)
-                        off = self.get_nav_offset(scr_reg)
+                        off = self.ship_control.roll_clockwise_anticlockwise(off['roll'], auto_tune=self.auto_tune_rpy, cur_deg=off['roll'])
                     else:
                         break
+
+            # Reduce the closeness as we are using the target instead of compass
+            close = 3.0  # in degrees
 
             for i in range(20):
                 # Calc pitch time based on nav point location
@@ -1721,9 +1707,7 @@ class EDAutopilot:
                         self.overlay.overlay_remove_floating_text('compass_rpy')
                         self.overlay.overlay_paint()
 
-                    self.pitch_up_down(off['pit'])
-                    sleep(0.75)
-                    off = self.get_nav_offset(scr_reg)
+                    off = self.ship_control.pitch_up_down(off['pit'], auto_tune=self.auto_tune_rpy, cur_deg=off['pit'])
                 else:
                     break
 
@@ -1742,9 +1726,7 @@ class EDAutopilot:
                         self.overlay.overlay_remove_floating_text('compass_rpy')
                         self.overlay.overlay_paint()
 
-                    self.yaw_right_left(off['yaw'])
-                    sleep(0.5)
-                    off = self.get_nav_offset(scr_reg)
+                    off = self.ship_control.yaw_right_left(off['yaw'], auto_tune=self.auto_tune_rpy, cur_deg=off['yaw'])
                 else:
                     break
 
@@ -1756,32 +1738,52 @@ class EDAutopilot:
         self.ap_ckb('log+vce', 'Compass Align failed - exhausted all retries')
         return False
 
+    def _is_in_supercruise_or_space(self) -> bool:
+        """Check if the ship is in supercruise or normal space using both journal state and status.json flags.
+        The status.json flags update faster than the journal reader, so we check both to avoid race conditions.
+        @return: True if in SC or Space, else False.
+        """
+        jn_status = self.jn.ship_state()['status']
+        if jn_status == 'in_supercruise' or jn_status == 'in_space':
+            return True
+        if self.status.get_flag(FlagsSupercruise):
+            return True
+        if (not self.status.get_flag(FlagsDocked) and not self.status.get_flag(FlagsLanded)
+                and not self.status.get_flag(FlagsFsdJump) and not self.status.get_flag(FlagsFsdCharging)):
+            return True
+        return False
+
     def mnvr_to_target(self, scr_reg):
         """ Maneuver to Target using compass then target before performing a jump."""
         logger.debug('mnvr_to_target entered')
 
-        if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
-            logger.error('align() not in sc or space')
-            raise Exception('align() not in sc or space')
+        if not self._is_in_supercruise_or_space():
+            for _ in range(10):
+                sleep(0.5)
+                if self._is_in_supercruise_or_space():
+                    break
+            else:
+                logger.error('align() not in sc or space')
+                raise Exception('align() not in sc or space')
 
-        self.sun_avoid(scr_reg)
+        self.sun_avoid(scr_reg, scooping=False)
 
-        self.set_speed_50()
+        self.set_throttle_50()
         res = self.compass_align(scr_reg)
         # Quick calibrate the compass
-        if res:
-            self.quick_calibrate_compass()
+        # if res:
+        #     self.quick_calibrate_compass()
 
         self.ap_ckb('log+vce', 'Target Align')
         for i in range(5):
-            self.set_speed_50()
+            self.set_throttle_50()
             align_res = self.sc_target_align(scr_reg)
             if align_res == ScTargetAlignReturn.Lost:
-                self.set_speed_50()
+                self.set_throttle_50()
                 self.compass_align(scr_reg)  # Compass Align
 
             elif align_res == ScTargetAlignReturn.Found:
-                self.set_speed_100()
+                self.set_throttle_100()
                 return
 
             elif align_res == ScTargetAlignReturn.Disengage:
@@ -1809,41 +1811,42 @@ class EDAutopilot:
         target_align_inner_lim = self.target_align_inner_lim
 
         off = None
-        tar_off1 = None
+        tar_off1: CompassTargetOffset | None = None
         nav_off1 = None
-        tar_off2 = None
+        tar_off2: CompassTargetOffset | None = None
         nav_off2 = None
 
         # Try to get the target 5 times before quiting
         for i in range(5):
             # Check Target and Compass
-            nav_off1 = self.get_nav_offset(scr_reg)
-            tar_off1 = self.get_target_offset(scr_reg)
+            # nav_off1 = self.get_nav_offset(scr_reg)
+            tar_off1 = self.get_compass_target_offset()
             if tar_off1:
                 # Target detected
                 off = tar_off1
                 # logger.debug(f"sc_target_align x: {str(off['x'])} y:{str(off['y'])}")
                 # Apply offset to keep target above center
                 off['pit'] = off['pit'] - target_align_pit_off
-            elif nav_off1:
-                # Try to use the compass data if the target is not visible.
-                off = nav_off1
-                self.ap_ckb('log+vce', 'Using Compass for Target Align')
+                # elif nav_off1:
+                #     # Try to use the compass data if the target is not visible.
+                #     off = nav_off1
+                #     self.ap_ckb('log', 'Using Compass for Target Align')
 
                 # We are using compass align, increase the values as compass is much less accurate
-                target_align_outer_lim = target_align_outer_lim * target_align_compass_mult
-                target_align_inner_lim = target_align_inner_lim * target_align_compass_mult
-                target_align_pit_off = target_align_pit_off * target_align_compass_mult
+                if off['used_nav']:
+                    target_align_outer_lim = target_align_outer_lim * target_align_compass_mult
+                    target_align_inner_lim = target_align_inner_lim * target_align_compass_mult
+                    target_align_pit_off = target_align_pit_off * target_align_compass_mult
 
                 # Check if Target is now behind us
-                if nav_off1['z'] < 0:
+                if off['tar_behind']:
                     self.ap_ckb('log', 'Target is behind us')
                     return ScTargetAlignReturn.Lost
 
-            # Check if target occluded
-            if tar_off1 and tar_off1['occ']:
-                self.occluded_reposition(scr_reg)
-                self.ap_ckb('log+vce', 'Target Align')
+                # Check if target occluded
+                if tar_off1['tar_occ']:
+                    self.occluded_reposition(scr_reg)
+                    self.ap_ckb('log+vce', 'Target Align')
 
             # if self.is_destination_occluded(scr_reg):
             #     self.occluded_reposition(scr_reg)
@@ -1853,8 +1856,8 @@ class EDAutopilot:
             # if self.sc_disengage_label_up(scr_reg):
             #     if self.sc_disengage_ocr(scr_reg):
             if self._sc_disengage_active:
-                self.ap_ckb('log+vce', 'Disengage Supercruise')
-                self.keys.send('HyperSuperCombination')
+                # self.ap_ckb('log+vce', 'Disengage Supercruise')
+                # self.keys.send('HyperSuperCombination')
                 self.stop_sco_monitoring()
                 return ScTargetAlignReturn.Disengage
 
@@ -1863,7 +1866,7 @@ class EDAutopilot:
                 break
 
         # Target could not be found, return
-        if tar_off1 is None and nav_off1 is None:
+        if tar_off1 is None:
             logger.debug("sc_target_align not finding target")
             self.ap_ckb('log', 'Target Align failed - target not found')
             return ScTargetAlignReturn.Lost
@@ -1891,63 +1894,47 @@ class EDAutopilot:
             # Calc pitch time based on nav point location
             logger.debug(f"sc_target_align before: pit: {off['pit']} yaw: {off['yaw']} ")
 
-            p_deg = 0.0
+            # p_deg = 0.0
             if abs(off['pit']) > target_align_outer_lim:
-                p_deg = off['pit']
-                self.pitch_up_down(p_deg)
+                # p_deg = off['pit']
+                # self.ship_control.pitch_up_down(p_deg)
+                self.ship_control.pitch_up_down(off['pit'], auto_tune=self.auto_tune_rpy, cur_deg=off['pit'])
 
             # Calc yaw time based on nav point location
-            y_deg = 0.0
+            # y_deg = 0.0
             if abs(off['yaw']) > target_align_outer_lim:
-                y_deg = off['yaw']
-                self.yaw_right_left(y_deg)
-
-            # Wait for ship to finish moving and picture to stabilize
-            sleep(1.0)
+                # y_deg = off['yaw']
+                # self.ship_control.yaw_right_left(y_deg)
+                self.ship_control.yaw_right_left(off['yaw'], auto_tune=self.auto_tune_rpy, cur_deg=off['yaw'])
 
             # Check Target and Compass
-            nav_off2 = self.get_nav_offset(scr_reg)  # For cv view only
-            tar_off2 = self.get_target_offset(scr_reg)
+            tar_off2 = self.get_compass_target_offset()
             if tar_off2:
                 off = tar_off2
                 logger.debug(f"sc_target_align after: pit:{off['pit']} yaw: {off['yaw']} ")
                 # Apply offset to keep target above center
                 off['pit'] = off['pit'] - target_align_pit_off
-            elif nav_off2:
-                # Try to use the compass data if the target is not visible.
-                off = nav_off2
-                self.ap_ckb('log+vce', 'Using Compass for Target Align')
+            # elif nav_off2:
+            #     # Try to use the compass data if the target is not visible.
+            #     off = nav_off2
+            #     self.ap_ckb('log', 'Using Compass for Target Align')
                 # Check if Target is now behind us
-                if nav_off2['z'] < 0:
+                if tar_off2['tar_behind'] < 0:
                     self.ap_ckb('log', 'Target is behind us')
                     return ScTargetAlignReturn.Lost
 
             if tar_off1 and tar_off2:
                 # Check diff from before and after movement
+                # TODO - At some point check/increase the RPY if we overshoot?
                 pit_delta = tar_off2['pit'] - tar_off1['pit']
                 yaw_delta = tar_off2['yaw'] - tar_off1['yaw']
-                if ((tar_off1['pit'] < 0.0 and tar_off2['pit'] > target_align_outer_lim) or
-                        (tar_off1['pit'] > 0.0 and tar_off2['pit'] < -target_align_outer_lim)):
-                    self.ap_ckb('log', f"TEST - Pitch correction gone too far. Reducing Pitch Factor.")
-                    # Correct factor
-                    # self.pitchfactor = self.pitchfactor - 1.0
-                    # Update GUI with ship config
-                    self.ap_ckb('update_ship_cfg')
-
-                if ((tar_off1['yaw'] < 0.0 and tar_off2['yaw'] > target_align_outer_lim) or
-                        (tar_off1['yaw'] > 0.0 and tar_off2['yaw'] < -target_align_outer_lim)):
-                    self.ap_ckb('log', f"TEST - Yaw correction gone too far. Reducing Yaw Factor.")
-                    # Correct factor
-                    # self.yawfactor = self.yawfactor - 1.0
-                    # Update GUI with ship config
-                    self.ap_ckb('update_ship_cfg')
 
             if tar_off2:
                 # Store current offsets
                 tar_off1 = tar_off2.copy()
 
             # Check if target occluded
-            if tar_off2 and tar_off2['occ']:
+            if tar_off2 and tar_off2['tar_occ']:
                 self.occluded_reposition(scr_reg)
                 self.ap_ckb('log+vce', 'Target Align')
 
@@ -1959,25 +1946,25 @@ class EDAutopilot:
             # if self.sc_disengage_label_up(scr_reg):
             #     if self.sc_disengage_ocr(scr_reg):
             if self._sc_disengage_active:
-                self.ap_ckb('log+vce', 'Disengage Supercruise')
-                self.keys.send('HyperSuperCombination')
+                # self.ap_ckb('log+vce', 'Disengage Supercruise')
+                # self.keys.send('HyperSuperCombination')
                 self.stop_sco_monitoring()
                 return ScTargetAlignReturn.Disengage
 
             # Check if target is outside the target region (behind us) and break loop
-            if tar_off2 is None and nav_off2 is None:
+            if tar_off2 is None:
                 logger.debug("sc_target_align lost target")
                 self.ap_ckb('log', 'Target Align failed - lost target.')
                 return ScTargetAlignReturn.Lost
 
-        # We are aligned, so define the navigation correction as the current offset. This won't be 100% accurate, but
-        # will be within a few degrees.
-        if tar_off1 and nav_off1:
-            self._nav_cor_x = self._nav_cor_x + nav_off1['x']
-            self._nav_cor_y = self._nav_cor_y + nav_off1['y']
-        elif tar_off2 and nav_off2:
-            self._nav_cor_x = self._nav_cor_x + nav_off2['x']
-            self._nav_cor_y = self._nav_cor_y + nav_off2['y']
+        # # We are aligned, so define the navigation correction as the current offset. This won't be 100% accurate, but
+        # # will be within a few degrees.
+        # if tar_off1 and nav_off1:
+        #     self._nav_cor_x = self._nav_cor_x + nav_off1['x']
+        #     self._nav_cor_y = self._nav_cor_y + nav_off1['y']
+        # elif tar_off2 and nav_off2:
+        #     self._nav_cor_x = self._nav_cor_x + nav_off2['x']
+        #     self._nav_cor_y = self._nav_cor_y + nav_off2['y']
 
         # self.ap_ckb('log', 'Target Align complete.')
         return ScTargetAlignReturn.Found
@@ -1989,17 +1976,17 @@ class EDAutopilot:
         in the compass (because it is a hollow circle), then it will pitch down, this will
         bring the target into view quickly. """
         self.ap_ckb('log+vce', 'Target occluded, repositioning.')
-        self.set_speed_0()
-        self.pitch_up_down(-90)
+        self.set_throttle_0()
+        self.ship_control.pitch_up_down(-90)
 
         # Speed away
-        self.set_speed_100()
+        self.set_throttle_100()
         sleep(15)
 
-        self.set_speed_0()
-        self.pitch_up_down(90)
+        self.set_throttle_0()
+        self.ship_control.pitch_up_down(90)
         self.compass_align(scr_reg)
-        self.set_speed_50()
+        self.set_throttle_50()
 
     def honk(self):
         # Do the Discovery Scan (Honk)
@@ -2039,15 +2026,19 @@ class EDAutopilot:
         sleep(0.5)
         self.update_ap_status("Idle")
 
-    # position() happens after a refuel and performs
-    #   - accelerate past sun
-    #   - perform Discovery scan
-    #   - perform fss (if enabled)
     def position(self, scr_reg, did_refuel=True):
+        """ Position() happens after a refuel and performs
+            - accelerate past sun
+            - perform Discovery scan
+            - perform fss (if enabled)
+        @param scr_reg:
+        @param did_refuel:
+        @return:
+        """
         logger.debug('position')
         add_time = 12
 
-        self.set_speed_100()
+        self.set_throttle_100()
 
         self.vce.say("Passing star")
 
@@ -2071,10 +2062,13 @@ class EDAutopilot:
         logger.debug('position=complete')
         return True
 
-    # jump() happens after we are aligned to Target
-    # TODO: nees to check for Thargoid interdiction and their wave that would shut us down,
-    #       if thargoid, then we wait until reboot and continue on.. go back into FSD and align
     def jump(self, scr_reg):
+        """ jump() happens after we are aligned to Target
+        TODO: nees to check for Thargoid interdiction and their wave that would shut us down,
+        if thargoid, then we wait until reboot and continue on.. go back into FSD and align
+        @param scr_reg:
+        @return:
+        """
         logger.debug('jump')
 
         self.vce.say("Frameshift Jump")
@@ -2086,7 +2080,7 @@ class EDAutopilot:
         for i in range(jump_tries):
 
             logger.debug('jump= try:'+str(i))
-            if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
+            if not self._is_in_supercruise_or_space():
                 logger.error('Not ready to FSD jump. jump=err1')
                 raise Exception('not ready to jump')
             sleep(0.5)
@@ -2115,7 +2109,7 @@ class EDAutopilot:
 
             logger.debug('jump= speed 0')
             self.jump_cnt = self.jump_cnt+1
-            self.set_speed_0(repeat=3)  # Let's be triply sure that we set speed to 0% :)
+            self.set_throttle_0(repeat=3)  # Let's be triply sure that we set speed to 0% :)
             sleep(1)  # wait 1 sec after jump to allow graphics to stablize and accept inputs
             logger.debug('jump=complete')
 
@@ -2130,152 +2124,9 @@ class EDAutopilot:
 
         # a set of convience routes to pitch, rotate by specified degress
 
-    def roll_clockwise_anticlockwise(self, deg):
-        abs_deg = abs(deg)
-        htime = abs_deg/self.rollrate
-
-        if self.speed_demand is None:
-            self.set_speed_50()
-
-        # # Using Power calc for roll rate
-        # if 0 < abs_deg < 45:
-        #     value = self.rollrate * math.pow((abs_deg / 45), (1 / self.roll_factor))
-        #     value = min(value, self.rollrate)
-        #     value = max(value, 0.01)
-        #     htime = abs_deg / value
-
-        # Calculate rate for less than 45 degrees, else use default
-        if abs_deg < 45:
-            # Roll rate from ship config
-            ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
-            if self.speed_demand not in ship_type:
-                ship_type[self.speed_demand] = dict()
-            speed_demand = ship_type[self.speed_demand]
-            if 'RollRate' not in speed_demand:
-                speed_demand['RollRate'] = dict()
-
-            last_deg = 0.0
-            last_val = 0.0
-            for key, value in speed_demand['RollRate'].items():
-                key_deg = float(int(key)) / 10
-                if abs_deg <= key_deg:
-                    print(f"Roll demand: {deg}. Closest lookup: {key_deg}, {value}")
-
-                    # Ratio based on the last value and this value
-                    ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
-                    print(f"Roll demand: {deg}. Ratio value: {round(ratio_val, 2)}")
-
-                    htime = abs_deg / ratio_val
-                    break
-                else:
-                    last_deg = key_deg
-                    last_val = value
-
-        # Check if we are rolling right or left
-        if deg > 0.0:
-            self.keys.send('RollRightButton', hold=htime)
-        else:
-            self.keys.send('RollLeftButton', hold=htime)
-
-    def pitch_up_down(self, deg):
-        abs_deg = abs(deg)
-        htime = abs_deg/self.pitchrate
-
-        if self.speed_demand is None:
-            self.set_speed_50()
-
-        # # Using Power calc for pitch rate
-        # if 0 < abs_deg < 30:
-        #     value = self.pitchrate * math.pow((abs_deg / 30), (1 / self.pitch_factor))
-        #     value = min(value, self.pitchrate)
-        #     value = max(value, 0.01)
-        #     htime = abs_deg / value
-
-        # Calculate rate for less than 30 degrees, else use default
-        if abs_deg < 30:
-            # Pitch rate from ship config
-            ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
-            if self.speed_demand not in ship_type:
-                ship_type[self.speed_demand] = dict()
-            speed_demand = ship_type[self.speed_demand]
-            if 'PitchRate' not in speed_demand:
-                speed_demand['PitchRate'] = dict()
-
-            last_deg = 0.0
-            last_val = 0.0
-            for key, value in speed_demand['PitchRate'].items():
-                key_deg = float(int(key)) / 10
-                if abs_deg <= key_deg:
-                    print(f"Pitch demand: {deg}. Closest lookup: {key_deg}, {value}")
-
-                    # Ratio based on the last value and this value
-                    ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
-                    print(f"Pitch demand: {deg}. Ratio value: {round(ratio_val, 2)}")
-
-                    htime = abs_deg / ratio_val
-                    break
-                else:
-                    last_deg = key_deg
-                    last_val = value
-
-        # Check if we are pitching up or down
-        if deg > 0.0:
-            self.keys.send('PitchUpButton', hold=htime)
-        else:
-            self.keys.send('PitchDownButton', hold=htime)
-
-    def yaw_right_left(self, deg):
-        """ Yaw in deg. (> 0.0 for yaw right, < 0.0 for yaw left)
-        @return: The key hold duration.
-        """
-        abs_deg = abs(deg)
-        htime = abs_deg/self.yawrate
-
-        if self.speed_demand is None:
-            self.set_speed_50()
-
-        # # Using Power calc for yaw rate
-        # if 0 < abs_deg < 30:
-        #     value = self.yawrate * math.pow((abs_deg / 30), (1 / self.yaw_factor))
-        #     value = min(value, self.yawrate)
-        #     value = max(value, 0.01)
-        #     htime = abs_deg / value
-
-        # Calculate rate for less than 30 degrees, else use default
-        if abs_deg < 30:
-            # Yaw rate from ship config
-            ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
-            if self.speed_demand not in ship_type:
-                ship_type[self.speed_demand] = dict()
-            speed_demand = ship_type[self.speed_demand]
-            if 'YawRate' not in speed_demand:
-                speed_demand['YawRate'] = dict()
-
-            last_deg = 0.0
-            last_val = 0.0
-            for key, value in speed_demand['YawRate'].items():
-                key_deg = float(int(key)) / 10
-                if abs_deg <= key_deg:
-                    print(f"Yaw demand: {deg}. Closest lookup: {key_deg}, {value}")
-
-                    # Ratio based on the last value and this value
-                    ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
-                    print(f"Yaw demand: {deg}. Ratio value: {round(ratio_val, 2)}")
-
-                    htime = abs_deg / ratio_val
-                    break
-                else:
-                    last_deg = key_deg
-                    last_val = value
-
-        # Check if we are yawing right or left
-        if deg > 0.0:
-            self.keys.send('YawRightButton', hold=htime)
-        else:
-            self.keys.send('YawLeftButton', hold=htime)
-
     def refuel(self, scr_reg):
         """ Check if refueling needed, ensure correct start type. """
+        # TODO delete this once refuel_new is proven.
         # Check if we have a fuel scoop
         has_fuel_scoop = self.jn.ship_state()['has_fuel_scoop']
 
@@ -2301,7 +2152,7 @@ class EDAutopilot:
         self.vce.say("Avoiding star")
         self.update_ap_status("Avoiding star")
         self.ap_ckb('log', 'Avoiding star')
-        self.sun_avoid(scr_reg)
+        self.sun_avoid(scr_reg, scooping=True)
 
         if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and is_star_scoopable and has_fuel_scoop:
             logger.debug('refuel= start refuel')
@@ -2310,25 +2161,25 @@ class EDAutopilot:
             self.update_ap_status("Refueling")
 
             # mnvr into position
-            self.set_speed_100()
+            self.set_throttle_100()
             sleep(5)
-            self.set_speed_50()
+            self.set_throttle_50()
             sleep(1.7)
-            self.set_speed_0(repeat=3)
+            self.set_throttle_0(repeat=3)
 
             self.refuel_cnt += 1
 
             # The log will not reflect a FuelScoop until first 5 tons filled, then every 5 tons until complete
-            #if we don't scoop first 5 tons with 40 sec break, since not scooping or not fast enough or not at all, then abort
+            # if we don't scoop first 5 tons with 40 sec break, since not scooping or not fast enough or not at all, then abort
             startime = time.time()
             while not self.jn.ship_state()['is_scooping'] and not self.jn.ship_state()['fuel_percent'] == 100:
                 # check if we are being interdicted
                 interdicted = self.interdiction_check()
                 if interdicted:
                     # Continue journey after interdiction
-                    self.set_speed_0()
+                    self.set_throttle_0()
 
-                if ((time.time()-startime) > int(self.config['FuelScoopTimeOut'])):
+                if (time.time() - startime) > int(self.config['FuelScoopTimeOut']):
                     self.vce.say("Refueling abort, insufficient scooping")
                     return False
 
@@ -2341,7 +2192,7 @@ class EDAutopilot:
                 interdicted = self.interdiction_check()
                 if interdicted:
                     # Continue journey after interdiction
-                    self.set_speed_0()
+                    self.set_throttle_0()
 
                 if ((time.time()-startime) > int(self.config['FuelScoopTimeOut'])):
                     self.vce.say("Refueling abort, insufficient scooping")
@@ -2354,7 +2205,7 @@ class EDAutopilot:
         elif is_star_scoopable == False:
             self.ap_ckb('log', 'Skip refuel - not a fuel star')
             logger.debug('refuel= needed, unsuitable star')
-            self.pitch_up_down(20)
+            self.ship_control.pitch_up_down(20)
             return False
 
         elif self.jn.ship_state()['fuel_percent'] >= self.config['RefuelThreshold']:
@@ -2365,12 +2216,119 @@ class EDAutopilot:
         elif not has_fuel_scoop:
             self.ap_ckb('log', 'Skip refuel - no fuel scoop fitted')
             logger.debug('No fuel scoop fitted.')
-            self.pitch_up_down(20)
+            self.ship_control.pitch_up_down(20)
             return False
 
         else:
-            self.pitch_up_down(15)  # if not refueling pitch up somemore so we won't heat up
+            self.ship_control.pitch_up_down(15)  # if not refueling pitch up somemore so we won't heat up
             return False
+
+    def refuel_new(self, scr_reg):
+        """ Check if refueling needed, ensure correct start type. """
+        # Check if we have a fuel scoop
+        has_fuel_scoop = self.jn.ship_state()['has_fuel_scoop']
+
+        logger.debug('refuel')
+        scoopable_stars = ['F', 'O', 'G', 'K', 'B', 'A', 'M']
+
+        if self.jn.ship_state()['status'] != 'in_supercruise':
+            logger.error('refuel=err1')
+            return False
+
+        is_star_scoopable = self.jn.ship_state()['star_class'] in scoopable_stars
+
+        # if the sun is not scoopable, then set a low low threshold so we can pick up the dull red
+        # sun types.  Since we won't scoop it doesn't matter how much we pitch up
+        # if scoopable we know white/yellow stars are bright, so set higher threshold, this will allow us to
+        #  mast out the galaxy edge (which is bright) and not pitch up too much and avoid scooping
+        if is_star_scoopable == False or not has_fuel_scoop:
+            scr_reg.set_sun_threshold(25)
+        else:
+            scr_reg.set_sun_threshold(self.config['SunBrightThreshold'])
+
+        # Conditions to avoid refueling
+        avoid_star = False
+        if not is_star_scoopable:
+            self.ap_ckb('log', 'Skip refuel - not a fuel star')
+            avoid_star = True
+
+        elif (self.jn.ship_state()['fuel_percent'] == 100 or
+                self.jn.ship_state()['fuel_percent'] >= self.config['RefuelThreshold']):
+            self.ap_ckb('log', 'Skip refuel - fuel level okay')
+            avoid_star = True
+
+        elif not has_fuel_scoop:
+            self.ap_ckb('log', 'Skip refuel - no fuel scoop fitted')
+            avoid_star = True
+
+        # Check if we are avoiding this star
+        if avoid_star:
+            # Let's avoid the star, shall we
+            self.update_ap_status("Avoiding star")
+            self.ap_ckb('log+vce', 'Avoiding star')
+
+            # Avoid star
+            self.sun_avoid(scr_reg, scooping=False)
+            # Move and additional 20 deg up to avoid scooping
+            self.ship_control.pitch_up_down(20)
+            return False
+
+        # Continue refueling operation
+        self.ap_ckb('log+vce', 'Preparing for refuel')
+        self.update_ap_status("Preparing for refuel")
+        # Avoid star
+        self.sun_avoid(scr_reg, scooping=True)
+
+        # mnvr into position
+        self.set_throttle_100()
+        sleep(5)
+        self.set_throttle_50()
+        sleep(1.7)
+        self.set_throttle_0(repeat=3)
+
+        self.refuel_cnt += 1
+
+        # The log will not reflect a FuelScoop until first 5 tons filled, then every 5 tons until complete. If we
+        # don't scoop first 5 tons with 40 sec break, since not scooping or not fast enough or not at all, then abort.
+        startime = time.time()
+        while not self.status.get_flag(FlagsScoopingFuel):
+            # check if we are being interdicted
+            interdicted = self.interdiction_check()
+            if interdicted:
+                # Continue journey after interdiction
+                self.set_throttle_0()
+
+            if (time.time() - startime) > int(self.config['FuelScoopTimeOut']):
+                self.vce.say("Refueling abort, insufficient scooping")
+                return False
+
+        logger.debug('refuel=refueling')
+        self.ap_ckb('log+vce', 'Refueling')
+        self.update_ap_status("Refueling")
+
+        # We started fueling, so lets give it another timeout period to fuel up
+        startime = time.time()
+        while not self.jn.ship_state()['fuel_percent'] == 100:
+            # check if we are being interdicted
+            interdicted = self.interdiction_check()
+            if interdicted:
+                # Continue journey after interdiction
+                self.set_throttle_0()
+
+            if (time.time() - startime) > int(self.config['FuelScoopTimeOut']):
+                self.vce.say("Refueling abort, insufficient scooping")
+                self.ship_control.pitch_up_down(20)
+                return True
+
+            if not self.status.get_flag(FlagsScoopingFuel):
+                self.ap_ckb('log', 'Fuel scooping Ended')
+                self.ship_control.pitch_up_down(20)
+                return True
+            sleep(1)
+
+        self.ap_ckb('log', 'Refueling complete')
+        self.ship_control.pitch_up_down(20)
+        return True
 
     def waypoint_undock_seq(self):
         self.update_ap_status("Executing Undocking/Launch")
@@ -2400,11 +2358,11 @@ class EDAutopilot:
                 while self.jn.ship_state()['status'] != 'in_space':
                     sleep(1)
 
-                # If we are on a Fleet Carrier we will pitch up 90 deg and fly away to avoid planet
-                if fleet_carrier:
+                # If we are on a Fleet Carrier/Squadron Carrier we will pitch up 90 deg and fly away to avoid planet
+                if fleet_carrier or squadron_fleet_carrier:
                     self.ap_ckb('log+vce', 'Maneuvering')
                     # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-                    self.pitch_up_down(self.config['FCDepartureAngle'])
+                    self.ship_control.pitch_up_down(self.config['FCDepartureAngle'])
 
                     self.update_ap_status("Undock Complete, accelerating")
 
@@ -2419,7 +2377,7 @@ class EDAutopilot:
                 if on_orbital_construction_site:
                     self.ap_ckb('log+vce', 'Maneuvering')
                     # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-                    self.pitch_up_down(self.config['OCDepartureAngle'])
+                    self.ship_control.pitch_up_down(self.config['OCDepartureAngle'])
 
                 if starport_outpost or on_orbital_construction_site:
                     # In space (launched from starport or outpost etc.) OR construction site
@@ -2454,9 +2412,12 @@ class EDAutopilot:
                 self.update_ap_status("Takeoff Complete, accelerating")
 
             # Undocked or off the surface, so leave planet
-            self.set_speed_50()
+            self.set_throttle_50()
+            # Wait for throttle to take effect.
+            sleep(2.0)
+
             # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-            self.pitch_up_down(90 * 1.25)
+            self.ship_control.pitch_up_down(90)
 
             # Engage Supercruise
             self.sc_engage(True)
@@ -2465,7 +2426,14 @@ class EDAutopilot:
             self.keys.send('UseBoostJuice')
 
             # Wait until out of orbit.
-            res = self.status.wait_for_flag_off(FlagsHasLatLong, timeout=60)
+            res = self.status.wait_for_flag_off(FlagsHasLatLong, timeout=60)  # This takes too long to update
+            # TODO - wait_for_flag_off(FlagsHasLatLong) takes too long when SCO is active and sends us far from the
+            #  planet which is not useful when we are doing exobiology stuff and want to go back to the planet.
+            #  The below tries to help do this, but is not very effective. Maybe another flag would be useful?
+            # dly = self.config['PlanetDepartureSCOTime']
+            # if dly > 0.0:
+            #     sleep(dly)
+
             # TODO - do we need to check if we never leave orbit?
 
             # Disable SCO. If SCO not fitted, this will do nothing.
@@ -2480,7 +2448,7 @@ class EDAutopilot:
             self.start_sco_monitoring()
             return True
 
-        self.set_speed_100()
+        self.set_throttle_100()
 
         # While Mass Locked, keep boosting.
         while self.status.get_flag(FlagsFsdMassLocked):
@@ -2504,7 +2472,7 @@ class EDAutopilot:
         self.status.wait_for_flag_on(FlagsSupercruise, timeout=30)
 
         # Revert to 50%
-        self.set_speed_50()
+        self.set_throttle_50()
 
         return True
 
@@ -2553,8 +2521,8 @@ class EDAutopilot:
         Returns True if we travel successfully travel there, else False. """
         # If waypoint file has a Station Name associated then attempt targeting it
         self.update_ap_status(f"Targeting Station: {station_name}")
-        #res = self.nav_panel.lock_destination(station_name)
-        #if not res:
+        # res = self.nav_panel.lock_destination(station_name)
+        # if not res:
         #    return False
 
         # if we are starting the waypoint docked at a station, we need to undock first
@@ -2595,6 +2563,15 @@ class EDAutopilot:
                 self.update_overlay()
                 self.waypoint_undock_seq()
 
+        # If we are already in supercruise (e.g. manual restart), check if the sun is ahead
+        # and perform the same post-jump sequence: refuel (which includes sun_avoid with
+        # correct brightness threshold), then position to fly past the star
+        # TODO - Add this to SC Assist and Waypoint Assist?
+        if self._is_in_supercruise_or_space() and self.is_sun_dead_ahead(scr_reg):
+            refueled = self.refuel_new(scr_reg)
+            self.update_ap_status("Maneuvering")
+            self.position(scr_reg, refueled)
+
         # Keep jumping as long as there is a system to jump to.
         # TODO - can we enable this? Seems like a better way
         # while nav_route_parser.get_last_system() is not None:
@@ -2626,8 +2603,8 @@ class EDAutopilot:
 
                 self.update_overlay()
 
-                self.ap_ckb('jumpcount', "Dist: {:,.1f}".format(self.total_dist_jumped)+"ly"+
-                            "  Jumps: {}of{}".format(self.jump_cnt, self.total_jumps)+"  @{}s/j".format(int(avg_time_jump))+
+                self.ap_ckb('jumpcount', "Dist: {:,.1f}".format(self.total_dist_jumped)+"ly" +
+                            "  Jumps: {}of{}".format(self.jump_cnt, self.total_jumps)+"  @{}s/j".format(int(avg_time_jump)) +
                             "  Fu#: "+str(self.refuel_cnt) + " ETA: "+self._str_eta)
                 self.ap_ckb('log', 'ETA (to System): '+self._str_eta)
 
@@ -2635,8 +2612,14 @@ class EDAutopilot:
                 self.honk_thread = threading.Thread(target=self.honk, daemon=True)
                 self.honk_thread.start()
 
+                # Rotate destination to roughly the top if we have a destination
+                # Should make it easier to get to the destination the other side of the star
+                off = self.get_compass_target_offset()
+                if off:
+                    self.ship_control.roll_clockwise_anticlockwise(off['roll'], auto_tune=self.auto_tune_rpy, cur_deg=off['roll'])
+
                 # Refuel
-                refueled = self.refuel(scr_reg)
+                refueled = self.refuel_new(scr_reg)
 
                 self.update_ap_status("Maneuvering")
 
@@ -2651,7 +2634,7 @@ class EDAutopilot:
 
         # if there is no destination defined, we are done
         if not self.have_destination(scr_reg):
-            self.set_speed_0()
+            self.set_throttle_0()
             self.ap_ckb('log+vce', f"Destination reached, distance jumped:"+str(int(self.total_dist_jumped))+" lightyears")
             if self.config["AutomaticLogout"]:
                 sleep(5)
@@ -2659,7 +2642,7 @@ class EDAutopilot:
             return FSDAssistReturn.Complete
         # else there is a destination in System, so let jump over to SC Assist
         else:
-            self.set_speed_100()
+            self.set_throttle_100()
             self.ap_ckb('log+vce', f"System reached, preparing for supercruise")
             sleep(1)
             return FSDAssistReturn.Partial
@@ -2678,9 +2661,9 @@ class EDAutopilot:
             self.ap_ckb('log', "Quiting SC Assist - Compass not found. Rotate ship and try again.")
             logger.debug("Quiting sc_assist - compass not found")
             return
-        else:
-            # Quick calibrate the compass
-            self.quick_calibrate_compass()
+        # else:
+        #     # Quick calibrate the compass
+        #     self.quick_calibrate_compass()
 
         # if we are starting the waypoint docked at a station or landed, we need to undock/takeoff first
         if self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
@@ -2693,21 +2676,18 @@ class EDAutopilot:
 
         # Ensure we are 50%, don't want the loop of shame
         # Align Nav to target
-        self.set_speed_50()
+        self.set_throttle_50()
         res = self.compass_align(scr_reg)  # Compass Align
 
-        # self.quick_calibrate_target()
         self.ap_ckb('log+vce', 'Target Align')
-        self.set_speed_50()
+        self.set_throttle_50()
         align_res = self.sc_target_align(scr_reg)
-        # Quick calibrate with the target in front
-        # if align_res == ScTargetAlignReturn.Found:
-        #     self.quick_calibrate_target()
 
         # Loop forever keeping tight align to target, until we get SC Disengage popup
         while True:
             sleep(0.05)
-            if self.jn.ship_state()['status'] == 'in_supercruise':
+            if (self.jn.ship_state()['status'] == 'in_supercruise' or self.status.get_flag(FlagsSupercruise) or
+                    self._sc_disengage_active):
                 # Align and stay on target. If false is returned, we have lost the target behind us.
                 # self.set_speed_50()
                 align_res = self.sc_target_align(scr_reg)
@@ -2715,7 +2695,7 @@ class EDAutopilot:
                     # Continue ahead before aligning to prevent us circling the target
                     # self.set_speed_100()
                     sleep(10)
-                    self.set_speed_50()
+                    self.set_throttle_50()
                     self.compass_align(scr_reg)  # Compass Align
 
                 elif align_res == ScTargetAlignReturn.Found:
@@ -2739,15 +2719,15 @@ class EDAutopilot:
             interdicted = self.interdiction_check()
             if interdicted:
                 # Continue journey after interdiction
-                self.set_speed_50()
+                self.set_throttle_50()
                 self.compass_align(scr_reg)  # realign with station
 
             # check for SC Disengage
             # if self.sc_disengage_label_up(scr_reg):
             #     if self.sc_disengage_ocr(scr_reg):
             if self._sc_disengage_active:
-                self.ap_ckb('log+vce', 'Disengage Supercruise')
-                self.keys.send('HyperSuperCombination')
+                # self.ap_ckb('log+vce', 'Disengage Supercruise')
+                # self.keys.send('HyperSuperCombination')
                 self.stop_sco_monitoring()
                 break
 
@@ -2780,10 +2760,10 @@ class EDAutopilot:
                 self.ap_ckb('log+vce', "Docking complete, refueled, repaired and re-armed")
                 self.update_ap_status("Docking Complete")
             else:
-                self.set_speed_0()
+                self.set_throttle_0()
         else:
             self.vce.say("Exiting Supercruise, setting throttle to zero")
-            self.set_speed_0()  # make sure we don't continue to land
+            self.set_throttle_0()  # make sure we don't continue to land
             self.ap_ckb('log', "Supercruise dropped, terminating SC Assist")
 
         self.ap_ckb('log+vce', "Supercruise Assist complete")
@@ -2795,7 +2775,7 @@ class EDAutopilot:
     # and thus redeploy another one
     def afk_combat_loop(self):
         while True:
-            if self.afk_combat.check_shields_up() == False:
+            if not self.afk_combat.check_shields_up():
                 set_focus_elite_window()
                 self.vce.say("Shields down, evading")
                 self.afk_combat.evade()
@@ -2803,7 +2783,7 @@ class EDAutopilot:
                 self.afk_combat.launch_fighter()  # at new location launch fighter
                 break
 
-            if self.afk_combat.check_fighter_destroyed() == True:
+            if self.afk_combat.check_fighter_destroyed():
                 set_focus_elite_window()
                 self.vce.say("Fighter Destroyed, redeploying")
                 self.afk_combat.launch_fighter()  # assuming two fighter bays
@@ -2852,9 +2832,13 @@ class EDAutopilot:
             if res is False:
                 return False
 
-    # raising an exception to the engine loop thread, so we can terminate its execution
-    #  if thread was in a sleep, the exception seems to not be delivered
     def ctype_async_raise(self, thread_obj, exception):
+        """ Raising an exception to the engine loop thread, so we can terminate its execution
+        if thread was in a sleep, the exception seems to not be delivered
+        @param thread_obj:
+        @param exception:
+        @return:
+        """
         found = False
         target_tid = 0
         for tid, tobj in threading._active.items():
@@ -2864,7 +2848,8 @@ class EDAutopilot:
                 break
 
         if not found:
-            raise ValueError("Invalid thread object")
+            # Thread already exited, nothing to interrupt
+            return
 
         ret = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(target_tid),
                                                          ctypes.py_object(exception))
@@ -2882,38 +2867,45 @@ class EDAutopilot:
     # Setter routines for state variables
     #
     def set_fsd_assist(self, enable=True):
-        if enable == False and self.fsd_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+        if not enable and self.fsd_assist_enabled:
+            if self.ap_thread is not None and self.ap_thread.is_alive():
+                self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.fsd_assist_enabled = enable
 
     def set_sc_assist(self, enable=True):
-        if enable == False and self.sc_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+        if not enable and self.sc_assist_enabled:
+            if self.ap_thread is not None and self.ap_thread.is_alive():
+                self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.sc_assist_enabled = enable
 
     def set_waypoint_assist(self, enable=True):
-        if enable == False and self.waypoint_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+        if not enable and self.waypoint_assist_enabled:
+            if self.ap_thread is not None and self.ap_thread.is_alive():
+                self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.waypoint_assist_enabled = enable
 
     def set_robigo_assist(self, enable=True):
-        if enable == False and self.robigo_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+        if not enable and self.robigo_assist_enabled:
+            if self.ap_thread is not None and self.ap_thread.is_alive():
+                self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.robigo_assist_enabled = enable
 
     def set_afk_combat_assist(self, enable=True):
-        if enable == False and self.afk_combat_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+        if not enable and self.afk_combat_assist_enabled:
+            if self.ap_thread is not None and self.ap_thread.is_alive():
+                self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.afk_combat_assist_enabled = enable
 
     def set_dss_assist(self, enable=True):
-        if enable == False and self.dss_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+        if not enable and self.dss_assist_enabled:
+            if self.ap_thread is not None and self.ap_thread.is_alive():
+                self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.dss_assist_enabled = enable
 
     def set_single_waypoint_assist(self, system: str, station: str, enable=True):
         if not enable and self.single_waypoint_enabled:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            if self.ap_thread is not None and self.ap_thread.is_alive():
+                self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self._single_waypoint_system = system
         self._single_waypoint_station = station
         self.single_waypoint_enabled = enable
@@ -2922,7 +2914,7 @@ class EDAutopilot:
         self.cv_view = enable
         self.config['Enable_CV_View'] = int(self.cv_view)  # update the config
         self.update_config()  # save the config
-        if enable == True:
+        if enable:
             self.cv_view_x = x
             self.cv_view_y = y
         else:
@@ -2947,7 +2939,7 @@ class EDAutopilot:
         self.overlay.overlay_paint()
 
     def set_voice(self, enable=False):
-        if enable == True:
+        if enable:
             self.vce.set_on()
         else:
             self.vce.set_off()
@@ -2970,24 +2962,27 @@ class EDAutopilot:
         self.config["LogINFO"] = True
         logger.setLevel(logging.INFO)
 
-    # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
-    # have then then kill python exec
     def quit(self):
+        """ quit() is important to call to clean up, if we don't terminate the threads we created the AP will
+        hang on exit have then kill python exec.
+        @return:
+        """
+        self.keys.release_all_keys()
         if self.vce != None:
             self.vce.quit()
         if self.overlay != None:
             self.overlay.overlay_quit()
         self.terminate = True
 
-    #
-    # This function will execute in its own thread and will loop forever until
-    # the self.terminate flag is set
-    #
     def engine_loop(self):
+        """
+        This function will execute in its own thread and will loop forever until the self.terminate flag is set
+        @return:
+        """
         while not self.terminate:
             # TODO - Remove these show compass/target all the time
             if self.debug_show_compass_overlay:
-                self.get_nav_offset(self.scrReg, True)
+                self.get_nav_offset(self.scrReg)
             if self.debug_show_target_overlay:
                 self.get_target_offset(self.scrReg, True)
 
@@ -2996,13 +2991,13 @@ class EDAutopilot:
 
             # Ship calibration functions
             if self.ship_tst_roll_enabled:
-                self.ship_tst_roll_new(0)
+                self.ship_control.ship_calibrate_roll()
                 self.ship_tst_roll_enabled = False
             if self.ship_tst_pitch_enabled:
-                self.ship_tst_pitch_new(0)
+                self.ship_control.ship_calibrate_pitch()
                 self.ship_tst_pitch_enabled = False
             if self.ship_tst_yaw_enabled:
-                self.ship_tst_yaw_new(0)
+                self.ship_control.ship_calibrate_yaw()
                 self.ship_tst_yaw_enabled = False
 
             if self.fsd_assist_enabled:
@@ -3019,6 +3014,7 @@ class EDAutopilot:
                     fin = self.fsd_assist(self.scrReg)
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     logger.debug("FSD Assist trapped generic:"+str(e))
                     print("Trapped generic:"+str(e))
@@ -3037,10 +3033,10 @@ class EDAutopilot:
                     self.ap_ckb("sc_start")
 
                 # drop all out debug windows
-                #cv2.destroyAllWindows()
-                #cv2.waitKey(10)
+                # cv2.destroyAllWindows()
+                # cv2.waitKey(10)
 
-            elif self.sc_assist_enabled == True:
+            elif self.sc_assist_enabled:
                 logger.debug("Running sc_assist")
                 set_focus_elite_window()
                 self.update_overlay()
@@ -3049,6 +3045,7 @@ class EDAutopilot:
                     self.sc_assist(self.scrReg)
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:"+str(e))
                     logger.debug("SC Assist trapped generic:"+str(e))
@@ -3060,7 +3057,7 @@ class EDAutopilot:
                 self.ap_ckb('sc_stop')
                 self.update_overlay()
 
-            elif self.waypoint_assist_enabled == True:
+            elif self.waypoint_assist_enabled:
                 logger.debug("Running waypoint_assist")
 
                 set_focus_elite_window()
@@ -3073,6 +3070,7 @@ class EDAutopilot:
                     self.waypoint_assist(self.keys, self.scrReg)
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:"+str(e))
                     logger.debug("Waypoint Assist trapped generic:"+str(e))
@@ -3083,7 +3081,7 @@ class EDAutopilot:
                 self.ap_ckb('waypoint_stop')
                 self.update_overlay()
 
-            elif self.robigo_assist_enabled == True:
+            elif self.robigo_assist_enabled:
                 logger.debug("Running robigo_assist")
                 set_focus_elite_window()
                 self.update_overlay()
@@ -3091,6 +3089,7 @@ class EDAutopilot:
                     self.robigo_assist()
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:"+str(e))
                     logger.debug("Robigo Assist trapped generic:"+str(e))
@@ -3101,12 +3100,13 @@ class EDAutopilot:
                 self.ap_ckb('robigo_stop')
                 self.update_overlay()
 
-            elif self.afk_combat_assist_enabled == True:
+            elif self.afk_combat_assist_enabled:
                 self.update_overlay()
                 try:
                     self.afk_combat_loop()
                 except EDAP_Interrupt:
                     logger.debug("Stopping afk_combat")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:" + str(e))
                     logger.debug("AFK Combat Assist trapped generic:" + str(e))
@@ -3117,7 +3117,7 @@ class EDAutopilot:
                 self.ap_ckb('afk_stop')
                 self.update_overlay()
 
-            elif self.dss_assist_enabled == True:
+            elif self.dss_assist_enabled:
                 logger.debug("Running dss_assist")
                 set_focus_elite_window()
                 self.update_overlay()
@@ -3125,6 +3125,7 @@ class EDAutopilot:
                     self.dss_assist()
                 except EDAP_Interrupt:
                     logger.debug("Stopping DSS Assist")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:" + str(e))
                     logger.debug("DSS Assist trapped generic:" + str(e))
@@ -3140,6 +3141,7 @@ class EDAutopilot:
                     self.single_waypoint_assist()
                 except EDAP_Interrupt:
                     logger.debug("Stopping Single Waypoint Assist")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:" + str(e))
                     logger.debug("Single Waypoint Assist trapped generic:" + str(e))
@@ -3157,7 +3159,8 @@ class EDAutopilot:
                 # Check if a ship and not a suit (on foot)
                 if ship not in ship_size_map:
                     # Clear current ship
-                    self.current_ship_type = ''
+                    self.current_ship_type = None
+                    self.current_ship_cfg = None
                 else:
                     ship_fullname = get_ship_fullname(ship)
 
@@ -3183,404 +3186,53 @@ class EDAutopilot:
                         # Load ship configuration with proper hierarchy
                         self.load_ship_configuration(ship)
 
+                        # Update current ship config
+                        self.current_ship_cfg = self.ship_configs['Ship_Configs'][self.current_ship_type]
+
                         # Update GUI with ship config
                         self.ap_ckb('update_ship_cfg')
 
-                        # Reload templates
-                        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale, self.target_scale)
+                        # Reload templates for this ship
+                        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY)
 
             self.update_overlay()
             cv2.waitKey(10)
-            sleep(1)
-
-    def ship_tst_pitch(self, angle: float):
-        """ Performs a ship pitch test by pitching 360 degrees.
-        If the ship does not rotate enough, decrease the pitch value.
-        If the ship rotates too much, increase the pitch value.
-        """
-        # if not self.status.get_flag(FlagsSupercruise):
-        #     self.ap_ckb('log', "Enter Supercruise and try again.")
-        #     return
-        #
-        # if self.jn.ship_state()['target'] is None:
-        #     self.ap_ckb('log', "Select a target system and try again.")
-        #     return
-
-        set_focus_elite_window()
-        sleep(0.25)
-        # self.set_speed_50()
-        self.pitch_up_down(angle)
-
-    def ship_tst_pitch_new(self, angle: float):
-        """ Performs a ship pitch test by pitching 360 degrees.
-        If the ship does not rotate enough, decrease the pitch value.
-        If the ship rotates too much, increase the pitch value.
-        """
-        self.ap_ckb('log', "Starting Pitch Calibration.")
-        if not self.speed_demand == 'SCSpeed50':
-            self.set_speed_50()
-            # sleep(10)
-
-        ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
-        if self.speed_demand not in ship_type:
-            ship_type[self.speed_demand] = dict()
-
-        # Clear existing data
-        ship_type[self.speed_demand]['PitchRate'] = dict()
-
-        test_time = 0.05
-        delta_int = 0.0
-        for targ_ang in [5, 10, 20, 40, 80, 160]:
-            while 1:
-                set_focus_elite_window()
-                off = self.get_target_offset(self.scrReg)
-                if not off:
-                    print(f"Target lost")
-                    break
-
-                # Clear the overlays before moving
-                if self.debug_overlay:
-                    self.overlay.overlay_remove_rect('target')
-                    self.overlay.overlay_remove_floating_text('target')
-                    self.overlay.overlay_remove_floating_text('target_occ')
-                    self.overlay.overlay_remove_floating_text('target_rpy')
-                    self.overlay.overlay_paint()
-
-                if off['pit'] > 0:
-                    self.keys.send('PitchUpButton', hold=test_time)
-                else:
-                    self.keys.send('PitchDownButton', hold=test_time)
-
+            # Catch EDAP_Interrupt raised while idle to prevent killing the engine loop
+            try:
                 sleep(1)
+            except EDAP_Interrupt:
+                logger.debug("EDAP_Interrupt caught in engine_loop idle")
 
-                off2 = self.get_target_offset(self.scrReg)
-                if not off2:
-                    print(f"Target lost")
-                    break
-
-                delta = abs(off2['pit'] - off['pit'])
-                delta_int_lst = delta_int
-                delta_int = int(round(delta * 10, 0))
-
-                test_time = test_time * 1.04
-                rate = round(delta / test_time, 2)
-                rate = min(rate, self.pitchrate)  # Limit rate to no higher than the default
-                if delta_int >= targ_ang and delta_int > delta_int_lst:
-                    ship_type[self.speed_demand]['PitchRate'][delta_int] = rate
-
-                    print(f"Pitch Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
-                    self.ap_ckb('log', f"Pitch Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
-                    break
-                else:
-                    print(f"Ignored Pitch Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
-
-        # If we have logged values, add the ship default rate at 30 deg
-        if len(ship_type[self.speed_demand]['PitchRate']) > 0:
-            ship_type[self.speed_demand]['PitchRate'][300] = self.pitchrate
-            self.ap_ckb('log', f"Default: Pitch Angle: 30: Rate: {self.pitchrate}")
-
-        self.ap_ckb('log', "Completed Pitch Calibration.")
-        self.ap_ckb('log', "Remember to Save if you wish to keep these values!")
-
-    def ship_tst_pitch_calc_power(self, angle: float):
-        """ Performs a ship pitch test by pitching 360 degrees.
-        If the ship does not rotate enough, decrease the pitch value.
-        If the ship rotates too much, increase the pitch value.
-        """
-        # if not self.status.get_flag(FlagsSupercruise):
-        #     self.ap_ckb('log', "Enter Supercruise and try again.")
-        #     return
-        #
-        # if self.jn.ship_state()['target'] is None:
-        #     self.ap_ckb('log', "Select a target system and try again.")
-        #     return
-
-        set_focus_elite_window()
-        # sleep(0.25)
-        # # self.set_speed_50()
-        # self.pitch_up_down(angle)
-
-        target_align_outer_lim = 1.0
-        target_align_inner_lim = 0.5
-
-        off = None
-        tar_off1 = None
-        tar_off2 = None
-
-        # Try to get the target 5 times before quiting
-        for i in range(5):
-            # Check Target and Compass
-            tar_off1 = self.get_target_offset(self.scrReg)
-            if tar_off1:
-                # Target detected
-                off = tar_off1
-
-            # Quit loop if we found Target or Compass
-            if off:
-                break
-
-        # We have Target or Compass. Are we close to Target?
-        while ((abs(off['yaw']) > target_align_outer_lim) or
-               (abs(off['pit']) > target_align_outer_lim)):
-
-            target_align_outer_lim = target_align_inner_lim  # Keep aligning until we are within this lower range.
-
-            # Clear the overlays before moving
-            if self.debug_overlay:
-                self.overlay.overlay_remove_rect('target')
-                self.overlay.overlay_remove_floating_text('target')
-                self.overlay.overlay_remove_floating_text('target_occ')
-                self.overlay.overlay_remove_floating_text('target_rpy')
-                self.overlay.overlay_paint()
-
-            # Calc pitch time based on nav point location
-            logger.debug(f"sc_target_align before: pit: {off['pit']} yaw: {off['yaw']} ")
-
-            p_deg = 0.0
-            if abs(off['pit']) > target_align_outer_lim:
-                p_deg = off['pit']
-                self.pitch_up_down(p_deg)
-
-            # Calc yaw time based on nav point location
-            y_deg = 0.0
-            if abs(off['yaw']) > target_align_outer_lim:
-                y_deg = off['yaw']
-                self.yaw_right_left(y_deg)
-
-            # Wait for ship to finish moving and picture to stabilize
-            sleep(2.0)
-
-            # Check Target and Compass
-            tar_off2 = self.get_target_offset(self.scrReg)
-            if tar_off2:
-                off = tar_off2
-                logger.debug(f"sc_target_align after: pit:{off['pit']} yaw: {off['yaw']}")
-
-            if tar_off1 and tar_off2:
-                # Check diff from before and after movement
-                pit_delta = tar_off2['pit'] - tar_off1['pit']
-                yaw_delta = tar_off2['yaw'] - tar_off1['yaw']
-                if ((tar_off1['pit'] < 0.0 and tar_off2['pit'] > target_align_outer_lim) or
-                        (tar_off1['pit'] > 0.0 and tar_off2['pit'] < -target_align_outer_lim)):
-                    self.ap_ckb('log', f"TEST - Pitch correction gone too far {round(abs(pit_delta),2)} > {round(abs(tar_off1['pit']),2) + target_align_outer_lim}. Reducing Pitch Factor.")
-                    # Correct factor
-                    # self.pitchfactor = self.pitchfactor - 1.0
-                    # Update GUI with ship config
-                    self.ap_ckb('update_ship_cfg')
-
-                if ((tar_off1['yaw'] < 0.0 and tar_off2['yaw'] > target_align_outer_lim) or
-                        (tar_off1['yaw'] > 0.0 and tar_off2['yaw'] < -target_align_outer_lim)):
-                    self.ap_ckb('log', f"TEST - Yaw correction gone too far {round(abs(yaw_delta),2)} > {round(abs(tar_off1['yaw']),2) + target_align_outer_lim}. Reducing Yaw Factor.")
-                    # Correct factor
-                    # self.yawfactor = self.yawfactor + 0.1
-                    # Update GUI with ship config
-                    self.ap_ckb('update_ship_cfg')
-
-            if tar_off2:
-                # Store current offsets
-                tar_off1 = tar_off2.copy()
-
-    def ship_tst_roll(self, angle: float):
-        """ Performs a ship roll test by pitching 360 degrees.
-        If the ship does not rotate enough, decrease the roll value.
-        If the ship rotates too much, increase the roll value.
-        """
-        # if not self.status.get_flag(FlagsSupercruise):
-        #     self.ap_ckb('log', "Enter Supercruise and try again.")
-        #     return
-        #
-        # if self.jn.ship_state()['target'] is None:
-        #     self.ap_ckb('log', "Select a target system and try again.")
-        #     return
-
-        set_focus_elite_window()
-        sleep(0.25)
-        # self.set_speed_50()
-        self.roll_clockwise_anticlockwise(angle)
-
-    def ship_tst_roll_new(self, angle: float):
-        """ Performs a ship roll test by pitching 360 degrees.
-        If the ship does not rotate enough, decrease the roll value.
-        If the ship rotates too much, increase the roll value.
-        """
-        self.ap_ckb('log', "Starting Roll Calibration.")
-        if not self.speed_demand == 'SCSpeed50':
-            self.set_speed_50()
-            #sleep(10)
-
-        ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
-        if self.speed_demand not in ship_type:
-            ship_type[self.speed_demand] = dict()
-
-        # Clear existing data
-        ship_type[self.speed_demand]['RollRate'] = dict()
-
-        test_time = 0.05
-        delta_int = 0.0
-        for targ_ang in [40, 80, 160, 320]:
-            while 1:
-                set_focus_elite_window()
-                off = self.get_nav_offset(self.scrReg)
-                if not off:
-                    break
-
-                # Clear the overlays before moving
-                if self.debug_overlay:
-                    self.overlay.overlay_remove_rect('compass')
-                    self.overlay.overlay_remove_floating_text('compass')
-                    self.overlay.overlay_remove_floating_text('nav')
-                    self.overlay.overlay_remove_floating_text('nav_beh')
-                    self.overlay.overlay_remove_floating_text('compass_rpy')
-                    self.overlay.overlay_paint()
-
-                if off['roll'] > 0:
-                    self.keys.send('RollRightButton', hold=test_time)
-                else:
-                    self.keys.send('RollLeftButton', hold=test_time)
-
-                sleep(1)
-
-                off2 = self.get_nav_offset(self.scrReg)
-                if not off2:
-                    break
-
-                delta = abs(off2['roll'] - off['roll'])
-                delta_int_lst = delta_int
-                delta_int = int(round(delta * 10, 0))
-
-                test_time = test_time * 1.03
-                rate = round(delta / test_time, 2)
-                rate = min(rate, self.rollrate)  # Limit rate to no higher than the default
-                if delta_int >= targ_ang and delta_int > delta_int_lst:
-                    ship_type[self.speed_demand]['RollRate'][delta_int] = rate
-
-                    print(f"Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
-                    self.ap_ckb('log', f"Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
-                    break
-                else:
-                    print(f"Ignored Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
-
-        # If we have logged values, add the ship default rate at 45 deg
-        if len(ship_type[self.speed_demand]['RollRate']) > 0:
-            ship_type[self.speed_demand]['RollRate'][450] = self.rollrate
-            self.ap_ckb('log', f"Default: Roll Angle: 45: Rate: {self.rollrate}")
-
-        self.ap_ckb('log', "Completed Roll Calibration.")
-        self.ap_ckb('log', "Remember to Save if you wish to keep these values!")
-
-    def ship_tst_yaw(self, angle: float):
-        """ Performs a ship yaw test by pitching 360 degrees.
-        If the ship does not rotate enough, decrease the yaw value.
-        If the ship rotates too much, increase the yaw value.
-        """
-        # if not self.status.get_flag(FlagsSupercruise):
-        #     self.ap_ckb('log', "Enter Supercruise and try again.")
-        #     return
-        #
-        # if self.jn.ship_state()['target'] is None:
-        #     self.ap_ckb('log', "Select a target system and try again.")
-        #     return
-
-        set_focus_elite_window()
-        sleep(0.25)
-        # self.set_speed_50()
-        self.yaw_right_left(angle)
-
-    def ship_tst_yaw_new(self, angle: float):
-        """ Performs a ship yaw test by pitching 360 degrees.
-        If the ship does not rotate enough, decrease the yaw value.
-        If the ship rotates too much, increase the yaw value.
-        """
-        self.ap_ckb('log', "Starting Yaw Calibration.")
-        # self.compass_align(self.scrReg)
-        # self.sc_target_align(self.scrReg)
-
-        if not self.speed_demand == 'SCSpeed50':
-            self.set_speed_50()
-            # sleep(10)
-
-        ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
-        if self.speed_demand not in ship_type:
-            ship_type[self.speed_demand] = dict()
-
-        # Clear existing data
-        ship_type[self.speed_demand]['YawRate'] = dict()
-
-        test_time = 0.07
-        delta_int = 0.0
-        for targ_ang in [5, 10, 20, 40, 80, 160]:
-            while 1:
-                set_focus_elite_window()
-                off = self.get_target_offset(self.scrReg)
-                if not off:
-                    break
-
-                # Clear the overlays before moving
-                if self.debug_overlay:
-                    self.overlay.overlay_remove_rect('target')
-                    self.overlay.overlay_remove_floating_text('target')
-                    self.overlay.overlay_remove_floating_text('target_occ')
-                    self.overlay.overlay_remove_floating_text('target_rpy')
-                    self.overlay.overlay_paint()
-
-                if off['yaw'] > 0:
-                    self.keys.send('YawRightButton', hold=test_time)
-                else:
-                    self.keys.send('YawLeftButton', hold=test_time)
-
-                sleep(1)
-
-                off2 = self.get_target_offset(self.scrReg)
-                if not off2:
-                    break
-
-                delta = abs(off2['yaw'] - off['yaw'])
-                delta_int_lst = delta_int
-                delta_int = int(round(delta * 10, 0))
-
-                test_time = test_time * 1.05
-                rate = round(delta / test_time, 2)
-                rate = min(rate, self.yawrate)  # Limit rate to no higher than the default
-                if delta_int >= targ_ang and delta_int > delta_int_lst:
-                    ship_type[self.speed_demand]['YawRate'][delta_int] = rate
-
-                    print(f"Yaw Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
-                    self.ap_ckb('log', f"Yaw Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
-                    break
-                else:
-                    print(f"Ignored Yaw Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
-
-        # If we have logged values, add the ship default rate at 30 deg
-        if len(ship_type[self.speed_demand]['YawRate']) > 0:
-            ship_type[self.speed_demand]['YawRate'][300] = self.yawrate
-            self.ap_ckb('log', f"Default: Yaw Angle: 30: Rate: {self.yawrate}")
-
-        self.ap_ckb('log', "Completed Yaw Calibration.")
-        self.ap_ckb('log', "Remember to Save if you wish to keep these values!")
-
-    def set_speed_0(self, repeat=1):
+    def set_throttle_0(self, repeat=1):
         if self.status.get_flag(FlagsSupercruise):
             self.speed_demand = 'SCSpeed0'
+            self.ap_ckb('log', f"Setting throttle to 0% (in SC).")
         else:
             self.speed_demand = 'Speed0'
+            self.ap_ckb('log', f"Setting throttle to 0%.")
 
         self.keys.send('SetSpeedZero', repeat)
 
-    def set_speed_50(self, repeat=1):
+    def set_throttle_50(self, repeat=1):
         if self.status.get_flag(FlagsSupercruise):
             self.speed_demand = 'SCSpeed50'
+            self.ap_ckb('log', f"Setting throttle to 50% (in SC).")
         else:
             self.speed_demand = 'Speed50'
+            self.ap_ckb('log', f"Setting throttle to 50%.")
 
         self.keys.send('SetSpeed50', repeat)
 
-    def set_speed_100(self, repeat=1):
+    def set_throttle_100(self, repeat=1):
         if self.status.get_flag(FlagsSupercruise):
             self.speed_demand = 'SCSpeed100'
+            self.ap_ckb('log', f"Setting throttle to 100% (in SC).")
         else:
             self.speed_demand = 'Speed100'
+            self.ap_ckb('log', f"Setting throttle to 100%.")
 
         self.keys.send('SetSpeed100', repeat)
+
 
 def delete_old_log_files():
     """ Deleted old .log files from the main folder."""
@@ -3641,8 +3293,8 @@ def strfdelta(tdelta, fmt='{H:02}h {M:02}m {S:02.0f}s', inputtype='timedelta'):
 
     f = Formatter()
     desired_fields = [field_tuple[1] for field_tuple in f.parse(fmt)]
-    possible_fields = ('Y','m','W', 'D', 'H', 'M', 'S', 'mS', 'µS')
-    constants = {'Y':86400*365.24,'m': 86400*30.44 ,'W': 604800, 'D': 86400, 'H': 3600, 'M': 60, 'S': 1, 'mS': 1/pow(10,3) , 'µS':1/pow(10,6)}
+    possible_fields = ('Y', 'm', 'W', 'D', 'H', 'M', 'S', 'mS', 'µS')
+    constants = {'Y': 86400*365.24, 'm': 86400*30.44, 'W': 604800, 'D': 86400, 'H': 3600, 'M': 60, 'S': 1, 'mS': 1/pow(10, 3), 'µS': 1/pow(10, 6)}
     values = {}
     for field in possible_fields:
         if field in desired_fields and field in constants:
@@ -3673,20 +3325,20 @@ def dummy_cb(msg, body=None):
 # This main is for testing purposes.
 #
 def main():
-    #handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
-    #if handle != None:
+    # handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
+    # if handle != None:
     #    win32gui.SetForegroundWindow(handle)  # put the window in foreground
 
     delete_old_log_files()
 
-    ed_ap = EDAutopilot(cb=dummy_cb, doThread=False)
+    ed_ap = EDAutopilot(cb=dummy_cb, do_thread=False)
 
     # for x in range(10):
     #     ed_ap.keys.send('RollLeftButton', 0.04)
     # sleep(1)
 
     set_focus_elite_window()
-    ed_ap.set_speed_50()
+    ed_ap.set_throttle_50()
     sleep(0.25)
 
     tar_off = ed_ap.get_target_offset(ed_ap.scrReg)
@@ -3697,7 +3349,7 @@ def main():
     # ed_ap.rotateLeft(1)
     x = 10
     ed_ap.pitchrate = 16.0
-    ed_ap.pitch_up_down(-x)
+    ed_ap.ship_control.pitch_up_down(-x)
 
     sleep(.5)
 
@@ -3708,7 +3360,7 @@ def main():
 
     sleep(.5)
 
-    ed_ap.pitch_up_down(x)
+    ed_ap.ship_control.pitch_up_down(x)
 
     # ed_ap.yawLeft(1)
 
@@ -3717,23 +3369,21 @@ def main():
     # sleep(1)
     # for x in range(10):
     #     ed_ap.keys.send('YawLeftButton', 0.04)
-
-        #target_align(scrReg)
-        # print("Calling nav_align")
-        #ed_ap.nav_align(ed_ap.scrReg)
-        #ed_ap.fss_detect_elw(ed_ap.scrReg)
-
-        #loc = get_destination_offset(scrReg)
-        #print("get_dest: " +str(loc))
-        #loc = get_nav_offset(scrReg)
-        #print("get_nav: " +str(loc))
-        # cv2.waitKey(0)
-        # print("Done nav")
-        # sleep(8)
+    #
+    #     target_align(scrReg)
+    #     print("Calling nav_align")
+    #     ed_ap.nav_align(ed_ap.scrReg)
+    #     ed_ap.fss_detect_elw(ed_ap.scrReg)
+    #
+    #     loc = get_destination_offset(scrReg)
+    #     print("get_dest: " +str(loc))
+    #     loc = get_nav_offset(scrReg)
+    #     print("get_nav: " +str(loc))
+    #     cv2.waitKey(0)
+    #     print("Done nav")
+    #     sleep(8)
 
     # ed_ap.overlay.overlay_quit()
-
-
 
 
 if __name__ == "__main__":

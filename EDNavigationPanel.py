@@ -11,7 +11,7 @@ import numpy as np
 
 from EDAP_data import GuiFocusExternalPanel
 from EDlogger import logger
-from Screen_Regions import Quad, Point
+from Screen_Regions import Quad, Point, load_calibrated_regions
 from StatusParser import StatusParser
 from Screen import crop_image_by_pct
 
@@ -59,12 +59,12 @@ def image_perspective_transform(image, src_quad: Quad):
     return dst, m, rev
 
 
-def image_reverse_perspective_transform(image, src_quad: Quad, transform) -> Quad:
-    """ Performs warping of points and returns the transformed points.
+def image_reverse_perspective_transform(image, src_quad: Quad, rev_transform) -> Quad:
+    """ Performs warping of points and returns the transformed (warped) points.
     Used to calculate overlay graphics for display over the navigation panek, which is warped.
-    @param image: The image used to generate the transform.
+    @param image: The straightened image from the perspective transform function.
     @param src_quad: A quad to transform, in percent of the image size.
-    @param transform: The transform created by the perspective transform function.
+    @param rev_transform: The reverse transform created by the perspective transform function.
     @return: A quad representing the input quad, reverse transformed. Return quad is in pixel relative to the origin
     of the image (0, 0).
     """
@@ -81,7 +81,7 @@ def image_reverse_perspective_transform(image, src_quad: Quad, transform) -> Qua
     src_arr = np.float32(source_coord).reshape(-1, 1, 2)
 
     # Transform the array of coordinates to the skew of the nav panel
-    dst_arr = cv2.perspectiveTransform(src_arr, transform)
+    dst_arr = cv2.perspectiveTransform(src_arr, rev_transform)
 
     # Convert 3D results to 2D array for results
     dst_arr_2d = dst_arr.reshape(-1, dst_arr.shape[-1])
@@ -98,10 +98,10 @@ def rects_to_quadrilateral(rect_tlbr: Quad, rect_bltr: Quad) -> Quad:
     rect - [L, T, R, B]
     The panel is rotated slightly anti-clockwise
     """
-    q = Quad(Point(rect_tlbr.get_left(), rect_tlbr.get_top()),
-             Point(rect_bltr.get_right(), rect_bltr.get_top()),
-             Point(rect_tlbr.get_right(), rect_tlbr.get_bottom()),
-             Point(rect_bltr.get_left(), rect_bltr.get_bottom()))
+    q = Quad(Point(rect_tlbr.left, rect_tlbr.top),
+             Point(rect_bltr.right, rect_bltr.top),
+             Point(rect_tlbr.right, rect_tlbr.bottom),
+             Point(rect_bltr.left, rect_bltr.bottom))
     return q
 
 
@@ -128,34 +128,28 @@ class EDNavigationPanel:
                     'panel_bounds2': {'rect': [0.0, 0.2, 0.7, 0.35]},
                     }
         self.sub_reg = {'tab_bar': {'rect': [0.0, 0.0, 1.0, 0.08]},
-                        'location_panel': {'rect': [0.2218, 0.3, 0.8, 1.0]}}
-        self.sub_reg_size = {'nav_pnl_tab': {"width": 0.23, "height": 0.7},  # Nav panel tab size in percent
-                             'nav_pnl_location': {"width": 1.0, "height": 0.08}}  # Nav panel location size in percent
+                        'location_panel': {'rect': [0.2218, 0.3, 0.8, 1.0]},
+                        'nav_pnl_tab': {'rect': [0.0, 0.0, 0.23, 0.7]},
+                        'nav_pnl_location': {'rect': [0.0, 0.0, 1.0, 0.08]},
+                        }
         self.panel_quad_pct = Quad()
         self.panel_quad_pix = Quad()
         self.panel = None
         self._transform = None  # Warp transform to deskew the Nav panel
         self._rev_transform = None  # Reverse warp transform to skew to match the Nav panel
 
-        self.load_calibrated_regions()
+        # Load custom regions from file
+        load_calibrated_regions('EDNavigationPanel', self.reg)
 
-    def load_calibrated_regions(self):
-        calibration_file = 'configs/ocr_calibration.json'
-        if os.path.exists(calibration_file):
-            with open(calibration_file, 'r') as f:
-                calibrated_regions = json.load(f)
+        self.customize_regions()
 
-            for key, value in self.reg.items():
-                calibrated_key = f"EDNavigationPanel.{key}"
-                if calibrated_key in calibrated_regions:
-                    self.reg[key]['rect'] = calibrated_regions[calibrated_key]['rect']
-
-            # Produce quadrilateral from the two bounds rectangles
-            reg1 = Quad.from_rect(self.reg['panel_bounds1']['rect'])
-            reg2 = Quad.from_rect(self.reg['panel_bounds2']['rect'])
-            self.panel_quad_pct = rects_to_quadrilateral(reg1, reg2)
-            self.panel_quad_pix = copy(self.panel_quad_pct)
-            self.panel_quad_pix.scale_from_origin(self.ap.scr.screen_width, self.ap.scr.screen_height)
+    def customize_regions(self):
+        # Produce quadrilateral from the two bounds rectangles
+        reg1 = Quad.from_rect(self.reg['panel_bounds1']['rect'])
+        reg2 = Quad.from_rect(self.reg['panel_bounds2']['rect'])
+        self.panel_quad_pct = rects_to_quadrilateral(reg1, reg2)
+        self.panel_quad_pix = copy(self.panel_quad_pct)
+        self.panel_quad_pix.scale_from_origin(self.ap.scr.screen_width, self.ap.scr.screen_height)
 
     def capture_panel_straightened(self):
         """ Grab the image based on the panel coordinates.
@@ -168,13 +162,13 @@ class EDNavigationPanel:
             return None
 
         # Get the nav panel image based on the region
-        image = self.screen.get_screen(self.panel_quad_pix.get_left(), self.panel_quad_pix.get_top(),
-                                       self.panel_quad_pix.get_right(), self.panel_quad_pix.get_bottom(), rgb=False)
+        image = self.screen.get_screen(self.panel_quad_pix.left, self.panel_quad_pix.top,
+                                       self.panel_quad_pix.right, self.panel_quad_pix.bottom, rgb=False)
         cv2.imwrite(f'test/nav-panel/out/nav_panel_original.png', image)
 
         # Offset the panel co-ords to match the cropped image (i.e. starting at 0,0)
         panel_quad_pix_off = copy(self.panel_quad_pix)
-        panel_quad_pix_off.offset(-panel_quad_pix_off.get_left(), -panel_quad_pix_off.get_top())
+        panel_quad_pix_off.offset(-panel_quad_pix_off.left, -panel_quad_pix_off.top)
 
         # Straighten the image
         straightened, trans, rev_trans = image_perspective_transform(image, panel_quad_pix_off)
@@ -209,7 +203,7 @@ class EDNavigationPanel:
             # Transform the array of coordinates to the skew of the nav panel
             q_out = image_reverse_perspective_transform(self.panel, tab_bar_quad, self._rev_transform)
             # Offset to match the nav panel offset
-            q_out.offset(self.panel_quad_pix.get_left(), self.panel_quad_pix.get_top())
+            q_out.offset(self.panel_quad_pix.left, self.panel_quad_pix.top)
 
             self.ap.overlay.overlay_quad_pix('nav_panel_tab_bar', q_out, (0, 255, 0), 2, 5)
             self.ap.overlay.overlay_paint()
@@ -235,7 +229,7 @@ class EDNavigationPanel:
             # Transform the array of coordinates to the skew of the nav panel
             q_out = image_reverse_perspective_transform(nav_panel, location_panel_quad, self._rev_transform)
             # Offset to match the nav panel offset
-            q_out.offset(self.panel_quad_pix.get_left(), self.panel_quad_pix.get_top())
+            q_out.offset(self.panel_quad_pix.left, self.panel_quad_pix.top)
 
             self.ap.overlay.overlay_quad_pix('nav_panel_location_panel', q_out, (0, 255, 0), 2, 5)
             self.ap.overlay.overlay_paint()
@@ -297,21 +291,22 @@ class EDNavigationPanel:
             if tab_bar is None:
                 return False, ""
 
-            img_selected, _, ocr_textlist, quad = self.ocr.get_highlighted_item_data(tab_bar, self.sub_reg_size['nav_pnl_tab']['width'], self.sub_reg_size['nav_pnl_tab']['height'], 'nav panel')
+            item = Quad.from_rect(self.sub_reg['nav_pnl_tab']['rect'])
+            img_selected, _, ocr_textlist, quad = self.ocr.get_highlighted_item_data(tab_bar, item, 'nav panel')
             if img_selected is not None:
                 if self.ap.debug_overlay:
                     tab_bar_quad = Quad.from_rect(self.sub_reg['tab_bar']['rect'])
                     # Convert to a percentage of the nav panel
-                    quad.scale_from_origin(tab_bar_quad.get_width(), tab_bar_quad.get_height())
-                    # quad.offset(tab_bar_quad.get_left(), tab_bar_quad.get_top())
+                    quad.scale_from_origin(tab_bar_quad.width, tab_bar_quad.height)
+                    # quad.offset(tab_bar_quad.left, tab_bar_quad.top)
 
                     # Transform the array of coordinates to the skew of the nav panel
                     q_out = image_reverse_perspective_transform(self.panel, quad, self._rev_transform)
                     # Offset to match the nav panel offset
-                    q_out.offset(self.panel_quad_pix.get_left(), self.panel_quad_pix.get_top())
+                    q_out.offset(self.panel_quad_pix.left, self.panel_quad_pix.top)
 
                     # Overlay OCR result
-                    self.ap.overlay.overlay_floating_text('nav_panel_item_text', f'{str(ocr_textlist)}', q_out.get_left(), q_out.get_top() - 25,                                                         (0, 255, 0))
+                    self.ap.overlay.overlay_floating_text('nav_panel_item_text', f'{str(ocr_textlist)}', q_out.left, q_out.top - 25,                                                         (0, 255, 0))
                     self.ap.overlay.overlay_quad_pix('nav_panel_item', q_out, (0, 255, 0), 2)
                     self.ap.overlay.overlay_paint()
 
@@ -454,7 +449,8 @@ class EDNavigationPanel:
                 return None
 
             # Find the selected item/menu (solid orange)
-            img_selected, q = self.ocr.get_highlighted_item_in_image(loc_panel, self.sub_reg_size['nav_pnl_location']['width'], self.sub_reg_size['nav_pnl_location']['height'])
+            item = Quad.from_rect(self.sub_reg['nav_pnl_location']['rect'])
+            img_selected, q = self.ocr.get_highlighted_item_in_image(loc_panel, item)
 
             # Check if end of list.
             if img_selected is None and in_list:
@@ -498,7 +494,9 @@ class EDNavigationPanel:
                 return False
 
             # Find the selected item/menu (solid orange)
-            img_selected, quad = self.ocr.get_highlighted_item_in_image(loc_panel, self.sub_reg_size['nav_pnl_location']['width'], self.sub_reg_size['nav_pnl_location']['height'])
+            item = Quad.from_rect(self.sub_reg['nav_pnl_location']['rect'])
+            img_selected, quad = self.ocr.get_highlighted_item_in_image(loc_panel, item)
+
             # Check if end of list.
             if img_selected is None and in_list:
                 logger.debug(f"Off end of list. Did not find '{dst_name}' in list.")
@@ -509,25 +507,25 @@ class EDNavigationPanel:
                 loc_pnl_quad = Quad.from_rect(self.sub_reg['location_panel']['rect'])
                 q = copy(quad)
                 # Convert to a percentage of the nav panel
-                q.scale_from_origin(loc_pnl_quad.get_width(), loc_pnl_quad.get_height())
-                q.offset(loc_pnl_quad.get_left(), loc_pnl_quad.get_top())
+                q.scale_from_origin(loc_pnl_quad.width, loc_pnl_quad.height)
+                q.offset(loc_pnl_quad.left, loc_pnl_quad.top)
 
                 # Transform the array of coordinates to the skew of the nav panel
                 q_out = image_reverse_perspective_transform(self.panel, q, self._rev_transform)
                 # Offset to match the nav panel offset
-                q_out.offset(self.panel_quad_pix.get_left(), self.panel_quad_pix.get_top())
+                q_out.offset(self.panel_quad_pix.left, self.panel_quad_pix.top)
 
                 # Overlay OCR result
-                # self.ap.overlay.overlay_floating_text('nav_panel_item_text', f'{str(ocr_textlist)}', q_out.get_left(), q_out.get_top() - 25, (0, 255, 0))
+                # self.ap.overlay.overlay_floating_text('nav_panel_item_text', f'{str(ocr_textlist)}', q_out.left, q_out.top - 25, (0, 255, 0))
                 self.ap.overlay.overlay_quad_pix('nav_panel_item', q_out, (0, 255, 0), 2)
                 self.ap.overlay.overlay_paint()
 
             # Check if this item is above the last item (we cycled to top). The quad is a percent decimal (0.0 - 1.0).
-            if quad.get_top() < y_last - 0.1:
+            if quad.top < y_last - 0.1:
                 logger.debug(f"Cycled back to top. Did not find '{dst_name}' in list.")
                 return False
             else:
-                y_last = quad.get_top()
+                y_last = quad.top
 
             # OCR the selected item
             sim_match = 0.8  # Similarity match 0.0 - 1.0 for 0% - 100%)
@@ -538,7 +536,7 @@ class EDNavigationPanel:
                 if self.ap.debug_overlay:
                     # Overlay OCR result
                     self.ap.overlay.overlay_floating_text('nav_panel_item_text', f'{str(ocr_textlist)} {round(sim, 4)} > {sim_match}',
-                                                          q_out.get_left(), q_out.get_top() - 25, (0, 255, 0))
+                                                          q_out.left, q_out.top - 25, (0, 255, 0))
                     self.ap.overlay.overlay_paint()
 
                 #print(f"Similarity of ['{dst_name.upper()}'] and {str(ocr_textlist)} is {sim}")
