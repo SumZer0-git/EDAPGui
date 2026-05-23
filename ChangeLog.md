@@ -1,3 +1,11 @@
+# 5/23/2026 v1.9.0 b19
+- Disengage stays active until disengage check loop is complete.
+
+- # 5/17/2026 v1.9.0 b18
+- Added throttle dropdown to allow any RPY curve to be edited.
+- Deleted RPY rates entry boxes.
+- Edit curves button changes selected throttle, not current throttle.
+
 # 5/14/2026 v1.9.0 b17
 - Added quick SC disengage, moving key action to detection function.
 - Ship moving now always calculates movement error, removing additional checks after the movement.
