@@ -1,10 +1,14 @@
+# 5/24/2026 v1.9.1
+- Added additional help pages to github.
+- Added 'Online HELP' button to app that takes user to the specific help page.
+
 # 5/23/2026 v1.9.0
 - Minor update for release.
 
 # 5/23/2026 v1.9.0 b19
 - Disengage stays active until disengage check loop is complete.
 
-- # 5/17/2026 v1.9.0 b18
+# 5/17/2026 v1.9.0 b18
 - Added throttle dropdown to allow any RPY curve to be edited.
 - Deleted RPY rates entry boxes.
 - Edit curves button changes selected throttle, not current throttle.
