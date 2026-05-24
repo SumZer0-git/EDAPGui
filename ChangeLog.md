@@ -1,3 +1,6 @@
+# 5/23/2026 v1.9.0
+- Minor update for release.
+
 # 5/23/2026 v1.9.0 b19
 - Disengage stays active until disengage check loop is complete.
 
