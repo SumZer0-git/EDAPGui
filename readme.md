@@ -1,6 +1,8 @@
 See [ChangeLog](/ChangeLog.md) for latest updates.<br>
-Join discord if need support or wish to provide inputs on new features:  https://discord.gg/HCgkfSc
-<br>
+IMPORTANT: 
+1. Read the rest of this page before requesting support.
+2. Join discord if you need support or wish to provide inputs on new features:  https://discord.gg/HCgkfSc
+3. Use the 'Online Help' button in the app to view context help.<br>
 
 # ED Autopilot Main Features
 This Elite Dangerous (ED) Autopilot supports the following main features:
@@ -32,6 +34,7 @@ If Voice enabled, the autopilot will inform you of its actions.
 ## TCE (Trade Computer Extension) Integration
 Basic integration with TCE. The current TCE destination may be loaded as a Single Waypoint Assist target with the Load TCE Destination button on the Debug tab. 
 Refer to [TCE on Frontiers Forums](https://forums.frontier.co.uk/threads/trade-computer-extension-mk-ii.223056/) for info on TCE.
+Additional information can be found [here](docs/TCE.md). 
 
 This autopilot uses Computer Vision (grabs screens and performs template matching) and issues keystrokes.  It does not perform any runtime modifications 
 of Elite Dangerous, it is an external-ED construct (similar to us commanders) 
@@ -163,6 +166,15 @@ Once ED_AP is running there are few steps to complete the first time ED AP is ru
    * Ship will undock if docked, jump to SC, maneuver to the target, perform an FSD jump. Upon arrival in the system, it will manuever aroung the star, fuel scoop as necessary and either stop if no in system target is selected, or attempt to fly to the target and  attempt to dock if it is a station.
    * Any flight issues, check ship tuning.
 
+# GUI
+Detailed information on each tab within the application:
+* [Main](docs/Main.md)
+* [Settings](docs/Settings.md)
+* [Debug/Test](docs/DebugTest.md)
+* [Calibration](docs/Calibration.md)
+* [Waypoints](docs/WaypointEditor.md)
+* [Colonization](docs/ColonizationEditor.md)
+* [TCE](docs/TCE.md)
 
 # Required Keybindings
 The following keybindings are required by AP, so make sure a key is assigned to each by going into the Elite Dangerous options and assigning a key. After changing keybindings run AP again for the changes to be read. An error will appear if any of the keybindings are missing in Elite Dangerous.
@@ -242,7 +254,7 @@ The following keybindings are required by AP, so make sure a key is assigned to 
 * AFK Combat Assist: used with a AFK Combat ship in a Rez Zone.  It will detect if shields have
     dropped and if so, will boost away and go into supercruise for ~10sec... then drop, put pips to
     system and weapons and deploy fighter, then terminate.  While in the Rez Zone, if your fighter has
-    been destroyed it will deploy another figher (assumes you have two bays)
+    been destroyed it will deploy another fighter (assumes you have two bays)
 * ELW Scanner: will perform FSS scans while FSD Assist is traveling between stars.  If the FSS
     shows a signal in the region of Earth, Water or Ammonia type worlds, it will announce that discovery
     and log it into elw.txt file.  Note: it does not do the FSS scan, you would need to terminate FSD Assist
@@ -252,27 +264,13 @@ The following keybindings are required by AP, so make sure a key is assigned to 
        Slegi BG-E c28-2  %(dot,sig):   0.36,   0.75 Water date: 2022-01-22 11:55:30.714843<br>
        Slegi TM-L c24-4  %(dot,sig):   0.31,   0.85 Earth date: 2022-01-22 12:04:47.527793<br>_
 * Calibrate: will iterate through a set of scaling values getting the best match for your system.  See HOWTO-Calibrate.md
-* Cap Mouse X, Y:  this will provide the StationCoord value of the Station in the SystemMap.  Selecting this button
-    and then clicking on the Station in the SystemMap will return the x,y value that can be pasted in the waypoints file
-* SunPitchUp+Time field are for ship that tend to overheat. Providing 1-2 more seconds of Pitch up when avoiding the Sun
-    will overcome this problem.  This will be Ship unique and this value will be saved along with the Roll, Pitch, Yaw values 
-* Menu
-  * Open : read in a file with roll, pitch, yaw values for ship
-  * Save : save the roll,pitch,yaw, and sunpitchup time values to a files
-  * Enable Voice : Turns on/off voice
-  * Enable CV View: Turn on/off debug images showing the image matching as it happens.  The numbers displayed
-    indicate the % matched with the criteria for matching. Example:  0.55 > 0.5  means 55% match and the criteria
-    is that it has to be > 50%, so in this case the match is true
     
 ## Hot Keys (configurable)
-* Home - Start FSD Assist
-* Ins  - Start SC Assist
-* Pg Up - Start Robigo Assist
-* End  - Terminate any running assistants
-
-Hot keys are now configurable in the config-AP.json file, so you can remap them. Be sure not to use any keys you have mapped in ED.
-The hotkey must be in the format 'ctrl+shift+a, s'. This would trigger when the user holds ctrl, shift and "a" at once, releases, and then presses "s". To represent literal commas, pluses, and spaces, use their names ('comma', 'plus', 'space').
-For those wanting a detailed list, refer to the [Keyboard](https://github.com/boppreh/keyboard/tree/master) module's [winkeyboard.py](https://github.com/boppreh/keyboard/blob/master/keyboard/_winkeyboard.py) file.
+Configurable hotkeys for the following. Refer to [Settings](docs/Settings.md) for more information.
+* Start FSD Assist
+* Start SC Assist
+* Start Robigo Assist
+* Terminate any running assistants
 
 ## Additional Configuration Settings
 The following settings from the AP.json file (in the configs folder) are **not** available through the GUI and must be changed directly within AP.json using any text editor:

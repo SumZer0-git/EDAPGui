@@ -64,7 +64,7 @@ Author: sumzer0@yahoo.com
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
 # contains the names of the release.
-EDAP_VERSION = "V1.9.0"
+EDAP_VERSION = "V1.9.1"
 # depending on how release versions are best marked you could also change it to the release tag, see function check_update.
 # ---------------------------------------------------------------------------
 
@@ -177,6 +177,7 @@ class APGui:
         self._global_shopping_list_tab = None
         self.waypoint_editor_tab = None
         self.colonize_tab = None
+        self._nb = None
 
         self.FSD_A_running = False
         self.SC_A_running = False
@@ -745,6 +746,29 @@ class APGui:
     def load_settings(self):
         self.ed_ap.load_ship_configs()
 
+    def open_help(self):
+        # Determine the active Tab
+        tab_text = self._nb.tab(self._nb.select(), "text")
+
+        if tab_text == "Main":
+            webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui/blob/main/docs/Main.md")
+        elif tab_text == "Settings":
+            webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui/blob/main/docs/Settings.md")
+        elif tab_text == "Debug/Test":
+            webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui/blob/main/docs/DebugTest.md")
+        elif tab_text == "Calibration":
+            webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui/blob/main/docs/Calibration.md")
+        elif tab_text == "Waypoints":
+            webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui/blob/main/docs/WaypointEditor.md")
+        elif tab_text == "Colonization":
+            webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui/blob/main/docs/ColonizationEditor.md")
+        elif tab_text == "TCE":
+            webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui/blob/main/docs/TCE.md")
+        else:
+            messagebox.showwarning("Warning", f"No match for tab text '{tab_text}'. Please report to developers.")
+            webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui/blob/main/docs/Main.md")
+
+
     def entry_update(self, event):
         """
         # new data was added to a field, re-read them all for simple logic
@@ -1020,53 +1044,54 @@ class APGui:
         btn_load.grid(row=0, column=0, padx=5, pady=5, sticky="W")
         btn_save = ttk.Button(blk_top_buttons, text='Save All Settings', command=self.save_settings, style="Accent.TButton")
         btn_save.grid(row=0, column=1, padx=2, pady=5, sticky="W")
+        ttk.Button(blk_top_buttons, text="Online HELP", command=self.open_help, style="Accent.TButton").grid(row=0, column=2, padx=5, pady=10, sticky=tk.E)
 
-        nb = ttk.Notebook(win)
-        nb.grid(row=1, padx=10, pady=5, sticky="NSEW")
+        self._nb = ttk.Notebook(win)
+        self._nb.grid(row=1, padx=10, pady=5, sticky="NSEW")
 
-        page0 = ttk.Frame(nb)
+        page0 = ttk.Frame(self._nb)
         page0.grid_columnconfigure(0, weight=1)
         page0.grid_rowconfigure(0, weight=0)
         page0.grid_rowconfigure(1, weight=0)
         page0.grid_rowconfigure(2, weight=1)  # Log row
-        nb.add(page0, text="Main")  # main page
+        self._nb.add(page0, text="Main")  # main page
 
-        page1 = ttk.Frame(nb)
+        page1 = ttk.Frame(self._nb)
         page1.grid_columnconfigure(0, weight=1)
-        nb.add(page1, text="Settings")  # options page
+        self._nb.add(page1, text="Settings")  # options page
 
-        page2 = ttk.Frame(nb)
+        page2 = ttk.Frame(self._nb)
         page2.grid_columnconfigure([0, 1], weight=1)
-        nb.add(page2, text="Debug/Test")  # debug/test page
+        self._nb.add(page2, text="Debug/Test")  # debug/test page
 
         # === Calibration Tab ===
-        page_calibration = ttk.Frame(nb)
+        page_calibration = ttk.Frame(self._nb)
         page_calibration.grid_columnconfigure(0, weight=1)
-        nb.add(page_calibration, text="Calibration")
+        self._nb.add(page_calibration, text="Calibration")
         # self.create_calibration_tab(page_calibration)
         self.calibration = Calibration(self.ed_ap, self.callback)
         self.calibration.create_calibration_tab(page_calibration)
         # self.calibration_tab.frame.pack(fill="both", expand=True)
 
         # === Waypoint Editor Tab ===
-        page_waypoint_editor = ttk.Frame(nb)
+        page_waypoint_editor = ttk.Frame(self._nb)
         page_waypoint_editor.grid_columnconfigure(0, weight=1)
-        nb.add(page_waypoint_editor, text="Waypoints")
+        self._nb.add(page_waypoint_editor, text="Waypoints")
         self.waypoint_editor_tab = WaypointEditorTab(page_waypoint_editor, self.ed_ap.waypoint)
         self.waypoint_editor_tab.frame.pack(fill="both", expand=True)
 
         # === Colonization Editor Tab ===
-        tab_colonize_editor = ttk.Frame(nb)
+        tab_colonize_editor = ttk.Frame(self._nb)
         tab_colonize_editor.grid_columnconfigure(0, weight=1)
-        nb.add(tab_colonize_editor, text="Colonization")
+        self._nb.add(tab_colonize_editor, text="Colonization")
         self.colonize_tab = ColonizeEditorTab(self.ed_ap, self.callback)
         self.colonize_tab.create_waypoints_tab(tab_colonize_editor)
         self.colonize_tab.frame.pack(fill="both", expand=True)
 
         # === TCE Integration ===
-        page_tce_integration = ttk.Frame(nb)
+        page_tce_integration = ttk.Frame(self._nb)
         page_tce_integration.grid_columnconfigure(0, weight=1)
-        nb.add(page_tce_integration, text="TCE")
+        self._nb.add(page_tce_integration, text="TCE")
         tce_integration_tab = self.ed_ap.tce_integration.create_gui_tab(self, page_tce_integration)
 
         # === MAIN TAB ===

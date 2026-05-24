@@ -1,4 +1,5 @@
-# Colonization Editor
+# Colonization (Construction Projects) Editor
+Aids with colonization construction projects, determining what commodities are needed for each project. 
 Colonization editor allows you to edit your colonization projects.
 
 Use the 'Load Construction Commodities' button on the 'Waypoints > Global Shopping List' tab to add the commodities selected to be included in the Global Shopping List. This will replace the current Global Shopping List.
