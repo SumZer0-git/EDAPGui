@@ -3179,6 +3179,8 @@ class EDAutopilot:
                             self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is not fitted with an Advanced Docking Computer.")
                         if self.jn.ship_state()['has_std_dock_comp']:
                             self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is fitted with a Standard Docking Computer.")
+                        if self.jn.ship_state()['has_supercruise_assist']:
+                            self.ap_ckb('log+vce', f"Your {ship_fullname} is fitted with a Supercruise Assist module.")
 
                         # Store ship for change detection BEFORE loading config and GUI update
                         self.current_ship_type = ship

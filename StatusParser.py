@@ -27,6 +27,7 @@ class StatusParser:
         self.last_mod_time = None
 
         # Read json file data
+        self.enable_log_flag_diffs = False
         self.current_data = None
         self.current_data = self.get_cleaned_data()
         self.last_data = self.current_data
@@ -309,7 +310,10 @@ class StatusParser:
         # print(json.dumps(data, indent=4))
 
         # Enable the following to print all the changes to the status flags.
-        # self.log_flag_diffs()
+        #self.enable_log_flag_diffs = True
+        if self.enable_log_flag_diffs:
+            self.log_flag_diffs()
+
         # TODO Enable the following to print all the changes to the destination. See function for details.
         # self.log_destination_diffs()
 

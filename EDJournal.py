@@ -140,6 +140,22 @@ def check_sco_fsd(modules: list[dict[str, any]] | None) -> bool:
     return False
 
 
+def check_supercruise_assist(modules: list[dict[str, any]] | None) -> bool:
+    """ Gets whether the ship has a Supercruise Assist (SCA) module.
+    """
+    # Default to SCO fitted if modules is None
+    if modules is None:
+        return True
+
+    # Check all modules. Could just check the internals, but this is easier.
+    for module in modules:
+        if "supercruiseassist" in module['Item'].lower():
+            return True
+
+    #print("FrameShiftDrive has no SCO")
+    return False
+
+
 def check_station_type(station_type: str, station_name: str, station_services: list[str]) -> StationType:
     """ Gets the station type.
         @station_type:  The station type from the journal (i.e. 'Coriolis').
@@ -237,6 +253,7 @@ class EDJournal:
             'has_adv_dock_comp': None,
             'has_std_dock_comp': None,
             'has_sco_fsd': None,
+            'has_supercruise_assist': None,
             'StationServices': None,
             'ConstructionDepotDetails': dict[str, any],
             'MarketID': 0,
@@ -321,11 +338,30 @@ class EDJournal:
                 self.ship['no_dock_reason'] = log['Reason']
 
             elif log_event == 'SupercruiseExit':
+                # {
+                # "timestamp": "2025-06-14T20:39:18Z",
+                # "event": "SupercruiseExit",
+                # "Taxi": false,
+                # "Multicrew": false,
+                # "StarSystem": "Ho Hsi",
+                # "SystemAddress": 3412091472243,
+                # "Body": "Ho Hsi 2",
+                # "BodyID": 10,
+                # "BodyType": "Null" (e.g. the barycentre of a binary star system) | "Star" | "Planet" |
+                #       "PlanetaryRing" | "StellarRing" | "Station" | "AsteroidCluster"
+                # }
                 self.ship['status'] = 'in_space'
                 self.ship['body'] = log['Body']
                 self.ship['sc_exit_body_type'] = log.get('BodyType', '')
 
             elif log_event == 'SupercruiseDestinationDrop':
+                # {
+                # "timestamp": "2025-06-14T20:39:15Z",
+                # "event": "SupercruiseDestinationDrop",
+                # "Type": "STAR BLAZE V2V-65W",
+                # "Threat": 0,
+                # "MarketID": 3712238848
+                # }
                 self.ship['SupercruiseDestinationDrop_type'] = log['Type']
 
             elif log_event == 'DockingCancelled':
@@ -410,6 +446,7 @@ class EDJournal:
                 self.ship['has_adv_dock_comp'] = check_adv_docking_computer(log['Modules'])
                 self.ship['has_std_dock_comp'] = check_std_docking_computer(log['Modules'])
                 self.ship['has_sco_fsd'] = check_sco_fsd(log['Modules'])
+                self.ship['has_supercruise_assist'] = check_supercruise_assist(log['Modules'])
 
             # parse fuel
             if 'FuelLevel' in log and self.ship['type'] != 'TestBuggy':
