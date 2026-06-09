@@ -1,3 +1,9 @@
+# 6/8/2026 v1.9.2
+- Updated packages for Python 3.11.
+- Added Supercruise Assist module and status detection (for future use).
+- Added additional help pages to github.
+- Added 'Online HELP' button to app that takes user to the specific help page.
+ 
 # 5/24/2026 v1.9.1
 - Added additional help pages to github.
 - Added 'Online HELP' button to app that takes user to the specific help page.

@@ -137,7 +137,16 @@ The following error may occur:
 
 The error is usually as a result of mss incompatibility. Try pip install mss==8.0.3 or pip install mss==8.0.3.
 
-## Upgrades
+## Troubleshooting
+If you receive python errors when running EDAP, it may be useful to check that all packages are installed correctly at the correct versions.
+[pipdeptree](https://pypi.org/project/pipdeptree/) is command line utility to show a dependency tree of packages. It also checks version compatability.
+Install and run. Review the text output for any warnings/errors. 
+```sh
+pip install pipdeptree
+pipdeptree 
+```
+
+## Upgrading EDAP Versions
 If you install a new version, copy the **Configs** folder from the old version to the new version to retain the settings you have configured. Refer to the release notes to identify and configuration that needs to be changed for that version upgrade.
 
 # Running ED_AP
