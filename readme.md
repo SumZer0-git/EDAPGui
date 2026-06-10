@@ -1,6 +1,6 @@
 See [ChangeLog](/ChangeLog.md) for latest updates.<br>
 IMPORTANT: 
-1. Read the rest of this page before requesting support.
+1. Read the rest of this page before requesting support. **Don't** use the Github **Issues** page. It is not monitored. Use Discord instead.
 2. Join discord if you need support or wish to provide inputs on new features:  https://discord.gg/HCgkfSc
 3. Use the 'Online Help' button in the app to view context help.<br>
 
