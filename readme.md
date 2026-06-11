@@ -90,9 +90,9 @@ Aids with colonization construction projects, determining what commodities are n
 # Installation
 _Requires **python 3** and **git**_
 
-_Python 3.11 is the recommended version of Python. Python 3.9 or 3.10 may also be used._
+_Python 3.11.9 is the recommended version of Python. Python 3.9 or 3.10 may also be used._
 If you don't have Python installed:
-* Here is a link to [Python 3.11 installer](https://www.python.org/downloads/release/python-3110/). 
+* Here is a link to [Python 3.11.9 installer](https://www.python.org/downloads/release/python-3119/). 
 * Scroll to the bottom and select the installer with the description "Recommended".
 * **Note**: To avoid a 'py is not recognized error' later, in the Python installation wizard, make sure to check the box “Add Python 3.xx to PATH”.
 
@@ -161,7 +161,8 @@ Once ED_AP is running there are few steps to complete the first time ED AP is ru
 1. Perform screen calibration, detailed [here](docs/Calibration.md). This will configure ED_AP for your screen resolution. Many issues can be avoided with correct calibration.
 2. Check and if necessary, change keybinding options, detailed below. Pay special attention that the Ins, Home, End and Pg Up are not used by ED as these are used by EDAP.
 3. Note: the autopilot.log file will capture any required keybindings that are not set.
-4. Select the correct ship file matching the ship you are flying, this will configure the pitch, roll and yaw rates to match. Depending on the ship, you may need to tune the values for best response a detailed [here](docs/RollPitchYaw.md).
+4. Increase the brightness of the HUD to maximum to help image processing (Interior/Right Panel > SHIP > INTERFACE BRIGHTNESS).
+5. Change Location Status Icons to SHOW ICONS (Interior/Right Panel > SHIP > LOCATION STATUS ICONS).
 5. Perform an in-system test:
     * In ED, use Left Panel to select a local target.
     * In the autopilot enable SC Assist or hit the 'Ins' key.
