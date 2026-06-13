@@ -1,4 +1,9 @@
-# 6/8/2026 v1.9.2
+# 6/13/2026 v1.9.3
+- Removed duplicate save all settings buttons.
+- Removed test rpy buttons.
+- Updated documentation.
+
+- # 6/8/2026 v1.9.2
 - Updated packages for Python 3.11.
 - Added Supercruise Assist module and status detection (for future use).
 - Added additional help pages to github.

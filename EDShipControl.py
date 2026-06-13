@@ -663,7 +663,7 @@ class EDShipControl:
         set_focus_elite_window()
         sleep(0.25)
         # self.ap.set_speed_50()
-        self.ap.pitch_up_down(angle)
+        self.pitch_up_down(angle)
 
     def ship_tst_yaw(self, angle: float):
         """ Performs a ship yaw test by pitching 360 degrees.
