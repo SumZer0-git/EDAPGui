@@ -158,7 +158,8 @@ If you install a new version, copy the **Configs** folder from the old version t
 
 # Getting Started
 Once ED_AP is running there are few steps to complete the first time ED AP is run. These will help avoid common issues.
-1. Perform screen calibration, detailed [here](docs/Calibration.md). This will configure ED_AP for your screen resolution. Many issues can be avoided with correct calibration.
+1. For languages other than English, refer to Localization below.
+2. Perform screen calibration, detailed [here](docs/Calibration.md). This will configure ED_AP for your screen resolution. Many issues can be avoided with correct calibration.
 2. Check and if necessary, change keybinding options, detailed below. Pay special attention that the Ins, Home, End and Pg Up are not used by ED as these are used by EDAP.
 3. Note: the autopilot.log file will capture any required keybindings that are not set.
 4. Increase the brightness of the HUD to maximum to help image processing (Interior/Right Panel > SHIP > INTERFACE BRIGHTNESS).
@@ -175,6 +176,14 @@ Once ED_AP is running there are few steps to complete the first time ED AP is ru
    * When a assist starts it will set focus to the Elite Dangerous window.
    * Ship will undock if docked, jump to SC, maneuver to the target, perform an FSD jump. Upon arrival in the system, it will manuever aroung the star, fuel scoop as necessary and either stop if no in system target is selected, or attempt to fly to the target and  attempt to dock if it is a station.
    * Any flight issues, check ship tuning.
+
+# Localization
+EDAP does not feature localization, however as ED does and EDAP uses OCR, it is necessary to configure the OCR language in EDAP.
+For non-English, change the 'Language' field of ap.json to the language of choice. 
+The available language files are located in the 'locales' folder. 
+To add a new language, copy an existing language file and edit the contents based on the text seen in ED. 
+Update ap.json with the matching language identifier (the language filename).
+Report any language additions/changes on Discord for other users.
 
 # GUI
 Detailed information on each tab within the application:
