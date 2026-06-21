@@ -12,6 +12,7 @@ import cv2
 
 from EDAPColonizeEditor import read_json_file, write_json_file
 from EDFSS import EDFSS
+from EDPlayerSettings import EDPlayerSettings
 from MachineLearning import MachLearn, ModelType
 from simple_localization import LocalizationManager
 
@@ -161,6 +162,8 @@ class EDAutopilot:
             logger.debug(f'Vertical FOV: {self.ver_fov} deg (-{self.ver_fov / 2} to {self.ver_fov / 2}).')
             self.hor_fov = round(self.ver_fov * self.scr.aspect_ratio, 4)
             logger.debug(f'Horizontal FOV: {self.hor_fov} deg (-{self.hor_fov / 2} to {self.hor_fov / 2}).')
+
+        self.player_settings = EDPlayerSettings(cb)
 
         self.templ = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY)
         self.scrReg = Screen_Regions.Screen_Regions(self.scr, self.templ)
