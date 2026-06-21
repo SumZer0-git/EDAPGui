@@ -107,17 +107,6 @@ class EDKeys:
                 logger.warning("\tget_bindings_<{}>= does not have a valid keyboard keybind.".format(key).upper())
                 self.missing_keys.append(key)
 
-        # Check for key collisions with the keys EDAP uses.
-        for key in self.keys_to_obtain:
-            collisions = self.get_collisions(key)
-            if len(collisions) > 1:
-                # lookup the keyname in the SCANCODE reverse dictionary and output that key name
-                keyname = self.reversed_dict.get(self.keys[key]['key'], "Key not found")
-                warn_text = (f"Key '{keyname}' is used for the following bindings: {collisions}. "
-                             "This MAY causes issues when using EDAP. Monitor and adjust accordingly.")
-                self.ap_ckb('log', f"WARNING: {warn_text}")
-                logger.warning(f"{warn_text}")
-
         # Check if the hotkeys are used in ED
         binding_name = self.check_hotkey_in_bindings('Key_End')
         if binding_name != "":
