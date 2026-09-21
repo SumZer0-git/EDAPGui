@@ -236,39 +236,39 @@ class Overlay:
             force_redraw = False
 
             # Check lines
-            for key in list(lines):
+            for key, item in list(lines.items()):
                 # Check the datetime diff between when the overlay was added and now
-                time_diff = (time_now - lines[key][5]).total_seconds()
+                time_diff = (time_now - item[5]).total_seconds()
                 # Remove overlay if it is too old. Keep overlay if dur < 0
-                if 0 < lines[key][4] < time_diff:
-                    del lines[key]
+                if 0 < item[4] < time_diff:
+                    lines.pop(key, None)
                     force_redraw = True
 
             # Check quadrilaterals
-            for key in list(quadrilaterals):
+            for key, item in list(quadrilaterals.items()):
                 # Check the datetime diff between when the overlay was added and now
-                time_diff = (time_now - quadrilaterals[key][4]).total_seconds()
+                time_diff = (time_now - item[4]).total_seconds()
                 # Remove overlay if it is too old. Keep overlay if dur < 0
-                if 0 < quadrilaterals[key][3] < time_diff:
-                    del quadrilaterals[key]
+                if 0 < item[3] < time_diff:
+                    quadrilaterals.pop(key, None)
                     force_redraw = True
 
             # Check text
-            for key in list(text):
+            for key, item in list(text.items()):
                 # Check the datetime diff between when the overlay was added and now
-                time_diff = (time_now - text[key][5]).total_seconds()
+                time_diff = (time_now - item[5]).total_seconds()
                 # Remove overlay if it is too old. Keep overlay if dur < 0
-                if 0 < text[key][4] < time_diff:
-                    del text[key]
+                if 0 < item[4] < time_diff:
+                    text.pop(key, None)
                     force_redraw = True
 
             # Check floating_text
-            for key in list(floating_text):
+            for key, item in list(floating_text.items()):
                 # Check the datetime diff between when the overlay was added and now
-                time_diff = (time_now - floating_text[key][5]).total_seconds()
+                time_diff = (time_now - item[5]).total_seconds()
                 # Remove overlay if it is too old. Keep overlay if dur < 0
-                if 0 < floating_text[key][4] < time_diff:
-                    del floating_text[key]
+                if 0 < item[4] < time_diff:
+                    floating_text.pop(key, None)
                     force_redraw = True
 
             if force_redraw:
@@ -411,26 +411,24 @@ class Overlay:
             Overlay.overlay_set_font(hdc, fnt[0], fnt[1])
 
             #for i, key in enumerate(lines):
-            for key in list(lines.keys()):
-                #print(lines[key])
-                Overlay.overlay_draw_rect(hdc, lines[key][0], lines[key][1], win32con.PS_SOLID, lines[key][2], lines[key][3])
+            for line in list(lines.values()):
+                #print(line)
+                Overlay.overlay_draw_rect(hdc, line[0], line[1], win32con.PS_SOLID, line[2], line[3])
 
             #for i, key in enumerate(quadrilaterals):
-            for key in list(quadrilaterals.keys()):
-                #print(lines[key])
-                Overlay.overlay_draw_quad(hdc, quadrilaterals[key][0], win32con.PS_SOLID, quadrilaterals[key][1],
-                                          quadrilaterals[key][2])
+            for quad in list(quadrilaterals.values()):
+                #print(quad)
+                Overlay.overlay_draw_quad(hdc, quad[0], win32con.PS_SOLID, quad[1], quad[2])
 
             #for i, key in enumerate(text):
-            for key in list(text.keys()):
-                #print(text[key])
-                Overlay.overlay_draw_text(hWnd, hdc, text[key][0], text[key][1], text[key][2], text[key][3])
+            for txt in list(text.values()):
+                #print(txt)
+                Overlay.overlay_draw_text(hWnd, hdc, txt[0], txt[1], txt[2], txt[3])
 
             #for i, key in enumerate(floating_text):
-            for key in list(floating_text.keys()):
-                #print(text[key])
-                Overlay.overlay_draw_floating_text(hWnd, hdc, floating_text[key][0], floating_text[key][1],
-                                                   floating_text[key][2], floating_text[key][3])
+            for ftxt in list(floating_text.values()):
+                #print(ftxt)
+                Overlay.overlay_draw_floating_text(hWnd, hdc, ftxt[0], ftxt[1], ftxt[2], ftxt[3])
 
             win32gui.EndPaint(hWnd, paintStruct)
             return 0
