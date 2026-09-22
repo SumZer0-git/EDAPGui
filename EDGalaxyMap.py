@@ -244,7 +244,7 @@ class EDGalaxyMap:
             # Wait for screen to appear. The text is the same, regardless of language.
             res = self.ocr.wait_for_text(self.ap, ["CARTOGRAPHICS"], self.reg['cartographics'], timeout=15)
             if not res:
-                if self.status_parser.get_gui_focus() != GuiFocusGalaxyMap:
+                if not self.status_parser.wait_for_gui_focus(GuiFocusGalaxyMap, timeout=5):
                     logger.warning("Unable to open Galaxy Map")
                     return False
 
