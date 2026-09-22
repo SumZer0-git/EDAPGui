@@ -115,7 +115,7 @@ class EDSystemMap:
             # Wait for screen to appear. The text is the same, regardless of language.
             res = self.ocr.wait_for_text(self.ap, ["CARTOGRAPHICS"], self.reg['cartographics'], timeout=15)
             if not res:
-                if self.status_parser.get_gui_focus() != GuiFocusSystemMap:
+                if not self.status_parser.wait_for_gui_focus(GuiFocusSystemMap, timeout=5):
                     logger.warning("Unable to open System Map")
                     return False
 
