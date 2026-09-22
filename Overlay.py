@@ -206,23 +206,19 @@ class Overlay:
 
     def overlay_remove_rect(self, key):
         """ Removes a rectangle overlay. Does not force a redraw."""
-        if key in lines:
-            lines.pop(key)
+        lines.pop(key, None)
 
     def overlay_remove_quad(self, key):
         """ Removes a quadrilateral overlay. Does not force a redraw."""
-        if key in quadrilaterals:
-            quadrilaterals.pop(key)
+        quadrilaterals.pop(key, None)
 
     def overlay_remove_text(self, key):
         """ Removes a text overlay. Does not force a redraw."""
-        if key in text:
-            text.pop(key)
+        text.pop(key, None)
 
     def overlay_remove_floating_text(self, key):
         """ Removes a floating text overlay. Does not force a redraw."""
-        if key in floating_text:
-            floating_text.pop(key)
+        floating_text.pop(key, None)
 
     def overlay_quit(self):
         win32gui.PostMessage(self.hWindow, win32con.WM_CLOSE, 0, 0)
