@@ -934,15 +934,15 @@ class EDAutopilot:
         ml_res = self.mach_learn.model_predict(ModelType.Compass, full_compass_image2, '')
         if ml_res and len(ml_res) > 0:
             for ml in ml_res:
-                if ml.class_name == 'compass':
+                if ml.class_name == 'compass' and ml.match_pct > max_val:
                     max_val = ml.match_pct
                     compass_quad = ml.bounding_quad
                     # pt = [compass_quad.left, compass_quad.top]
-                if ml.class_name == 'navpoint':
+                if ml.class_name == 'navpoint' and ml.match_pct > n_max_val:
                     n_max_val = ml.match_pct
                     n_compass_quad = ml.bounding_quad
                     # n_pt = [n_compass_quad.left, n_compass_quad.top]
-                if ml.class_name == 'navpoint-behind':
+                if ml.class_name == 'navpoint-behind' and ml.match_pct > b_max_val:
                     b_max_val = ml.match_pct
                     b_compass_quad = ml.bounding_quad
                     # b_pt = [b_compass_quad.left, b_compass_quad.top]
@@ -1126,11 +1126,11 @@ class EDAutopilot:
         ml_res = self.mach_learn.model_predict(ModelType.Target, target_image2, '')
         if ml_res and len(ml_res) > 0:
             for ml in ml_res:
-                if ml.class_name == 'target':
+                if ml.class_name == 'target' and ml.match_pct > max_val:
                     max_val = ml.match_pct
                     target_quad = ml.bounding_quad
                     pt = [target_quad.left, target_quad.top]
-                if ml.class_name == 'target-occluded':
+                if ml.class_name == 'target-occluded' and ml.match_pct > maxVal_occ:
                     maxVal_occ = ml.match_pct
                     target_occ_quad = ml.bounding_quad
                     pt_occ = [target_occ_quad.left, target_occ_quad.top]
