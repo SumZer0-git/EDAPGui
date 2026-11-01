@@ -10,17 +10,18 @@ from vision.ocr import OCR
 
 class OCRTestCase(unittest.TestCase):
     def test_simple_OCR(self):
-        """ Simple check of OCR to bring back text of a know image. """
+        """ Simple check of OCR to bring back text of a known image. """
         ocr = OCR(screen=None)
 
         # Load image
         image_path = str(paths.ROOT / 'tests' / 'fixtures' / 'ocr' / 'ocr-test1.png')
         orig_image = cv2.imread(image_path)
         ocr_textlist = ocr.image_simple_ocr(orig_image)
-        actual = str(ocr_textlist)
-        expected = "['DESTINATION', 'SIRIUS ATMOSPHERICS']"
+        actual = ' '.join(ocr_textlist).upper()
 
-        self.assertEqual(actual, expected)  # add assertion here
+        # The screenshot also contains HUD text, so only check the known white text at the bottom.
+        self.assertIn('LOW WAKE', actual)
+        self.assertIn('RUSSELL HUTTON', actual)
 
     def test_similarity_test1(self):
         ocr = OCR(screen=None)

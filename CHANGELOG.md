@@ -27,6 +27,7 @@
  - Changed all `from x import *` to explicit imports, removed unused imports and sorted the imports in all modules. Comparisons with `None`, `True` and `False` were rewritten to `is None` or plain truth checks, bare `except:` became `except Exception:`, trailing whitespace was removed, and unused local variables were removed.
  - Changed log rotation to keep only the 10 newest rotated log files in `user_data/logs/`.
  - Fixed rotated log files (`autopilot <date>.log`) not being excluded by `.gitignore`.
+ - Fixed the OCR unit test to check only the known text of its screenshot instead of the complete HUD text.
  - Fixed circular imports between `ED_AP.py` and the `routines/` and `panels/` modules; all modules can now be imported on their own.
  - Fixed a startup error when the previous log file could not be renamed because a rotated log with the same timestamp already existed.
  - Cleaned up `.gitignore`.
