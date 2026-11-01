@@ -1,21 +1,13 @@
-/__pycache__
-/venv
-/hold
-/notes
-/tst
-/autopilot.log
-/templates/images
-/dist
-/build
-/EDAPGiu.spec
-/EDAPGui.spec
-/elw.txt
+# Runtime and user data
+/user_data/
+
+# Python
+__pycache__/
+/venv/
+
+# Build output (build is currently disabled)
+/build/
+/dist/
+*.spec
 /build.bat
-/screen/old-screen_cap.png
-/templates/bck
-/configs/AP.json
 /EDAPGui.exe
-.idea/
-EDMesg/__pycache__/
-simple_localization/__pycache__/
-configs/ship_configs.json
