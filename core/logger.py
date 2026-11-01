@@ -15,7 +15,7 @@ if os.path.exists(_filename):
     t = os.path.getmtime(_filename)
     v = datetime.datetime.fromtimestamp(t)
     x = v.strftime('%Y-%m-%d %H-%M-%S')
-    os.rename(_filename, paths.LOG_DIR / f"{filename_only} {x}.log")
+    os.replace(_filename, paths.LOG_DIR / f"{filename_only} {x}.log")
 
 # Keep only the newest rotated log files.
 _rotated = sorted(paths.LOG_DIR.glob(f"{Path(_filename).stem} ????-??-?? ??-??-??.log"))

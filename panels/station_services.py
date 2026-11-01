@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import cv2
 
-import ED_AP
 from game.market import MarketParser
 from vision.ocr import OCR
 from vision.regions import reg_scale_for_station, size_scale_for_station
@@ -234,7 +233,9 @@ def dummy_cb(msg, body=None):
 
 # Usage Example
 if __name__ == "__main__":
-    test_ed_ap = ED_AP.EDAutopilot(cb=dummy_cb)
+    from ED_AP import EDAutopilot
+
+    test_ed_ap = EDAutopilot(cb=dummy_cb)
     test_ed_ap.keys.activate_window = True
     svcs = EDStationServicesInShip(test_ed_ap, test_ed_ap.scr, test_ed_ap.keys, test_ed_ap.ap_ckb)
     svcs.goto_station_services()

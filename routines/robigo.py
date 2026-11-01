@@ -8,7 +8,6 @@ import keyboard
 import win32gui
 
 import vision.regions
-from ED_AP import *
 from game.journal import *
 from controls.keys import *
 from core.logger import logger
@@ -457,7 +456,9 @@ def callback(self, key, body=None):
 
 def main():
     global main_thrd , ap1
-    
+
+    from ED_AP import EDAutopilot
+
     main_thrd = threading.current_thread()
 
     ap = EDAutopilot(callback, False)

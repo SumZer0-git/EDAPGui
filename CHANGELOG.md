@@ -19,6 +19,8 @@
  - Changed tests to live in `tests/` (`tests/test_*.py`), test images in `tests/fixtures/`, and the manual debug tool `Test_Routines.py` to `tests/manual/debug_routines.py` (run with `python -m tests.manual.debug_routines`). Run the unit tests with `python -m unittest discover -s tests -t .`. Tests that need the running game live in `tests/integration/` and are skipped unless `EDAP_INTEGRATION=1` is set.
  - Changed log rotation to keep only the 10 newest rotated log files in `user_data/logs/`.
  - Fixed rotated log files (`autopilot <date>.log`) not being excluded by `.gitignore`.
+ - Fixed circular imports between `ED_AP.py` and the `routines/` and `panels/` modules; all modules can now be imported on their own.
+ - Fixed a startup error when the previous log file could not be renamed because a rotated log with the same timestamp already existed.
  - Cleaned up `.gitignore`.
 
 # 8/19/2025 v1.7.0: General updates.
