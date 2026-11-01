@@ -9,7 +9,7 @@ def dummy_cb(msg, body=None):
 class SystemMapTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from ED_AP import EDAutopilot
+        from core.autopilot import EDAutopilot
         cls.ed_ap = EDAutopilot(cb=dummy_cb)
 
         scr = cls.ed_ap.scr

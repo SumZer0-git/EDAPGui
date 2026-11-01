@@ -628,7 +628,7 @@ class EDWayPoint:
 
 
 def main():
-    from ED_AP import EDAutopilot
+    from core.autopilot import EDAutopilot
 
     ed_ap = EDAutopilot(cb=None)
     wp = EDWayPoint(ed_ap, True)  # False = Horizons

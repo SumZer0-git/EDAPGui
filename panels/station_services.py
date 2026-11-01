@@ -233,7 +233,7 @@ def dummy_cb(msg, body=None):
 
 # Usage Example
 if __name__ == "__main__":
-    from ED_AP import EDAutopilot
+    from core.autopilot import EDAutopilot
 
     test_ed_ap = EDAutopilot(cb=dummy_cb)
     test_ed_ap.keys.activate_window = True

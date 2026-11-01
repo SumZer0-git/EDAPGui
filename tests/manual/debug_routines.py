@@ -2,7 +2,7 @@ import logging
 import cv2
 import os
 
-from ED_AP import EDAutopilot
+from core.autopilot import EDAutopilot
 from vision.regions import *
 from gui.overlay import *
 from vision.screen import *

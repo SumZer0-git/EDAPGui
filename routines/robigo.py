@@ -457,7 +457,7 @@ def callback(self, key, body=None):
 def main():
     global main_thrd , ap1
 
-    from ED_AP import EDAutopilot
+    from core.autopilot import EDAutopilot
 
     main_thrd = threading.current_thread()
 

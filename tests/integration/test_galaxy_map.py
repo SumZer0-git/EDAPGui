@@ -9,7 +9,7 @@ def dummy_cb(msg, body=None):
 class GalaxyMapTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from ED_AP import EDAutopilot
+        from core.autopilot import EDAutopilot
         cls.ed_ap = EDAutopilot(cb=dummy_cb)
 
         scr = cls.ed_ap.scr
@@ -37,7 +37,7 @@ class GalaxyMapTestCase(unittest.TestCase):
 
     def select_system(self, target_name) -> bool:
         """ Select a system in the galaxy map. """
-        # from ED_AP import EDAutopilot
+        # from core.autopilot import EDAutopilot
         # test_ed_ap = EDAutopilot(cb=dummy_cb)
         #
         # scr = test_ed_ap.scr
