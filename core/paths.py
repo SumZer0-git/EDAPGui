@@ -18,8 +18,8 @@ DATA_CONFIGS = DATA / 'configs'
 WAYPOINT_EXAMPLES_DIR = DATA / 'waypoints'
 
 # Read-only resources
-LOCALES_DIR = ROOT / 'locales'
-TEMPLATES_DIR = ROOT / 'templates'
+LOCALES_DIR = ROOT / 'assets' / 'locales'
+TEMPLATES_DIR = ROOT / 'assets' / 'templates'
 
 # Runtime files, not versioned
 USER_DATA = ROOT / 'user_data'

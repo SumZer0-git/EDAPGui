@@ -101,7 +101,7 @@ class EDAutopilot:
             "TCEInstallationPath": "C:\\TCE",
             "AutomaticLogout": False,      # Logout when we are done with the mission
             "FCDepartureTime": 5.0,        # Extra time to fly away from a Fleet Carrier
-            "Language": 'en',              # Language (matching ./locales/xx.json file)
+            "Language": 'en',              # Language (matching assets/locales/xx.json file)
             "OCRLanguage": 'en',           # Language for OCR detection (see OCR language doc in \docs)
             "EnableEDMesg": False,
             "EDMesgActionsPort": 15570,

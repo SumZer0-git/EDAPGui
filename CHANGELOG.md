@@ -3,6 +3,8 @@
  - Changed config, waypoint and log files to be stored in `user_data/` (configs, waypoints, logs, debug output). The folder is created on first start.
  - Changed reference files (`resolution.json` and the example waypoint files) to live in `data/` and be copied to `user_data/` when missing.
  - Changed paths to be resolved relative to the project folder instead of the working directory.
+ - Changed `templates/`, `locales/` and `screen/edap.ico` to `assets/templates/`, `assets/locales/` and `assets/icons/edap.ico`; the documentation screenshots from `screen/` to `docs/screenshots/`. The disabled build workflow still references the old `screen\` paths and will be reworked separately.
+ - Changed `readme.md` and `ChangeLog.md` to `README.md` and `CHANGELOG.md`.
  - Changed `EDWayPoint.py`, `Robigo.py` and `EDafk_combat.py` to live in the new `routines/` package as `routines/waypoints.py`, `routines/robigo.py` and `routines/afk_combat.py`.
  - Changed `TCE_Integration.py`, `Voice.py` and the `EDAP_EDMesg_*.py` modules to live in the new `integrations/` package as `integrations/tce.py`, `integrations/voice.py` and `integrations/edmesg/{interface,client,server}.py`.
  - Changed `Overlay.py` to `gui/overlay.py` and the `simple_localization/` package to `i18n/`.

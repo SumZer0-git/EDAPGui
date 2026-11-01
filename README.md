@@ -1,4 +1,4 @@
-See [ChangeLog](/ChangeLog.md) for latest updates.<br>
+See [ChangeLog](/CHANGELOG.md) for latest updates.<br>
 Join discord if need support or wish to provide inputs on new features:  https://discord.gg/HCgkfSc
 <br>
 
@@ -304,7 +304,7 @@ sumzer0@yahoo.com
 
 
 # Screen Shots
-![Alt text](screen/screen_cap_main.png?raw=true "Main Tab")
-![Alt text](screen/screen_cap_settings.png?raw=true "Settings Tab")
-![Alt text](screen/screen_cap_debug.png?raw=true "Debug Tab")
+![Alt text](docs/screenshots/screen_cap_main.png?raw=true "Main Tab")
+![Alt text](docs/screenshots/screen_cap_settings.png?raw=true "Settings Tab")
+![Alt text](docs/screenshots/screen_cap_debug.png?raw=true "Debug Tab")
                                                                

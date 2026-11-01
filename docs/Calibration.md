@@ -20,7 +20,7 @@ Also see:  HOWTO-RollPitchYaw.md on how to adjust your autopilot performance whi
     * In Supercruise (%0 thrust is ok)
     * Target system selected
     * Align to the target, as show in this screenshot:<br>
-![Alt text](../screen/screen-cap-calibrate.png?raw=true "Calibrate ED Config")  
+![Alt text](../docs/screenshots/screen-cap-calibrate.png?raw=true "Calibrate ED Config")  
 
 # To run the calibration (Target or Compass)
 * Start EDAPGui

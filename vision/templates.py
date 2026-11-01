@@ -45,18 +45,18 @@ class Image_Templates:
 
     def reload_templates(self, scaleX, scaleY, compass_scale: float):
         """ Load the full set of image templates. """
-        self.template['elw']       = self.load_template("templates/elw-template.png", scaleX, scaleY) 
-        self.template['elw_sig']   = self.load_template("templates/elw-sig-template.png", scaleX, scaleY) 
-        self.template['navpoint']  = self.load_template("templates/navpoint.png", compass_scale, compass_scale)
-        self.template['navpoint-behind']  = self.load_template("templates/navpoint-behind.png", compass_scale, compass_scale)
-        self.template['compass']   = self.load_template("templates/compass.png", compass_scale,compass_scale)
-        self.template['target']    = self.load_template("templates/destination.png", scaleX, scaleY) 
-        self.template['target_occluded']    = self.load_template("templates/target_occluded.png", scaleX, scaleY) 
-        self.template['disengage'] = self.load_template("templates/sc-disengage.png", scaleX, scaleY) 
-        self.template['missions']  = self.load_template("templates/completed-missions.png", scaleX, scaleY) 
-        self.template['dest_sirius'] = self.load_template("templates/dest-sirius-atmos-HL.png", scaleX, scaleY)
-        self.template['robigo_mines']  = self.load_template("templates/robigo-mines-selected.png", scaleX, scaleY) 
-        self.template['sirius_atmos']  = self.load_template("templates/sirius-atmos-selected.png", scaleX, scaleY)        
+        self.template['elw']       = self.load_template("assets/templates/elw-template.png", scaleX, scaleY) 
+        self.template['elw_sig']   = self.load_template("assets/templates/elw-sig-template.png", scaleX, scaleY) 
+        self.template['navpoint']  = self.load_template("assets/templates/navpoint.png", compass_scale, compass_scale)
+        self.template['navpoint-behind']  = self.load_template("assets/templates/navpoint-behind.png", compass_scale, compass_scale)
+        self.template['compass']   = self.load_template("assets/templates/compass.png", compass_scale,compass_scale)
+        self.template['target']    = self.load_template("assets/templates/destination.png", scaleX, scaleY) 
+        self.template['target_occluded']    = self.load_template("assets/templates/target_occluded.png", scaleX, scaleY) 
+        self.template['disengage'] = self.load_template("assets/templates/sc-disengage.png", scaleX, scaleY) 
+        self.template['missions']  = self.load_template("assets/templates/completed-missions.png", scaleX, scaleY) 
+        self.template['dest_sirius'] = self.load_template("assets/templates/dest-sirius-atmos-HL.png", scaleX, scaleY)
+        self.template['robigo_mines']  = self.load_template("assets/templates/robigo-mines-selected.png", scaleX, scaleY) 
+        self.template['sirius_atmos']  = self.load_template("assets/templates/sirius-atmos-selected.png", scaleX, scaleY)        
         
 
     def resource_path(self,relative_path):
