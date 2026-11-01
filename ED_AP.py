@@ -17,16 +17,16 @@ from EDShipControl import EDShipControl
 from EDStationServicesInShip import EDStationServicesInShip
 from EDSystemMap import EDSystemMap
 from core.logger import logging
-import Image_Templates
-import Screen
-import Screen_Regions
+import vision.templates
+import vision.screen
+import vision.regions
 from EDWayPoint import *
 from EDJournal import *
 from EDKeys import *
 from EDafk_combat import AFK_Combat
 from EDInternalStatusPanel import EDInternalStatusPanel
 from NavRouteParser import NavRouteParser
-from OCR import OCR
+from vision.ocr import OCR
 from EDNavigationPanel import EDNavigationPanel
 from Overlay import *
 from StatusParser import StatusParser
@@ -205,13 +205,13 @@ class EDAutopilot:
         # Create instance of each of the needed Classes
         self.gfx_settings = EDGraphicsSettings()
 
-        self.scr = Screen.Screen(cb)
+        self.scr = vision.screen.Screen(cb)
         self.scr.scaleX = self.config['TargetScale']
         self.scr.scaleY = self.config['TargetScale']
 
         self.ocr = OCR(self.scr, self.config['OCRLanguage'])
-        self.templ = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
-        self.scrReg = Screen_Regions.Screen_Regions(self.scr, self.templ)
+        self.templ = vision.templates.Image_Templates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
+        self.scrReg = vision.regions.Screen_Regions(self.scr, self.templ)
         self.jn = EDJournal(cb)
         self.keys = EDKeys(cb)
         self.keys.activate_window = self.config['ActivateEliteEachKey']

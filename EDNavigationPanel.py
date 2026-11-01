@@ -6,9 +6,9 @@ from time import sleep
 from core.constants import GuiFocusExternalPanel
 from EDKeys import EDKeys
 from core.logger import logger
-from OCR import OCR
-from Screen import Screen
-from Screen_Regions import size_scale_for_station
+from vision.ocr import OCR
+from vision.screen import Screen
+from vision.regions import size_scale_for_station
 from StatusParser import StatusParser
 
 """
@@ -176,7 +176,7 @@ if __name__ == "__main__":
     ap = EDAutopilot(cb=dummy_cb)
     ap.keys.activate_window = True  # Helps with single steps testing
 
-    from Screen import set_focus_elite_window
+    from vision.screen import set_focus_elite_window
     set_focus_elite_window()
     nav_pnl = EDNavigationPanel(ap, ap.scr, ap.keys, dummy_cb)
     nav_pnl.request_docking()

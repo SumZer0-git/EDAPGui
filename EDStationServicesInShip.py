@@ -4,11 +4,11 @@ import cv2
 
 import ED_AP
 from MarketParser import MarketParser
-from OCR import OCR
+from vision.ocr import OCR
+from vision.regions import reg_scale_for_station, size_scale_for_station
 from StatusParser import StatusParser
 from time import sleep
 from core.logger import logger
-from Screen_Regions import reg_scale_for_station, size_scale_for_station
 
 """
 File:StationServicesInShip.py    

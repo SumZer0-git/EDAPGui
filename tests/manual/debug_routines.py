@@ -3,10 +3,10 @@ import cv2
 import os
 
 from ED_AP import EDAutopilot
-from Screen_Regions import *
+from vision.regions import *
 from Overlay import *
-from Screen import *
-from Image_Templates import *
+from vision.screen import *
+from vision.templates import *
 from time import sleep
 import numpy as np
 
@@ -27,7 +27,7 @@ def main():
 
     # Rescale screenshots from the user scaling (i.e. 1920x1080 [0.75,0.75]
     # to the default scaling of 3440x1440 [1.0, 1.0]. Note the scaling is by
-    # the ratio, not the resolution. Refer to Screen.py for resolution to
+    # the ratio, not the resolution. Refer to vision/screen.py for resolution to
     # ratio conversions.
     # This only needs to be competed for new screenshots that were not take
     # at 3440x1440. Once complete, remove the original images and move the

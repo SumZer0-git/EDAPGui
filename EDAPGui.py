@@ -25,9 +25,9 @@ from Voice import *
 from MousePt import MousePoint
 from core import paths
 
-from Image_Templates import *
-from Screen import *
-from Screen_Regions import *
+from vision.templates import *
+from vision.screen import *
+from vision.regions import *
 from EDKeys import *
 from EDJournal import *
 from ED_AP import *

@@ -12,7 +12,7 @@ from core.logger import logger
 
 
 """
-File:Screen.py    
+File:vision/screen.py    
 
 Description:
   Class to handle screen grabs
@@ -164,7 +164,7 @@ class Screen:
             with open(fileName,"w") as fp:
                 json.dump(data,fp, indent=4)
         except Exception as e:
-            logger.warning("Screen.py write_config error:"+str(e))
+            logger.warning("screen.py write_config error:"+str(e))
 
     def read_config(self, fileName=paths.RESOLUTION_CONFIG):
         s = None
@@ -172,7 +172,7 @@ class Screen:
             with open(fileName,"r") as fp:
                 s = json.load(fp)
         except  Exception as e:
-            logger.warning("Screen.py read_config error :"+str(e))
+            logger.warning("screen.py read_config error :"+str(e))
 
         return s
 

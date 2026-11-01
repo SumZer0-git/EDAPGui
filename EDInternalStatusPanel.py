@@ -6,9 +6,9 @@ import cv2
 from core import paths
 from core.constants import *
 from EDKeys import EDKeys
-from OCR import OCR
-from Screen import Screen
-from Screen_Regions import size_scale_for_station
+from vision.ocr import OCR
+from vision.screen import Screen
+from vision.regions import size_scale_for_station
 from StatusParser import StatusParser
 from core.logger import logger
 
@@ -275,7 +275,7 @@ if __name__ == "__main__":
     mykeys = ap.keys
     mykeys.activate_window = True  # Helps with single steps testing
 
-    from Screen import set_focus_elite_window
+    from vision.screen import set_focus_elite_window
     set_focus_elite_window()
     nav_pnl = EDInternalStatusPanel(ap, scr, mykeys, dummy_cb)
     nav_pnl.show_inventory_tab()

@@ -3,6 +3,7 @@
  - Changed config, waypoint and log files to be stored in `user_data/` (configs, waypoints, logs, debug output). The folder is created on first start.
  - Changed reference files (`resolution.json` and the example waypoint files) to live in `data/` and be copied to `user_data/` when missing.
  - Changed paths to be resolved relative to the project folder instead of the working directory.
+ - Changed `Screen.py`, `Screen_Regions.py`, `OCR.py` and `Image_Templates.py` to live in the new `vision/` package as `vision/screen.py`, `vision/regions.py`, `vision/ocr.py` and `vision/templates.py`.
  - Changed `paths.py`, `EDlogger.py` and `EDAP_data.py` to live in the new `core/` package as `core/paths.py`, `core/logger.py` and `core/constants.py`.
  - Changed tests to live in `tests/` (`tests/test_*.py`), test images in `tests/fixtures/`, and the manual debug tool `Test_Routines.py` to `tests/manual/debug_routines.py` (run with `python -m tests.manual.debug_routines`). Run the unit tests with `python -m unittest discover -s tests -t .`. Tests that need the running game live in `tests/integration/` and are skipped unless `EDAP_INTEGRATION=1` is set.
  - Changed log rotation to keep only the 10 newest rotated log files in `user_data/logs/`.

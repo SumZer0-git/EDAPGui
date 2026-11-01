@@ -11,7 +11,7 @@ from xml.etree.ElementTree import parse
 import win32gui
 import xmltodict
 
-from Screen import set_focus_elite_window
+from vision.screen import set_focus_elite_window
 from directinput import *
 from core.logger import logger
 

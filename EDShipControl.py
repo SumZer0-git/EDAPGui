@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from core.constants import *
-from OCR import OCR
+from vision.ocr import OCR
 from StatusParser import StatusParser
 
 

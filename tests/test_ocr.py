@@ -1,7 +1,7 @@
 import unittest
 from core import paths
-from OCR import OCR
-from Screen import *
+from vision.ocr import OCR
+from vision.screen import *
 
 
 class OCRTestCase(unittest.TestCase):

@@ -7,14 +7,14 @@ import time
 import keyboard
 import win32gui
 
-import Screen_Regions
+import vision.regions
 from ED_AP import *
 from EDJournal import *
 from EDKeys import *
 from core.logger import logger
-from Image_Templates import *
+from vision.templates import *
 from Overlay import *
-from Screen import *
+from vision.screen import *
 from Voice import *
 '''
 
