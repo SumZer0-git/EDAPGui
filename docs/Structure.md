@@ -21,6 +21,7 @@ src/                    All program code (this is the import root; run the progr
     constants.py            Shared constants and game data tables
     types.py                Shared exceptions and enums
     version.py              The application version (single place; releases must match it)
+    updates.py              Update check against the latest GitHub release
 
   vision/                 Everything that looks at the screen
     screen.py, regions.py   Screen capture, resolution handling, screen regions
