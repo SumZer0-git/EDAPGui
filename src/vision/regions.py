@@ -61,11 +61,9 @@ def size_scale_for_station(width: int, height: int, w: int, h: int) -> (int, int
     @param w: The screen width in pixels
     """
     ref_w = 1920
-    ref_h = 1080
 
-    # Calc the x and y scaling.
+    # Calc the x scaling.
     x_scale = w / ref_w
-    y_scale = h / ref_h
 
     # Increase the height by the ratio of the width
     new_width = width * x_scale

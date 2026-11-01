@@ -149,7 +149,7 @@ class EDMesgServer:
             self.ap.tce_integration.write_shopping_list()
 
 def main():
-    edmesg_server = EDMesgServer(ed_ap=None, cb=None)
+    EDMesgServer(ed_ap=None, cb=None)
     # while not edmesg_server.stop:
     #     sleep(1)
 

@@ -82,7 +82,7 @@ class EDGraphicsSettings:
 
 
 def main():
-    gs = EDGraphicsSettings()
+    EDGraphicsSettings()
 
 
 if __name__ == "__main__":

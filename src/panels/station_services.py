@@ -40,7 +40,7 @@ class EDStationServicesInShip:
         scl_reg = reg_scale_for_station(self.reg['connected_to'], self.screen.screen_width, self.screen.screen_height)
 
         # Wait for screen to appear
-        res = self.ocr.wait_for_text(self.ap, [self.locale["STN_SVCS_CONNECTED_TO"]], scl_reg)
+        self.ocr.wait_for_text(self.ap, [self.locale["STN_SVCS_CONNECTED_TO"]], scl_reg)
 
         # Store image
         # image = self.screen.get_screen_rect_pct(scl_reg['rect'])

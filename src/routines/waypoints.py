@@ -446,7 +446,6 @@ class EDWayPoint:
 
             # Current in game destination
             status = self.ap.status.get_cleaned_data()
-            destination_system = status['Destination_System']  # The system ID
             destination_body = status['Destination_Body']  # The body number (0 for prim star)
             destination_name = status['Destination_Name']  # The system/body/station/settlement name
 
@@ -577,7 +576,6 @@ class EDWayPoint:
 
                     elif next_wp_station != "":
                         # Need OCR added in for this (WIP)
-                        need_ocr = True
                         self.ap.ap_ckb('log+vce', "No bookmark defined. Target by Station text not supported.")
                         # res = self.nav_panel.lock_destination(station_name)
                         _abort = True

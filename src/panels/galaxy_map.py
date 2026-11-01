@@ -237,7 +237,7 @@ class EDGalaxyMap:
                                             self.screen.screen_height)
 
             # Wait for screen to appear. The text is the same, regardless of language.
-            res = self.ocr.wait_for_text(self.ap, ["CARTOGRAPHICS"], scl_reg)
+            self.ocr.wait_for_text(self.ap, ["CARTOGRAPHICS"], scl_reg)
 
             self.keys.send('UI_Up')  # Go up to search bar
         else:

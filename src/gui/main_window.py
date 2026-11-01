@@ -828,11 +828,11 @@ class APGui():
         self.wp_filelabel.set("<no list loaded>")
         btn_wp_file = Button(blk_wp_buttons, textvariable=self.wp_filelabel, command=self.open_wp_file)
         btn_wp_file.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-        tip_wp_file = Hovertip(btn_wp_file, self.tooltips['Waypoint List Button'], hover_delay=1000)
+        Hovertip(btn_wp_file, self.tooltips['Waypoint List Button'], hover_delay=1000)
 
         btn_reset = Button(blk_wp_buttons, text='Reset List', command=self.reset_wp_file)
         btn_reset.grid(row=1, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-        tip_reset = Hovertip(btn_reset, self.tooltips['Reset Waypoint List'], hover_delay=1000)
+        Hovertip(btn_reset, self.tooltips['Reset Waypoint List'], hover_delay=1000)
 
         # log window
         log = LabelFrame(page0, text="LOG")
@@ -1001,7 +1001,7 @@ def main():
     #       win32gui.SetForegroundWindow(handle)  # put the window in foreground
 
     root = tk.Tk()
-    app = APGui(root)
+    app = APGui(root)  # noqa: F841 - keep a reference for the lifetime of the main loop
 
     root.mainloop()
 

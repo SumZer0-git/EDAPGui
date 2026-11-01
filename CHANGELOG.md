@@ -1,6 +1,6 @@
 # Unreleased
  - Important notice: Runtime files moved to the new `user_data/` folder. Existing users must manually copy `configs/AP.json`, `configs/ship_configs.json` and their own waypoint files from `waypoints/` into `user_data/configs/` and `user_data/waypoints/`.
- - Added the Ruff linter (`pyproject.toml`, `requirements-dev.txt`) with the rule groups `F` (pyflakes), `I` (import sorting), `W` (whitespace) and the checks `E711`, `E712`, `E713`, `E714` and `E722`; run `ruff check .`.
+ - Added the Ruff linter (`pyproject.toml`, `requirements-dev.txt`) with the rule groups `F` (pyflakes), `I` (import sorting), `W` (whitespace) and the checks `E711`, `E712`, `E713`, `E714`, `E722` and `F841`; run `ruff check .`.
  - Added `docs/Structure.md` describing the folder structure and rules for where new files belong.
  - Changed config, waypoint and log files to be stored in `user_data/` (configs, waypoints, logs, debug output). The folder is created on first start.
  - Changed reference files (`resolution.json` and the example waypoint files) to live in `data/` and be copied to `user_data/` when missing.
@@ -24,7 +24,7 @@
  - Changed `Screen.py`, `Screen_Regions.py`, `OCR.py` and `Image_Templates.py` to live in the new `vision/` package as `vision/screen.py`, `vision/regions.py`, `vision/ocr.py` and `vision/templates.py`.
  - Changed `paths.py`, `EDlogger.py` and `EDAP_data.py` to live in the new `core/` package as `core/paths.py`, `core/logger.py` and `core/constants.py`.
  - Changed tests to live in `tests/` (`tests/test_*.py`), test images in `tests/fixtures/`, and the manual debug tool `Test_Routines.py` to `tests/manual/debug_routines.py` (run with `python -m tests.manual.debug_routines`). Run the unit tests with `python -m unittest discover -s tests -t .`. Tests that need the running game live in `tests/integration/` and are skipped unless `EDAP_INTEGRATION=1` is set.
- - Changed all `from x import *` to explicit imports, removed unused imports and sorted the imports in all modules. Comparisons with `None`, `True` and `False` were rewritten to `is None` or plain truth checks, bare `except:` became `except Exception:`, and trailing whitespace was removed.
+ - Changed all `from x import *` to explicit imports, removed unused imports and sorted the imports in all modules. Comparisons with `None`, `True` and `False` were rewritten to `is None` or plain truth checks, bare `except:` became `except Exception:`, trailing whitespace was removed, and unused local variables were removed.
  - Changed log rotation to keep only the 10 newest rotated log files in `user_data/logs/`.
  - Fixed rotated log files (`autopilot <date>.log`) not being excluded by `.gitignore`.
  - Fixed circular imports between `ED_AP.py` and the `routines/` and `panels/` modules; all modules can now be imported on their own.

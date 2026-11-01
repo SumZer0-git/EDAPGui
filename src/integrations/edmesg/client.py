@@ -75,7 +75,7 @@ class EDMesgClient:
 #         client.close()
 
 def main():
-    edmesg_client = EDMesgClient(ed_ap=None, cb=None)
+    EDMesgClient(ed_ap=None, cb=None)
     while 1:  # not edmesg_client.stop:
          sleep(1)
 

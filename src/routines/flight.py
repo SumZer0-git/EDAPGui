@@ -830,13 +830,13 @@ class FlightMixin:
             self.start_sco_monitoring()
 
             # Wait for SC
-            res = self.status.wait_for_flag_on(FlagsSupercruise, timeout=30)
+            self.status.wait_for_flag_on(FlagsSupercruise, timeout=30)
 
             # Enable SCO. If SCO not fitted, this will do nothing.
             self.keys.send('UseBoostJuice')
 
             # Wait until out of orbit.
-            res = self.status.wait_for_flag_off(FlagsHasLatLong, timeout=60)
+            self.status.wait_for_flag_off(FlagsHasLatLong, timeout=60)
             # TODO - do we need to check if we never leave orbit?
 
             # Disable SCO. If SCO not fitted, this will do nothing.
