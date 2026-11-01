@@ -114,9 +114,9 @@ or run 'install_requirements.bat':
 ```
 3. Run script
 ```sh
-> python EDAPGui.py
+> python main.py
 OR you may have to run
-> python3 EDAPGui.py
+> python3 main.py
 if you have both python 2 and 3 installed.
 ```
 
@@ -132,8 +132,8 @@ The error is usually as a result of mss incompatibility. Try pip install mss==8.
 # Running ED_AP
 * With Elite Dangerous (ED) running, start ED_AP:
     * By double clicking start_ed_ap.bat in Windows Explorer (preferred method).
-    * By typing 'python EDAPGui.py' in a console window.
-    * By running EDAPGui.py directly in a Python supporting IDE.
+    * By typing 'python main.py' in a console window.
+    * By running main.py directly in a Python supporting IDE.
 * The ED_AP Gui should appear and there may be messages in the log warning of issues to be fixed. Refer to the information on this page how to resolve those issues.
 
 # Getting Started

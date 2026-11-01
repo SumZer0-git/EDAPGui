@@ -107,7 +107,7 @@ jobs:
           --clean `
           --noupx `
           --noconfirm `
-          EDAPGui.py
+          main.py
         
         # Create zip archive of the directory for distribution
         Compress-Archive -Path ".\dist\EDAP-Autopilot-$buildDate" -DestinationPath ".\dist\EDAP-Autopilot-$buildDate.zip"

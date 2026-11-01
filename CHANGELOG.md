@@ -10,6 +10,7 @@
  - Changed `controls/keys.py` (`EDKeys`) to be split: reading the Elite Dangerous keybindings now lives in `game/keybindings.py` (`KeyBindings`), while `controls/keys.py` only sends keys.
  - Changed `ED_AP.py` to `core/autopilot.py` and split `EDAutopilot` into mixin classes with identical behavior: `core/config.py` (`ConfigMixin`), `vision/calibration.py` (`CalibrationMixin`), `vision/detection.py` (`DetectionMixin`), `routines/flight.py` (`FlightMixin`) and `routines/assists.py` (`AssistsMixin`). `EDAP_Interrupt` and `ScTargetAlignReturn` moved to `core/types.py`.
  - Changed the GUI code of `EDAPGui.py` to `gui/main_window.py`; `EDAPGui.py` in the project root remains as the thin start script (`python EDAPGui.py`, `start_ed_ap.bat`).
+ - Changed the start script `EDAPGui.py` in the project root to `main.py` (`python main.py`); `start_ed_ap.bat` is unchanged for users.
  - Changed `EDWayPoint.py`, `Robigo.py` and `EDafk_combat.py` to live in the new `routines/` package as `routines/waypoints.py`, `routines/robigo.py` and `routines/afk_combat.py`.
  - Changed `TCE_Integration.py`, `Voice.py` and the `EDAP_EDMesg_*.py` modules to live in the new `integrations/` package as `integrations/tce.py`, `integrations/voice.py` and `integrations/edmesg/{interface,client,server}.py`.
  - Changed `Overlay.py` to `gui/overlay.py` and the `simple_localization/` package to `i18n/`.

@@ -16,4 +16,4 @@ if not exist "venv\Scripts\python.exe" (
 )
 
 echo Starting EDAPGui...
-venv\Scripts\python.exe EDAPGui.py
+venv\Scripts\python.exe main.py

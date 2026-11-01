@@ -45,7 +45,7 @@ class ConfigMixin:
             with open(fileName, "r") as fp:
                 s = json.load(fp)
         except  Exception as e:
-            logger.warning("EDAPGui.py read_config error :"+str(e))
+            logger.warning("core/config.py read_config error :"+str(e))
 
         return s
 
@@ -57,7 +57,7 @@ class ConfigMixin:
             with open(fileName, "w") as fp:
                 json.dump(data, fp, indent=4)
         except Exception as e:
-            logger.warning("EDAPGui.py write_config error:"+str(e))
+            logger.warning("core/config.py write_config error:"+str(e))
 
     def read_ship_configs(self, filename=paths.SHIP_CONFIGS):
         """ Read the user's ship configuration file."""
@@ -66,7 +66,7 @@ class ConfigMixin:
             with open(filename, "r") as fp:
                 s = json.load(fp)
         except  Exception as e:
-            logger.warning("EDAPGui.py read_ship_configs error :"+str(e))
+            logger.warning("core/config.py read_ship_configs error :"+str(e))
 
         return s
 
@@ -94,7 +94,7 @@ class ConfigMixin:
             with open(filename, "w") as fp:
                 json.dump(data, fp, indent=4)
         except Exception as e:
-            logger.warning("EDAPGui.py write_ship_configs error:"+str(e))
+            logger.warning("core/config.py write_ship_configs error:"+str(e))
 
     def load_ship_configuration(self, ship_type):
         """ Load ship configuration with the following priority:
