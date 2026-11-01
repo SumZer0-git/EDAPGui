@@ -11,10 +11,12 @@ from time import sleep
 import numpy as np
 
 """
-File:Test_Routines.py    
+File: debug_routines.py
 
 Description:
-  Class to allow testing 
+  Class to allow testing. This is a manual debug tool and not a unit test.
+  Run it from the project folder with: python -m tests.manual.debug_routines
+  Run this instead of the main EDAPGui file.
 """
 
 
@@ -33,7 +35,7 @@ def main():
     #
     # Does NOT require Elite Dangerous to be running.
     # ======================================================================
-    # rescale_screenshots('test/images-to-rescale', 0.76, 0.76)
+    # rescale_screenshots('tests/images-to-rescale', 0.76, 0.76)
 
     # Shows filtering and matching for the specified region...
     # Requires Elite Dangerous to be running.
@@ -59,12 +61,12 @@ def main():
     #
     # Does NOT require Elite Dangerous to be running.
     # ===============================================
-    # hsv_tester("test/compass/Screenshot 2024-07-04 20-01-49.png")
-    # hsv_tester("test/disengage/Screenshot 2024-08-13 21-32-58.png")
-    # hsv_tester("test/navpoint/Screenshot 2024-07-04 20-02-01.png")
-    # hsv_tester("test/navpoint-behind/Screenshot 2024-07-04 20-01-33.png")
-    # hsv_tester("test/target/Screenshot 2024-07-04 23-22-02.png")
-    # hsv_tester("test/target-occluded/Screenshot 2025-05-04 16-07-09_cr.png")
+    # hsv_tester("tests/fixtures/compass/Screenshot 2024-07-04 20-01-49.png")
+    # hsv_tester("tests/fixtures/disengage/Screenshot 2024-08-13 21-32-58.png")
+    # hsv_tester("tests/fixtures/navpoint/Screenshot 2024-07-04 20-02-01.png")
+    # hsv_tester("tests/fixtures/navpoint-behind/Screenshot 2024-07-04 20-01-33.png")
+    # hsv_tester("tests/fixtures/target/Screenshot 2024-07-04 23-22-02.png")
+    # hsv_tester("tests/fixtures/target-occluded/Screenshot 2025-05-04 16-07-09_cr.png")
 
 def draw_match_rect(img, pt1, pt2, color, thick):
     """ Utility function to add a rectangle to an image. """

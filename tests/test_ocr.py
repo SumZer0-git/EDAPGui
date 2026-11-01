@@ -1,4 +1,5 @@
 import unittest
+from core import paths
 from OCR import OCR
 from Screen import *
 
@@ -9,7 +10,7 @@ class OCRTestCase(unittest.TestCase):
         ocr = OCR(screen=None)
 
         # Load image
-        image_path = 'test/ocr/ocr-test1.png'
+        image_path = str(paths.ROOT / 'tests' / 'fixtures' / 'ocr' / 'ocr-test1.png')
         orig_image = cv2.imread(image_path)
         ocr_textlist = ocr.image_simple_ocr(orig_image)
         actual = str(ocr_textlist)

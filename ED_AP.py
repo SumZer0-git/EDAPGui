@@ -1082,7 +1082,7 @@ class EDAutopilot:
 
         if sim > sim_match:
             logger.info("'PRESS [] TO DISENGAGE' detected. Disengaging Supercruise")
-            #cv2.imwrite(f'test/disengage.png', image)
+            #cv2.imwrite(paths.debug_path('disengage.png'), image)
             return True
 
         return False

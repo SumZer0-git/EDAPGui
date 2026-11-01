@@ -54,7 +54,7 @@ class EDStationServicesInShip:
 
         # Store image
         # image = self.screen.get_screen_rect_pct(scl_reg['rect'])
-        # cv2.imwrite(f'test/station-services/station-services.png', image)
+        # cv2.imwrite(paths.debug_path('station-services', 'station-services.png'), image)
 
         # After the OCR timeout, station services will have appeared, to return true anyway.
         return True
