@@ -11,7 +11,7 @@ from time import sleep
 from core.logger import logger
 
 """
-File:StationServicesInShip.py    
+File:panels/station_services.py    
 
 Description:
   TBD 

@@ -1,5 +1,5 @@
 import unittest
-from EDSystemMap import EDSystemMap
+from panels.system_map import EDSystemMap
 
 
 def dummy_cb(msg, body=None):

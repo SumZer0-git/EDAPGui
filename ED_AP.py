@@ -11,11 +11,11 @@ from core import paths
 from simple_localization import LocalizationManager
 
 from EDAP_EDMesg_Server import EDMesgServer
-from EDGalaxyMap import EDGalaxyMap
+from panels.galaxy_map import EDGalaxyMap
 from game.graphics_settings import EDGraphicsSettings
-from EDShipControl import EDShipControl
-from EDStationServicesInShip import EDStationServicesInShip
-from EDSystemMap import EDSystemMap
+from panels.ship_control import EDShipControl
+from panels.station_services import EDStationServicesInShip
+from panels.system_map import EDSystemMap
 from core.logger import logging
 import vision.templates
 import vision.screen
@@ -24,10 +24,10 @@ from EDWayPoint import *
 from game.journal import *
 from controls.keys import *
 from EDafk_combat import AFK_Combat
-from EDInternalStatusPanel import EDInternalStatusPanel
+from panels.internal_status import EDInternalStatusPanel
 from game.nav_route import NavRouteParser
 from vision.ocr import OCR
-from EDNavigationPanel import EDNavigationPanel
+from panels.navigation import EDNavigationPanel
 from Overlay import *
 from game.status import StatusParser
 from Voice import *

@@ -12,7 +12,7 @@ from vision.regions import size_scale_for_station
 from game.status import StatusParser
 
 """
-File:navPanel.py    
+File:panels/navigation.py    
 
 Description:
   TBD 
