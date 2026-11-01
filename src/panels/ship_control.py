@@ -7,7 +7,8 @@ from game.status import StatusParser
 
 
 class EDShipControl:
-    """ Handles ship control, FSD, SC, etc. """
+    """Handles ship control, FSD, SC, etc."""
+
     def __init__(self, ed_ap, screen, keys, cb):
         self.ocr = ed_ap.ocr
         self.screen = screen
@@ -16,7 +17,7 @@ class EDShipControl:
         self.ap_ckb = cb
 
     def goto_cockpit_view(self) -> bool:
-        """ Goto cockpit view.
+        """Goto cockpit view.
         @return: True once complete.
         """
         if self.status_parser.get_gui_focus() == GuiFocusNoFocus:

@@ -8,15 +8,14 @@ from time import sleep
 import kthread
 import pyttsx3
 
-#rate = voiceEngine.getProperty('rate')
-#volume = voiceEngine.getProperty('volume')
-#voice = voiceEngine.getProperty('voice')
-#voiceEngine.setProperty('rate', newVoiceRate)
-#voiceEngine.setProperty('voice', voice.id)   id = 0, 1, ...
+# rate = voiceEngine.getProperty('rate')
+# volume = voiceEngine.getProperty('volume')
+# voice = voiceEngine.getProperty('voice')
+# voiceEngine.setProperty('rate', newVoiceRate)
+# voiceEngine.setProperty('voice', voice.id)   id = 0, 1, ...
 
 
 class Voice:
-
     def __init__(self):
         self.q = queue.Queue(5)
         self.v_enabled = False
@@ -28,9 +27,9 @@ class Voice:
     def say(self, text):
         if self.v_enabled:
             # A better way to correct mis-pronunciation?
-            text = text.replace(' Mk V ', ' mark five ')
-            text = text.replace(' Mk ', ' mark ')
-            text = text.replace(' Krait ', ' crate ')
+            text = text.replace(" Mk V ", " mark five ")
+            text = text.replace(" Mk ", " mark ")
+            text = text.replace(" Krait ", " crate ")
             self.q.put(text)
 
     def set_off(self):
@@ -47,16 +46,16 @@ class Voice:
 
     def voice_exec(self):
         engine = pyttsx3.init()
-        voices = engine.getProperty('voices')
-        v_id_current = 0   # David
-        engine.setProperty('voice', voices[v_id_current].id)
-        engine.setProperty('rate', 160)
+        voices = engine.getProperty("voices")
+        v_id_current = 0  # David
+        engine.setProperty("voice", voices[v_id_current].id)
+        engine.setProperty("rate", 160)
         while not self.v_quit:
             # check if the voice ID changed
             if self.v_id != v_id_current:
                 v_id_current = self.v_id
                 try:
-                    engine.setProperty('voice', voices[v_id_current].id)
+                    engine.setProperty("voice", voices[v_id_current].id)
                 except Exception:
                     print("Voice ID out of range")
 

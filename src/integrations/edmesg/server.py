@@ -23,9 +23,9 @@ from integrations.edmesg.interface import (
 
 
 class EDMesgServer:
-    """ EDMesg Server. Allows EDMesg Clients to connect to EDAP and send actions and receive events.
-     https://github.com/RatherRude/EDMesg
-     """
+    """EDMesg Server. Allows EDMesg Clients to connect to EDAP and send actions and receive events.
+    https://github.com/RatherRude/EDMesg
+    """
 
     def __init__(self, ed_ap, cb):
         self.ap = ed_ap
@@ -39,18 +39,18 @@ class EDMesgServer:
     def start_server(self):
         try:
             self._provider = create_edap_provider(self.actions_port, self.events_port)  # Factory method for EDCoPilot
-            self.ap_ckb('log', "Starting EDMesg Server.")
+            self.ap_ckb("log", "Starting EDMesg Server.")
             print("Server starting.")
 
             self._server_loop_thread = threading.Thread(target=self._server_loop, daemon=True)
             self._server_loop_thread.start()
         except Exception as e:
-            self.ap_ckb('log', f"EDMesg Server failed to start: {e}")
+            self.ap_ckb("log", f"EDMesg Server failed to start: {e}")
             print(f"EDMesg Server failed to start: {e}")
 
     def _server_loop(self):
-        """ A loop for the server.
-        This runs on a separate thread monitoring communications in the background. """
+        """A loop for the server.
+        This runs on a separate thread monitoring communications in the background."""
         try:
             while True:
                 # Check if we received an action from the client
@@ -84,7 +84,7 @@ class EDMesgServer:
             self._provider.close()
 
     def _get_edap_location(self, provider):
-        self.ap_ckb('log', "Received EDMesg Action: GetEDAPLocationAction")
+        self.ap_ckb("log", "Received EDMesg Action: GetEDAPLocationAction")
         print("Received EDMesg Action: GetEDAPLocationAction")
 
         # Get the absolute path of the running script
@@ -92,61 +92,56 @@ class EDMesgServer:
         abspath = os.path.abspath(pathname)
 
         print("Sending Event: EDAPLocationEvent")
-        provider.publish(
-            EDAPLocationEvent(
-                path=abspath
-            )
-        )
+        provider.publish(EDAPLocationEvent(path=abspath))
 
     def _load_waypoint_file(self, filepath: str):
-        self.ap_ckb('log', "Received EDMesg Action: LoadWaypointFileAction")
+        self.ap_ckb("log", "Received EDMesg Action: LoadWaypointFileAction")
         print("Received EDMesg Action: LoadWaypointFileAction")
         self.ap.waypoint.load_waypoint_file(filepath)
 
     def _start_waypoint_assist(self):
-        self.ap_ckb('log', "Received EDMesg Action: StartWaypointAssistAction")
+        self.ap_ckb("log", "Received EDMesg Action: StartWaypointAssistAction")
         print("Received EDMesg Action: StartWaypointAssistAction")
         # Start the waypoint assist using callback
-        self.ap_ckb('waypoint_start')
+        self.ap_ckb("waypoint_start")
 
     def _stop_all_assists(self):
-        self.ap_ckb('log', "Received EDMesg Action: StopAllAssistsAction")
+        self.ap_ckb("log", "Received EDMesg Action: StopAllAssistsAction")
         print("Received EDMesg Action: StopAllAssistsAction")
         # Stop all assists using callback
-        self.ap_ckb('stop_all_assists')
+        self.ap_ckb("stop_all_assists")
 
     def _launch(self, provider):
-        self.ap_ckb('log', "Received EDMesg Action: LaunchAction")
+        self.ap_ckb("log", "Received EDMesg Action: LaunchAction")
         print("Received EDMesg Action: LaunchAction")
         # Request
-        #self.ap.waypoint_undock_seq()
+        # self.ap.waypoint_undock_seq()
 
         sleep(1)
-        self.ap_ckb('log', "Sending EDMesg Event: LaunchCompleteEvent")
+        self.ap_ckb("log", "Sending EDMesg Event: LaunchCompleteEvent")
         print("Sending Event: LaunchCompleteEvent")
-        provider.publish(
-            LaunchCompleteEvent()
-        )
+        provider.publish(LaunchCompleteEvent())
 
     def _system_map_target_station_by_bookmark(self, bm_type: str, number: int):
-        self.ap_ckb('log', "Received EDMesg Action: SystemMapTargetStationByBookmarkAction")
+        self.ap_ckb("log", "Received EDMesg Action: SystemMapTargetStationByBookmarkAction")
         self.ap.system_map.goto_system_map()
         self.ap.system_map.set_sys_map_dest_bookmark(self.ap, bm_type, number)
 
     def _galaxy_map_target_station_by_bookmark(self, bm_type: str, number: int):
-        self.ap_ckb('log', "Received EDMesg Action: GalaxyMapTargetStationByBookmarkAction")
+        self.ap_ckb("log", "Received EDMesg Action: GalaxyMapTargetStationByBookmarkAction")
         self.ap.galaxy_map.goto_galaxy_map()
         self.ap.galaxy_map.set_gal_map_dest_bookmark(self.ap, bm_type, number)
 
     def _galaxy_map_target_system_by_name(self, name: str):
-        self.ap_ckb('log', "Received EDMesg Action: GalaxyMapTargetSystemByNameAction")
+        self.ap_ckb("log", "Received EDMesg Action: GalaxyMapTargetSystemByNameAction")
         self.ap.galaxy_map.goto_galaxy_map()
         self.ap.galaxy_map.set_gal_map_destination_text(self.ap, name, target_select_cb=None)
 
     def _generic_action(self, name: str):
-        self.ap_ckb('log', f"Received EDMesg Action: GenericAction '{name}'")
-        if name == 'WriteTCEShoppingList':
+        self.ap_ckb("log", f"Received EDMesg Action: GenericAction '{name}'")
+        if name == "WriteTCEShoppingList":
             self.ap.tce_integration.write_shopping_list()
+
 
 def main():
     EDMesgServer(ed_ap=None, cb=None)

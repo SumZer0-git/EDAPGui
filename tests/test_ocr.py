@@ -10,18 +10,18 @@ from vision.ocr import OCR
 
 class OCRTestCase(unittest.TestCase):
     def test_simple_ocr(self):
-        """ Simple check of OCR to bring back text of a known image. """
+        """Simple check of OCR to bring back text of a known image."""
         ocr = OCR(screen=None)
 
         # Load image
-        image_path = str(paths.ROOT / 'tests' / 'fixtures' / 'ocr' / 'ocr-test1.png')
+        image_path = str(paths.ROOT / "tests" / "fixtures" / "ocr" / "ocr-test1.png")
         orig_image = cv2.imread(image_path)
         ocr_textlist = ocr.image_simple_ocr(orig_image)
-        actual = ' '.join(ocr_textlist).upper()
+        actual = " ".join(ocr_textlist).upper()
 
         # The screenshot also contains HUD text, so only check the known white text at the bottom.
-        self.assertIn('LOW WAKE', actual)
-        self.assertIn('RUSSELL HUTTON', actual)
+        self.assertIn("LOW WAKE", actual)
+        self.assertIn("RUSSELL HUTTON", actual)
 
     def test_similarity_test1(self):
         ocr = OCR(screen=None)
@@ -42,5 +42,5 @@ class OCRTestCase(unittest.TestCase):
         self.assertGreater(actual, 0.8)  # add assertion here
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

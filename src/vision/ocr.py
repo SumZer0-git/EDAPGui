@@ -15,25 +15,26 @@ from core.logger import logger
 
 
 class OCR:
-    def __init__(self, screen, language: str = 'en'):
+    def __init__(self, screen, language: str = "en"):
         self.screen = screen
-        self.paddleocr = PaddleOCR(use_angle_cls=True, lang=language, use_gpu=False, show_log=False, use_dilation=True,
-                                   use_space_char=True)
+        self.paddleocr = PaddleOCR(
+            use_angle_cls=True, lang=language, use_gpu=False, show_log=False, use_dilation=True, use_space_char=True
+        )
         # Class for text similarity metrics
         self.jarowinkler = JaroWinkler()
         self.sorensendice = SorensenDice()
 
     def string_similarity(self, s1, s2) -> float:
-        """ Performs a string similarity check and returns the result.
+        """Performs a string similarity check and returns the result.
         @param s1: The first string to compare.
         @param s2: The second string to compare.
         @return: The similarity from 0.0 (no match) to 1.0 (identical).
         """
-        #return self.jarowinkler.similarity(s1, s2)
+        # return self.jarowinkler.similarity(s1, s2)
         return self.sorensendice.similarity(s1, s2)
 
     def image_ocr(self, image):
-        """ Perform OCR with no filtering. Returns the full OCR data and a simplified list of strings.
+        """Perform OCR with no filtering. Returns the full OCR data and a simplified list of strings.
         This routine is the slower than the simplified OCR.
 
         OCR Data is returned in the following format, or (None, None):
@@ -53,11 +54,11 @@ class OCR:
                 for line in res:
                     ocr_textlist.append(line[1][0])
 
-            #print(ocr_textlist)
+            # print(ocr_textlist)
             return ocr_data, ocr_textlist
 
     def image_simple_ocr(self, image) -> list[str] | None:
-        """ Perform OCR with no filtering. Returns a simplified list of strings with no positional data.
+        """Perform OCR with no filtering. Returns a simplified list of strings with no positional data.
         This routine is faster than the function that returns the full data. Generally good when you
         expect to only return one or two lines of text.
 
@@ -84,12 +85,12 @@ class OCR:
             return ocr_textlist
 
     def get_highlighted_item_data(self, image, min_w, min_h):
-        """ Attempts to find a selected item in an image. The selected item is identified by being solid orange or blue
-            rectangle with dark text, instead of orange/blue text on a dark background.
-            The OCR daya of the first item matching the criteria is returned, otherwise None.
-            @param image: The image to check.
-            @param min_w: The minimum width of the text block.
-            @param min_h: The minimum height of the text block.
+        """Attempts to find a selected item in an image. The selected item is identified by being solid orange or blue
+        rectangle with dark text, instead of orange/blue text on a dark background.
+        The OCR daya of the first item matching the criteria is returned, otherwise None.
+        @param image: The image to check.
+        @param min_w: The minimum width of the text block.
+        @param min_h: The minimum height of the text block.
         """
         # Find the selected item/menu (solid orange)
         img_selected, x, y = self.get_highlighted_item_in_image(image, min_w, min_h)
@@ -107,7 +108,7 @@ class OCR:
             return None, None, None
 
     def get_highlighted_item_in_image(self, image, min_w, min_h):
-        """ Attempts to find a selected item in an image. The selected item is identified by being solid orange or blue
+        """Attempts to find a selected item in an image. The selected item is identified by being solid orange or blue
         rectangle with dark text, instead of orange/blue text on a dark background.
         The image of the first item matching the criteria and minimum width and height is returned
         with x and y co-ordinates, otherwise None.
@@ -121,26 +122,26 @@ class OCR:
         upper_range = np.array([255, 255, 255])
         mask = cv2.inRange(hsv, lower_range, upper_range)
         masked_image = cv2.bitwise_and(image, image, mask=mask)
-        cv2.imwrite(paths.debug_path('nav-panel', '1-masked.png'), masked_image)
+        cv2.imwrite(paths.debug_path("nav-panel", "1-masked.png"), masked_image)
 
         # Convert to gray scale and invert
         gray = cv2.cvtColor(masked_image, cv2.COLOR_BGR2GRAY)
-        cv2.imwrite(paths.debug_path('nav-panel', '2-gray.png'), gray)
+        cv2.imwrite(paths.debug_path("nav-panel", "2-gray.png"), gray)
 
         # Blur slightly to remove thin lines
         blur = cv2.GaussianBlur(gray, (3, 3), cv2.BORDER_DEFAULT)
-        cv2.imwrite(paths.debug_path('nav-panel', '3-blur.png'), blur)
+        cv2.imwrite(paths.debug_path("nav-panel", "3-blur.png"), blur)
 
         # Convert to B&W to allow FindContours to find rectangles.
         ret, thresh1 = cv2.threshold(blur, 0, 255, cv2.THRESH_OTSU)  # | cv2.THRESH_BINARY_INV)
-        cv2.imwrite(paths.debug_path('nav-panel', '4-thresh1.png'), thresh1)
+        cv2.imwrite(paths.debug_path("nav-panel", "4-thresh1.png"), thresh1)
 
         # Finding contours in B&W image. White are the areas detected
         contours, hierarchy = cv2.findContours(thresh1, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         output = image
         cv2.drawContours(output, contours, -1, (0, 255, 0), 2)
-        cv2.imwrite(paths.debug_path('nav-panel', '5-contours.png'), output)
+        cv2.imwrite(paths.debug_path("nav-panel", "5-contours.png"), output)
 
         # bounds = image
         cropped = image
@@ -152,26 +153,26 @@ class OCR:
                 # bounds = cv2.rectangle(bounds, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
                 # Crop to leave only the contour (the selected rectangle)
-                cropped = image[y:y + h, x:x + w]
+                cropped = image[y : y + h, x : x + w]
 
                 # cv2.imshow("cropped", cropped)
-                cv2.imwrite(paths.debug_path('nav-panel', '6-selected_item.png'), cropped)
+                cv2.imwrite(paths.debug_path("nav-panel", "6-selected_item.png"), cropped)
                 return cropped, x, y
 
         # No good matches, then return None
         return None, 0, 0
 
     def capture_region_pct(self, region):
-        """ Grab the image based on the region name/rect.
+        """Grab the image based on the region name/rect.
         Returns an unfiltered image, either from screenshot or provided image.
         @param region: The region to check in % (0.0 - 1.0).
         """
-        rect = region['rect']
+        rect = region["rect"]
         image = self.screen.get_screen_rect_pct(rect)
         return image
 
     def is_text_in_selected_item_in_image(self, img, text, min_w, min_h):
-        """ Does the selected item in the region include the text being checked for.
+        """Does the selected item in the region include the text being checked for.
         Checks if text exists in a region using OCR.
         Return True if found, False if not and None if no item was selected.
         @param min_h: Minimum height in pixels.
@@ -195,7 +196,7 @@ class OCR:
             return False
 
     def is_text_in_region(self, text, region) -> (bool, str):
-        """ Does the region include the text being checked for. The region does not need
+        """Does the region include the text being checked for. The region does not need
         to include highlighted areas.
         Checks if text exists in a region using OCR.
         Return True if found, False if not and None if no item was selected.
@@ -216,7 +217,7 @@ class OCR:
             return False, str(ocr_textlist)
 
     def select_item_in_list(self, text, region, keys, min_w, min_h) -> bool:
-        """ Attempt to find the item by text in a list defined by the region.
+        """Attempt to find the item by text in a list defined by the region.
         If found, leaves it selected for further actions.
         @param keys:
         @param text: Text to find.
@@ -247,16 +248,16 @@ class OCR:
                 keys.send("UI_Down")
 
     def wait_for_text(self, ap, texts: list[str], region, timeout=30) -> bool:
-        """ Wait for a screen to appear by checking for text to appear in the region.
+        """Wait for a screen to appear by checking for text to appear in the region.
         @param ap: ED_AP instance.
         @param texts: List of text to check for. Success occurs if any in the list is found.
         @param region: The region to check in % (0.0 - 1.0).
         @param timeout: Time to wait for screen in seconds
         """
         # Draw box around region
-        abs_rect = self.screen.screen_rect_to_abs(region['rect'])
+        abs_rect = self.screen.screen_rect_to_abs(region["rect"])
         if ap.debug_overlay:
-            ap.overlay.overlay_rect1('wait_for_text', abs_rect, (0, 255, 0), 2)
+            ap.overlay.overlay_rect1("wait_for_text", abs_rect, (0, 255, 0), 2)
             ap.overlay.overlay_paint()
 
         start_time = time.time()
@@ -272,7 +273,9 @@ class OCR:
 
                 # Over OCR result
                 if ap.debug_overlay:
-                    ap.overlay.overlay_floating_text('wait_for_text', f'{ocr_text}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
+                    ap.overlay.overlay_floating_text(
+                        "wait_for_text", f"{ocr_text}", abs_rect[0], abs_rect[1] - 25, (0, 255, 0)
+                    )
                     ap.overlay.overlay_paint()
 
                 if text_found:
@@ -286,8 +289,8 @@ class OCR:
         # Clean up screen
         if ap.debug_overlay:
             time.sleep(2)
-            ap.overlay.overlay_remove_rect('wait_for_text')
-            ap.overlay.overlay_remove_floating_text('wait_for_text')
+            ap.overlay.overlay_remove_rect("wait_for_text")
+            ap.overlay.overlay_remove_floating_text("wait_for_text")
             ap.overlay.overlay_paint()
 
         return text_found

@@ -11,7 +11,7 @@ from integrations.edmesg.interface import (
 
 
 class EDMesgClient:
-    """ EDMesg Client. Allows connection to EDAP and send actions and receive events. """
+    """EDMesg Client. Allows connection to EDAP and send actions and receive events."""
 
     def __init__(self, ed_ap, cb):
         self.ap = ed_ap
@@ -26,8 +26,8 @@ class EDMesgClient:
         self._client_loop_thread.start()
 
     def _client_loop(self):
-        """ A loop for the client.
-        This runs on a separate thread monitoring communications in the background. """
+        """A loop for the client.
+        This runs on a separate thread monitoring communications in the background."""
         try:
             print("Starting client loop.")
             while True:
@@ -49,7 +49,7 @@ class EDMesgClient:
         # Implement the event handling logic here
 
     def send_launch_action(self):
-        """ Send an action request to EDAP. """
+        """Send an action request to EDAP."""
         print("Sending Action: LaunchAction.")
         self.client.publish(LaunchAction())
 
@@ -74,10 +74,11 @@ class EDMesgClient:
 #     finally:
 #         client.close()
 
+
 def main():
     EDMesgClient(ed_ap=None, cb=None)
     while 1:  # not edmesg_client.stop:
-         sleep(1)
+        sleep(1)
 
 
 if __name__ == "__main__":

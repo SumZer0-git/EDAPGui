@@ -11,6 +11,7 @@ class SystemMapTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from core.autopilot import EDAutopilot
+
         cls.ed_ap = EDAutopilot(cb=dummy_cb)
 
         scr = cls.ed_ap.scr
@@ -20,9 +21,9 @@ class SystemMapTestCase(unittest.TestCase):
         cls.sys_map = EDSystemMap(cls.ed_ap, scr, keys, dummy_cb, True)
 
     def test_open_system_map(self):
-        """ Open System Map. """
+        """Open System Map."""
         self.sys_map.goto_system_map()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

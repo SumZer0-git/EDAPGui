@@ -11,9 +11,18 @@ from core import paths
 from routines.waypoints import EDWayPoint
 
 GLOBAL_LIST = {
-    "SystemName": "", "StationName": "", "GalaxyBookmarkType": "", "GalaxyBookmarkNumber": 0,
-    "SystemBookmarkType": "", "SystemBookmarkNumber": 0, "SellCommodities": {}, "BuyCommodities": {},
-    "UpdateCommodityCount": True, "FleetCarrierTransfer": False, "Skip": True, "Completed": False,
+    "SystemName": "",
+    "StationName": "",
+    "GalaxyBookmarkType": "",
+    "GalaxyBookmarkNumber": 0,
+    "SystemBookmarkType": "",
+    "SystemBookmarkNumber": 0,
+    "SellCommodities": {},
+    "BuyCommodities": {},
+    "UpdateCommodityCount": True,
+    "FleetCarrierTransfer": False,
+    "Skip": True,
+    "Completed": False,
 }
 
 
@@ -24,14 +33,14 @@ def stop(system, **values):
 
 
 def new_waypoints(waypoints) -> EDWayPoint:
-    """ A waypoint object without the parsers and the autopilot, which are not needed for the list handling. """
+    """A waypoint object without the parsers and the autopilot, which are not needed for the list handling."""
     wp = EDWayPoint.__new__(EDWayPoint)
     wp.waypoints = copy.deepcopy(waypoints)
     wp.step = 0
-    wp.filename = 'test.json'
-    wp.stats_log = {'Colonisation': 0, 'Construction': 0, 'Fleet Carrier': 0, 'Station': 0}
+    wp.filename = "test.json"
+    wp.stats_log = {"Colonisation": 0, "Construction": 0, "Fleet Carrier": 0, "Station": 0}
     # The list handling must never write into the user's waypoint folder
-    for method in ('save_waypoints', 'log_stats'):
+    for method in ("save_waypoints", "log_stats"):
         patcher = mock.patch.object(wp, method)
         patcher.start()
     return wp
@@ -45,8 +54,8 @@ class ReadWaypointsTestCase(unittest.TestCase):
         self.wp = new_waypoints({})
 
     def write(self, data) -> Path:
-        path = self.dir / 'waypoints.json'
-        path.write_text(json.dumps(data), encoding='utf-8')
+        path = self.dir / "waypoints.json"
+        path.write_text(json.dumps(data), encoding="utf-8")
         return path
 
     def test_valid_file(self):
@@ -59,25 +68,25 @@ class ReadWaypointsTestCase(unittest.TestCase):
 
     def test_missing_required_field(self):
         broken = stop("Sol")
-        del broken['SystemBookmarkNumber']
+        del broken["SystemBookmarkNumber"]
 
         self.assertIsNone(self.wp.read_waypoints(self.write({"GlobalShoppingList": GLOBAL_LIST, "1": broken})))
 
     def test_missing_field_in_global_shopping_list(self):
         broken = dict(GLOBAL_LIST)
-        del broken['BuyCommodities']
+        del broken["BuyCommodities"]
 
         self.assertIsNone(self.wp.read_waypoints(self.write({"GlobalShoppingList": broken})))
 
     def test_invalid_json_and_missing_file(self):
-        path = self.dir / 'waypoints.json'
-        path.write_text('{not json', encoding='utf-8')
+        path = self.dir / "waypoints.json"
+        path.write_text("{not json", encoding="utf-8")
 
         self.assertIsNone(self.wp.read_waypoints(path))
-        self.assertIsNone(self.wp.read_waypoints(self.dir / 'missing.json'))
+        self.assertIsNone(self.wp.read_waypoints(self.dir / "missing.json"))
 
     def test_shipped_example_files_are_valid(self):
-        examples = sorted(paths.WAYPOINT_EXAMPLES_DIR.glob('*.json'))
+        examples = sorted(paths.WAYPOINT_EXAMPLES_DIR.glob("*.json"))
         self.assertTrue(examples)
         for example in examples:
             with self.subTest(example=example.name):
@@ -91,24 +100,26 @@ class ReadWaypointsTestCase(unittest.TestCase):
         self.assertEqual(self.wp.filename, str(path))
         self.assertIn("1", self.wp.waypoints)
 
-        self.assertFalse(self.wp.load_waypoint_file(str(self.dir / 'missing.json')))
+        self.assertFalse(self.wp.load_waypoint_file(str(self.dir / "missing.json")))
         self.assertFalse(self.wp.load_waypoint_file(None))
 
 
 class GetWaypointTestCase(unittest.TestCase):
     def test_skips_shopping_list_completed_and_skipped_entries(self):
-        wp = new_waypoints({
-            "GlobalShoppingList": GLOBAL_LIST,
-            "1": stop("Done", Completed=True),
-            "2": stop("Skipped", Skip=True),
-            "3": stop("Next"),
-            "4": stop("Later"),
-        })
+        wp = new_waypoints(
+            {
+                "GlobalShoppingList": GLOBAL_LIST,
+                "1": stop("Done", Completed=True),
+                "2": stop("Skipped", Skip=True),
+                "3": stop("Next"),
+                "4": stop("Later"),
+            }
+        )
 
         key, entry = wp.get_waypoint()
 
         self.assertEqual(key, "3")
-        self.assertEqual(entry['SystemName'], "Next")
+        self.assertEqual(entry["SystemName"], "Next")
 
     def test_progress_through_the_list(self):
         wp = new_waypoints({"GlobalShoppingList": GLOBAL_LIST, "1": stop("A"), "2": stop("B")})
@@ -123,12 +134,14 @@ class GetWaypointTestCase(unittest.TestCase):
         self.assertEqual(new_waypoints({}).get_waypoint(), (None, None))
 
     def test_repeat_restarts_the_list(self):
-        wp = new_waypoints({
-            "GlobalShoppingList": GLOBAL_LIST,
-            "1": stop("A", Completed=True),
-            "2": stop("B", Completed=True),
-            "3": stop("REPEAT"),
-        })
+        wp = new_waypoints(
+            {
+                "GlobalShoppingList": GLOBAL_LIST,
+                "1": stop("A", Completed=True),
+                "2": stop("B", Completed=True),
+                "3": stop("REPEAT"),
+            }
+        )
 
         key, _ = wp.get_waypoint()
 
@@ -137,14 +150,16 @@ class GetWaypointTestCase(unittest.TestCase):
         self.assertFalse(wp.waypoints["2"]["Completed"])
 
     def test_skipped_repeat_ends_the_list(self):
-        wp = new_waypoints({
-            "GlobalShoppingList": GLOBAL_LIST,
-            "1": stop("A", Completed=True),
-            "2": stop("REPEAT", Skip=True),
-        })
+        wp = new_waypoints(
+            {
+                "GlobalShoppingList": GLOBAL_LIST,
+                "1": stop("A", Completed=True),
+                "2": stop("REPEAT", Skip=True),
+            }
+        )
 
         self.assertEqual(wp.get_waypoint(), (None, None))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

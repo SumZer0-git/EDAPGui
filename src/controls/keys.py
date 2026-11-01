@@ -11,7 +11,6 @@ from vision.screen import set_focus_elite_window
 
 @final
 class EDKeys(KeyBindings):
-
     def __init__(self, cb):
         super().__init__(cb)
         self.key_mod_delay = 0.010
@@ -25,7 +24,7 @@ class EDKeys(KeyBindings):
             set_focus_elite_window()
             sleep(0.05)
 
-        if type == 'Up':
+        if type == "Up":
             release_key(key)
         else:
             press_key(key)
@@ -33,15 +32,29 @@ class EDKeys(KeyBindings):
     def send(self, key_binding, hold=None, repeat=1, repeat_delay=None, state=None):
         key = self.keys.get(key_binding)
         if key is None:
-            logger.warning('SEND=NONE !!!!!!!!')
-            self.ap_ckb('log', f"WARNING: Unable to retrieve keybinding for {key_binding}.")
+            logger.warning("SEND=NONE !!!!!!!!")
+            self.ap_ckb("log", f"WARNING: Unable to retrieve keybinding for {key_binding}.")
             raise Exception(
-                f"Unable to retrieve keybinding for {key_binding}. Advise user to check game settings for keyboard bindings.")
+                f"Unable to retrieve keybinding for {key_binding}. Advise user to check game settings for keyboard bindings."
+            )
 
-        key_name = self.reversed_dict.get(key['key'], "Key not found")
-        logger.debug('\tsend=' + key_binding + ',key:' + str(key) + ',key_name:' + key_name + ',hold:' + str(
-            hold) + ',repeat:' + str(
-            repeat) + ',repeat_delay:' + str(repeat_delay) + ',state:' + str(state))
+        key_name = self.reversed_dict.get(key["key"], "Key not found")
+        logger.debug(
+            "\tsend="
+            + key_binding
+            + ",key:"
+            + str(key)
+            + ",key_name:"
+            + key_name
+            + ",hold:"
+            + str(hold)
+            + ",repeat:"
+            + str(repeat)
+            + ",repeat_delay:"
+            + str(repeat_delay)
+            + ",state:"
+            + str(state)
+        )
 
         for i in range(repeat):
             # Focus Elite window if configured.
@@ -50,11 +63,11 @@ class EDKeys(KeyBindings):
                 sleep(0.05)
 
             if state is None or state == 1:
-                for mod in key['mods']:
+                for mod in key["mods"]:
                     press_key(mod)
                     sleep(self.key_mod_delay)
 
-                press_key(key['key'])
+                press_key(key["key"])
 
             if state is None:
                 if hold:
@@ -62,13 +75,13 @@ class EDKeys(KeyBindings):
                 else:
                     sleep(self.key_default_delay)
 
-            if 'hold' in key:
+            if "hold" in key:
                 sleep(0.1)
 
             if state is None or state == 0:
-                release_key(key['key'])
+                release_key(key["key"])
 
-                for mod in key['mods']:
+                for mod in key["mods"]:
                     sleep(self.key_mod_delay)
                     release_key(mod)
 

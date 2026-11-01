@@ -7,4 +7,4 @@ extend-exclude = ["third_party", "venv", "user_data"]
 select = ["F", "I", "N", "W", "E711", "E712", "E713", "E714", "E722"]
 # N806 is ignored: local names such as minVal/maxLoc mirror OpenCV and the game.
 ignore = ["N806"]
-# Not enforced yet: E501 (line length).
+# Not enforced: E501 (line length). The formatter wraps code, the remaining long lines are strings and comments.

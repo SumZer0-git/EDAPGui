@@ -47,51 +47,50 @@ from vision.screen import set_focus_elite_window
 
 
 class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, AssistsMixin):
-
     def __init__(self, cb, do_thread=True):
 
         # NOTE!!! When adding a new config value below, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
         self.config = {
-            "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS
-            "JumpTries": 3,                #
-            "NavAlignTries": 3,            #
-            "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel
-            "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
-            "WaitForAutoDockTimer": 240,   # After docking granted, wait this amount of time for us to get docked with autodocking
-            "SunBrightThreshold": 125,     # The low level for brightness detection, range 0-255, want to mask out darker items
-            "FuelScoopTimeOut": 35,        # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
-            "DockingRetries": 30,          # number of time to attempt docking
-            "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
-            "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
+            "DSSButton": "Primary",  # if anything other than "Primary", it will use the Secondary Fire button for DSS
+            "JumpTries": 3,  #
+            "NavAlignTries": 3,  #
+            "RefuelThreshold": 65,  # if fuel level get below this level, it will attempt refuel
+            "FuelThreasholdAbortAP": 10,  # level at which AP will terminate, because we are not scooping well
+            "WaitForAutoDockTimer": 240,  # After docking granted, wait this amount of time for us to get docked with autodocking
+            "SunBrightThreshold": 125,  # The low level for brightness detection, range 0-255, want to mask out darker items
+            "FuelScoopTimeOut": 35,  # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
+            "DockingRetries": 30,  # number of time to attempt docking
+            "HotKey_StartFSD": "home",  # if going to use other keys, need to look at the python keyboard package
+            "HotKey_StartSC": "ins",  # to determine other keynames, make sure these keys are not used in ED bindings
             "HotKey_StartRobigo": "pgup",  #
             "HotKey_StopAllAssists": "end",
-            "Robigo_Single_Loop": False,   # True means only 1 loop will executed and then terminate the Robigo, will not perform mission processing
-            "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
-            "ActivateEliteEachKey": False, # Activate Elite window before each key or group of keys
-            "OverlayTextEnable": False,    # Experimental at this stage
-            "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
-            "OverlayTextXOffset": 50,      # offset left the screen to start place overlay text
+            "Robigo_Single_Loop": False,  # True means only 1 loop will executed and then terminate the Robigo, will not perform mission processing
+            "EnableRandomness": False,  # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
+            "ActivateEliteEachKey": False,  # Activate Elite window before each key or group of keys
+            "OverlayTextEnable": False,  # Experimental at this stage
+            "OverlayTextYOffset": 400,  # offset down the screen to start place overlay text
+            "OverlayTextXOffset": 50,  # offset left the screen to start place overlay text
             "OverlayTextFont": "Eurostyle",
             "OverlayTextFontSize": 14,
-            "OverlayGraphicEnable": False, # not implemented yet
-            "DiscordWebhook": False,       # discord not implemented yet
+            "OverlayGraphicEnable": False,  # not implemented yet
+            "DiscordWebhook": False,  # discord not implemented yet
             "DiscordWebhookURL": "",
             "DiscordUserID": "",
             "VoiceEnable": False,
-            "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
+            "VoiceID": 1,  # my Windows only have 3 defined (0-2)
             "ElwScannerEnable": False,
-            "LogDEBUG": False,             # enable for debug messages
+            "LogDEBUG": False,  # enable for debug messages
             "LogINFO": True,
-            "Enable_CV_View": 0,           # Should CV View be enabled by default
-            "ShipConfigFile": None,        # Ship config to load on start - deprecated
-            "TargetScale": 1.0,            # Scaling of the target when a system is selected
+            "Enable_CV_View": 0,  # Should CV View be enabled by default
+            "ShipConfigFile": None,  # Ship config to load on start - deprecated
+            "TargetScale": 1.0,  # Scaling of the target when a system is selected
             "TCEDestinationFilepath": "C:\\TCE\\DUMP\\Destination.json",  # Destination file for TCE
             "TCEInstallationPath": "C:\\TCE",
-            "AutomaticLogout": False,      # Logout when we are done with the mission
-            "FCDepartureTime": 5.0,        # Extra time to fly away from a Fleet Carrier
-            "Language": 'en',              # Language (matching assets/locales/xx.json file)
-            "OCRLanguage": 'en',           # Language for OCR detection (see OCR language doc in \docs)
+            "AutomaticLogout": False,  # Logout when we are done with the mission
+            "FCDepartureTime": 5.0,  # Extra time to fly away from a Fleet Carrier
+            "Language": "en",  # Language (matching assets/locales/xx.json file)
+            "OCRLanguage": "en",  # Language for OCR detection (see OCR language doc in \docs)
             "EnableEDMesg": False,
             "EDMesgActionsPort": 15570,
             "EDMesgEventsPort": 15571,
@@ -120,37 +119,37 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
         # if we read it then point to it, otherwise use the default table above
         if cnf is not None:
             # NOTE!!! Add default values for new entries below!
-            if 'SunBrightThreshold' not in cnf:
-                cnf['SunBrightThreshold'] = 125
-            if 'TargetScale' not in cnf:
-                cnf['TargetScale'] = 1.0
-            if 'TCEDestinationFilepath' not in cnf:
-                cnf['TCEDestinationFilepath'] = "C:\\TCE\\DUMP\\Destination.json"
-            if 'TCEInstallationPath' not in cnf:
-                cnf['TCEInstallationPath'] = "C:\\TCE"
-            if 'AutomaticLogout' not in cnf:
-                cnf['AutomaticLogout'] = False
-            if 'FCDepartureTime' not in cnf:
-                cnf['FCDepartureTime'] = 5.0
-            if 'Language' not in cnf:
-                cnf['Language'] = 'en'
-            if 'OCRLanguage' not in cnf:
-                cnf['OCRLanguage'] = 'en'
-            if 'EnableEDMesg' not in cnf:
-                cnf['EnableEDMesg'] = False
-            if 'EDMesgActionsPort' not in cnf:
-                cnf['EDMesgActionsPort'] = 15570
-            if 'EDMesgEventsPort' not in cnf:
-                cnf['EDMesgEventsPort'] = 15571
-            if 'DebugOverlay' not in cnf:
-                cnf['DebugOverlay'] = False
+            if "SunBrightThreshold" not in cnf:
+                cnf["SunBrightThreshold"] = 125
+            if "TargetScale" not in cnf:
+                cnf["TargetScale"] = 1.0
+            if "TCEDestinationFilepath" not in cnf:
+                cnf["TCEDestinationFilepath"] = "C:\\TCE\\DUMP\\Destination.json"
+            if "TCEInstallationPath" not in cnf:
+                cnf["TCEInstallationPath"] = "C:\\TCE"
+            if "AutomaticLogout" not in cnf:
+                cnf["AutomaticLogout"] = False
+            if "FCDepartureTime" not in cnf:
+                cnf["FCDepartureTime"] = 5.0
+            if "Language" not in cnf:
+                cnf["Language"] = "en"
+            if "OCRLanguage" not in cnf:
+                cnf["OCRLanguage"] = "en"
+            if "EnableEDMesg" not in cnf:
+                cnf["EnableEDMesg"] = False
+            if "EDMesgActionsPort" not in cnf:
+                cnf["EDMesgActionsPort"] = 15570
+            if "EDMesgEventsPort" not in cnf:
+                cnf["EDMesgEventsPort"] = 15571
+            if "DebugOverlay" not in cnf:
+                cnf["DebugOverlay"] = False
             self.config = cnf
-            logger.debug("read AP json:"+str(cnf))
+            logger.debug("read AP json:" + str(cnf))
         else:
             self.write_config(self.config)
 
         # Load selected language
-        self.locale = LocalizationManager(str(paths.LOCALES_DIR), self.config['Language'])
+        self.locale = LocalizationManager(str(paths.LOCALES_DIR), self.config["Language"])
 
         shp_cnf = self.read_ship_configs()
         # if we read it then point to it, otherwise use the default table above
@@ -159,8 +158,8 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 # If configs of different lengths, then a new parameter was added.
                 # self.write_config(self.config)
                 # Add default values for new entries
-                if 'Ship_Configs' not in shp_cnf:
-                    shp_cnf['Ship_Configs'] = dict()
+                if "Ship_Configs" not in shp_cnf:
+                    shp_cnf["Ship_Configs"] = dict()
                 self.ship_configs = shp_cnf
                 logger.debug("read Ships Config json:" + str(shp_cnf))
             else:
@@ -171,15 +170,15 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
 
         # config the voice interface
         self.vce = Voice()
-        self.vce.v_enabled = self.config['VoiceEnable']
-        self.vce.set_voice_id(self.config['VoiceID'])
+        self.vce.v_enabled = self.config["VoiceEnable"]
+        self.vce.set_voice_id(self.config["VoiceID"])
         self.vce.say("Welcome to Autopilot")
 
         # set log level based on config input, defaulting to warning
         logger.setLevel(logging.WARNING)
-        if self.config['LogINFO']:
+        if self.config["LogINFO"]:
             logger.setLevel(logging.INFO)
-        if self.config['LogDEBUG']:
+        if self.config["LogDEBUG"]:
             logger.setLevel(logging.DEBUG)
 
         # initialize all to false
@@ -195,31 +194,31 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
         self.gfx_settings = EDGraphicsSettings()
 
         self.scr = vision.screen.Screen(cb)
-        self.scr.scaleX = self.config['TargetScale']
-        self.scr.scaleY = self.config['TargetScale']
+        self.scr.scaleX = self.config["TargetScale"]
+        self.scr.scaleY = self.config["TargetScale"]
 
-        self.ocr = OCR(self.scr, self.config['OCRLanguage'])
+        self.ocr = OCR(self.scr, self.config["OCRLanguage"])
         self.templ = vision.templates.ImageTemplates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
         self.scrReg = vision.regions.ScreenRegions(self.scr, self.templ)
         self.jn = EDJournal(cb)
         self.keys = EDKeys(cb)
-        self.keys.activate_window = self.config['ActivateEliteEachKey']
+        self.keys.activate_window = self.config["ActivateEliteEachKey"]
         self.afk_combat = AfkCombat(self.keys, self.jn, self.vce)
-        self.waypoint = EDWayPoint(self, self.jn.ship_state()['odyssey'])
+        self.waypoint = EDWayPoint(self, self.jn.ship_state()["odyssey"])
         self.robigo = Robigo(self)
         self.status = StatusParser()
         self.nav_route = NavRouteParser()
         self.ship_control = EDShipControl(self, self.scr, self.keys, cb)
         self.internal_panel = EDInternalStatusPanel(self, self.scr, self.keys, cb)
-        self.galaxy_map = EDGalaxyMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
-        self.system_map = EDSystemMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
+        self.galaxy_map = EDGalaxyMap(self, self.scr, self.keys, cb, self.jn.ship_state()["odyssey"])
+        self.system_map = EDSystemMap(self, self.scr, self.keys, cb, self.jn.ship_state()["odyssey"])
         self.stn_svcs_in_ship = EDStationServicesInShip(self, self.scr, self.keys, cb)
         self.nav_panel = EDNavigationPanel(self, self.scr, self.keys, cb)
 
         self.mesg_server = EDMesgServer(self, cb)
-        self.mesg_server.actions_port = self.config['EDMesgActionsPort']
-        self.mesg_server.events_port = self.config['EDMesgEventsPort']
-        if self.config['EnableEDMesg']:
+        self.mesg_server.actions_port = self.config["EDMesgActionsPort"]
+        self.mesg_server.events_port = self.config["EDMesgEventsPort"]
+        if self.config["EnableEDMesg"]:
             self.mesg_server.start_server()
 
         # rate as ship dependent. Can be found on the outfitting page for the ship. However, it looks like supercruise
@@ -230,8 +229,8 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
         # Algorithm will roll the vehicle for the nav point to be north or south and then pitch to get the nave point
         # to center
         self.compass_scale = 1.0
-        self.yawrate   = 8.0
-        self.rollrate  = 80.0
+        self.yawrate = 8.0
+        self.rollrate = 80.0
         self.pitchrate = 33.0
         self.sunpitchuptime = 0.0
 
@@ -250,19 +249,19 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
 
         # Initialize the Overlay class
         self.overlay = Overlay("", elite=1)
-        self.overlay.overlay_setfont(self.config['OverlayTextFont'], self.config['OverlayTextFontSize'])
-        self.overlay.overlay_set_pos(self.config['OverlayTextXOffset'], self.config['OverlayTextYOffset'])
+        self.overlay.overlay_setfont(self.config["OverlayTextFont"], self.config["OverlayTextFontSize"])
+        self.overlay.overlay_set_pos(self.config["OverlayTextXOffset"], self.config["OverlayTextYOffset"])
         # must be called after we initialized the objects above
         self.update_overlay()
 
-        self.debug_overlay = self.config['DebugOverlay']
+        self.debug_overlay = self.config["DebugOverlay"]
 
         # debug window
-        self.cv_view = self.config['Enable_CV_View']
+        self.cv_view = self.config["Enable_CV_View"]
         self.cv_view_x = 10
         self.cv_view_y = 10
 
-        #start the engine thread
+        # start the engine thread
         self.terminate = False  # terminate used by the thread to exit its loop
         if do_thread:
             self.ap_thread = kthread.KThread(target=self.engine_loop, name="EDAutopilot")
@@ -270,16 +269,15 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
 
     @property
     def tce_integration(self) -> TceIntegration:
-        """ Load TCE Integration class when needed. """
+        """Load TCE Integration class when needed."""
         if not self._tce_integration:
             self._tce_integration = TceIntegration(self, self.ap_ckb)
         return self._tce_integration
 
-
     # draw the overlay data on the ED Window
     #
     def update_overlay(self):
-        if self.config['OverlayTextEnable']:
+        if self.config["OverlayTextEnable"]:
             ap_mode = "Offline"
             if self.fsd_assist_enabled:
                 ap_mode = "FSD Route Assist"
@@ -294,37 +292,36 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
             elif self.dss_assist_enabled:
                 ap_mode = "DSS Assist"
 
-            ship_state = self.jn.ship_state()['status']
+            ship_state = self.jn.ship_state()["status"]
             if ship_state is None:
-                ship_state = '<init>'
+                ship_state = "<init>"
 
-            sclass = self.jn.ship_state()['star_class']
+            sclass = self.jn.ship_state()["star_class"]
             if sclass is None:
                 sclass = "<init>"
 
-            location = self.jn.ship_state()['location']
+            location = self.jn.ship_state()["location"]
             if location is None:
                 location = "<init>"
-            self.overlay.overlay_text('1', "AP MODE: "+ap_mode, 1, 1, (136, 53, 0))
-            self.overlay.overlay_text('2', "AP STATUS: "+self.ap_state, 2, 1, (136, 53, 0))
-            self.overlay.overlay_text('3', "SHIP STATUS: "+ship_state, 3, 1, (136, 53, 0))
-            self.overlay.overlay_text('4', "CURRENT SYSTEM: "+location+", "+sclass, 4, 1, (136, 53, 0))
-            self.overlay.overlay_text('5', "JUMPS: {} of {}".format(self.jump_cnt, self.total_jumps), 5, 1, (136, 53, 0))
+            self.overlay.overlay_text("1", "AP MODE: " + ap_mode, 1, 1, (136, 53, 0))
+            self.overlay.overlay_text("2", "AP STATUS: " + self.ap_state, 2, 1, (136, 53, 0))
+            self.overlay.overlay_text("3", "SHIP STATUS: " + ship_state, 3, 1, (136, 53, 0))
+            self.overlay.overlay_text("4", "CURRENT SYSTEM: " + location + ", " + sclass, 4, 1, (136, 53, 0))
+            self.overlay.overlay_text(
+                "5", "JUMPS: {} of {}".format(self.jump_cnt, self.total_jumps), 5, 1, (136, 53, 0)
+            )
             if self.config["ElwScannerEnable"]:
-                self.overlay.overlay_text('6', "ELW SCANNER: "+self.fss_detected, 6, 1, (136, 53, 0))
+                self.overlay.overlay_text("6", "ELW SCANNER: " + self.fss_detected, 6, 1, (136, 53, 0))
             self.overlay.overlay_paint()
 
     def update_ap_status(self, txt):
         self.ap_state = txt
         self.update_overlay()
-        self.ap_ckb('statusline', txt)
-
+        self.ap_ckb("statusline", txt)
 
         # Performs left menu ops to request docking
 
-
         # a set of convience routes to pitch, rotate by specified degress
-
 
         # Disabled until SC to station enabled.
         # if self._single_waypoint_station != "":
@@ -346,8 +343,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
         if not found:
             raise ValueError("Invalid thread object")
 
-        ret = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(target_tid),
-                                                         ctypes.py_object(exception))
+        ret = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(target_tid), ctypes.py_object(exception))
         # ref: http://docs.python.org/c-api/init.html#PyThreadState_SetAsyncExc
         if ret == 0:
             raise ValueError("Invalid thread ID")
@@ -400,7 +396,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
 
     def set_cv_view(self, enable=True, x=0, y=0):
         self.cv_view = enable
-        self.config['Enable_CV_View'] = int(self.cv_view)  # update the config
+        self.config["Enable_CV_View"] = int(self.cv_view)  # update the config
         self.update_config()  # save the config
         if enable:
             self.cv_view_x = x
@@ -487,11 +483,11 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 except EdapInterruptError:
                     logger.debug("Caught stop exception")
                 except Exception as e:
-                    print("Trapped generic:"+str(e))
+                    print("Trapped generic:" + str(e))
                     traceback.print_exc()
 
                 self.fsd_assist_enabled = False
-                self.ap_ckb('fsd_stop')
+                self.ap_ckb("fsd_stop")
                 self.update_overlay()
 
                 # if fsd_assist returned false then we are not finished, meaning we have an in system target
@@ -502,8 +498,8 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                     self.ap_ckb("sc_start")
 
                 # drop all out debug windows
-                #cv2.destroyAllWindows()
-                #cv2.waitKey(10)
+                # cv2.destroyAllWindows()
+                # cv2.waitKey(10)
 
             elif self.sc_assist_enabled:
                 logger.debug("Running sc_assist")
@@ -515,12 +511,12 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 except EdapInterruptError:
                     logger.debug("Caught stop exception")
                 except Exception as e:
-                    print("Trapped generic:"+str(e))
+                    print("Trapped generic:" + str(e))
                     traceback.print_exc()
 
                 logger.debug("Completed sc_assist")
                 self.sc_assist_enabled = False
-                self.ap_ckb('sc_stop')
+                self.ap_ckb("sc_stop")
                 self.update_overlay()
 
             elif self.waypoint_assist_enabled:
@@ -537,11 +533,11 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 except EdapInterruptError:
                     logger.debug("Caught stop exception")
                 except Exception as e:
-                    print("Trapped generic:"+str(e))
+                    print("Trapped generic:" + str(e))
                     traceback.print_exc()
 
                 self.waypoint_assist_enabled = False
-                self.ap_ckb('waypoint_stop')
+                self.ap_ckb("waypoint_stop")
                 self.update_overlay()
 
             elif self.robigo_assist_enabled:
@@ -553,11 +549,11 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 except EdapInterruptError:
                     logger.debug("Caught stop exception")
                 except Exception as e:
-                    print("Trapped generic:"+str(e))
+                    print("Trapped generic:" + str(e))
                     traceback.print_exc()
 
                 self.robigo_assist_enabled = False
-                self.ap_ckb('robigo_stop')
+                self.ap_ckb("robigo_stop")
                 self.update_overlay()
 
             elif self.afk_combat_assist_enabled:
@@ -567,7 +563,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 except EdapInterruptError:
                     logger.debug("Stopping afk_combat")
                 self.afk_combat_assist_enabled = False
-                self.ap_ckb('afk_stop')
+                self.ap_ckb("afk_stop")
                 self.update_overlay()
 
             elif self.dss_assist_enabled:
@@ -579,7 +575,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 except EdapInterruptError:
                     logger.debug("Stopping DSS Assist")
                 self.dss_assist_enabled = False
-                self.ap_ckb('dss_stop')
+                self.ap_ckb("dss_stop")
                 self.update_overlay()
 
             elif self.single_waypoint_enabled:
@@ -589,17 +585,17 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 except EdapInterruptError:
                     logger.debug("Stopping Single Waypoint Assist")
                 self.single_waypoint_enabled = False
-                self.ap_ckb('single_waypoint_stop')
+                self.ap_ckb("single_waypoint_stop")
                 self.update_overlay()
 
             # Check once EDAPGUI loaded to prevent errors logging to the listbox before loaded
             if self.gui_loaded:
                 # Check if ship has changed
-                ship = self.jn.ship_state()['type']
+                ship = self.jn.ship_state()["type"]
                 # Check if a ship and not a suit (on foot)
                 if ship not in ship_size_map:
                     # Clear current ship
-                    self.current_ship_type = ''
+                    self.current_ship_type = ""
                 else:
                     ship_fullname = get_ship_fullname(ship)
 
@@ -607,17 +603,24 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                     if ship != self.current_ship_type:
                         if self.current_ship_type is not None:
                             cur_ship_fullname = get_ship_fullname(self.current_ship_type)
-                            self.ap_ckb('log+vce', f"Switched ship from your {cur_ship_fullname} to your {ship_fullname}.")
+                            self.ap_ckb(
+                                "log+vce", f"Switched ship from your {cur_ship_fullname} to your {ship_fullname}."
+                            )
                         else:
-                            self.ap_ckb('log+vce', f"Welcome aboard your {ship_fullname}.")
+                            self.ap_ckb("log+vce", f"Welcome aboard your {ship_fullname}.")
 
                         # Check for fuel scoop and advanced docking computer
-                        if not self.jn.ship_state()['has_fuel_scoop']:
-                            self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is not fitted with a Fuel Scoop.")
-                        if not self.jn.ship_state()['has_adv_dock_comp']:
-                            self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is not fitted with an Advanced Docking Computer.")
-                        if self.jn.ship_state()['has_std_dock_comp']:
-                            self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is fitted with a Standard Docking Computer.")
+                        if not self.jn.ship_state()["has_fuel_scoop"]:
+                            self.ap_ckb("log+vce", f"Warning, your {ship_fullname} is not fitted with a Fuel Scoop.")
+                        if not self.jn.ship_state()["has_adv_dock_comp"]:
+                            self.ap_ckb(
+                                "log+vce",
+                                f"Warning, your {ship_fullname} is not fitted with an Advanced Docking Computer.",
+                            )
+                        if self.jn.ship_state()["has_std_dock_comp"]:
+                            self.ap_ckb(
+                                "log+vce", f"Warning, your {ship_fullname} is fitted with a Standard Docking Computer."
+                            )
 
                         # Store ship for change detection BEFORE loading config and GUI update
                         self.current_ship_type = ship
@@ -626,7 +629,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                         self.load_ship_configuration(ship)
 
                         # Update GUI with ship config
-                        self.ap_ckb('update_ship_cfg')
+                        self.ap_ckb("update_ship_cfg")
 
                         # Reload templates
                         self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale)
@@ -636,57 +639,57 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
             sleep(1)
 
     def ship_tst_pitch(self):
-        """ Performs a ship pitch test by pitching 360 degrees.
+        """Performs a ship pitch test by pitching 360 degrees.
         If the ship does not rotate enough, decrease the pitch value.
         If the ship rotates too much, increase the pitch value.
         """
         if not self.status.get_flag(FlagsSupercruise):
-            self.ap_ckb('log', "Enter Supercruise and try again.")
+            self.ap_ckb("log", "Enter Supercruise and try again.")
             return
 
-        if self.jn.ship_state()['target'] is None:
-            self.ap_ckb('log', "Select a target system and try again.")
+        if self.jn.ship_state()["target"] is None:
+            self.ap_ckb("log", "Select a target system and try again.")
             return
 
         set_focus_elite_window()
         sleep(0.25)
-        self.keys.send('SetSpeed50')
+        self.keys.send("SetSpeed50")
         self.pitch_up(360)
 
     def ship_tst_roll(self):
-        """ Performs a ship roll test by pitching 360 degrees.
+        """Performs a ship roll test by pitching 360 degrees.
         If the ship does not rotate enough, decrease the roll value.
         If the ship rotates too much, increase the roll value.
         """
         if not self.status.get_flag(FlagsSupercruise):
-            self.ap_ckb('log', "Enter Supercruise and try again.")
+            self.ap_ckb("log", "Enter Supercruise and try again.")
             return
 
-        if self.jn.ship_state()['target'] is None:
-            self.ap_ckb('log', "Select a target system and try again.")
+        if self.jn.ship_state()["target"] is None:
+            self.ap_ckb("log", "Select a target system and try again.")
             return
 
         set_focus_elite_window()
         sleep(0.25)
-        self.keys.send('SetSpeed50')
+        self.keys.send("SetSpeed50")
         self.rotate_left(360)
 
     def ship_tst_yaw(self):
-        """ Performs a ship yaw test by pitching 360 degrees.
+        """Performs a ship yaw test by pitching 360 degrees.
         If the ship does not rotate enough, decrease the yaw value.
         If the ship rotates too much, increase the yaw value.
         """
         if not self.status.get_flag(FlagsSupercruise):
-            self.ap_ckb('log', "Enter Supercruise and try again.")
+            self.ap_ckb("log", "Enter Supercruise and try again.")
             return
 
-        if self.jn.ship_state()['target'] is None:
-            self.ap_ckb('log', "Select a target system and try again.")
+        if self.jn.ship_state()["target"] is None:
+            self.ap_ckb("log", "Select a target system and try again.")
             return
 
         set_focus_elite_window()
         sleep(0.25)
-        self.keys.send('SetSpeed50')
+        self.keys.send("SetSpeed50")
         self.yaw_left(360)
 
 
@@ -694,8 +697,8 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
 # This main is for testing purposes.
 #
 def main():
-    #handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
-    #if handle != None:
+    # handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
+    # if handle != None:
     #    win32gui.SetForegroundWindow(handle)  # put the window in foreground
 
     ed_ap = EDAutopilot(cb=None, do_thread=False)
@@ -705,20 +708,21 @@ def main():
     sleep(2)
 
     for x in range(10):
-        #target_align(scrReg)
+        # target_align(scrReg)
         print("Calling nav_align")
-        #ed_ap.nav_align(ed_ap.scrReg)
+        # ed_ap.nav_align(ed_ap.scrReg)
         ed_ap.fss_detect_elw(ed_ap.scrReg)
 
-        #loc = get_destination_offset(scrReg)
-        #print("get_dest: " +str(loc))
-        #loc = get_nav_offset(scrReg)
-        #print("get_nav: " +str(loc))
+        # loc = get_destination_offset(scrReg)
+        # print("get_dest: " +str(loc))
+        # loc = get_nav_offset(scrReg)
+        # print("get_nav: " +str(loc))
         cv2.waitKey(0)
         print("Done nav")
         sleep(8)
 
     ed_ap.overlay.overlay_quit()
+
 
 if __name__ == "__main__":
     main()

@@ -44,7 +44,7 @@ class LocalizationManager:
 
         # Add a list of all keys to a list
         for language in self.available_languages:
-            with open(f"{self.folder_path}/{language}.json", "r", encoding='utf-8') as file:
+            with open(f"{self.folder_path}/{language}.json", "r", encoding="utf-8") as file:
                 data = json.load(file)
                 keys.append(list(data.keys()))
 
@@ -74,7 +74,7 @@ class LocalizationManager:
 
         # Load the localization file
         self._data = {}
-        with open(f"{self.folder_path}/{self.language}.json", "r", encoding='utf-8') as file:
+        with open(f"{self.folder_path}/{self.language}.json", "r", encoding="utf-8") as file:
             self._data = json.load(file)
 
     def change_language(self, language: str) -> None:
@@ -87,7 +87,8 @@ class LocalizationManager:
         # Check if the language is available
         if language not in self.available_languages:
             raise Exception(
-                f"Language not found in {self.folder_path}. Is there a {self.folder_path}/{language}.json file?")
+                f"Language not found in {self.folder_path}. Is there a {self.folder_path}/{language}.json file?"
+            )
 
         # Update the language
         self.language = language
