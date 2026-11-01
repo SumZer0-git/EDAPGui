@@ -4,15 +4,14 @@ from __future__ import annotations
 
 import logging
 from time import sleep
+
 import cv2
+
 from core import paths
-from core.constants import *
-from controls.keys import EDKeys
-from vision.ocr import OCR
-from vision.screen import Screen
-from vision.regions import size_scale_for_station
-from game.status import StatusParser
+from core.constants import GuiFocusInternalPanel
 from core.logger import logger
+from game.status import StatusParser
+from vision.regions import size_scale_for_station
 
 
 class EDInternalStatusPanel:
@@ -229,7 +228,7 @@ class EDInternalStatusPanel:
 
     def transfer_from_fleetcarrier(self, ap, buy_commodities):
         """ Transfer specific good from Fleet Carrier to ship"""
-        self.ap_ckb('log+vce', f"Executing transfer from Fleet Carrier.")
+        self.ap_ckb('log+vce', "Executing transfer from Fleet Carrier.")
         logger.debug("transfer_to_fleetcarrier: entered")
         # Go to the internal (right) panel inventory tab
         self.show_inventory_tab()

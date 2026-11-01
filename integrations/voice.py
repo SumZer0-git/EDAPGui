@@ -2,11 +2,11 @@
 
 # pip install pyttsx3
 
-from threading import Thread
-import kthread
 import queue
-import pyttsx3
 from time import sleep
+
+import kthread
+import pyttsx3
 
 #rate = voiceEngine.getProperty('rate')
 #volume = voiceEngine.getProperty('volume')

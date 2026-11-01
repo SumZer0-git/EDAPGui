@@ -6,15 +6,15 @@ whenever the state is accessed. Leveraged from https://github.com/skai2/EDAutopi
 from __future__ import annotations
 
 import os
-from os import environ, listdir
-from os.path import join, isfile, getmtime, abspath
-from json import loads
-from time import sleep, time
 from datetime import datetime
+from json import loads
+from os import listdir
+from os.path import getmtime, isfile, join
+from time import sleep
 
-from core.constants import ship_size_map, ship_name_map
+from core.constants import ship_name_map, ship_size_map
 from core.logger import logger
-from game.known_paths import *
+from game.known_paths import FOLDERID, UserHandle, get_path
 
 # TODO: thinking self.ship()[name] uses the same names as in the journal, so can lookup same construct
 

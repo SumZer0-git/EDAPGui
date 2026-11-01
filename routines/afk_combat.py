@@ -6,14 +6,6 @@ if another fighter is ready. The ship must point away from the site at the start
 
 from time import sleep
 
-import keyboard
-import win32gui
-
-from game.journal import *
-from controls.keys import *
-from core.logger import logger
-from integrations.voice import *
-
 
 class AFK_Combat:
 

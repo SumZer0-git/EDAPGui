@@ -1,8 +1,10 @@
 """Lookup of Windows known folder paths."""
 
-import ctypes, sys
+import ctypes
+import sys
 from ctypes import windll, wintypes
 from uuid import UUID
+
 
 class GUID(ctypes.Structure):   # [1]
     _fields_ = [

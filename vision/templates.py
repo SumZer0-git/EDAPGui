@@ -1,11 +1,10 @@
 """Template images used with OpenCV to match in screen regions."""
 
-import sys
-from os.path import abspath, getmtime, isfile, join, dirname
+from os.path import join
 
 import cv2
+
 from core import paths
-from core.logger import logger
 
 
 class Image_Templates:

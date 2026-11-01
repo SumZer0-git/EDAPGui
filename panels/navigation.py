@@ -6,12 +6,9 @@ import logging
 from time import sleep
 
 from core.constants import GuiFocusExternalPanel
-from controls.keys import EDKeys
 from core.logger import logger
-from vision.ocr import OCR
-from vision.screen import Screen
-from vision.regions import size_scale_for_station
 from game.status import StatusParser
+from vision.regions import size_scale_for_station
 
 
 class EDNavigationPanel:

@@ -1,10 +1,11 @@
 """Logging setup and rotation of the log files."""
 
-import colorlog
 import datetime
 import logging
 import os
 from pathlib import Path
+
+import colorlog
 
 from core import paths
 

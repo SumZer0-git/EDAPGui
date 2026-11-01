@@ -1,14 +1,12 @@
 """Draws lines and text as an overlay on top of the game screen."""
 
 import threading
-from ctypes.wintypes import PRECT
 from time import sleep
 
 import win32api
 import win32con
 import win32gui
 import win32ui
-
 
 lines = {}
 text = {}

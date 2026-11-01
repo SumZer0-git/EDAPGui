@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from core.constants import *
-from vision.ocr import OCR
+from core.constants import GuiFocusNoFocus
 from game.status import StatusParser
 
 

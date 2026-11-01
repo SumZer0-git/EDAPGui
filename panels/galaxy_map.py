@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from core.constants import GuiFocusGalaxyMap
-from vision.regions import reg_scale_for_station
-from game.status import StatusParser
 from time import sleep
-from core.logger import logger
+
 from pyautogui import typewrite
+
+from core.constants import GuiFocusGalaxyMap
+from core.logger import logger
+from game.status import StatusParser
+from vision.regions import reg_scale_for_station
 
 
 class EDGalaxyMap:
@@ -173,7 +175,7 @@ class EDGalaxyMap:
             # if got passed through the ship() object, lets call it to see if a target has been
             # selected yet... otherwise we wait.  If long route, it may take a few seconds
             if ap.nav_route is not None:
-                logger.debug(f"Waiting for Nav Route to update.")
+                logger.debug("Waiting for Nav Route to update.")
                 while 1:
                     curr_nav_route_sys = ap.nav_route.get_last_system()
                     curr_nav_route_sys_uc = curr_nav_route_sys.upper()
@@ -193,7 +195,7 @@ class EDGalaxyMap:
                             break
             else:
                 # Cannot check route, so assume right
-                logger.debug(f"Unable to check Nav Route, so assuming it is correct.")
+                logger.debug("Unable to check Nav Route, so assuming it is correct.")
                 correct_route = True
 
         # Close Galaxy map

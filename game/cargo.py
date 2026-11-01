@@ -5,13 +5,10 @@ from __future__ import annotations
 import json
 import os
 import time
-from datetime import datetime, timedelta
-import queue
 from sys import platform
-import threading
 from time import sleep
+
 from core.logger import logger
-from game.known_paths import *
 
 
 class CargoParser:
@@ -20,7 +17,7 @@ class CargoParser:
         if platform != "win32":
             self.file_path = file_path if file_path else "./linux_ed/Cargo.json"
         else:
-            from game.known_paths import get_path, FOLDERID, UserHandle
+            from game.known_paths import FOLDERID, UserHandle, get_path
 
             self.file_path = file_path if file_path else (get_path(FOLDERID.SavedGames, UserHandle.current)
                                                           + "/Frontier Developments/Elite Dangerous/Cargo.json")
@@ -74,7 +71,7 @@ class CargoParser:
                 with open(self.file_path, 'r', encoding='utf-8') as file:
                     data = json.load(file)
                     break
-            except Exception as e:
+            except Exception:
                 logger.debug('An error occurred reading Cargo.json file. File may be open.')
                 sleep(backoff)
                 logger.debug('Attempting to re-read Cargo.json file after delay.')

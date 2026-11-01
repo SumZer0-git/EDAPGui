@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from time import sleep
+
 from core.constants import GuiFocusSystemMap
 from core.logger import logger
-from vision.ocr import OCR
-from vision.regions import reg_scale_for_station
 from game.status import StatusParser
-from time import sleep
+from vision.regions import reg_scale_for_station
 
 
 class EDSystemMap:

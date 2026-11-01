@@ -1,8 +1,7 @@
 """Screen regions to capture, with filters, and template matching within a region."""
 
-import numpy as np
-from numpy import array, sum
 import cv2
+from numpy import array, sum
 
 
 def reg_scale_for_station(region, w: int, h: int) -> [int, int, int, int]:

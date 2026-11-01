@@ -4,9 +4,8 @@ Before the first run, verify that Sirius Atmospherics is in the Nav Panel after 
 the Sothis system and set the Nav Panel filter to "Stations and POI only".
 Set the refuel threshold low (about 35%) for ships without a fuel scoop."""
 
-from time import sleep
 import time
-
+from time import sleep
 
 # TODO:  
 

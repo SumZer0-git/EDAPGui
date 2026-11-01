@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from os import environ, listdir
-import os
 from os.path import getmtime, isfile, join
 from typing import Any
 from xml.etree.ElementTree import parse
@@ -87,7 +86,7 @@ class KeyBindings:
                     logger.warning(
                         "\tget_bindings_<{}>= does not have a valid keyboard keybind {}".format(key, keyname).upper())
                     self.missing_keys.append(key)
-            except Exception as e:
+            except Exception:
                 self.ap_ckb('log', f"WARNING: \tget_bindings_<{key}>= does not have a valid keyboard keybind.")
                 logger.warning("\tget_bindings_<{}>= does not have a valid keyboard keybind.".format(key).upper())
                 self.missing_keys.append(key)
@@ -215,7 +214,7 @@ class KeyBindings:
                 my_dict = xmltodict.parse(my_xml)
                 return my_dict
 
-        except OSError as e:
+        except OSError:
             logger.error(f"OS Error reading Elite Dangerous bindings file: {latest_bindings}.")
             raise Exception(f"OS Error reading Elite Dangerous bindings file: {latest_bindings}.")
 
@@ -240,7 +239,7 @@ class KeyBindings:
         try:
             list_of_bindings = [join(path_bindings, f) for f in listdir(path_bindings) if
                                 isfile(join(path_bindings, f)) and f.endswith('.binds')]
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             return None
 
         if not list_of_bindings:

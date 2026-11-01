@@ -1,38 +1,11 @@
 """Calibration of the template matching scale."""
 
-import math
-import traceback
-from enum import Enum
-from math import atan, degrees
-import random
+from time import sleep
 from tkinter import messagebox
+
 import cv2
-from core import paths
-from i18n import LocalizationManager
-from integrations.edmesg.server import EDMesgServer
-from panels.galaxy_map import EDGalaxyMap
-from game.graphics_settings import EDGraphicsSettings
-from panels.ship_control import EDShipControl
-from panels.station_services import EDStationServicesInShip
-from panels.system_map import EDSystemMap
-from core.logger import logging
-import vision.templates
-import vision.screen
-import vision.regions
-from routines.waypoints import *
-from game.journal import *
-from controls.keys import *
-from routines.afk_combat import AFK_Combat
-from panels.internal_status import EDInternalStatusPanel
-from game.nav_route import NavRouteParser
-from vision.ocr import OCR
-from panels.navigation import EDNavigationPanel
-from gui.overlay import *
-from game.status import StatusParser
-from integrations.voice import *
-from routines.robigo import *
-from integrations.tce import TceIntegration
-from core.types import EDAP_Interrupt, ScTargetAlignReturn
+
+from vision.screen import set_focus_elite_window
 
 
 class CalibrationMixin:

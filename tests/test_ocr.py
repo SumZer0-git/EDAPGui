@@ -1,9 +1,11 @@
 """Simple check of OCR to bring back text of a known image."""
 
 import unittest
+
+import cv2
+
 from core import paths
 from vision.ocr import OCR
-from vision.screen import *
 
 
 class OCRTestCase(unittest.TestCase):

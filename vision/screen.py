@@ -1,17 +1,18 @@
 """Screen grabs."""
 
 from __future__ import annotations
+
+import json
 import typing
+
 import cv2
+import mss
 import win32con
 import win32gui
 from numpy import array
-import mss
-import json
 
 from core import paths
 from core.logger import logger
-
 
 # size() return (ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1))
 # TODO: consider update to handle ED running in a window

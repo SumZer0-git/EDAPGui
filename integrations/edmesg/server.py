@@ -3,24 +3,23 @@
 import os
 import sys
 import threading
+from time import sleep
 
 from EDMesg.EDMesgBase import EDMesgWelcomeAction
 from integrations.edmesg.interface import (
-    create_edap_provider,
-    GetEDAPLocationAction,
-    LoadWaypointFileAction,
-    StartWaypointAssistAction,
-    StopAllAssistsAction,
-    LaunchAction,
-    SystemMapTargetStationByBookmarkAction,
+    EDAPLocationEvent,
     GalaxyMapTargetStationByBookmarkAction,
     GalaxyMapTargetSystemByNameAction,
     GenericAction,
-
-    EDAPLocationEvent,
+    GetEDAPLocationAction,
+    LaunchAction,
     LaunchCompleteEvent,
+    LoadWaypointFileAction,
+    StartWaypointAssistAction,
+    StopAllAssistsAction,
+    SystemMapTargetStationByBookmarkAction,
+    create_edap_provider,
 )
-from time import sleep
 
 
 class EDMesgServer:
@@ -92,7 +91,7 @@ class EDMesgServer:
         pathname = os.path.dirname(sys.argv[0])
         abspath = os.path.abspath(pathname)
 
-        print(f"Sending Event: EDAPLocationEvent")
+        print("Sending Event: EDAPLocationEvent")
         provider.publish(
             EDAPLocationEvent(
                 path=abspath
@@ -124,7 +123,7 @@ class EDMesgServer:
 
         sleep(1)
         self.ap_ckb('log', "Sending EDMesg Event: LaunchCompleteEvent")
-        print(f"Sending Event: LaunchCompleteEvent")
+        print("Sending Event: LaunchCompleteEvent")
         provider.publish(
             LaunchCompleteEvent()
         )

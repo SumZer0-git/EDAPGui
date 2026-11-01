@@ -3,16 +3,17 @@
 Run it from the project folder with: python -m tests.manual.debug_routines"""
 
 import logging
-import cv2
 import os
+from time import sleep
+
+import cv2
+import numpy as np
 
 from core.autopilot import EDAutopilot
-from vision.regions import *
-from gui.overlay import *
-from vision.screen import *
-from vision.templates import *
-from time import sleep
-import numpy as np
+from core.logger import logger
+from vision.regions import Screen_Regions
+from vision.screen import Screen
+from vision.templates import Image_Templates
 
 
 def main():

@@ -2,47 +2,48 @@
 
 Ideas taken from: https://github.com/skai2/EDAutopilot"""
 
-import math
+import ctypes
+import logging
+import threading
 import traceback
-from enum import Enum
-from math import atan, degrees
-import random
-from tkinter import messagebox
+from time import sleep
 
 import cv2
+import kthread
 
+import vision.regions
+import vision.screen
+import vision.templates
+from controls.keys import EDKeys
 from core import paths
-from i18n import LocalizationManager
-
-from integrations.edmesg.server import EDMesgServer
-from panels.galaxy_map import EDGalaxyMap
+from core.config import ConfigMixin
+from core.constants import FlagsSupercruise, ship_size_map
+from core.logger import logger
+from core.types import EDAP_Interrupt
 from game.graphics_settings import EDGraphicsSettings
+from game.journal import EDJournal, get_ship_fullname
+from game.nav_route import NavRouteParser
+from game.status import StatusParser
+from gui.overlay import Overlay
+from i18n import LocalizationManager
+from integrations.edmesg.server import EDMesgServer
+from integrations.tce import TceIntegration
+from integrations.voice import Voice
+from panels.galaxy_map import EDGalaxyMap
+from panels.internal_status import EDInternalStatusPanel
+from panels.navigation import EDNavigationPanel
 from panels.ship_control import EDShipControl
 from panels.station_services import EDStationServicesInShip
 from panels.system_map import EDSystemMap
-from core.logger import logging
-import vision.templates
-import vision.screen
-import vision.regions
-from routines.waypoints import *
-from game.journal import *
-from controls.keys import *
 from routines.afk_combat import AFK_Combat
-from panels.internal_status import EDInternalStatusPanel
-from game.nav_route import NavRouteParser
-from vision.ocr import OCR
-from panels.navigation import EDNavigationPanel
-from gui.overlay import *
-from game.status import StatusParser
-from integrations.voice import *
-from routines.robigo import *
-from integrations.tce import TceIntegration
-from core.types import EDAP_Interrupt, ScTargetAlignReturn
-from core.config import ConfigMixin
+from routines.assists import AssistsMixin
+from routines.flight import FlightMixin
+from routines.robigo import Robigo
+from routines.waypoints import EDWayPoint
 from vision.calibration import CalibrationMixin
 from vision.detection import DetectionMixin
-from routines.flight import FlightMixin
-from routines.assists import AssistsMixin
+from vision.ocr import OCR
+from vision.screen import set_focus_elite_window
 
 
 class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, AssistsMixin):

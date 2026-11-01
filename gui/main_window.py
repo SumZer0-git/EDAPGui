@@ -2,42 +2,50 @@
 
 Ideas taken from: https://github.com/skai2/EDAutopilot"""
 
+import json
+import os
 import queue
 import sys
-import os
-import threading
-import kthread
-from datetime import datetime
-from time import sleep
-import cv2
-import json
-from pathlib import Path
-import keyboard
-import webbrowser
-import requests
-
-
-from PIL import Image, ImageGrab, ImageTk
 import tkinter as tk
-from tkinter import *
-from tkinter import filedialog as fd
-from tkinter import messagebox
-from tkinter import ttk
+import webbrowser
+from datetime import datetime
 from idlelib.tooltip import Hovertip
+from pathlib import Path
+from time import sleep
+from tkinter import (
+    BOTH,
+    END,
+    LEFT,
+    RIGHT,
+    BooleanVar,
+    Button,
+    Checkbutton,
+    E,
+    Entry,
+    Frame,
+    IntVar,
+    Label,
+    LabelFrame,
+    Listbox,
+    Menu,
+    N,
+    Radiobutton,
+    S,
+    Scrollbar,
+    StringVar,
+    W,
+    Y,
+    messagebox,
+    ttk,
+)
+from tkinter import filedialog as fd
 
-from integrations.voice import *
+import keyboard
+
 from controls.mouse_point import MousePoint
 from core import paths
-
-from vision.templates import *
-from vision.screen import *
-from vision.regions import *
-from controls.keys import *
-from game.journal import *
-from core.autopilot import *
-
+from core.autopilot import EDAutopilot
 from core.logger import logger
-
 
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
@@ -980,7 +988,6 @@ class APGui():
         self.ed_ap.quit()
         sleep(0.1)
 
-        import sys
         print("argv was", sys.argv)
         print("sys.executable was", sys.executable)
         print("restart now")

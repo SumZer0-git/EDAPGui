@@ -1,8 +1,8 @@
 """Gets the x,y location of a mouse click and clicks on a given x,y location."""
 
-from pynput.mouse import *
-
 from time import sleep
+
+from pynput.mouse import Button, Controller, Listener
 
 
 class MousePoint:

@@ -8,6 +8,7 @@ import time
 from operator import itemgetter
 from sys import platform
 from time import sleep
+
 from core.logger import logger
 
 
@@ -17,7 +18,7 @@ class MarketParser:
         if platform != "win32":
             self.file_path = file_path if file_path else "./linux_ed/Market.json"
         else:
-            from game.known_paths import get_path, FOLDERID, UserHandle
+            from game.known_paths import FOLDERID, UserHandle, get_path
 
             self.file_path = file_path if file_path else (get_path(FOLDERID.SavedGames, UserHandle.current)
                                                           + "/Frontier Developments/Elite Dangerous/Market.json")
@@ -97,7 +98,7 @@ class MarketParser:
                 with open(self.file_path, 'r', encoding='utf-8') as file:
                     data = json.load(file)
                     break
-            except Exception as e:
+            except Exception:
                 logger.debug('An error occurred reading Market.json file. File may be open.')
                 sleep(backoff)
                 logger.debug('Attempting to re-read Market.json file after delay.')

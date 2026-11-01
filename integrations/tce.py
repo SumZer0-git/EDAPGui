@@ -2,7 +2,7 @@
 
 import os
 import sqlite3
-from typing import Union, Any, final
+from typing import Any, Union, final
 
 from core.logger import logger
 
@@ -106,7 +106,7 @@ class TceIntegration:
     def read_resources_db(self, filepath: str, table_name: str) -> list[Union[dict, dict[str, Any], dict[str, str]]]:
         """ Reads the resources database. Returns a dict of the data."""
         if table_name == "":
-            raise Exception(f"Requested table name is blank.")
+            raise Exception("Requested table name is blank.")
 
         # Connect to the SQLite database (or create it if it doesn't exist)
         if not os.path.exists(filepath):

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+
 import cv2
 import numpy as np
 from paddleocr import PaddleOCR
@@ -180,7 +181,7 @@ class OCR:
         """
         img_selected, x, y = self.get_highlighted_item_in_image(img, min_w, min_h)
         if img_selected is None:
-            logger.debug(f"Did not find a selected item in the region.")
+            logger.debug("Did not find a selected item in the region.")
             return None
 
         ocr_textlist = self.image_simple_ocr(img_selected)

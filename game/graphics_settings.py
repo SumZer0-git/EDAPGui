@@ -1,10 +1,11 @@
 """Handles the Graphics DisplaySettings.xml and Settings.xml files."""
 
+from os import environ
 from os.path import isfile
 
-from core.logger import logger
 import xmltodict
-from os import environ
+
+from core.logger import logger
 
 
 class EDGraphicsSettings:
@@ -75,7 +76,7 @@ class EDGraphicsSettings:
                 my_xml = file.read()
                 my_dict = xmltodict.parse(my_xml)
                 return my_dict
-        except OSError as e:
+        except OSError:
             logger.error(f"OS Error reading Elite Dangerous display settings file: {filename}.")
             raise Exception(f"OS Error reading Elite Dangerous display settings file: {filename}.")
 

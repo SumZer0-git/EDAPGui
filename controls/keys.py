@@ -3,7 +3,7 @@
 from time import sleep
 from typing import final
 
-from controls.directinput import *
+from controls.directinput import PressKey, ReleaseKey
 from core.logger import logger
 from game.keybindings import KeyBindings
 from vision.screen import set_focus_elite_window

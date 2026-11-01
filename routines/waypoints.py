@@ -1,16 +1,18 @@
 """Loads a waypoint file (list of systems and stations to visit) and provides the next waypoint."""
 
 from __future__ import annotations
-from time import sleep
-from game.cargo import CargoParser
-from core.constants import *
-from controls.keys import EDKeys
-from core.logger import logger
+
 import json
-from core import paths
-from game.market import MarketParser
-from controls.mouse_point import MousePoint
 from pathlib import Path
+from time import sleep
+
+from controls.keys import EDKeys
+from controls.mouse_point import MousePoint
+from core import paths
+from core.constants import FlagsDocked
+from core.logger import logger
+from game.cargo import CargoParser
+from game.market import MarketParser
 
 
 class EDWayPoint:
@@ -56,7 +58,7 @@ class EDWayPoint:
             logger.debug("EDWayPoint: read json:" + str(ss))
             return True
 
-        self.ap.ap_ckb('log', f"Waypoint file is invalid. Check log file for details.")
+        self.ap.ap_ckb('log', "Waypoint file is invalid. Check log file for details.")
         return False
 
     def read_waypoints(self, filename=paths.WAYPOINTS_DIR / 'waypoints.json'):
@@ -215,10 +217,10 @@ class EDWayPoint:
         # From the journal, this works for stations (incl. outpost), colonisation ship and megaships
         if ap.jn.ship_state()['StationServices'] is not None:
             if 'commodities' not in ap.jn.ship_state()['StationServices']:
-                self.ap.ap_ckb('log', f"No commodities market at docked location.")
+                self.ap.ap_ckb('log', "No commodities market at docked location.")
                 return
         else:
-            self.ap.ap_ckb('log', f"No station services at docked location.")
+            self.ap.ap_ckb('log', "No station services at docked location.")
             return
 
         # Determine type of station we are at
@@ -231,13 +233,13 @@ class EDWayPoint:
             if colonisation_ship:
                 # Colonisation Ship
                 self.stats_log['Colonisation'] = self.stats_log['Colonisation'] + 1
-                self.ap.ap_ckb('log', f"Executing trade with Colonisation Ship.")
-                logger.debug(f"Execute Trade: On Colonisation Ship")
+                self.ap.ap_ckb('log', "Executing trade with Colonisation Ship.")
+                logger.debug("Execute Trade: On Colonisation Ship")
             if orbital_construction_site:
                 # Construction Ship
                 self.stats_log['Construction'] = self.stats_log['Construction'] + 1
-                self.ap.ap_ckb('log', f"Executing trade with Orbital Construction Ship.")
-                logger.debug(f"Execute Trade: On Orbital Construction Site")
+                self.ap.ap_ckb('log', "Executing trade with Orbital Construction Ship.")
+                logger.debug("Execute Trade: On Orbital Construction Site")
 
             # Go to station services
             self.ap.stn_svcs_in_ship.goto_construction_services()
@@ -262,7 +264,7 @@ class EDWayPoint:
         else:
             # Regular Station or Fleet Carrier in Buy/Sell mode
             self.ap.ap_ckb('log', "Executing trade.")
-            logger.debug(f"Execute Trade: On Regular Station")
+            logger.debug("Execute Trade: On Regular Station")
             self.stats_log['Station'] = self.stats_log['Station'] + 1
 
             market_time_old = ""
@@ -348,7 +350,7 @@ class EDWayPoint:
                     logger.info(f"Execute trade: Free cargo space: {free_cargo}")
 
                     if free_cargo == 0:
-                        logger.info(f"Execute trade: No space for additional cargo")
+                        logger.info("Execute trade: No space for additional cargo")
                         break
 
                     qty_to_buy = buy_commodities[key]
@@ -376,7 +378,7 @@ class EDWayPoint:
                     logger.info(f"Execute trade: Free cargo space: {free_cargo}")
 
                     if free_cargo == 0:
-                        logger.info(f"Execute trade: No space for additional cargo")
+                        logger.info("Execute trade: No space for additional cargo")
                         break
 
                     qty_to_buy = global_buy_commodities[key]
@@ -486,7 +488,7 @@ class EDWayPoint:
             # Check current system and go to next system if different and not blank
             if next_wp_system == "" or (cur_star_system == next_wp_system):
                 if new_waypoint:
-                    self.ap.ap_ckb('log+vce', f"Already in target System.")
+                    self.ap.ap_ckb('log+vce', "Already in target System.")
             else:
                 # Check if the current nav route is to the target system
                 last_nav_route_sys = self.ap.nav_route.get_last_system().upper()
@@ -495,14 +497,14 @@ class EDWayPoint:
                 if ((last_nav_route_sys == next_wp_system) and
                         (destination_body == 0 and destination_name != "")):
                     # No need to target system
-                    self.ap.ap_ckb('log+vce', f"System already targeted.")
+                    self.ap.ap_ckb('log+vce', "System already targeted.")
                 else:
                     self.ap.ap_ckb('log+vce', f"Targeting system {next_wp_system}.")
                     # Select destination in galaxy map based on name
                     res = self.ap.galaxy_map.set_gal_map_destination_text(self.ap, next_wp_system,
                                                                           self.ap.jn.ship_state)
                     if res:
-                        self.ap.ap_ckb('log', f"System has been targeted.")
+                        self.ap.ap_ckb('log', "System has been targeted.")
                     else:
                         self.ap.ap_ckb('log+vce', f"Unable to target {next_wp_system} in Galaxy Map.")
                         _abort = True
@@ -561,7 +563,7 @@ class EDWayPoint:
                         # Set destination via gal bookmark, not system bookmark
                         res = self.ap.galaxy_map.set_gal_map_dest_bookmark(self.ap, gal_bookmark_type, gal_bookmark_num)
                         if not res:
-                            self.ap.ap_ckb('log+vce', f"Unable to set Galaxy Map bookmark.")
+                            self.ap.ap_ckb('log+vce', "Unable to set Galaxy Map bookmark.")
                             _abort = True
                             break
 
@@ -569,14 +571,14 @@ class EDWayPoint:
                         # Set destination via system bookmark
                         res = self.ap.system_map.set_sys_map_dest_bookmark(self.ap, sys_bookmark_type, sys_bookmark_num)
                         if not res:
-                            self.ap.ap_ckb('log+vce', f"Unable to set System Map bookmark.")
+                            self.ap.ap_ckb('log+vce', "Unable to set System Map bookmark.")
                             _abort = True
                             break
 
                     elif next_wp_station != "":
                         # Need OCR added in for this (WIP)
                         need_ocr = True
-                        self.ap.ap_ckb('log+vce', f"No bookmark defined. Target by Station text not supported.")
+                        self.ap.ap_ckb('log+vce', "No bookmark defined. Target by Station text not supported.")
                         # res = self.nav_panel.lock_destination(station_name)
                         _abort = True
                         break
@@ -600,7 +602,7 @@ class EDWayPoint:
 
             # Mark this waypoint as completed
             self.mark_waypoint_complete(dest_key)
-            self.ap.ap_ckb('log+vce', f"Current Waypoint complete.")
+            self.ap.ap_ckb('log+vce', "Current Waypoint complete.")
 
         # Done with waypoints
         if not _abort:

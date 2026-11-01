@@ -1,13 +1,13 @@
 """EDMesg client: connects to EDAP, sends actions and receives events."""
 
 import threading
+from time import sleep
 
 from integrations.edmesg.interface import (
-    create_edap_client,
     LaunchAction,
     LaunchCompleteEvent,
+    create_edap_client,
 )
-from time import sleep
 
 
 class EDMesgClient:
@@ -45,7 +45,7 @@ class EDMesgClient:
             self.client.close()
 
     def _handle_launch_complete(self):
-        print(f"Handling Event: LaunchCompleteEvent")
+        print("Handling Event: LaunchCompleteEvent")
         # Implement the event handling logic here
 
     def send_launch_action(self):

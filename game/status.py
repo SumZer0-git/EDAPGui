@@ -4,15 +4,10 @@ import json
 import os
 import time
 from datetime import datetime, timedelta
-import queue
 from sys import platform
-import threading
 from time import sleep
 
-from core.constants import *
 from core.logger import logger
-from integrations.voice import Voice
-from game.known_paths import *
 
 
 class StatusParser:
@@ -22,7 +17,7 @@ class StatusParser:
         if platform != "win32":
             self.file_path = file_path if file_path else "./linux_ed/Status.json"
         else:
-            from game.known_paths import get_path, FOLDERID, UserHandle
+            from game.known_paths import FOLDERID, UserHandle, get_path
 
             self.file_path = file_path if file_path else (get_path(FOLDERID.SavedGames, UserHandle.current)
                                                           + "/Frontier Developments/Elite Dangerous/Status.json")
@@ -204,7 +199,7 @@ class StatusParser:
                         if attempt > 1:
                             print(f"Status file attempt: {attempt}")
                         break
-                except Exception as e:
+                except Exception:
                     logger.debug('An error occurred reading Status.json file. File may be open.')
                     sleep(backoff)
                     logger.debug('Attempting to re-read Status.json file after delay.')

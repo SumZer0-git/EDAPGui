@@ -1,4 +1,5 @@
 import unittest
+
 from panels.galaxy_map import EDGalaxyMap
 
 

@@ -1,38 +1,13 @@
 """The assist routines: FSD, SC, waypoint, Robigo, AFK combat, DSS."""
 
-import math
-import traceback
-from enum import Enum
-from math import atan, degrees
-import random
-from tkinter import messagebox
-import cv2
-from core import paths
-from i18n import LocalizationManager
-from integrations.edmesg.server import EDMesgServer
-from panels.galaxy_map import EDGalaxyMap
-from game.graphics_settings import EDGraphicsSettings
-from panels.ship_control import EDShipControl
-from panels.station_services import EDStationServicesInShip
-from panels.system_map import EDSystemMap
-from core.logger import logging
-import vision.templates
-import vision.screen
-import vision.regions
-from routines.waypoints import *
-from game.journal import *
-from controls.keys import *
-from routines.afk_combat import AFK_Combat
-from panels.internal_status import EDInternalStatusPanel
-from game.nav_route import NavRouteParser
-from vision.ocr import OCR
-from panels.navigation import EDNavigationPanel
-from gui.overlay import *
-from game.status import StatusParser
-from integrations.voice import *
-from routines.robigo import *
-from integrations.tce import TceIntegration
-from core.types import EDAP_Interrupt, ScTargetAlignReturn
+import threading
+import time
+from time import sleep
+
+from core.constants import Flags2GlideMode, FlagsDocked, FlagsLanded
+from core.logger import logger
+from core.types import ScTargetAlignReturn
+from vision.screen import set_focus_elite_window
 
 
 class AssistsMixin:
@@ -347,7 +322,7 @@ class AssistsMixin:
             # Select destination in galaxy map based on name
             res = self.galaxy_map.set_gal_map_destination_text(self, self._single_waypoint_system, self.jn.ship_state)
             if res:
-                self.ap_ckb('log', f"System has been targeted.")
+                self.ap_ckb('log', "System has been targeted.")
             else:
                 self.ap_ckb('log+vce', f"Unable to target {self._single_waypoint_system} in Galaxy Map.")
                 return False

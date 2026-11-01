@@ -1,38 +1,26 @@
 """Ship maneuvers: aligning, jumping, docking, undocking and refueling."""
 
-import math
-import traceback
-from enum import Enum
-from math import atan, degrees
 import random
-from tkinter import messagebox
-import cv2
-from core import paths
-from i18n import LocalizationManager
-from integrations.edmesg.server import EDMesgServer
-from panels.galaxy_map import EDGalaxyMap
-from game.graphics_settings import EDGraphicsSettings
-from panels.ship_control import EDShipControl
-from panels.station_services import EDStationServicesInShip
-from panels.system_map import EDSystemMap
-from core.logger import logging
-import vision.templates
-import vision.screen
-import vision.regions
-from routines.waypoints import *
-from game.journal import *
-from controls.keys import *
-from routines.afk_combat import AFK_Combat
-from panels.internal_status import EDInternalStatusPanel
-from game.nav_route import NavRouteParser
-from vision.ocr import OCR
-from panels.navigation import EDNavigationPanel
-from gui.overlay import *
-from game.status import StatusParser
-from integrations.voice import *
-from routines.robigo import *
-from integrations.tce import TceIntegration
-from core.types import EDAP_Interrupt, ScTargetAlignReturn
+import threading
+import time
+from time import sleep
+
+from controls.directinput import SCANCODE
+from core.constants import (
+    Flags2FsdScoActive,
+    FlagsAnalysisMode,
+    FlagsDocked,
+    FlagsFsdCharging,
+    FlagsFsdJump,
+    FlagsFsdMassLocked,
+    FlagsHasLatLong,
+    FlagsLanded,
+    FlagsLowFuel,
+    FlagsOverHeating,
+    FlagsSupercruise,
+)
+from core.logger import logger
+from core.types import ScTargetAlignReturn
 
 
 class FlightMixin:
