@@ -1,0 +1,20 @@
+# Slim dependency set for the fast CI on pull requests: requirements.txt without PaddleOCR and its pins.
+# Tests that need PaddleOCR are skipped here and run in the release workflow.
+colorlog==6.5.0
+keyboard==0.13.5
+kthread==0.2.2
+logger==1.4
+mss==8.0.3
+numpy~=1.26.4
+opencv_python==4.5.5.64
+Pillow==10.4.0
+PyAutoGUI==0.9.53
+pydantic>=2.9.1
+pynput==1.7.6
+pyttsx3==2.90
+pywin32==303
+pyzmq>=26.2.0
+requests~=2.32.3
+strsimpy~=0.2.1
+xmltodict~=0.14.2
+ruff==0.17.3

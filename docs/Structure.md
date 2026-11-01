@@ -7,6 +7,7 @@ start_ed_ap.bat         Start script for users (creates the venv on first start 
 install_requirements.bat  Creates the venv and installs requirements.txt.
 requirements.txt        Python dependencies.
 requirements-dev.txt    Development tools (Ruff). Install: pip install -r requirements-dev.txt
+requirements-ci.txt     Slim dependencies for the PR checks (no PaddleOCR)
 pyproject.toml          Ruff configuration. Check the code with: ruff check .  Format with: ruff format .
 README.md, CHANGELOG.md, LICENSE
 
@@ -71,7 +72,7 @@ third_party/           Unmodified third-party libraries (EDMesg). Not linted; ad
 tests/                  Unit tests (tests/test_*.py), fixtures/ for test images,
                         integration/ for tests that need the running game (set EDAP_INTEGRATION=1),
                         manual/ for debug tools
-.github/                Workflows and project settings
+.github/                Workflows (ci.yml, release.yml) and project settings
 ```
 
 ## Rules
