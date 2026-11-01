@@ -5,9 +5,14 @@ import unittest
 import cv2
 
 from core import paths
-from vision.ocr import OCR
+
+try:
+    from vision.ocr import OCR
+except ImportError:  # PaddleOCR is not installed (slim CI)
+    OCR = None
 
 
+@unittest.skipIf(OCR is None, "PaddleOCR is not installed")
 class OCRTestCase(unittest.TestCase):
     def test_simple_ocr(self):
         """Simple check of OCR to bring back text of a known image."""

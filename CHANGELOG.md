@@ -7,6 +7,7 @@
  - Added offline unit tests for reading the Elite Dangerous keybindings (`game/keybindings.py`), using an anonymized sample bindings file in `tests/fixtures/bindings/`.
  - Added offline tests for template matching and screen detection (compass, nav point, target, occlusion, supercruise disengage message, region filters) using the screenshot crops in `tests/fixtures/` and a fake screen instead of the game.
  - Added `docs/Structure.md` describing the folder structure and rules for where new files belong.
+ - Added GitHub workflows: `ci.yml` runs Ruff and the unit tests (without the OCR test, using the slim `requirements-ci.txt`) on pushes and pull requests to `main`; `release.yml` runs the full checks including OCR when a `vX.Y.Z` tag is pushed, verifies that the tag is on `main` and matches `core/version.py`, and creates a GitHub release with the changelog notes and a source ZIP.
  - Changed class names to CapWords and exception names to end with `Error`: `Screen_Regions` to `ScreenRegions`, `Image_Templates` to `ImageTemplates`, `AFK_Combat` to `AfkCombat`, `EDAP_Interrupt` to `EdapInterruptError` and `PathNotFoundException` to `PathNotFoundError`.
  - Changed function and argument names to snake_case: `PressKey`/`ReleaseKey` to `press_key`/`release_key`, `rotateLeft`, `rotateRight`, `pitchUp`, `pitchDown`, `yawLeft` and `yawRight` to `rotate_left` etc., and arguments such as `scaleX`/`scaleY`, `fileName`, `doThread`, `fontSize`, `vSay` and `noOp` to `scale_x`/`scale_y`, `file_name`, `do_thread`, `font_size`, `text` and `no_op`. Names that follow the Windows API (`wndProc`, `hWnd`, `wParam`, `lParam`, `Input_I`) are kept.
  - Changed config, waypoint and log files to be stored in `user_data/` (configs, waypoints, logs, debug output). The folder is created on first start.
@@ -15,6 +16,7 @@
  - Changed `templates/`, `locales/` and `screen/edap.ico` to `assets/templates/`, `assets/locales/` and `assets/icons/edap.ico`; the documentation screenshots from `screen/` to `docs/screenshots/`. The disabled build workflow still references the old `screen\` paths and will be reworked separately.
  - Changed `readme.md` and `ChangeLog.md` to `README.md` and `CHANGELOG.md`.
  - Changed the in-app links (About, Changelog) and the clone URL in the README to point to this repository instead of the upstream repository.
+ - Removed the disabled `build-executable.yml` workflow; a build of the executable will be added later.
  - Removed the "Join Discord" menu entry, the Discord link and the email contact addresses.
  - Changed `controls/keys.py` (`EDKeys`) to be split: reading the Elite Dangerous keybindings now lives in `game/keybindings.py` (`KeyBindings`), while `controls/keys.py` only sends keys.
  - Changed `ED_AP.py` to `core/autopilot.py` and split `EDAutopilot` into mixin classes with identical behavior: `core/config.py` (`ConfigMixin`), `vision/calibration.py` (`CalibrationMixin`), `vision/detection.py` (`DetectionMixin`), `routines/flight.py` (`FlightMixin`) and `routines/assists.py` (`AssistsMixin`). `EDAP_Interrupt` and `ScTargetAlignReturn` moved to `core/types.py`.
