@@ -6,7 +6,7 @@ Files written at runtime live in USER_DATA, versioned reference files live in DA
 import shutil
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 
 # Versioned reference files (examples and defaults), copied to USER_DATA when missing
 DATA = ROOT / 'data'

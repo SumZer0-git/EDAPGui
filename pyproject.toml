@@ -1,6 +1,7 @@
 [tool.ruff]
 line-length = 120
-extend-exclude = ["EDMesg", "venv", "user_data"]
+src = ["src", "third_party"]
+extend-exclude = ["third_party", "venv", "user_data"]
 
 [tool.ruff.lint]
 select = ["F", "I", "W", "E711", "E712", "E713", "E714", "E722"]

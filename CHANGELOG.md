@@ -14,6 +14,7 @@
  - Changed the GUI code of `EDAPGui.py` to `gui/main_window.py`; `EDAPGui.py` in the project root remains as the thin start script (`python EDAPGui.py`, `start_ed_ap.bat`).
  - Changed the file headers of all source files to a short module docstring; author lines and the copy of the hotkey list (see README) were removed. Credits to the original projects stay in the affected modules and the README.
  - Changed the start script `EDAPGui.py` in the project root to `main.py` (`python main.py`); `start_ed_ap.bat` is unchanged for users.
+ - Changed all program packages (`controls/`, `core/`, `game/`, `gui/`, `i18n/`, `integrations/`, `panels/`, `routines/`, `vision/`) and `main.py` to live in the new `src/` folder; start the program with `python src/main.py` (`start_ed_ap.bat` is unchanged for users). The bundled `EDMesg/` library moved to `third_party/EDMesg/`.
  - Changed `EDWayPoint.py`, `Robigo.py` and `EDafk_combat.py` to live in the new `routines/` package as `routines/waypoints.py`, `routines/robigo.py` and `routines/afk_combat.py`.
  - Changed `TCE_Integration.py`, `Voice.py` and the `EDAP_EDMesg_*.py` modules to live in the new `integrations/` package as `integrations/tce.py`, `integrations/voice.py` and `integrations/edmesg/{interface,client,server}.py`.
  - Changed `Overlay.py` to `gui/overlay.py` and the `simple_localization/` package to `i18n/`.
