@@ -46,13 +46,7 @@ from controls.mouse_point import MousePoint
 from core import paths
 from core.autopilot import EDAutopilot
 from core.logger import logger
-
-# ---------------------------------------------------------------------------
-# must be updated with a new release so that the update check works properly!
-# contains the names of the release.
-EDAP_VERSION = "V1.7.0"
-# depending on how release versions are best marked you could also change it to the release tag, see function check_update.
-# ---------------------------------------------------------------------------
+from core.version import EDAP_VERSION
 
 FORM_TYPE_CHECKBOX = 0
 FORM_TYPE_SPINBOX = 1
