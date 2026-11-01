@@ -509,10 +509,7 @@ class FlightMixin:
         sleep(0.5)
         self.update_ap_status("Idle")
 
-    # position() happens after a refuel and performs
-    #   - accelerate past sun
-    #   - perform Discovery scan
-    #   - perform fss (if enabled)
+    # position() happens after a refuel and accelerates past the sun before the discovery scan.
     def position(self, scr_reg, did_refuel=True):
         logger.debug("position")
         add_time = 12
@@ -528,13 +525,7 @@ class FlightMixin:
         # need time to get away from the Sun so heat will disipate before we use FSD
         sleep(pause_time)
 
-        if self.config["ElwScannerEnable"]:
-            self.fss_detect_elw(scr_reg)
-            if self.config["EnableRandomness"]:
-                sleep(random.randint(0, 3))
-            sleep(3)
-        else:
-            sleep(5)  # since not doing FSS, need to give a little more time to get away from Sun, for heat
+        sleep(5)  # Give the ship extra time to get away from the Sun before engaging the FSD.
 
         logger.debug("position=complete")
         return True

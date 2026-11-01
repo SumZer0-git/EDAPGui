@@ -44,8 +44,8 @@ src/                    All program code (this is the import root; run the progr
   panels/                 In-game UI panels that are operated through the screen (one file per panel)
   routines/               Flight behavior and complete workflows
     flight.py               Maneuvers: align, jump, dock, refuel (FlightMixin)
-    assists.py              FSD, SC, waypoint, Robigo, AFK combat, DSS assists (AssistsMixin)
-    waypoints.py, robigo.py, afk_combat.py   Self-contained routines
+    assists.py              FSD, SC, waypoint, AFK combat, DSS assists (AssistsMixin)
+    waypoints.py, afk_combat.py   Self-contained routines
 
   integrations/           Connections to things outside the game
     voice.py, tce.py        Voice output, Trade Computer Extension

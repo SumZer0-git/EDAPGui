@@ -42,8 +42,6 @@ class KeyBindings:
             "HeadLookReset",
             "PrimaryFire",
             "SecondaryFire",
-            "ExplorationFSSEnter",
-            "ExplorationFSSQuit",
             "MouseReset",
             "DeployHardpointToggle",
             "IncreaseEnginesPower",

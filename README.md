@@ -4,9 +4,8 @@ See [ChangeLog](/CHANGELOG.md) for latest updates.<br>
 # ED Autopilot Main Features
 This Elite Dangerous (ED) Autopilot supports the following main features:
 ## FSD Route assist
-For the FSD Route Assist, you select your destination in the GalaxyMap and then enable this assistant and it will perform all the jumps to get you to your destination, AFK.  Furthermore while
-executing route assistance it will perform detailed system scanning (honk) when jumping into a system and optionally perform FSS scanning
-to determine if Earth, Water, or Ammonia type world is present.
+For the FSD Route Assist, you select your destination in the GalaxyMap and then enable this assistant and it will perform all the jumps to get you to your destination, AFK. While
+executing route assistance it will perform detailed system scanning (honk) when jumping into a system.
 ## Supercruise assist
 The supercruise (SC) assistant (and not using ED's SC Assist which takes up a slot, for a piece of software?) 
 will keep you on target and when "TO DISENGAGE" is presented and will autodrop out of SC and perform autodocking with the targeted Station. <br>
@@ -14,9 +13,6 @@ will keep you on target and when "TO DISENGAGE" is presented and will autodrop o
 With Waypoint Assist you define the route in a file and this assist will jump to those waypoints.  If a Station is defined to dock at, the assistant will transition to SC Assist and
 dock with the station.  A early version of a trading capability is also included.<br>
 Additional information can be found [here](docs/Waypoint.md).
-## Robigo Mines assist
-The Robigo Assist performs the Robigo Mines passenger mission loop which includes mission selection, mission completetion, and the full loop to Sirius Atmospherics.<br>
-Additional information can be found [here](docs/Robigo.md). 
 ## AFK Combat escape assist
 ## Single Waypoint assist
 Note: Currently available on the debug tab.
@@ -39,7 +35,6 @@ of Elite Dangerous, it is an external-ED construct (similar to us commanders)
   * Calibration.md for details on how to calibrate EDAPGui for your system if required 
   * Waypoint.md for details on how to generate a waypoint file 
   * RollPitchYaw.md for details on how to tune the Pitch, Roll, Yaw values
-  * Robgio.md for details on the Robigo Mines loop
   ```
 
 Note: this autopilot is based on https://github.com/skai2/EDAutopilot , some of the routines were used and turned into classes and tweaks were done on sequences
@@ -71,9 +66,6 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * The Left Panel (Navigation) must be on the Navigation tab as the script assumes so.  It will be reset after a FSD jump back to Nav,
   but if in SC Assist, need to ensure it is configured there to support docking request
 * "Advanced Autodocking" module must be outfitted on ship to support autodock 
-* The ELW Scanner may have issues for you, the screen region (defined in Screen_Region.py) isolates the region to where Earth, Water, and Ammonia
-  signal would be present.  If using different resolution from 3440x1440 then this region will need to be adjusted for your resolution for
-  proper detection
 * Must have required keybinding set for proper autopilot behavior.  See user_data/logs/autopilot.log for any Warnings on missing key bindings
 * If you jump into a system with 2 suns next to each other, will likely over heat and drop from Supercruise.
 * Have seen a few cases where after doing refueling, depending on ship acceleration, we don't get away from Sun far enough before engaging FSD
@@ -204,11 +196,7 @@ The following keybindings are required by AP, so make sure a key is assigned to 
 | UIFocus               | UI FOCUS                 | SHIP CONTROLS > MODE SWITCHES                |
 | GalaxyMapOpen         | OPEN GALAXY MAP          | SHIP CONTROLS > MODE SWITCHES                |
 | SystemMapOpen         | OPEN SYSTEM MAP          | SHIP CONTROLS > MODE SWITCHES                |
-| ExplorationFSSEnter   | ENTER FSS MODE           | SHIP CONTROLS > MODE SWITCHES                |
-|                       |                          |                                              |
 | HeadLookReset         | RESET HEADLOOK           | SHIP CONTROLS > HEADLOOK MODE                |
-|                       |                          |                                              |
-| ExplorationFSSQuit    | LEAVE FSS                | SHIP CONTROLS > FULL SPECTRUM SYSTEM SCANNER |
 
 
 
@@ -230,19 +218,10 @@ The following keybindings are required by AP, so make sure a key is assigned to 
     If the waypoint file entry has an associated Station/StationCoord entry, the assistant will route a course to that station
     upon entering that system.  The assistant will then autodock, refuel and repair.  If a trading sequence is define, it will then
     execute that trade.  See HOWTO-Waypoint.md
-* Robigo Assist:  Performs the Robigo Mines Passenger missions.  See Robigo.md under the docs folder
 * AFK Combat Assist: used with a AFK Combat ship in a Rez Zone.  It will detect if shields have
     dropped and if so, will boost away and go into supercruise for ~10sec... then drop, put pips to
     system and weapons and deploy fighter, then terminate.  While in the Rez Zone, if your fighter has
     been destroyed it will deploy another figher (assumes you have two bays)
-* ELW Scanner: will perform FSS scans while FSD Assist is traveling between stars.  If the FSS
-    shows a signal in the region of Earth, Water or Ammonia type worlds, it will announce that discovery
-    and log it into elw.txt file.  Note: it does not do the FSS scan, you would need to terminate FSD Assist
-    and manually perform the detailed FSS scan to get credit.  Or come back later to the elw.txt file
-    and go to those systems to perform additional detailed scanning. The elw.txt file looks like:<br>
-      _Oochoss BL-M d8-3  %(dot,sig):   0.39,   0.79 Ammonia date: 2022-01-22 11:17:51.338134<br>
-       Slegi BG-E c28-2  %(dot,sig):   0.36,   0.75 Water date: 2022-01-22 11:55:30.714843<br>
-       Slegi TM-L c24-4  %(dot,sig):   0.31,   0.85 Earth date: 2022-01-22 12:04:47.527793<br>_
 * Calibrate: will iterate through a set of scaling values getting the best match for your system.  See HOWTO-Calibrate.md
 * Cap Mouse X, Y:  this will provide the StationCoord value of the Station in the SystemMap.  Selecting this button
     and then clicking on the Station in the SystemMap will return the x,y value that can be pasted in the waypoints file
@@ -259,7 +238,6 @@ The following keybindings are required by AP, so make sure a key is assigned to 
 ## Hot Keys (configurable)
 * Home - Start FSD Assist
 * Ins  - Start SC Assist
-* Pg Up - Start Robigo Assist
 * End  - Terminate any running assistants
 
 Hot keys are now configurable in the user_data/configs/AP.json file, so you can remap them. Be sure not to use any keys you have mapped in ED.  You can find the key names here:
@@ -268,7 +246,6 @@ https://pythonhosted.org/pynput/keyboard.html
 ## Config File: user_data/configs/AP.json
 The following settings from the AP.json file (created in `user_data/configs/` on first start) are **not** available through the GUI and must be changed directly within AP.json:
   ```py
-    "Robigo_Single_Loop": False,   # True means only 1 loop will execute and then terminate upon docking, will not perform mission processing
     "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
     "OverlayTextFont": "Eurostyle", 
     "OverlayGraphicEnable": False, # not implemented yet

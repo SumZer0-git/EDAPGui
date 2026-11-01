@@ -12,8 +12,6 @@
 * If refuel required then wait for refuel complete or <#> sec elapsed
 * Accel back to 100, delay some seconds while we get away from Sun
 * Perform DSS on the System
-* If ELW Scanner enabled, go into FSS, do image matching in specific region looking for filled circle or frequency signal present.
-  If so, log wether an Earth, Water or Ammonia world based on where the frequency signal is at in the image
 * Perform Nav align looking at the Compass on the console, perform roll and pitch based on Nav point in the compass
 * Perform Target align (as the target should be pretty close in front of us) 
 * If reached destination system then terminate, however if we still have a target to a Station, then auto-enable SC Assist
@@ -51,4 +49,3 @@
 * A lot more error trapping needs to be put into the code, there is also a lot of corner cases to deal with
 * Handle Thargoid interdiction will in Hyperspace
 * Enhance SC Interdiction flow (hard to test)
-* FSS/ELW screen region needs to be able to handle diff screen resolutions
