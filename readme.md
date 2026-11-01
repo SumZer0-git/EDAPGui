@@ -53,7 +53,7 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * Default HUD colors must be used, if you changed those colors, this autopilot will not work
 * Borderless Elite Dangerous (ED) configuration required,  Windowed does not work due to how the screen is grabbed
 * Screen Resolution/scale X, Y:  The templates were captured on a 3440x1440 resolution/game configuration.  These need to be scaled
-  for different resolutions.  The _config-resolution.json_ file captures these resolutions with the corresponding ScaleX, Y values.  If a resolution is not defined
+  for different resolutions.  The _user_data/configs/resolution.json_ file captures these resolutions with the corresponding ScaleX, Y values.  If a resolution is not defined
   for your monitor the code will attempt to divide /3440  and /1440 to get the scale factor (not likely to be correct)
   ```
   * See docs/Calibration.md for details on how to calibrate EDAPGui for your system *
@@ -75,7 +75,7 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * The ELW Scanner may have issues for you, the screen region (defined in Screen_Region.py) isolates the region to where Earth, Water, and Ammonia
   signal would be present.  If using different resolution from 3440x1440 then this region will need to be adjusted for your resolution for
   proper detection
-* Must have required keybinding set for proper autopilot behavior.  See autopilot.log for any Warnings on missing key bindings
+* Must have required keybinding set for proper autopilot behavior.  See user_data/logs/autopilot.log for any Warnings on missing key bindings
 * If you jump into a system with 2 suns next to each other, will likely over heat and drop from Supercruise.
 * Have seen a few cases where after doing refueling, depending on ship acceleration, we don't get away from Sun far enough before engaging FSD
   and can over heat
@@ -141,7 +141,7 @@ The error is usually as a result of mss incompatibility. Try pip install mss==8.
 Once ED_AP is running there are few steps to complete the first time ED AP is run. These will help avoid common issues.
 1. Perform screen calibration, detailed [here](docs/Calibration.md). This will configure ED_AP for your screen resolution. Many issues can be avoided with correct calibration.
 2. Check and if necessary, change keybinding options, detailed below. Pay special attention that the Ins, Home, End and Pg Up are not used by ED as these are used by EDAP.
-3. Note: the autopilot.log file will capture any required keybindings that are not set.
+3. Note: the user_data/logs/autopilot.log file will capture any required keybindings that are not set.
 4. Select the correct ship file matching the ship you are flying, this will configure the pitch, roll and yaw rates to match. Depending on the ship, you may need to tune the values for best response a detailed [here](docs/RollPitchYaw.md).
 5. Perform an in-system test:
     * In ED, use Left Panel to select a local target.
@@ -263,11 +263,11 @@ The following keybindings are required by AP, so make sure a key is assigned to 
 * Pg Up - Start Robigo Assist
 * End  - Terminate any running assistants
 
-Hot keys are now configurable in the config-AP.json file, so you can remap them. Be sure not to use any keys you have mapped in ED.  You can find the key names here:
+Hot keys are now configurable in the user_data/configs/AP.json file, so you can remap them. Be sure not to use any keys you have mapped in ED.  You can find the key names here:
 https://pythonhosted.org/pynput/keyboard.html
 
-## Config File: config-AP.json
-The following settings from the AP.json file are **not** available through the GUI and must be changed directly within AP.json:
+## Config File: user_data/configs/AP.json
+The following settings from the AP.json file (created in `user_data/configs/` on first start) are **not** available through the GUI and must be changed directly within AP.json:
   ```py
     "Robigo_Single_Loop": False,   # True means only 1 loop will execute and then terminate upon docking, will not perform mission processing
     "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)

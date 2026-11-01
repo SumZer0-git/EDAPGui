@@ -1,5 +1,5 @@
 # Waypoints
-Waypoints are Systems that are captured in a waypoints.json file and read and processed by this Autopilot.  An example waypoint file is below:
+Waypoints are Systems that are captured in a waypoints.json file (in `user_data/waypoints/`, examples are in `data/waypoints/`) and read and processed by this Autopilot.  An example waypoint file is below:
 
 ```py
 {

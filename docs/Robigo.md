@@ -32,7 +32,7 @@
 ## Constraints:
 - This assists determines where you are in the loop and continues from there. If starting, best to jump to Robigo Mines and dock at the station to start
 - Odyssey only (due to unique Mission Selection and Mission Completion menus)
-  - However, if configure the config/AP.json to only do a single loop (Robigo_Single_Loop : True) then this Assist will work in Horizons
+  - However, if configure the user_data/configs/AP.json to only do a single loop (Robigo_Single_Loop : True) then this Assist will work in Horizons
     - The CMDR will have to manually complete and select missions, then re-engage the Robigo Assist
 - Set Nav Menu Filter to: Stations and POI only
     - Removes the clutter and allows faster selection of Robigo Mines and Sirius Atmos

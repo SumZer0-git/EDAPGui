@@ -1,3 +1,12 @@
+# Unreleased
+ - Important notice: Runtime files moved to the new `user_data/` folder. Existing users must manually copy `configs/AP.json`, `configs/ship_configs.json` and their own waypoint files from `waypoints/` into `user_data/configs/` and `user_data/waypoints/`.
+ - Changed config, waypoint and log files to be stored in `user_data/` (configs, waypoints, logs, debug output). The folder is created on first start.
+ - Changed reference files (`resolution.json` and the example waypoint files) to live in `data/` and be copied to `user_data/` when missing.
+ - Changed paths to be resolved relative to the project folder instead of the working directory.
+ - Changed log rotation to keep only the 10 newest rotated log files in `user_data/logs/`.
+ - Fixed rotated log files (`autopilot <date>.log`) not being excluded by `.gitignore`.
+ - Cleaned up `.gitignore`.
+
 # 8/19/2025 v1.7.0: General updates.
  - Changed all Parser files to UTF-8 format.
  - Fixed CARTOGRAPHICS detection.
