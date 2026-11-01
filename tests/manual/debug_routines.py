@@ -4,7 +4,7 @@ import os
 
 from ED_AP import EDAutopilot
 from vision.regions import *
-from Overlay import *
+from gui.overlay import *
 from vision.screen import *
 from vision.templates import *
 from time import sleep

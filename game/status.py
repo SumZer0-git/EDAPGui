@@ -9,7 +9,7 @@ from time import sleep
 
 from core.constants import *
 from core.logger import logger
-from Voice import Voice
+from integrations.voice import Voice
 from game.known_paths import *
 
 

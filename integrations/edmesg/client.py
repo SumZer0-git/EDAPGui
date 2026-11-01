@@ -1,6 +1,6 @@
 import threading
 
-from EDAP_EDMesg_Interface import (
+from integrations.edmesg.interface import (
     create_edap_client,
     LaunchAction,
     LaunchCompleteEvent,

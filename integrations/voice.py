@@ -13,7 +13,7 @@ from time import sleep
 #voiceEngine.setProperty('voice', voice.id)   id = 0, 1, ...
 
 """
-File:Voice.py    
+File:integrations/voice.py    
 
 Description:
   Class to enapsulate the Text to Speech package in python

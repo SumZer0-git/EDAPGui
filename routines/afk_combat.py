@@ -7,7 +7,7 @@ import win32gui
 from game.journal import *
 from controls.keys import *
 from core.logger import logger
-from Voice import *
+from integrations.voice import *
 
 """
 Description:  AFK Combat in Rez site (see Type 10 AFK videos).

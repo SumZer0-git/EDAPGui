@@ -3,6 +3,9 @@
  - Changed config, waypoint and log files to be stored in `user_data/` (configs, waypoints, logs, debug output). The folder is created on first start.
  - Changed reference files (`resolution.json` and the example waypoint files) to live in `data/` and be copied to `user_data/` when missing.
  - Changed paths to be resolved relative to the project folder instead of the working directory.
+ - Changed `EDWayPoint.py`, `Robigo.py` and `EDafk_combat.py` to live in the new `routines/` package as `routines/waypoints.py`, `routines/robigo.py` and `routines/afk_combat.py`.
+ - Changed `TCE_Integration.py`, `Voice.py` and the `EDAP_EDMesg_*.py` modules to live in the new `integrations/` package as `integrations/tce.py`, `integrations/voice.py` and `integrations/edmesg/{interface,client,server}.py`.
+ - Changed `Overlay.py` to `gui/overlay.py` and the `simple_localization/` package to `i18n/`.
  - Changed `EDNavigationPanel.py`, `EDInternalStatusPanel.py`, `EDGalaxyMap.py`, `EDSystemMap.py`, `EDStationServicesInShip.py` and `EDShipControl.py` to live in the new `panels/` package as `panels/navigation.py`, `panels/internal_status.py`, `panels/galaxy_map.py`, `panels/system_map.py`, `panels/station_services.py` and `panels/ship_control.py`.
  - Changed `EDJournal.py`, `StatusParser.py`, `CargoParser.py`, `MarketParser.py`, `NavRouteParser.py`, `EDGraphicsSettings.py` and `WindowsKnownPaths.py` to live in the new `game/` package as `game/journal.py`, `game/status.py`, `game/cargo.py`, `game/market.py`, `game/nav_route.py`, `game/graphics_settings.py` and `game/known_paths.py`.
  - Changed `EDKeys.py`, `directinput.py` and `MousePt.py` to live in the new `controls/` package as `controls/keys.py`, `controls/directinput.py` and `controls/mouse_point.py`.

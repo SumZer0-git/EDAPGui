@@ -11,7 +11,7 @@ from controls.mouse_point import MousePoint
 from pathlib import Path
 
 """
-File: EDWayPoint.py    
+File: routines/waypoints.py    
 
 Description:
    Class will load file called waypoints.json which contains a list of System name to jump to.
@@ -138,7 +138,7 @@ class EDWayPoint:
                 s = None
 
         except Exception as e:
-            logger.warning("EDWayPoint.py read_waypoints error :" + str(e))
+            logger.warning("routines/waypoints.py read_waypoints error :" + str(e))
 
         return s
 
@@ -149,7 +149,7 @@ class EDWayPoint:
             with open(filename, "w") as fp:
                 json.dump(data, fp, indent=4)
         except Exception as e:
-            logger.warning("EDWayPoint.py write_waypoints error:" + str(e))
+            logger.warning("routines/waypoints.py write_waypoints error:" + str(e))
 
     def save_waypoints(self):
         """ Save the current waypoints into the waypoints folder, using the name of the loaded file. """

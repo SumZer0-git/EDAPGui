@@ -8,7 +8,7 @@ import win32gui
 import win32ui
 
 """
-File:Overlay.py    
+File:gui/overlay.py    
 
 Description:
   Class to support drawing lines and text which would overlay the parent screen

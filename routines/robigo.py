@@ -13,14 +13,14 @@ from game.journal import *
 from controls.keys import *
 from core.logger import logger
 from vision.templates import *
-from Overlay import *
+from gui.overlay import *
 from vision.screen import *
-from Voice import *
+from integrations.voice import *
 '''
 
 
 """
-File:Robigo.py   
+File:routines/robigo.py   
 
 Description:
 This class contains the script required to execute the Robigo passenger mission loop

@@ -21,7 +21,7 @@ from tkinter import messagebox
 from tkinter import ttk
 from idlelib.tooltip import Hovertip
 
-from Voice import *
+from integrations.voice import *
 from controls.mouse_point import MousePoint
 from core import paths
 
