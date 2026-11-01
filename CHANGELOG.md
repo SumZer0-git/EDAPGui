@@ -1,5 +1,6 @@
 # Unreleased
  - Important notice: Runtime files moved to the new `user_data/` folder. Existing users must manually copy `configs/AP.json`, `configs/ship_configs.json` and their own waypoint files from `waypoints/` into `user_data/configs/` and `user_data/waypoints/`.
+ - Removed the unused EDMesg integration, its bundled library, configuration settings and dependencies.
  - Removed the obsolete ELW scanner, its FSS automation, GUI option, configuration, vision templates, and documentation.
  - Removed the obsolete Robigo passenger-mission assist, its GUI controls and configuration, dedicated vision templates, and documentation.
  - Added `core/version.py` as the single place for the application version (still 1.7.0); the window title and log read it from there.

@@ -26,7 +26,6 @@ from game.nav_route import NavRouteParser
 from game.status import StatusParser
 from gui.overlay import Overlay
 from i18n import LocalizationManager
-from integrations.edmesg.server import EDMesgServer
 from integrations.tce import TceIntegration
 from integrations.voice import Voice
 from panels.galaxy_map import EDGalaxyMap
@@ -87,9 +86,6 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
             "FCDepartureTime": 5.0,  # Extra time to fly away from a Fleet Carrier
             "Language": "en",  # Language (matching assets/locales/xx.json file)
             "OCRLanguage": "en",  # Language for OCR detection (see OCR language doc in \docs)
-            "EnableEDMesg": False,
-            "EDMesgActionsPort": 15570,
-            "EDMesgEventsPort": 15571,
             "DebugOverlay": False,
         }
         # NOTE!!! When adding a new config value above, add the same after read_config() to set
@@ -131,17 +127,14 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 cnf["Language"] = "en"
             if "OCRLanguage" not in cnf:
                 cnf["OCRLanguage"] = "en"
-            if "EnableEDMesg" not in cnf:
-                cnf["EnableEDMesg"] = False
-            if "EDMesgActionsPort" not in cnf:
-                cnf["EDMesgActionsPort"] = 15570
-            if "EDMesgEventsPort" not in cnf:
-                cnf["EDMesgEventsPort"] = 15571
             if "DebugOverlay" not in cnf:
                 cnf["DebugOverlay"] = False
             cnf.pop("HotKey_StartRobigo", None)
             cnf.pop("Robigo_Single_Loop", None)
             cnf.pop("ElwScannerEnable", None)
+            cnf.pop("EnableEDMesg", None)
+            cnf.pop("EDMesgActionsPort", None)
+            cnf.pop("EDMesgEventsPort", None)
             self.config = cnf
             logger.debug("read AP json:" + str(cnf))
         else:
@@ -211,12 +204,6 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
         self.system_map = EDSystemMap(self, self.scr, self.keys, cb, self.jn.ship_state()["odyssey"])
         self.stn_svcs_in_ship = EDStationServicesInShip(self, self.scr, self.keys, cb)
         self.nav_panel = EDNavigationPanel(self, self.scr, self.keys, cb)
-
-        self.mesg_server = EDMesgServer(self, cb)
-        self.mesg_server.actions_port = self.config["EDMesgActionsPort"]
-        self.mesg_server.events_port = self.config["EDMesgEventsPort"]
-        if self.config["EnableEDMesg"]:
-            self.mesg_server.start_server()
 
         # rate as ship dependent. Can be found on the outfitting page for the ship. However, it looks like supercruise
         # has worse performance for these rates

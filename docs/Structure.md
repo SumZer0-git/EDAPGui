@@ -49,7 +49,6 @@ src/                    All program code (this is the import root; run the progr
 
   integrations/           Connections to things outside the game
     voice.py, tce.py        Voice output, Trade Computer Extension
-    edmesg/                 EDMesg interface, client and server (the EDMesg library itself is in third_party/)
 
   gui/                    Tkinter user interface
     main_window.py          Main window and its callbacks
@@ -68,7 +67,6 @@ data/                   Reference files that are copied to user_data/ when missi
 
 user_data/              Created at runtime, not in git: configs/, waypoints/, logs/, debug/
 docs/                   Documentation (screenshots in docs/screenshots/)
-third_party/           Unmodified third-party libraries (EDMesg). Not linted; added to the import path by integrations/edmesg/__init__.py
 tests/                  Unit tests (tests/test_*.py), fixtures/ for test images,
                         integration/ for tests that need the running game (set EDAP_INTEGRATION=1),
                         manual/ for debug tools
@@ -79,7 +77,7 @@ tests/                  Unit tests (tests/test_*.py), fixtures/ for test images,
 
 - File and folder names are lowercase `snake_case`; the only exceptions are root files like `README.md`, `CHANGELOG.md` and `LICENSE`.
 - Do not put new Python modules into the project root. Every module belongs into one of the packages in `src/`.
-- Imports are relative to `src/` (for example `from core.logger import logger`). Do not edit files in `third_party/`.
+- Imports are relative to `src/` (for example `from core.logger import logger`).
 - Paths come from `core/paths.py`. Files the program writes go to `user_data/`, never next to the code.
 - Dependencies point downwards: `gui` and `routines` may use `panels`, `vision`, `controls`, `game` and `core`; `core`, `vision`, `controls` and `game` must not import from `gui` or `routines`. Import `core.autopilot` only inside a function if you need the autopilot from a lower layer, to avoid circular imports.
 - New tests go to `tests/`. Tests that need the running game go to `tests/integration/`.
