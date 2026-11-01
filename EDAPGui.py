@@ -29,7 +29,7 @@ from vision.templates import *
 from vision.screen import *
 from vision.regions import *
 from controls.keys import *
-from EDJournal import *
+from game.journal import *
 from ED_AP import *
 
 from core.logger import logger

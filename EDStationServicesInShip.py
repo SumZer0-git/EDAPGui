@@ -3,10 +3,10 @@ from __future__ import annotations
 import cv2
 
 import ED_AP
-from MarketParser import MarketParser
+from game.market import MarketParser
 from vision.ocr import OCR
 from vision.regions import reg_scale_for_station, size_scale_for_station
-from StatusParser import StatusParser
+from game.status import StatusParser
 from time import sleep
 from core.logger import logger
 

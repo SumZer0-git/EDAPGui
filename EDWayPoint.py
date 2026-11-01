@@ -1,12 +1,12 @@
 from __future__ import annotations
 from time import sleep
-from CargoParser import CargoParser
+from game.cargo import CargoParser
 from core.constants import *
 from controls.keys import EDKeys
 from core.logger import logger
 import json
 from core import paths
-from MarketParser import MarketParser
+from game.market import MarketParser
 from controls.mouse_point import MousePoint
 from pathlib import Path
 

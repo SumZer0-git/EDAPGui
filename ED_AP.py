@@ -12,7 +12,7 @@ from simple_localization import LocalizationManager
 
 from EDAP_EDMesg_Server import EDMesgServer
 from EDGalaxyMap import EDGalaxyMap
-from EDGraphicsSettings import EDGraphicsSettings
+from game.graphics_settings import EDGraphicsSettings
 from EDShipControl import EDShipControl
 from EDStationServicesInShip import EDStationServicesInShip
 from EDSystemMap import EDSystemMap
@@ -21,15 +21,15 @@ import vision.templates
 import vision.screen
 import vision.regions
 from EDWayPoint import *
-from EDJournal import *
+from game.journal import *
 from controls.keys import *
 from EDafk_combat import AFK_Combat
 from EDInternalStatusPanel import EDInternalStatusPanel
-from NavRouteParser import NavRouteParser
+from game.nav_route import NavRouteParser
 from vision.ocr import OCR
 from EDNavigationPanel import EDNavigationPanel
 from Overlay import *
-from StatusParser import StatusParser
+from game.status import StatusParser
 from Voice import *
 from Robigo import *
 from TCE_Integration import TceIntegration

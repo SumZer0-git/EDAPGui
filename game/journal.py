@@ -9,10 +9,10 @@ from datetime import datetime
 
 from core.constants import ship_size_map, ship_name_map
 from core.logger import logger
-from WindowsKnownPaths import *
+from game.known_paths import *
 
 """
-File EDJournal.py  (leveraged the EDAutopilot on github, turned into a 
+File game/journal.py  (leveraged the EDAutopilot on github, turned into a 
                    class and enhanced, see https://github.com/skai2/EDAutopilot
 
 Description: This file perform journal file processing.  It opens the latest updated Journal* 

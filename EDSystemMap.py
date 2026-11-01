@@ -4,7 +4,7 @@ from core.constants import GuiFocusSystemMap
 from core.logger import logger
 from vision.ocr import OCR
 from vision.regions import reg_scale_for_station
-from StatusParser import StatusParser
+from game.status import StatusParser
 from time import sleep
 
 

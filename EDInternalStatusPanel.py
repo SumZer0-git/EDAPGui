@@ -9,7 +9,7 @@ from controls.keys import EDKeys
 from vision.ocr import OCR
 from vision.screen import Screen
 from vision.regions import size_scale_for_station
-from StatusParser import StatusParser
+from game.status import StatusParser
 from core.logger import logger
 
 

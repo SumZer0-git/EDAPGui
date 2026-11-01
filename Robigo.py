@@ -9,7 +9,7 @@ import win32gui
 
 import vision.regions
 from ED_AP import *
-from EDJournal import *
+from game.journal import *
 from controls.keys import *
 from core.logger import logger
 from vision.templates import *

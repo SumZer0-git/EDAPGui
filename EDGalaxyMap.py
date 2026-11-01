@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from core.constants import GuiFocusGalaxyMap
 from vision.regions import reg_scale_for_station
-from StatusParser import StatusParser
+from game.status import StatusParser
 from time import sleep
 from core.logger import logger
 from pyautogui import typewrite

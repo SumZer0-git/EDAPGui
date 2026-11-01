@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from core.constants import *
 from vision.ocr import OCR
-from StatusParser import StatusParser
+from game.status import StatusParser
 
 
 class EDShipControl:
