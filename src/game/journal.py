@@ -127,6 +127,7 @@ class EDJournal:
             "no_dock_reason": None,
             "mission_completed": 0,
             "mission_redirected": 0,
+            "discovery_scans": 0,
             "body": None,
             "dist_jumped": 0,
             "jumps_remains": 0,
@@ -203,6 +204,9 @@ class EDJournal:
 
             elif log_event == "FighterDestroyed":
                 self.ship["fighter_destroyed"] = True
+
+            elif log_event == "FSSDiscoveryScan":
+                self.ship["discovery_scans"] += 1
 
             elif log_event == "MissionCompleted":
                 self.ship["mission_completed"] = self.ship["mission_completed"] + 1
