@@ -198,6 +198,7 @@ class APGui:
         # check for updates
         self.check_updates(manual=False)
         self.gui_loaded = True
+        self.ed_ap.gui_loaded = True
         # Send a log entry which will flush out the buffer.
         self.callback("log", "ED Autopilot loaded successfully.")
 
