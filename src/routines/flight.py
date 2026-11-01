@@ -471,28 +471,38 @@ class FlightMixin:
         self.nav_align(scr_reg)
         self.keys.send("SetSpeed50")
 
-    def honk(self):
-        # Do the Discovery Scan (Honk)
+    def honk(self, max_attempts=3, attempt_timeout=10):
+        """Do the Discovery Scan (Honk). The scan counts as done when the journal reports
+        FSSDiscoveryScan; otherwise it is retried up to max_attempts times."""
 
-        if self.status.get_flag(FlagsAnalysisMode):
-            if self.config["DSSButton"] == "Primary":
-                logger.debug("position=scanning")
-                self.keys.send("PrimaryFire", state=1)
-            else:
-                logger.debug("position=scanning")
-                self.keys.send("SecondaryFire", state=1)
-
-            sleep(7)  # roughly 6 seconds for DSS
-
-            # stop pressing the Scanner button
-            if self.config["DSSButton"] == "Primary":
-                logger.debug("position=scanning complete")
-                self.keys.send("PrimaryFire", state=0)
-            else:
-                logger.debug("position=scanning complete")
-                self.keys.send("SecondaryFire", state=0)
-        else:
+        if not self.status.get_flag(FlagsAnalysisMode):
             self.ap_ckb("log", "Not in analysis mode. Skipping discovery scan (honk).")
+            return False
+
+        fire = "PrimaryFire" if self.config["DSSButton"] == "Primary" else "SecondaryFire"
+        scans_before = self.jn.ship_state()["discovery_scans"]
+
+        for attempt in range(1, max_attempts + 1):
+            logger.debug(f"position=scanning, attempt {attempt}/{max_attempts}")
+            try:
+                # Hold the button until the journal reports the finished scan.
+                self.keys.send(fire, state=1)
+                end_time = time.time() + attempt_timeout
+                while time.time() < end_time:
+                    sleep(0.25)
+                    if self.jn.ship_state()["discovery_scans"] > scans_before:
+                        logger.debug("position=scanning complete")
+                        return True
+            finally:
+                self.keys.send(fire, state=0)
+
+            self.ap_ckb("log", f"Discovery scan not confirmed (attempt {attempt}/{max_attempts}).")
+            if not self.status.get_flag(FlagsAnalysisMode):
+                break
+            sleep(1)
+
+        self.ap_ckb("log", "Discovery scan could not be confirmed.")
+        return False
 
     def logout(self):
         """Performs menu action to log out of game"""
