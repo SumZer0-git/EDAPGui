@@ -4,7 +4,10 @@ import logging
 import os
 from pathlib import Path
 
-_filename = 'autopilot.log'
+import paths
+
+_filename = paths.LOG_FILE
+_MAX_ROTATED_LOGS = 10
 
 # Rename existing log file to create new one.
 if os.path.exists(_filename):
@@ -12,7 +15,15 @@ if os.path.exists(_filename):
     t = os.path.getmtime(_filename)
     v = datetime.datetime.fromtimestamp(t)
     x = v.strftime('%Y-%m-%d %H-%M-%S')
-    os.rename(_filename, f"{filename_only} {x}.log")
+    os.rename(_filename, paths.LOG_DIR / f"{filename_only} {x}.log")
+
+# Keep only the newest rotated log files.
+_rotated = sorted(paths.LOG_DIR.glob(f"{Path(_filename).stem} ????-??-?? ??-??-??.log"))
+for _old in _rotated[:-_MAX_ROTATED_LOGS]:
+    try:
+        _old.unlink()
+    except OSError:
+        pass
 
 # Define the logging config.
 logging.basicConfig(filename=_filename, level=logging.ERROR,

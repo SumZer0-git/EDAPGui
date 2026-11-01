@@ -7,6 +7,7 @@ from tkinter import messagebox
 
 import cv2
 
+import paths
 from simple_localization import LocalizationManager
 
 from EDAP_EDMesg_Server import EDMesgServer
@@ -160,7 +161,7 @@ class EDAutopilot:
             self.write_config(self.config)
 
         # Load selected language
-        self.locale = LocalizationManager('locales', self.config['Language'])
+        self.locale = LocalizationManager(str(paths.LOCALES_DIR), self.config['Language'])
 
         shp_cnf = self.read_ship_configs()
         # if we read it then point to it, otherwise use the default table above
@@ -287,7 +288,7 @@ class EDAutopilot:
 
     # Loads the configuration file
     #
-    def read_config(self, fileName='./configs/AP.json'):
+    def read_config(self, fileName=paths.AP_CONFIG):
         s = None
         try:
             with open(fileName, "r") as fp:
@@ -300,14 +301,14 @@ class EDAutopilot:
     def update_config(self):
         self.write_config(self.config)
 
-    def write_config(self, data, fileName='./configs/AP.json'):
+    def write_config(self, data, fileName=paths.AP_CONFIG):
         try:
             with open(fileName, "w") as fp:
                 json.dump(data, fp, indent=4)
         except Exception as e:
             logger.warning("EDAPGui.py write_config error:"+str(e))
 
-    def read_ship_configs(self, filename='./configs/ship_configs.json'):
+    def read_ship_configs(self, filename=paths.SHIP_CONFIGS):
         """ Read the user's ship configuration file."""
         s = None
         try:
@@ -336,7 +337,7 @@ class EDAutopilot:
             self.write_ship_configs(self.ship_configs)
             logger.debug(f"Saved ship config for: {self.current_ship_type}")
 
-    def write_ship_configs(self, data, filename='./configs/ship_configs.json'):
+    def write_ship_configs(self, data, filename=paths.SHIP_CONFIGS):
         """ Write the user's ship configuration file."""
         try:
             with open(filename, "w") as fp:

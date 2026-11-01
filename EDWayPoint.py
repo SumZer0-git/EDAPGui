@@ -5,6 +5,7 @@ from EDAP_data import *
 from EDKeys import EDKeys
 from EDlogger import logger
 import json
+import paths
 from MarketParser import MarketParser
 from MousePt import MousePoint
 from pathlib import Path
@@ -24,7 +25,7 @@ class EDWayPoint:
     def __init__(self, ed_ap, is_odyssey=True):
         self.ap = ed_ap
         self.is_odyssey = is_odyssey
-        self.filename = './waypoints.json'
+        self.filename = str(paths.WAYPOINTS_DIR / 'waypoints.json')
         self.stats_log = {'Colonisation': 0, 'Construction': 0, 'Fleet Carrier': 0, 'Station': 0}
         self.waypoints = {}
         #  { "Ninabin": {"DockWithTarget": false, "TradeSeq": None, "Completed": false} }
@@ -66,7 +67,7 @@ class EDWayPoint:
         self.ap.ap_ckb('log', f"Waypoint file is invalid. Check log file for details.")
         return False
 
-    def read_waypoints(self, filename='./waypoints/waypoints.json'):
+    def read_waypoints(self, filename=paths.WAYPOINTS_DIR / 'waypoints.json'):
         s = None
         try:
             with open(filename, "r") as fp:
@@ -141,7 +142,7 @@ class EDWayPoint:
 
         return s
 
-    def write_waypoints(self, data, filename='./waypoints/waypoints.json'):
+    def write_waypoints(self, data, filename=paths.WAYPOINTS_DIR / 'waypoints.json'):
         if data is None:
             data = self.waypoints
         try:
@@ -150,9 +151,13 @@ class EDWayPoint:
         except Exception as e:
             logger.warning("EDWayPoint.py write_waypoints error:" + str(e))
 
+    def save_waypoints(self):
+        """ Save the current waypoints into the waypoints folder, using the name of the loaded file. """
+        self.write_waypoints(data=None, filename=paths.WAYPOINTS_DIR / Path(self.filename).name)
+
     def mark_waypoint_complete(self, key):
         self.waypoints[key]['Completed'] = True
-        self.write_waypoints(data=None, filename='./waypoints/' + Path(self.filename).name)
+        self.save_waypoints()
 
     def get_waypoint(self) -> tuple[str, dict] | tuple[None, None]:
         """ Returns the next waypoint list or None if we are at the end of the waypoints.
@@ -196,7 +201,7 @@ class EDWayPoint:
                 # Or log a warning if the structure is unexpected
                 logger.warning(f"Waypoint {tkey} missing 'Completed' key during reset.")
             self.step = 0
-        self.write_waypoints(data=None, filename='./waypoints/' + Path(self.filename).name)
+        self.save_waypoints()
         self.log_stats()
 
     def log_stats(self):
@@ -333,7 +338,7 @@ class EDWayPoint:
                         sell_commodities[key] = sell_commodities[key] - qty
 
                 # Save changes
-                self.write_waypoints(data=None, filename='./waypoints/' + Path(self.filename).name)
+                self.save_waypoints()
 
             sleep(1)
 
@@ -399,7 +404,7 @@ class EDWayPoint:
                         global_buy_commodities[key] = qty_to_buy - qty
 
                 # Save changes
-                self.write_waypoints(data=None, filename='./waypoints/' + Path(self.filename).name)
+                self.save_waypoints()
 
             sleep(1.5)  # give time to popdown
             # Go to ship view

@@ -23,6 +23,7 @@ from idlelib.tooltip import Hovertip
 
 from Voice import *
 from MousePt import MousePoint
+import paths
 
 from Image_Templates import *
 from Screen import *
@@ -453,7 +454,7 @@ class APGui():
         webbrowser.open_new("https://discord.gg/HCgkfSc")
 
     def open_logfile(self):
-        os.startfile('autopilot.log')
+        os.startfile(paths.LOG_FILE)
 
     def log_msg(self, msg):
         message = datetime.now().strftime("%H:%M:%S: ") + msg
@@ -495,7 +496,7 @@ class APGui():
             ('json files', '*.json'),
             ('All files', '*.*')
         )
-        filename = fd.askopenfilename(title="Waypoint File", initialdir='./waypoints/', filetypes=filetypes)
+        filename = fd.askopenfilename(title="Waypoint File", initialdir=paths.WAYPOINTS_DIR, filetypes=filetypes)
         if filename != "":
             res = self.ed_ap.waypoint.load_waypoint_file(filename)
             if res:

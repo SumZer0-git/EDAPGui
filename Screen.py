@@ -7,6 +7,7 @@ from numpy import array
 import mss
 import json
 
+import paths
 from EDlogger import logger
 
 
@@ -156,7 +157,7 @@ class Screen:
         else:
             return False
 
-    def write_config(self, data, fileName='./configs/resolution.json'):
+    def write_config(self, data, fileName=paths.RESOLUTION_CONFIG):
         if data is None:
             data = self.scales
         try:
@@ -165,7 +166,7 @@ class Screen:
         except Exception as e:
             logger.warning("Screen.py write_config error:"+str(e))
 
-    def read_config(self, fileName='./configs/resolution.json'):
+    def read_config(self, fileName=paths.RESOLUTION_CONFIG):
         s = None
         try:
             with open(fileName,"r") as fp:

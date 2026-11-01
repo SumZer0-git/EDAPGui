@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from time import sleep
 import cv2
+import paths
 from EDAP_data import *
 from EDKeys import EDKeys
 from OCR import OCR
@@ -48,7 +49,7 @@ class EDInternalStatusPanel:
         if active:
             # Store image
             image = self.screen.get_screen_full()
-            cv2.imwrite(f'test/internal-panel/int_panel_full.png', image)
+            cv2.imwrite(paths.debug_path('internal-panel', 'int_panel_full.png'), image)
             return active, active_tab_name
         else:
             print("Open Internal Panel")
@@ -66,7 +67,7 @@ class EDInternalStatusPanel:
             if active:
                 # Store image
                 image = self.screen.get_screen_full()
-                cv2.imwrite(f'test/internal-panel/internal_panel_full.png', image)
+                cv2.imwrite(paths.debug_path('internal-panel', 'internal_panel_full.png'), image)
                 return active, active_tab_name
             else:
                 return False, ""

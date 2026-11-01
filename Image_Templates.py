@@ -2,6 +2,7 @@ import sys
 from os.path import abspath, getmtime, isfile, join, dirname
 
 import cv2
+import paths
 from EDlogger import logger
 
 """
@@ -66,7 +67,7 @@ class Image_Templates:
         #except Exception:
             #base_path = abspath(".")
 
-        base_path = abspath(".")
+        base_path = paths.ROOT
         return join(base_path, relative_path)
 
  
