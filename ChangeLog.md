@@ -3,6 +3,7 @@
  - Changed config, waypoint and log files to be stored in `user_data/` (configs, waypoints, logs, debug output). The folder is created on first start.
  - Changed reference files (`resolution.json` and the example waypoint files) to live in `data/` and be copied to `user_data/` when missing.
  - Changed paths to be resolved relative to the project folder instead of the working directory.
+ - Changed `paths.py`, `EDlogger.py` and `EDAP_data.py` to live in the new `core/` package as `core/paths.py`, `core/logger.py` and `core/constants.py`.
  - Changed log rotation to keep only the 10 newest rotated log files in `user_data/logs/`.
  - Fixed rotated log files (`autopilot <date>.log`) not being excluded by `.gitignore`.
  - Cleaned up `.gitignore`.

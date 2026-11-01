@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from EDAP_data import GuiFocusGalaxyMap
+from core.constants import GuiFocusGalaxyMap
 from Screen_Regions import reg_scale_for_station
 from StatusParser import StatusParser
 from time import sleep
-from EDlogger import logger
+from core.logger import logger
 from pyautogui import typewrite
 
 

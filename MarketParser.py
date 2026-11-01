@@ -6,7 +6,7 @@ import time
 from operator import itemgetter
 from sys import platform
 from time import sleep
-from EDlogger import logger
+from core.logger import logger
 
 
 class MarketParser:

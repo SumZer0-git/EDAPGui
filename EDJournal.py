@@ -7,8 +7,8 @@ from json import loads
 from time import sleep, time
 from datetime import datetime
 
-from EDAP_data import ship_size_map, ship_name_map
-from EDlogger import logger
+from core.constants import ship_size_map, ship_name_map
+from core.logger import logger
 from WindowsKnownPaths import *
 
 """

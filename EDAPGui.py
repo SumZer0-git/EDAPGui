@@ -23,7 +23,7 @@ from idlelib.tooltip import Hovertip
 
 from Voice import *
 from MousePt import MousePoint
-import paths
+from core import paths
 
 from Image_Templates import *
 from Screen import *
@@ -32,7 +32,7 @@ from EDKeys import *
 from EDJournal import *
 from ED_AP import *
 
-from EDlogger import logger
+from core.logger import logger
 
 
 """

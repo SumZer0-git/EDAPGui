@@ -7,8 +7,8 @@ from paddleocr import PaddleOCR
 from strsimpy import SorensenDice
 from strsimpy.jaro_winkler import JaroWinkler
 
-import paths
-from EDlogger import logger
+from core import paths
+from core.logger import logger
 
 """
 File:OCR.py    

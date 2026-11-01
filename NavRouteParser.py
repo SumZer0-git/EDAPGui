@@ -5,7 +5,7 @@ import os
 import time
 from sys import platform
 from time import sleep
-from EDlogger import logger
+from core.logger import logger
 
 
 class NavRouteParser:

@@ -2,7 +2,7 @@ import os
 import sqlite3
 from typing import Union, Any, final
 
-from EDlogger import logger
+from core.logger import logger
 
 
 @final

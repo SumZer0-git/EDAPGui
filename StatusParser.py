@@ -7,8 +7,8 @@ from sys import platform
 import threading
 from time import sleep
 
-from EDAP_data import *
-from EDlogger import logger
+from core.constants import *
+from core.logger import logger
 from Voice import Voice
 from WindowsKnownPaths import *
 
@@ -330,7 +330,7 @@ class StatusParser:
 
     def get_gui_focus(self) -> int:
         """ Gets the value of the GUI Focus flag.
-        The Flag constants are defined in 'EDAP_data.py'.
+        The Flag constants are defined in 'core/constants.py'.
         """
         self.get_cleaned_data()
         return self.current_data.get('GuiFocus', 0)
@@ -338,7 +338,7 @@ class StatusParser:
     def wait_for_gui_focus(self, gui_focus_flag: int, timeout: float = 15) -> bool:
         """ Waits for the GUI Focus flag to change to the provided value.
         Returns True if the flag turns true or False on a time-out.
-        The Flag constants are defined in 'EDAP_data.py'.
+        The Flag constants are defined in 'core/constants.py'.
         @param timeout: Timeout in seconds.
         @param gui_focus_flag: The flag to check for.
         """
@@ -353,7 +353,7 @@ class StatusParser:
     def wait_for_flag_on(self, flag: int, timeout: float = 15) -> bool:
         """ Waits for the of the selected flag to turn true.
         Returns True if the flag turns true or False on a time-out.
-        The Flag constants are defined in 'EDAP_data.py'.
+        The Flag constants are defined in 'core/constants.py'.
         @param timeout: Timeout in seconds.
         @param flag: The flag to check for.
         """
@@ -370,7 +370,7 @@ class StatusParser:
     def wait_for_flag_off(self, flag: int, timeout: float = 15) -> bool:
         """ Waits for the of the selected flag to turn false.
         Returns True if the flag turns false or False on a time-out.
-        The Flag constants are defined in 'EDAP_data.py'.
+        The Flag constants are defined in 'core/constants.py'.
         @param timeout: Timeout in seconds.
         @param flag: The flag to check for.
         """
@@ -387,7 +387,7 @@ class StatusParser:
     def wait_for_flag2_on(self, flag: int, timeout: float = 15) -> bool:
         """ Waits for the of the selected flag to turn true.
         Returns True if the flag turns true or False on a time-out.
-        The Flag constants are defined in 'EDAP_data.py'.
+        The Flag constants are defined in 'core/constants.py'.
         @param timeout: Timeout in seconds.
         @param flag: The flag to check for.
         """
@@ -407,7 +407,7 @@ class StatusParser:
     def wait_for_flag2_off(self, flag: int, timeout: float = 15) -> bool:
         """ Waits for the of the selected flag to turn false.
         Returns True if the flag turns false or False on a time-out.
-        The Flag constants are defined in 'EDAP_data.py'.
+        The Flag constants are defined in 'core/constants.py'.
         @param timeout: Timeout in seconds.
         @param flag: The flag to check for.
         """
@@ -426,7 +426,7 @@ class StatusParser:
 
     def get_flag(self, flag: int) -> bool:
         """ Gets the value of the selected flag.
-        The Flag constants are defined in 'EDAP_data.py'.
+        The Flag constants are defined in 'core/constants.py'.
         @param flag: The flag to check for.
         """
         self.get_cleaned_data()
@@ -434,7 +434,7 @@ class StatusParser:
 
     def get_flag2(self, flag: int) -> bool:
         """ Gets the value of the selected flag2.
-        The Flag2 constants are defined in 'EDAP_data.py'.
+        The Flag2 constants are defined in 'core/constants.py'.
         @param flag: The flag to check for.
         """
         self.get_cleaned_data()

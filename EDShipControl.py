@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from EDAP_data import *
+from core.constants import *
 from OCR import OCR
 from StatusParser import StatusParser
 

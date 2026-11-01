@@ -7,7 +7,7 @@ from MarketParser import MarketParser
 from OCR import OCR
 from StatusParser import StatusParser
 from time import sleep
-from EDlogger import logger
+from core.logger import logger
 from Screen_Regions import reg_scale_for_station, size_scale_for_station
 
 """

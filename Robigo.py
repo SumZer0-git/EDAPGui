@@ -11,7 +11,7 @@ import Screen_Regions
 from ED_AP import *
 from EDJournal import *
 from EDKeys import *
-from EDlogger import logger
+from core.logger import logger
 from Image_Templates import *
 from Overlay import *
 from Screen import *

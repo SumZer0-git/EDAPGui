@@ -7,7 +7,7 @@ from tkinter import messagebox
 
 import cv2
 
-import paths
+from core import paths
 from simple_localization import LocalizationManager
 
 from EDAP_EDMesg_Server import EDMesgServer
@@ -16,7 +16,7 @@ from EDGraphicsSettings import EDGraphicsSettings
 from EDShipControl import EDShipControl
 from EDStationServicesInShip import EDStationServicesInShip
 from EDSystemMap import EDSystemMap
-from EDlogger import logging
+from core.logger import logging
 import Image_Templates
 import Screen
 import Screen_Regions

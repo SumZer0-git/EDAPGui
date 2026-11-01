@@ -1,11 +1,11 @@
 from __future__ import annotations
 from time import sleep
 from CargoParser import CargoParser
-from EDAP_data import *
+from core.constants import *
 from EDKeys import EDKeys
-from EDlogger import logger
+from core.logger import logger
 import json
-import paths
+from core import paths
 from MarketParser import MarketParser
 from MousePt import MousePoint
 from pathlib import Path

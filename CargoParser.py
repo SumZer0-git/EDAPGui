@@ -8,7 +8,7 @@ import queue
 from sys import platform
 import threading
 from time import sleep
-from EDlogger import logger
+from core.logger import logger
 from WindowsKnownPaths import *
 
 

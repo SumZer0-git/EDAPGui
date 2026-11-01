@@ -13,7 +13,7 @@ import xmltodict
 
 from Screen import set_focus_elite_window
 from directinput import *
-from EDlogger import logger
+from core.logger import logger
 
 """
 Description:  Pulls the keybindings for specific controls from the ED Key Bindings file, this class also

@@ -7,8 +7,8 @@ from numpy import array
 import mss
 import json
 
-import paths
-from EDlogger import logger
+from core import paths
+from core.logger import logger
 
 
 """

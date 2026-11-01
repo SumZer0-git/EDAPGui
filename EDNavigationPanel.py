@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 from time import sleep
 
-from EDAP_data import GuiFocusExternalPanel
+from core.constants import GuiFocusExternalPanel
 from EDKeys import EDKeys
-from EDlogger import logger
+from core.logger import logger
 from OCR import OCR
 from Screen import Screen
 from Screen_Regions import size_scale_for_station

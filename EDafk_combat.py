@@ -6,7 +6,7 @@ import win32gui
 
 from EDJournal import *
 from EDKeys import *
-from EDlogger import logger
+from core.logger import logger
 from Voice import *
 
 """

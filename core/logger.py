@@ -4,7 +4,7 @@ import logging
 import os
 from pathlib import Path
 
-import paths
+from core import paths
 
 _filename = paths.LOG_FILE
 _MAX_ROTATED_LOGS = 10

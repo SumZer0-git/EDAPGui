@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from EDAP_data import GuiFocusSystemMap
-from EDlogger import logger
+from core.constants import GuiFocusSystemMap
+from core.logger import logger
 from OCR import OCR
 from Screen_Regions import reg_scale_for_station
 from StatusParser import StatusParser
