@@ -1,4 +1,5 @@
 /__pycache__
+/venv
 /hold
 /notes
 /tst
@@ -17,3 +18,4 @@
 .idea/
 EDMesg/__pycache__/
 simple_localization/__pycache__/
+configs/ship_configs.json
