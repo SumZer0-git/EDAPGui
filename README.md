@@ -1,5 +1,4 @@
 See [ChangeLog](/CHANGELOG.md) for latest updates.<br>
-Join discord if need support or wish to provide inputs on new features:  https://discord.gg/HCgkfSc
 <br>
 
 # ED Autopilot Main Features
@@ -44,7 +43,7 @@ of Elite Dangerous, it is an external-ED construct (similar to us commanders)
   ```
 
 Note: this autopilot is based on https://github.com/skai2/EDAutopilot , some of the routines were used and turned into classes and tweaks were done on sequences
- and how image matching was performed.   Kudo's to skai2mail@gmail.com
+ and how image matching was performed.   Kudo's to skai2 (https://github.com/skai2), the original author.
  
 Also Note: This repository is provided for educational purposes as a in depth programming example of interacting with file based data, computer vision processing, user feedback via voice, win32 integration using python, threading interaction, and python classes.  
 
@@ -297,11 +296,6 @@ Use at your own risk.  Have performed over 2000 FSD jumps with this autopilot an
 about 6 times due to jumping into a system that had 2 suns next to each other and pretty much the ship overheated
 and dropped out of supercruise.   The ship did not get destroyed but had to use a heat sink to get out of the
 situation
-
-# Email Contact
-
-sumzer0@yahoo.com
-
 
 # Screen Shots
 ![Alt text](docs/screenshots/screen_cap_main.png?raw=true "Main Tab")

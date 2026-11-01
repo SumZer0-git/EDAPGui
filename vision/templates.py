@@ -11,7 +11,7 @@ File:Image_Templates.py
 Description:
   Class defines template images that will be used with opencv to match in screen regions
 
-Author: sumzer0@yahoo.com
+Author: SumZer0
 """
 
 class Image_Templates:

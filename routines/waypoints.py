@@ -17,7 +17,7 @@ Description:
    Class will load file called waypoints.json which contains a list of System name to jump to.
    Provides methods to select a waypoint pass into it.  
 
-Author: sumzer0@yahoo.com
+Author: SumZer0
 """
 
 

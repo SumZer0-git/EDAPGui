@@ -13,7 +13,7 @@ File:gui/overlay.py
 Description:
   Class to support drawing lines and text which would overlay the parent screen
 
-Author: sumzer0@yahoo.com
+Author: SumZer0
 
 to use:
 ov = Overlay("")

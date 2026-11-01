@@ -10,7 +10,7 @@ Description:
   Class to rectangle areas of the screen to capture along with filters to apply. Includes functions to
   match a image template to the region using opencv 
 
-Author: sumzer0@yahoo.com
+Author: SumZer0
 """
 
 

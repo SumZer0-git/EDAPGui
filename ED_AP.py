@@ -42,7 +42,7 @@ Description:
 Note:
 Ideas taken from: https://github.com/skai2/EDAutopilot
 
-Author: sumzer0@yahoo.com
+Author: SumZer0
 """
 
 

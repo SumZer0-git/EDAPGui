@@ -34,7 +34,7 @@ Constraints:
     - Removes the clutter and allows faster selection of Robigo Mines and Sirius Athmos
 - Set refuelthreshold low.. like 35%  so not attempt refuel with a ship that doesn't have fuel scoop
 
-Author: sumzer0@yahoo.com
+Author: SumZer0
 """
 
 # TODO:  

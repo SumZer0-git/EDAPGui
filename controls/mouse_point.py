@@ -9,7 +9,7 @@ File:controls/mouse_point.py
 Description:
   Class to handles getting x,y location for a mouse click, and a routine to click on a x, y location
 
-Author: sumzer0@yahoo.com
+Author: SumZer0
 """
 
 class MousePoint:

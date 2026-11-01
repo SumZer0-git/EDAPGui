@@ -19,7 +19,7 @@ Description:  AFK Combat in Rez site (see Type 10 AFK videos).
 Required State:
   - Point away from Rez sight (so when boost away can get out of mass lock)
 
-Author: sumzer0@yahoo.com
+Author: SumZer0
 """
 
 """

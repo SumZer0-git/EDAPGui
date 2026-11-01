@@ -50,7 +50,7 @@ Ideas taken from:  https://github.com/skai2/EDAutopilot
     PG UP - Start Robigo Assist
     End - Terminate any ongoing assist (FSD, SC, AFK)
 
-Author: sumzer0@yahoo.com
+Author: SumZer0
 """
 
 # ---------------------------------------------------------------------------
@@ -450,9 +450,6 @@ class APGui():
     def open_changelog(self):
         webbrowser.open_new("https://github.com/DopeEx/EDAPGui/blob/main/CHANGELOG.md")
 
-    def open_discord(self):
-        webbrowser.open_new("https://discord.gg/HCgkfSc")
-
     def open_logfile(self):
         os.startfile(paths.LOG_FILE)
 
@@ -784,7 +781,6 @@ class APGui():
         help.add_command(label="Check for Updates", command=self.check_updates)
         help.add_command(label="View Changelog", command=self.open_changelog)
         help.add_separator()
-        help.add_command(label="Join Discord", command=self.open_discord)
         help.add_command(label="About", command=self.about)
         menubar.add_cascade(label="Help", menu=help)
 

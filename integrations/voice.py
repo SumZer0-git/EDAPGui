@@ -21,7 +21,7 @@ Description:
 To Use:
   See main() at bottom as example
   
-Author: sumzer0@yahoo.com
+Author: SumZer0
 
 """
 

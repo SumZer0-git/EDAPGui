@@ -32,7 +32,7 @@ Design:
     process it
     - also check if a new journal file present, if so close current one and open new one
  
-Author: sumzer0@yahoo.com
+Author: SumZer0
 """
 
 """                             
