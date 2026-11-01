@@ -244,16 +244,16 @@ class FlightMixin:
                         # first roll to get the nav point at the vertical position
                         if off['yaw'] > 0 and off['pit'] > 0:
                             # top right quad, then roll right to get to 90 up
-                            self.rotateRight(off['roll'])
+                            self.rotate_right(off['roll'])
                         elif off['yaw'] > 0 > off['pit']:
                             # bottom right quad, then roll left
-                            self.rotateLeft(180 - off['roll'])
+                            self.rotate_left(180 - off['roll'])
                         elif off['yaw'] < 0 < off['pit']:
                             # top left quad, then roll left
-                            self.rotateLeft(-off['roll'])
+                            self.rotate_left(-off['roll'])
                         else:
                             # bottom left quad, then roll right
-                            self.rotateRight(180 + off['roll'])
+                            self.rotate_right(180 + off['roll'])
                         sleep(1)
                         off = self.get_nav_offset(scr_reg)
                     else:
@@ -263,9 +263,9 @@ class FlightMixin:
                 # Calc pitch time based on nav point location
                 if abs(off['pit']) > close:
                     if off['pit'] < 0:
-                        self.pitchDown(abs(off['pit']))
+                        self.pitch_down(abs(off['pit']))
                     else:
-                        self.pitchUp(abs(off['pit']))
+                        self.pitch_up(abs(off['pit']))
                     sleep(0.5)
                     off = self.get_nav_offset(scr_reg)
                 else:
@@ -275,9 +275,9 @@ class FlightMixin:
                 # Calc yaw time based on nav point location
                 if abs(off['yaw']) > close:
                     if off['yaw'] < 0:
-                        self.yawLeft(abs(off['yaw']))
+                        self.yaw_left(abs(off['yaw']))
                     else:
-                        self.yawRight(abs(off['yaw']))
+                        self.yaw_right(abs(off['yaw']))
                     sleep(0.5)
                     off = self.get_nav_offset(scr_reg)
                 else:
@@ -469,7 +469,7 @@ class FlightMixin:
         self.ap_ckb('log+vce', 'Target occluded, repositioning.')
         self.keys.send('SetSpeed50')
         sleep(5)
-        self.pitchDown(90)
+        self.pitch_down(90)
 
         # Speed away
         self.keys.send('SetSpeed100')
@@ -477,7 +477,7 @@ class FlightMixin:
 
         self.keys.send('SetSpeed50')
         sleep(5)
-        self.pitchUp(90)
+        self.pitch_up(90)
         self.nav_align(scr_reg)
         self.keys.send('SetSpeed50')
 
@@ -601,27 +601,27 @@ class FlightMixin:
         raise Exception("FSD Jump failure")
 
     #
-    def rotateLeft(self, deg):
+    def rotate_left(self, deg):
         htime = deg/self.rollrate
         self.keys.send('RollLeftButton', hold=htime)
 
-    def rotateRight(self, deg):
+    def rotate_right(self, deg):
         htime = deg/self.rollrate
         self.keys.send('RollRightButton', hold=htime)
 
-    def pitchDown(self, deg):
+    def pitch_down(self, deg):
         htime = deg/self.pitchrate
         self.keys.send('PitchDownButton', htime)
 
-    def pitchUp(self, deg):
+    def pitch_up(self, deg):
         htime = deg/self.pitchrate
         self.keys.send('PitchUpButton', htime)
 
-    def yawLeft(self, deg):
+    def yaw_left(self, deg):
         htime = deg/self.yawrate
         self.keys.send('YawLeftButton', hold=htime)
 
-    def yawRight(self, deg):
+    def yaw_right(self, deg):
         htime = deg / self.yawrate
         self.keys.send('YawRightButton', hold=htime)
 
@@ -705,7 +705,7 @@ class FlightMixin:
         elif not is_star_scoopable:
             self.ap_ckb('log', 'Skip refuel - not a fuel star')
             logger.debug('refuel= needed, unsuitable star')
-            self.pitchUp(20)
+            self.pitch_up(20)
             return False
 
         elif self.jn.ship_state()['fuel_percent'] >= self.config['RefuelThreshold']:
@@ -716,11 +716,11 @@ class FlightMixin:
         elif not has_fuel_scoop:
             self.ap_ckb('log', 'Skip refuel - no fuel scoop fitted')
             logger.debug('No fuel scoop fitted.')
-            self.pitchUp(20)
+            self.pitch_up(20)
             return False
 
         else:
-            self.pitchUp(15)  # if not refueling pitch up somemore so we won't heat up
+            self.pitch_up(15)  # if not refueling pitch up somemore so we won't heat up
             return False
 
     def waypoint_undock_seq(self):
@@ -753,13 +753,13 @@ class FlightMixin:
                 if on_orbital_construction_site:
                     self.ap_ckb('log+vce', 'Maneuvering')
                     # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-                    self.pitchUp(90 * 1.25)
+                    self.pitch_up(90 * 1.25)
 
                 # If we are on a Fleet Carrier we will pitch up 90 deg and fly away to avoid planet
                 elif fleet_carrier:
                     self.ap_ckb('log+vce', 'Maneuvering')
                     # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-                    self.pitchUp(90 * 1.25)
+                    self.pitch_up(90 * 1.25)
 
                     self.keys.send('SetSpeed100')
 
@@ -816,7 +816,7 @@ class FlightMixin:
             # Undocked or off the surface, so leave planet
             self.keys.send('SetSpeed50')
             # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-            self.pitchUp(90 * 1.25)
+            self.pitch_up(90 * 1.25)
             self.keys.send('SetSpeed100')
 
             # While Mass Locked, keep boosting.

@@ -25,13 +25,13 @@ class Voice:
         self.t.start()
         self.v_id = 1
 
-    def say(self, vSay):
+    def say(self, text):
         if self.v_enabled:
             # A better way to correct mis-pronunciation?
-            vSay = vSay.replace(' Mk V ', ' mark five ')
-            vSay = vSay.replace(' Mk ', ' mark ')
-            vSay = vSay.replace(' Krait ', ' crate ')
-            self.q.put(vSay)
+            text = text.replace(' Mk V ', ' mark five ')
+            text = text.replace(' Mk ', ' mark ')
+            text = text.replace(' Krait ', ' crate ')
+            self.q.put(text)
 
     def set_off(self):
         self.v_enabled = False

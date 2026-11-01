@@ -152,19 +152,19 @@ class Screen:
         else:
             return False
 
-    def write_config(self, data, fileName=paths.RESOLUTION_CONFIG):
+    def write_config(self, data, file_name=paths.RESOLUTION_CONFIG):
         if data is None:
             data = self.scales
         try:
-            with open(fileName,"w") as fp:
+            with open(file_name,"w") as fp:
                 json.dump(data,fp, indent=4)
         except Exception as e:
             logger.warning("screen.py write_config error:"+str(e))
 
-    def read_config(self, fileName=paths.RESOLUTION_CONFIG):
+    def read_config(self, file_name=paths.RESOLUTION_CONFIG):
         s = None
         try:
-            with open(fileName,"r") as fp:
+            with open(file_name,"r") as fp:
                 s = json.load(fp)
         except  Exception as e:
             logger.warning("screen.py read_config error :"+str(e))

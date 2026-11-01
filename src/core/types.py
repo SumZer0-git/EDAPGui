@@ -3,7 +3,7 @@
 from enum import Enum
 
 
-class EDAP_Interrupt(Exception):
+class EdapInterruptError(Exception):
     """Exception used to unroll the call tree to stop execution."""
     pass
 

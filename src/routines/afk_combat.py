@@ -7,7 +7,7 @@ if another fighter is ready. The ship must point away from the site at the start
 from time import sleep
 
 
-class AFK_Combat:
+class AfkCombat:
 
     # TODO: consider the following enhancements
     #  - If a key is not mapped need to list which are needed and exit
@@ -143,7 +143,7 @@ def main():
     v = Voice()
     v.set_on()
 
-    afk = AFK_Combat(k, jn, v)
+    afk = AfkCombat(k, jn, v)
     v.say(" AFK Combat Assist active")
 
     print("Hot keys\n alt+q = Quit\n alt+s = force shield down event\n alt+f = force fighter destroy event\n alt+d = dump state\n")

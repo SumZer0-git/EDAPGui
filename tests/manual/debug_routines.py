@@ -11,9 +11,9 @@ import numpy as np
 
 from core.autopilot import EDAutopilot
 from core.logger import logger
-from vision.regions import Screen_Regions
+from vision.regions import ScreenRegions
 from vision.screen import Screen
-from vision.templates import Image_Templates
+from vision.templates import ImageTemplates
 
 
 def main():
@@ -113,8 +113,8 @@ def compass_test():
     ed_ap = EDAutopilot(cb=None)
     scr = ed_ap.scr
 
-    templ = Image_Templates(scr.scaleX, scr.scaleY, ed_ap.compass_scale)
-    scr_reg = Screen_Regions(scr, templ)
+    templ = ImageTemplates(scr.scaleX, scr.scaleY, ed_ap.compass_scale)
+    scr_reg = ScreenRegions(scr, templ)
 
     while True:
         region_name = 'compass'
@@ -143,9 +143,9 @@ def template_matching_test(region_name, template):
     #scr = ed_ap.scr
     scr = Screen(cb=None)
 
-    templ = Image_Templates(scr.scaleX, scr.scaleY, scr.scaleX)
+    templ = ImageTemplates(scr.scaleX, scr.scaleY, scr.scaleX)
 
-    scr_reg = Screen_Regions(scr, templ)
+    scr_reg = ScreenRegions(scr, templ)
 
     while True:
         img_region, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region(region_name, template)
@@ -166,8 +166,8 @@ def show_regions(region_names):
     scr = ed_ap.scr
     ov = ed_ap.overlay
 
-    templ = Image_Templates(scr.scaleX, scr.scaleY, scr.scaleX)
-    scrReg = Screen_Regions(scr, templ)
+    templ = ImageTemplates(scr.scaleX, scr.scaleY, scr.scaleX)
+    scrReg = ScreenRegions(scr, templ)
 
     overlay_colors = [
         (255, 255, 255),

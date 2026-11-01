@@ -73,7 +73,7 @@ def size_scale_for_station(width: int, height: int, w: int, h: int) -> (int, int
     return new_width, new_height
 
 
-class Screen_Regions:
+class ScreenRegions:
     def __init__(self, screen, templ):
         self.screen = screen
         self.templates = templ
@@ -212,7 +212,7 @@ class Screen_Regions:
         # H must be the best match
         return image, (minVal_h, maxVal_h, minLoc_h, maxLoc_h), match_h
 
-    def equalize(self, image=None, noOp=None):
+    def equalize(self, image=None, no_op=None):
         # Load the image in greyscale
         img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         # create a CLAHE object (Arguments are optional).  Histogram equalization, improves constrast
@@ -233,7 +233,7 @@ class Screen_Regions:
         return filtered
 
     # not used
-    def filter_bright(self, image=None, noOp=None):
+    def filter_bright(self, image=None, no_op=None):
         equalized = self.equalize(image)
         equalized = cv2.cvtColor(equalized, cv2.COLOR_GRAY2BGR)    #hhhmm, equalize() already converts to gray
         equalized = cv2.cvtColor(equalized, cv2.COLOR_BGR2HSV)
@@ -245,7 +245,7 @@ class Screen_Regions:
         self.sun_threshold = thresh
 
     # need to compare filter_sun with filter_bright
-    def filter_sun(self, image=None, noOp=None):
+    def filter_sun(self, image=None, no_op=None):
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # set low end of filter to 25 to pick up the dull red Class L stars

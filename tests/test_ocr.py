@@ -9,7 +9,7 @@ from vision.ocr import OCR
 
 
 class OCRTestCase(unittest.TestCase):
-    def test_simple_OCR(self):
+    def test_simple_ocr(self):
         """ Simple check of OCR to bring back text of a known image. """
         ocr = OCR(screen=None)
 

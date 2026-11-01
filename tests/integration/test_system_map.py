@@ -19,7 +19,7 @@ class SystemMapTestCase(unittest.TestCase):
 
         cls.sys_map = EDSystemMap(cls.ed_ap, scr, keys, dummy_cb, True)
 
-    def test_Open_System_Map(self):
+    def test_open_system_map(self):
         """ Open System Map. """
         self.sys_map.goto_system_map()
 

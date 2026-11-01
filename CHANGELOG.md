@@ -1,10 +1,12 @@
 # Unreleased
  - Important notice: Runtime files moved to the new `user_data/` folder. Existing users must manually copy `configs/AP.json`, `configs/ship_configs.json` and their own waypoint files from `waypoints/` into `user_data/configs/` and `user_data/waypoints/`.
- - Added the Ruff linter (`pyproject.toml`, `requirements-dev.txt`) with the rule groups `F` (pyflakes), `I` (import sorting), `W` (whitespace) and the checks `E711`, `E712`, `E713`, `E714`, `E722` and `F841`; run `ruff check .`.
+ - Added the Ruff linter (`pyproject.toml`, `requirements-dev.txt`) with the rule groups `F` (pyflakes), `I` (import sorting), `N` (pep8-naming, except `N806`), `W` (whitespace) and the checks `E711`, `E712`, `E713`, `E714`, `E722` and `F841`; run `ruff check .`.
  - Added offline unit tests (no game needed) for the status, cargo, market and navigation route parsers, journal event handling, waypoint files and routing, localization, shared paths, reference data and screen region scaling.
  - Added offline unit tests for reading the Elite Dangerous keybindings (`game/keybindings.py`), using an anonymized sample bindings file in `tests/fixtures/bindings/`.
  - Added offline tests for template matching and screen detection (compass, nav point, target, occlusion, supercruise disengage message, region filters) using the screenshot crops in `tests/fixtures/` and a fake screen instead of the game.
  - Added `docs/Structure.md` describing the folder structure and rules for where new files belong.
+ - Changed class names to CapWords and exception names to end with `Error`: `Screen_Regions` to `ScreenRegions`, `Image_Templates` to `ImageTemplates`, `AFK_Combat` to `AfkCombat`, `EDAP_Interrupt` to `EdapInterruptError` and `PathNotFoundException` to `PathNotFoundError`.
+ - Changed function and argument names to snake_case: `PressKey`/`ReleaseKey` to `press_key`/`release_key`, `rotateLeft`, `rotateRight`, `pitchUp`, `pitchDown`, `yawLeft` and `yawRight` to `rotate_left` etc., and arguments such as `scaleX`/`scaleY`, `fileName`, `doThread`, `fontSize`, `vSay` and `noOp` to `scale_x`/`scale_y`, `file_name`, `do_thread`, `font_size`, `text` and `no_op`. Names that follow the Windows API (`wndProc`, `hWnd`, `wParam`, `lParam`, `Input_I`) are kept.
  - Changed config, waypoint and log files to be stored in `user_data/` (configs, waypoints, logs, debug output). The folder is created on first start.
  - Changed reference files (`resolution.json` and the example waypoint files) to live in `data/` and be copied to `user_data/` when missing.
  - Changed paths to be resolved relative to the project folder instead of the working directory.
