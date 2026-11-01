@@ -8,7 +8,6 @@ from time import sleep
 
 
 class AfkCombat:
-
     # TODO: consider the following enhancements
     #  - If a key is not mapped need to list which are needed and exit
     #  - Need key for commanding fighter to 'attack at will' or defend
@@ -22,31 +21,31 @@ class AfkCombat:
         self.fighter_bay = 2
 
     def check_shields_up(self):
-        return self.jn.ship_state()['shieldsup']
+        return self.jn.ship_state()["shieldsup"]
 
     def check_fighter_destroyed(self):
-        des = self.jn.ship_state()['fighter_destroyed']
-        self.jn.ship_state()['fighter_destroyed'] = False    # reset it to false after we read it
+        des = self.jn.ship_state()["fighter_destroyed"]
+        self.jn.ship_state()["fighter_destroyed"] = False  # reset it to false after we read it
         return des
 
     def evade(self):
         # boost and prep for supercruise
         if self.voice is not None:
             self.voice.say("Boosting, reconfiguring")
-        self.k.send('SetSpeed100', repeat=2)
-        self.k.send('DeployHardpointToggle')
-        self.k.send('IncreaseEnginesPower', repeat=4)
-        self.k.send('UseBoostJuice')
+        self.k.send("SetSpeed100", repeat=2)
+        self.k.send("DeployHardpointToggle")
+        self.k.send("IncreaseEnginesPower", repeat=4)
+        self.k.send("UseBoostJuice")
         sleep(2)
 
         # while the ship is not in supercruise: booster and attempt supercruise
         # could be mass locked for a bit
-        while self.jn.ship_state()['status'] == 'in_space':
+        while self.jn.ship_state()["status"] == "in_space":
             if self.voice is not None:
                 self.voice.say("Boosting, commanding supercruise")
-            self.k.send('UseBoostJuice')
+            self.k.send("UseBoostJuice")
             sleep(1)
-            self.k.send('HyperSuperCombination')
+            self.k.send("HyperSuperCombination")
             sleep(9)
 
         # in supercruise, wait a bit to get away, then throttle 0 and exit supercruise, full pips to system
@@ -54,65 +53,63 @@ class AfkCombat:
             self.voice.say("In supercruise, retreating from site")
 
         sleep(1)
-        self.k.send('SetSpeed100', repeat=2)
+        self.k.send("SetSpeed100", repeat=2)
         sleep(20)
-        self.k.send('SetSpeedZero')
+        self.k.send("SetSpeedZero")
         sleep(10)
         if self.voice is not None:
             self.voice.say("Exiting supercruise, all power to system and weapons")
-        self.k.send('HyperSuperCombination', repeat=2)
+        self.k.send("HyperSuperCombination", repeat=2)
         sleep(7)
-        self.k.send('IncreaseSystemsPower', repeat=3)
-        self.k.send('IncreaseWeaponsPower', repeat=3)
-
-
+        self.k.send("IncreaseSystemsPower", repeat=3)
+        self.k.send("IncreaseWeaponsPower", repeat=3)
 
     def launch_fighter(self):
-         # menu select figher deploy
+        # menu select figher deploy
         if self.voice is not None:
             self.voice.say("Deploying fighter")
-        self.k.send('HeadLookReset')
-        self.k.send('UIFocus', state=1)
-        self.k.send('UI_Down')
-        self.k.send('UIFocus', state=0)
+        self.k.send("HeadLookReset")
+        self.k.send("UIFocus", state=1)
+        self.k.send("UI_Down")
+        self.k.send("UIFocus", state=0)
         sleep(0.2)
 
         # Reset to top, go left x2, go up x3
-        self.k.send('UI_Left', repeat=2)
-        self.k.send('UI_Up', repeat=3)
+        self.k.send("UI_Left", repeat=2)
+        self.k.send("UI_Up", repeat=3)
         sleep(0.1)
 
         # Down to fighter and then Right then will be over deploy button
-        self.k.send('UI_Down')
-        self.k.send('UI_Right')
+        self.k.send("UI_Down")
+        self.k.send("UI_Right")
         sleep(0.1)
 
         # go to top fighter bay selection
-        self.k.send('UI_Up')
+        self.k.send("UI_Up")
 
         # toggle between fighter bays, if a fighter gets restored, that bay is busy
         # rebuilding so need to us the other one
         if self.fighter_bay == 2:
-            self.k.send('UI_Down')
+            self.k.send("UI_Down")
             self.fighter_bay = 1
         else:
-             self.fighter_bay = 2
+            self.fighter_bay = 2
 
         # Deploy should be highlighted, Select it
-        self.k.send('UI_Select')
+        self.k.send("UI_Select")
 
         # select which pilot
-        self.k.send('UI_Up', repeat=4)  # ensure top entry selected
-        self.k.send('UI_Down')      # go down one and select the hired pilot
-        self.k.send('UI_Select')
+        self.k.send("UI_Up", repeat=4)  # ensure top entry selected
+        self.k.send("UI_Down")  # go down one and select the hired pilot
+        self.k.send("UI_Select")
 
         sleep(0.2)
-        self.k.send('UI_Back')
-        self.k.send('HeadLookReset')
+        self.k.send("UI_Back")
+        self.k.send("HeadLookReset")
         #
         # Command fighter to attack at will
         # self.k.send().... ??OrderAggressiveBehaviour
-        self.k.send('SetSpeedZero')
+        self.k.send("SetSpeedZero")
 
 
 """

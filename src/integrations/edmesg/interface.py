@@ -70,8 +70,8 @@ events: list[type[EDMesgEvent]] = [
 ]
 
 
-#actions_port = 15570
-#events_port = 15571
+# actions_port = 15570
+# events_port = 15571
 
 
 def create_edap_provider(actions_port: int, events_port: int) -> EDMesgProvider:

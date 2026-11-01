@@ -19,8 +19,8 @@ class EDWayPoint:
     def __init__(self, ed_ap, is_odyssey=True):
         self.ap = ed_ap
         self.is_odyssey = is_odyssey
-        self.filename = str(paths.WAYPOINTS_DIR / 'waypoints.json')
-        self.stats_log = {'Colonisation': 0, 'Construction': 0, 'Fleet Carrier': 0, 'Station': 0}
+        self.filename = str(paths.WAYPOINTS_DIR / "waypoints.json")
+        self.stats_log = {"Colonisation": 0, "Construction": 0, "Fleet Carrier": 0, "Station": 0}
         self.waypoints = {}
         #  { "Ninabin": {"DockWithTarget": false, "TradeSeq": None, "Completed": false} }
         # for i, key in enumerate(self.waypoints):
@@ -54,14 +54,14 @@ class EDWayPoint:
         if ss is not None:
             self.waypoints = ss
             self.filename = filename
-            self.ap.ap_ckb('log', f"Loaded Waypoint file: {filename}")
+            self.ap.ap_ckb("log", f"Loaded Waypoint file: {filename}")
             logger.debug("EDWayPoint: read json:" + str(ss))
             return True
 
-        self.ap.ap_ckb('log', "Waypoint file is invalid. Check log file for details.")
+        self.ap.ap_ckb("log", "Waypoint file is invalid. Check log file for details.")
         return False
 
-    def read_waypoints(self, filename=paths.WAYPOINTS_DIR / 'waypoints.json'):
+    def read_waypoints(self, filename=paths.WAYPOINTS_DIR / "waypoints.json"):
         s = None
         try:
             with open(filename, "r") as fp:
@@ -69,62 +69,64 @@ class EDWayPoint:
 
             # Perform any checks on the data returned
             # Check if the waypoint data contains the 'GlobalShoppingList' (new requirement)
-            if 'GlobalShoppingList' not in s:
+            if "GlobalShoppingList" not in s:
                 # self.ap.ap_ckb('log', f"Waypoint file is invalid. Check log file for details.")
-                logger.warning(f"Waypoint file {filename} is invalid or old version. "
-                               f"It does not contain a 'GlobalShoppingList' waypoint.")
+                logger.warning(
+                    f"Waypoint file {filename} is invalid or old version. "
+                    f"It does not contain a 'GlobalShoppingList' waypoint."
+                )
                 s = None
 
             # Check the
             err = False
             for key, value in s.items():
-                if key == 'GlobalShoppingList':
+                if key == "GlobalShoppingList":
                     # Special case
-                    if 'BuyCommodities' not in value:
+                    if "BuyCommodities" not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'BuyCommodities'.")
                         err = True
-                    if 'UpdateCommodityCount' not in value:
+                    if "UpdateCommodityCount" not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'UpdateCommodityCount'.")
                         err = True
-                    if 'Skip' not in value:
+                    if "Skip" not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'Skip'.")
                         err = True
                 else:
                     # All other cases
-                    if 'SystemName' not in value:
+                    if "SystemName" not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'SystemName'.")
                         err = True
-                    if 'StationName' not in value:
+                    if "StationName" not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'StationName'.")
                         err = True
-                    if 'GalaxyBookmarkType' not in value:
+                    if "GalaxyBookmarkType" not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'GalaxyBookmarkType'.")
                         err = True
-                    if 'GalaxyBookmarkNumber' not in value:
+                    if "GalaxyBookmarkNumber" not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'GalaxyBookmarkNumber'.")
                         err = True
-                    if 'SystemBookmarkType' not in value:
+                    if "SystemBookmarkType" not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'SystemBookmarkType'.")
                         err = True
-                    if 'SystemBookmarkNumber' not in value:
+                    if "SystemBookmarkNumber" not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'SystemBookmarkNumber'.")
                         err = True
-                    if 'SellCommodities' not in value:
+                    if "SellCommodities" not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'SellCommodities'.")
                         err = True
-                    if 'BuyCommodities' not in value:
+                    if "BuyCommodities" not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'BuyCommodities'.")
                         err = True
-                    if 'UpdateCommodityCount' not in value:
+                    if "UpdateCommodityCount" not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'UpdateCommodityCount'.")
                         err = True
-                    if 'FleetCarrierTransfer' not in value:
+                    if "FleetCarrierTransfer" not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'FleetCarrierTransfer'.")
                         err = True
-                    if 'Skip' not in value:
+                    if "Skip" not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'Skip'.")
                         err = True
-                    if 'Completed' not in value:
+                    if "Completed" not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'Completed'.")
                         err = True
 
@@ -136,7 +138,7 @@ class EDWayPoint:
 
         return s
 
-    def write_waypoints(self, data, filename=paths.WAYPOINTS_DIR / 'waypoints.json'):
+    def write_waypoints(self, data, filename=paths.WAYPOINTS_DIR / "waypoints.json"):
         if data is None:
             data = self.waypoints
         try:
@@ -146,16 +148,15 @@ class EDWayPoint:
             logger.warning("routines/waypoints.py write_waypoints error:" + str(e))
 
     def save_waypoints(self):
-        """ Save the current waypoints into the waypoints folder, using the name of the loaded file. """
+        """Save the current waypoints into the waypoints folder, using the name of the loaded file."""
         self.write_waypoints(data=None, filename=paths.WAYPOINTS_DIR / Path(self.filename).name)
 
     def mark_waypoint_complete(self, key):
-        self.waypoints[key]['Completed'] = True
+        self.waypoints[key]["Completed"] = True
         self.save_waypoints()
 
     def get_waypoint(self) -> tuple[str, dict] | tuple[None, None]:
-        """ Returns the next waypoint list or None if we are at the end of the waypoints.
-        """
+        """Returns the next waypoint list or None if we are at the end of the waypoints."""
         dest_key = "-1"
 
         # loop back to beginning if last record is "REPEAT"
@@ -166,14 +167,12 @@ class EDWayPoint:
                     continue
 
                 # if this entry is REPEAT (and not skipped), mark them all as Completed = False
-                if ((self.waypoints[key].get('SystemName', "").upper() == "REPEAT")
-                        and not self.waypoints[key]['Skip']):
+                if (self.waypoints[key].get("SystemName", "").upper() == "REPEAT") and not self.waypoints[key]["Skip"]:
                     self.mark_all_waypoints_not_complete()
                     break
 
                 # if this step is marked to skip... i.e. completed, go to next step
-                if (key == "GlobalShoppingList" or self.waypoints[key]['Completed']
-                        or self.waypoints[key]['Skip']):
+                if key == "GlobalShoppingList" or self.waypoints[key]["Completed"] or self.waypoints[key]["Skip"]:
                     continue
 
                 # This is the next uncompleted step
@@ -188,8 +187,8 @@ class EDWayPoint:
     def mark_all_waypoints_not_complete(self):
         for j, tkey in enumerate(self.waypoints):
             # Ensure 'Completed' key exists before trying to set it
-            if 'Completed' in self.waypoints[tkey]:
-                self.waypoints[tkey]['Completed'] = False
+            if "Completed" in self.waypoints[tkey]:
+                self.waypoints[tkey]["Completed"] = False
             else:
                 # Handle legacy format where 'Completed' might be missing
                 # Or log a warning if the structure is unexpected
@@ -199,46 +198,46 @@ class EDWayPoint:
         self.log_stats()
 
     def log_stats(self):
-        calc1 = 1.5 ** self.stats_log['Colonisation']
-        calc2 = 1.5 ** self.stats_log['Construction']
+        calc1 = 1.5 ** self.stats_log["Colonisation"]
+        calc2 = 1.5 ** self.stats_log["Construction"]
         sleep(max(calc1, calc2))
 
     def execute_trade(self, ap, dest_key):
         # Get trade commodities from waypoint
-        sell_commodities = self.waypoints[dest_key]['SellCommodities']
-        buy_commodities = self.waypoints[dest_key]['BuyCommodities']
-        fleetcarrier_transfer = self.waypoints[dest_key]['FleetCarrierTransfer']
-        global_buy_commodities = self.waypoints['GlobalShoppingList']['BuyCommodities']
+        sell_commodities = self.waypoints[dest_key]["SellCommodities"]
+        buy_commodities = self.waypoints[dest_key]["BuyCommodities"]
+        fleetcarrier_transfer = self.waypoints[dest_key]["FleetCarrierTransfer"]
+        global_buy_commodities = self.waypoints["GlobalShoppingList"]["BuyCommodities"]
 
         if len(sell_commodities) == 0 and len(buy_commodities) == 0 and len(global_buy_commodities) == 0:
             return
 
         # Does this place have commodities service?
         # From the journal, this works for stations (incl. outpost), colonisation ship and megaships
-        if ap.jn.ship_state()['StationServices'] is not None:
-            if 'commodities' not in ap.jn.ship_state()['StationServices']:
-                self.ap.ap_ckb('log', "No commodities market at docked location.")
+        if ap.jn.ship_state()["StationServices"] is not None:
+            if "commodities" not in ap.jn.ship_state()["StationServices"]:
+                self.ap.ap_ckb("log", "No commodities market at docked location.")
                 return
         else:
-            self.ap.ap_ckb('log', "No station services at docked location.")
+            self.ap.ap_ckb("log", "No station services at docked location.")
             return
 
         # Determine type of station we are at
-        colonisation_ship = "ColonisationShip".upper() in ap.jn.ship_state()['cur_station'].upper()
-        orbital_construction_site = ap.jn.ship_state()['cur_station_type'].upper() == "SpaceConstructionDepot".upper()
-        fleet_carrier = ap.jn.ship_state()['cur_station_type'].upper() == "FleetCarrier".upper()
-        outpost = ap.jn.ship_state()['cur_station_type'].upper() == "Outpost".upper()
+        colonisation_ship = "ColonisationShip".upper() in ap.jn.ship_state()["cur_station"].upper()
+        orbital_construction_site = ap.jn.ship_state()["cur_station_type"].upper() == "SpaceConstructionDepot".upper()
+        fleet_carrier = ap.jn.ship_state()["cur_station_type"].upper() == "FleetCarrier".upper()
+        outpost = ap.jn.ship_state()["cur_station_type"].upper() == "Outpost".upper()
 
         if colonisation_ship or orbital_construction_site:
             if colonisation_ship:
                 # Colonisation Ship
-                self.stats_log['Colonisation'] = self.stats_log['Colonisation'] + 1
-                self.ap.ap_ckb('log', "Executing trade with Colonisation Ship.")
+                self.stats_log["Colonisation"] = self.stats_log["Colonisation"] + 1
+                self.ap.ap_ckb("log", "Executing trade with Colonisation Ship.")
                 logger.debug("Execute Trade: On Colonisation Ship")
             if orbital_construction_site:
                 # Construction Ship
-                self.stats_log['Construction'] = self.stats_log['Construction'] + 1
-                self.ap.ap_ckb('log', "Executing trade with Orbital Construction Ship.")
+                self.stats_log["Construction"] = self.stats_log["Construction"] + 1
+                self.ap.ap_ckb("log", "Executing trade with Orbital Construction Ship.")
                 logger.debug("Execute Trade: On Orbital Construction Site")
 
             # Go to station services
@@ -251,7 +250,7 @@ class EDWayPoint:
 
         elif fleet_carrier and fleetcarrier_transfer:
             # Fleet Carrier in Transfer mode
-            self.stats_log['Fleet Carrier'] = self.stats_log['Fleet Carrier'] + 1
+            self.stats_log["Fleet Carrier"] = self.stats_log["Fleet Carrier"] + 1
             # --------- SELL ----------
             if len(sell_commodities) > 0:
                 # Transfer to Fleet Carrier
@@ -263,14 +262,14 @@ class EDWayPoint:
 
         else:
             # Regular Station or Fleet Carrier in Buy/Sell mode
-            self.ap.ap_ckb('log', "Executing trade.")
+            self.ap.ap_ckb("log", "Executing trade.")
             logger.debug("Execute Trade: On Regular Station")
-            self.stats_log['Station'] = self.stats_log['Station'] + 1
+            self.stats_log["Station"] = self.stats_log["Station"] + 1
 
             market_time_old = ""
             data = self.market_parser.get_market_data()
             if data is not None:
-                market_time_old = self.market_parser.current_data['timestamp']
+                market_time_old = self.market_parser.current_data["timestamp"]
 
             # We start off on the Main Menu in the Station
             self.ap.stn_svcs_in_ship.goto_station_services()
@@ -279,35 +278,35 @@ class EDWayPoint:
             if fleet_carrier:
                 # Fleet Carrier COMMODITIES MARKET location top right, with:
                 # uni cart, redemption, trit depot, shipyard, crew lounge
-                ap.keys.send('UI_Right', repeat=2)
-                ap.keys.send('UI_Select')  # Select Commodities
+                ap.keys.send("UI_Right", repeat=2)
+                ap.keys.send("UI_Select")  # Select Commodities
 
             elif outpost:
                 # Outpost COMMODITIES MARKET location in middle column
-                ap.keys.send('UI_Right')
-                ap.keys.send('UI_Select')  # Select Commodities
+                ap.keys.send("UI_Right")
+                ap.keys.send("UI_Select")  # Select Commodities
 
             else:
                 # Orbital station COMMODITIES MARKET location bottom left
-                ap.keys.send('UI_Down')
-                ap.keys.send('UI_Select')  # Select Commodities
+                ap.keys.send("UI_Down")
+                ap.keys.send("UI_Select")  # Select Commodities
 
-            self.ap.ap_ckb('log+vce', "Downloading commodities data from market.")
+            self.ap.ap_ckb("log+vce", "Downloading commodities data from market.")
 
             # Wait for market to update
             market_time_new = ""
             data = self.market_parser.get_market_data()
             if data is not None:
-                market_time_new = self.market_parser.current_data['timestamp']
+                market_time_new = self.market_parser.current_data["timestamp"]
 
             while market_time_new == market_time_old:
                 market_time_new = ""
                 data = self.market_parser.get_market_data()
                 if data is not None:
-                    market_time_new = self.market_parser.current_data['timestamp']
+                    market_time_new = self.market_parser.current_data["timestamp"]
                 sleep(1)  # wait for new menu to finish rendering
 
-            cargo_capacity = ap.jn.ship_state()['cargo_capacity']
+            cargo_capacity = ap.jn.ship_state()["cargo_capacity"]
             logger.info(f"Execute trade: Ship's max cargo capacity: {cargo_capacity}")
 
             # --------- SELL ----------
@@ -324,11 +323,12 @@ class EDWayPoint:
                         continue
 
                     # Sell the commodity
-                    result, qty = self.ap.stn_svcs_in_ship.sell_commodity(ap.keys, key, sell_commodities[key],
-                                                                          self.cargo_parser)
+                    result, qty = self.ap.stn_svcs_in_ship.sell_commodity(
+                        ap.keys, key, sell_commodities[key], self.cargo_parser
+                    )
 
                     # Update counts if necessary
-                    if qty > 0 and self.waypoints[dest_key]['UpdateCommodityCount']:
+                    if qty > 0 and self.waypoints[dest_key]["UpdateCommodityCount"]:
                         sell_commodities[key] = sell_commodities[key] - qty
 
                 # Save changes
@@ -343,8 +343,8 @@ class EDWayPoint:
 
                 # Go through buy commodities list
                 for i, key in enumerate(buy_commodities):
-                    curr_cargo_qty = int(ap.status.get_cleaned_data()['Cargo'])
-                    cargo_timestamp = ap.status.current_data['timestamp']
+                    curr_cargo_qty = int(ap.status.get_cleaned_data()["Cargo"])
+                    cargo_timestamp = ap.status.current_data["timestamp"]
 
                     free_cargo = cargo_capacity - curr_cargo_qty
                     logger.info(f"Execute trade: Free cargo space: {free_cargo}")
@@ -366,13 +366,13 @@ class EDWayPoint:
                         ap.status.wait_for_file_change(cargo_timestamp, 5)
 
                     # Update counts if necessary
-                    if qty > 0 and self.waypoints[dest_key]['UpdateCommodityCount']:
+                    if qty > 0 and self.waypoints[dest_key]["UpdateCommodityCount"]:
                         buy_commodities[key] = qty_to_buy - qty
 
                 # Go through global buy commodities list
                 for i, key in enumerate(global_buy_commodities):
-                    curr_cargo_qty = int(ap.status.get_cleaned_data()['Cargo'])
-                    cargo_timestamp = ap.status.current_data['timestamp']
+                    curr_cargo_qty = int(ap.status.get_cleaned_data()["Cargo"])
+                    cargo_timestamp = ap.status.current_data["timestamp"]
 
                     free_cargo = cargo_capacity - curr_cargo_qty
                     logger.info(f"Execute trade: Free cargo space: {free_cargo}")
@@ -394,7 +394,7 @@ class EDWayPoint:
                         ap.status.wait_for_file_change(cargo_timestamp, 5)
 
                     # Update counts if necessary
-                    if qty > 0 and self.waypoints['GlobalShoppingList']['UpdateCommodityCount']:
+                    if qty > 0 and self.waypoints["GlobalShoppingList"]["UpdateCommodityCount"]:
                         global_buy_commodities[key] = qty_to_buy - qty
 
                 # Save changes
@@ -405,49 +405,48 @@ class EDWayPoint:
             ap.ship_control.goto_cockpit_view()
 
     def sell_to_colonisation_ship(self, ap):
-        """ Sell all cargo to a colonisation/construction ship.
-        """
-        ap.keys.send('UI_Left', repeat=3)  # Go to table
-        ap.keys.send('UI_Down', hold=2)  # Go to bottom
-        ap.keys.send('UI_Up')  # Select RESET/CONFIRM TRANSFER/TRANSFER ALL
-        ap.keys.send('UI_Left', repeat=2)  # Go to RESET
-        ap.keys.send('UI_Right', repeat=2)  # Go to TRANSFER ALL
-        ap.keys.send('UI_Select')  # Select TRANSFER ALL
+        """Sell all cargo to a colonisation/construction ship."""
+        ap.keys.send("UI_Left", repeat=3)  # Go to table
+        ap.keys.send("UI_Down", hold=2)  # Go to bottom
+        ap.keys.send("UI_Up")  # Select RESET/CONFIRM TRANSFER/TRANSFER ALL
+        ap.keys.send("UI_Left", repeat=2)  # Go to RESET
+        ap.keys.send("UI_Right", repeat=2)  # Go to TRANSFER ALL
+        ap.keys.send("UI_Select")  # Select TRANSFER ALL
         sleep(0.5)
 
-        ap.keys.send('UI_Left')  # Go to CONFIRM TRANSFER
-        ap.keys.send('UI_Select')  # Select CONFIRM TRANSFER
+        ap.keys.send("UI_Left")  # Go to CONFIRM TRANSFER
+        ap.keys.send("UI_Select")  # Select CONFIRM TRANSFER
         sleep(2)
 
-        ap.keys.send('UI_Down')  # Go to EXIT
-        ap.keys.send('UI_Select')  # Select EXIT
+        ap.keys.send("UI_Down")  # Go to EXIT
+        ap.keys.send("UI_Select")  # Select EXIT
 
         sleep(2)  # give time to popdown menu
 
     def waypoint_assist(self, keys, scr_reg):
-        """ Processes the waypoints, performing jumps and sc assist if going to a station
+        """Processes the waypoints, performing jumps and sc assist if going to a station
         also can then perform trades if specific in the waypoints file.
         """
         if len(self.waypoints) == 0:
-            self.ap.ap_ckb('log+vce', "No Waypoint file loaded. Exiting Waypoint Assist.")
+            self.ap.ap_ckb("log+vce", "No Waypoint file loaded. Exiting Waypoint Assist.")
             return
 
         self.step = 0  # start at first waypoint
-        self.ap.ap_ckb('log', "Waypoint file: " + str(Path(self.filename).name))
+        self.ap.ap_ckb("log", "Waypoint file: " + str(Path(self.filename).name))
         self.reset_stats()
 
         # Loop until complete, or error
         _abort = False
         while not _abort:
             # Current location
-            cur_star_system = self.ap.jn.ship_state()['cur_star_system'].upper()
-            cur_station = self.ap.jn.ship_state()['cur_station'].upper()
-            cur_station_type = self.ap.jn.ship_state()['cur_station_type'].upper()
+            cur_star_system = self.ap.jn.ship_state()["cur_star_system"].upper()
+            cur_station = self.ap.jn.ship_state()["cur_station"].upper()
+            cur_station_type = self.ap.jn.ship_state()["cur_station_type"].upper()
 
             # Current in game destination
             status = self.ap.status.get_cleaned_data()
-            destination_body = status['Destination_Body']  # The body number (0 for prim star)
-            destination_name = status['Destination_Name']  # The system/body/station/settlement name
+            destination_body = status["Destination_Body"]  # The body number (0 for prim star)
+            destination_name = status["Destination_Name"]  # The system/body/station/settlement name
 
             # ====================================
             # Get next Waypoint
@@ -457,7 +456,7 @@ class EDWayPoint:
             old_step = self.step
             dest_key, next_waypoint = self.get_waypoint()
             if dest_key is None:
-                self.ap.ap_ckb('log+vce', "Waypoint list has been completed.")
+                self.ap.ap_ckb("log+vce", "Waypoint list has been completed.")
                 break
 
             # Is this a new waypoint?
@@ -467,18 +466,18 @@ class EDWayPoint:
                 new_waypoint = False
 
             # Flag if we are using bookmarks
-            gal_bookmark = next_waypoint.get('GalaxyBookmarkNumber', -1) > 0
-            sys_bookmark = next_waypoint.get('SystemBookmarkNumber', -1) > 0
-            gal_bookmark_type = next_waypoint.get('GalaxyBookmarkType', '')
-            gal_bookmark_num = next_waypoint.get('GalaxyBookmarkNumber', 0)
-            sys_bookmark_type = next_waypoint.get('SystemBookmarkType', '')
-            sys_bookmark_num = next_waypoint.get('SystemBookmarkNumber', 0)
+            gal_bookmark = next_waypoint.get("GalaxyBookmarkNumber", -1) > 0
+            sys_bookmark = next_waypoint.get("SystemBookmarkNumber", -1) > 0
+            gal_bookmark_type = next_waypoint.get("GalaxyBookmarkType", "")
+            gal_bookmark_num = next_waypoint.get("GalaxyBookmarkNumber", 0)
+            sys_bookmark_type = next_waypoint.get("SystemBookmarkType", "")
+            sys_bookmark_num = next_waypoint.get("SystemBookmarkNumber", 0)
 
-            next_wp_system = next_waypoint.get('SystemName', '').upper()
-            next_wp_station = next_waypoint.get('StationName', '').upper()
+            next_wp_system = next_waypoint.get("SystemName", "").upper()
+            next_wp_station = next_waypoint.get("StationName", "").upper()
 
             if new_waypoint:
-                self.ap.ap_ckb('log+vce', f"Next Waypoint: {next_wp_station} in {next_wp_system}")
+                self.ap.ap_ckb("log+vce", f"Next Waypoint: {next_wp_station} in {next_wp_system}")
 
             # ====================================
             # Target and travel to a System
@@ -487,37 +486,37 @@ class EDWayPoint:
             # Check current system and go to next system if different and not blank
             if next_wp_system == "" or (cur_star_system == next_wp_system):
                 if new_waypoint:
-                    self.ap.ap_ckb('log+vce', "Already in target System.")
+                    self.ap.ap_ckb("log+vce", "Already in target System.")
             else:
                 # Check if the current nav route is to the target system
                 last_nav_route_sys = self.ap.nav_route.get_last_system().upper()
                 # Check we have a route and that we have a destination to a star (body 0).
                 # We can have one without the other.
-                if ((last_nav_route_sys == next_wp_system) and
-                        (destination_body == 0 and destination_name != "")):
+                if (last_nav_route_sys == next_wp_system) and (destination_body == 0 and destination_name != ""):
                     # No need to target system
-                    self.ap.ap_ckb('log+vce', "System already targeted.")
+                    self.ap.ap_ckb("log+vce", "System already targeted.")
                 else:
-                    self.ap.ap_ckb('log+vce', f"Targeting system {next_wp_system}.")
+                    self.ap.ap_ckb("log+vce", f"Targeting system {next_wp_system}.")
                     # Select destination in galaxy map based on name
-                    res = self.ap.galaxy_map.set_gal_map_destination_text(self.ap, next_wp_system,
-                                                                          self.ap.jn.ship_state)
+                    res = self.ap.galaxy_map.set_gal_map_destination_text(
+                        self.ap, next_wp_system, self.ap.jn.ship_state
+                    )
                     if res:
-                        self.ap.ap_ckb('log', "System has been targeted.")
+                        self.ap.ap_ckb("log", "System has been targeted.")
                     else:
-                        self.ap.ap_ckb('log+vce', f"Unable to target {next_wp_system} in Galaxy Map.")
+                        self.ap.ap_ckb("log+vce", f"Unable to target {next_wp_system} in Galaxy Map.")
                         _abort = True
                         break
 
                 # Select next target system
                 # TODO should this be in before every jump?
-                keys.send('TargetNextRouteSystem')
+                keys.send("TargetNextRouteSystem")
 
                 # Jump to the destination system
-                self.ap.ap_ckb('log+vce', f"Jumping to {next_wp_system}.")
+                self.ap.ap_ckb("log+vce", f"Jumping to {next_wp_system}.")
                 res = self.ap.jump_to_system(scr_reg)
                 if not res:
-                    self.ap.ap_ckb('log', f"Failed to jump to {next_wp_system}.")
+                    self.ap.ap_ckb("log", f"Failed to jump to {next_wp_system}.")
                     _abort = True
                     break
 
@@ -534,11 +533,13 @@ class EDWayPoint:
                 # Check if we are at the correct station. Note that for FCs, the station name
                 # reported by the Journal is only the ship identifier (ABC-123) and not the carrier name.
                 # So we need to check if the ID (ABC-123) is at the end of the target ('Fleety McFleet ABC-123').
-                if cur_station_type == 'FleetCarrier'.upper():
+                if cur_station_type == "FleetCarrier".upper():
                     docked_at_stn = next_wp_station.endswith(cur_station)
-                elif next_wp_station == 'System Colonisation Ship'.upper():
-                    if (cur_station_type == 'SurfaceStation'.upper() and
-                            'ColonisationShip'.upper() in cur_station.upper()):
+                elif next_wp_station == "System Colonisation Ship".upper():
+                    if (
+                        cur_station_type == "SurfaceStation".upper()
+                        and "ColonisationShip".upper() in cur_station.upper()
+                    ):
                         docked_at_stn = True
                 # elif next_wp_station.startswith('Orbital Construction Site'.upper()):
                 #     if (cur_station_type == 'SurfaceStation'.upper() and
@@ -550,19 +551,19 @@ class EDWayPoint:
             # Check current station and go to it if different
             if docked_at_stn:
                 if new_waypoint:
-                    self.ap.ap_ckb('log+vce', f"Already at target Station: {next_wp_station}")
+                    self.ap.ap_ckb("log+vce", f"Already at target Station: {next_wp_station}")
             else:
                 # Check if we need to travel to a station, else we are done.
                 # This may be by 1) System bookmark, 2) Galaxy bookmark or 3) by Station Name text
                 if sys_bookmark or gal_bookmark or next_wp_station != "":
                     # If waypoint file has a Station Name associated then attempt targeting it
-                    self.ap.ap_ckb('log+vce', f"Targeting Station: {next_wp_station}")
+                    self.ap.ap_ckb("log+vce", f"Targeting Station: {next_wp_station}")
 
                     if gal_bookmark:
                         # Set destination via gal bookmark, not system bookmark
                         res = self.ap.galaxy_map.set_gal_map_dest_bookmark(self.ap, gal_bookmark_type, gal_bookmark_num)
                         if not res:
-                            self.ap.ap_ckb('log+vce', "Unable to set Galaxy Map bookmark.")
+                            self.ap.ap_ckb("log+vce", "Unable to set Galaxy Map bookmark.")
                             _abort = True
                             break
 
@@ -570,13 +571,13 @@ class EDWayPoint:
                         # Set destination via system bookmark
                         res = self.ap.system_map.set_sys_map_dest_bookmark(self.ap, sys_bookmark_type, sys_bookmark_num)
                         if not res:
-                            self.ap.ap_ckb('log+vce', "Unable to set System Map bookmark.")
+                            self.ap.ap_ckb("log+vce", "Unable to set System Map bookmark.")
                             _abort = True
                             break
 
                     elif next_wp_station != "":
                         # Need OCR added in for this (WIP)
-                        self.ap.ap_ckb('log+vce', "No bookmark defined. Target by Station text not supported.")
+                        self.ap.ap_ckb("log+vce", "No bookmark defined. Target by Station text not supported.")
                         # res = self.nav_panel.lock_destination(station_name)
                         _abort = True
                         break
@@ -586,7 +587,7 @@ class EDWayPoint:
                     sleep(1)  # Allow status log to update
                     continue
                 else:
-                    self.ap.ap_ckb('log+vce', f"Arrived at target System: {next_wp_system}")
+                    self.ap.ap_ckb("log+vce", f"Arrived at target System: {next_wp_system}")
 
             # ====================================
             # Dock and Trade at Station
@@ -595,28 +596,29 @@ class EDWayPoint:
             # Are we at the correct station to trade?
             if docked_at_stn:  # and (next_wp_station != "" or sys_bookmark):
                 # Docked - let do trade
-                self.ap.ap_ckb('log+vce', f"Execute trade at Station: {next_wp_station}")
+                self.ap.ap_ckb("log+vce", f"Execute trade at Station: {next_wp_station}")
                 self.execute_trade(self.ap, dest_key)
 
             # Mark this waypoint as completed
             self.mark_waypoint_complete(dest_key)
-            self.ap.ap_ckb('log+vce', "Current Waypoint complete.")
+            self.ap.ap_ckb("log+vce", "Current Waypoint complete.")
 
         # Done with waypoints
         if not _abort:
-            self.ap.ap_ckb('log+vce',
-                           "Waypoint Route Complete, total distance jumped: " + str(self.ap.total_dist_jumped) + "LY")
+            self.ap.ap_ckb(
+                "log+vce", "Waypoint Route Complete, total distance jumped: " + str(self.ap.total_dist_jumped) + "LY"
+            )
             self.ap.update_ap_status("Idle")
         else:
-            self.ap.ap_ckb('log+vce', "Waypoint Route was aborted.")
+            self.ap.ap_ckb("log+vce", "Waypoint Route was aborted.")
             self.ap.update_ap_status("Idle")
 
     def reset_stats(self):
         # Clear stats
-        self.stats_log['Colonisation'] = 0
-        self.stats_log['Construction'] = 0
-        self.stats_log['Fleet Carrier'] = 0
-        self.stats_log['Station'] = 0
+        self.stats_log["Colonisation"] = 0
+        self.stats_log["Construction"] = 0
+        self.stats_log["Fleet Carrier"] = 0
+        self.stats_log["Station"] = 0
 
 
 def main():
@@ -631,31 +633,31 @@ def main():
     wp.ap.stn_svcs_in_ship.sell_commodity(keys, "Aluminium", 1, wp.cargo_parser)
     wp.ap.stn_svcs_in_ship.sell_commodity(keys, "Beryllium", 1, wp.cargo_parser)
     wp.ap.stn_svcs_in_ship.sell_commodity(keys, "Cobalt", 1, wp.cargo_parser)
-    #wp.ap.stn_svcs_in_ship.buy_commodity(keys, "Titanium", 5, 200)
+    # wp.ap.stn_svcs_in_ship.buy_commodity(keys, "Titanium", 5, 200)
 
     # dest = 'Enayex'
-    #print(dest)
+    # print(dest)
 
-    #print("In waypoint_assist, at:"+str(dest))
+    # print("In waypoint_assist, at:"+str(dest))
 
     # already in doc config, test the trade
-    #wp.execute_trade(keys, dest)
+    # wp.execute_trade(keys, dest)
 
     # Set the Route for the waypoint^#
-    #dest = wp.waypoint_next(ap=None)
+    # dest = wp.waypoint_next(ap=None)
 
-    #while dest != "":
+    # while dest != "":
 
     #  print("Doing: "+str(dest))
     #  print(wp.waypoints[dest])
 
-    #wp.set_station_target(None, dest)
+    # wp.set_station_target(None, dest)
 
     # Mark this waypoint as complated
-    #wp.mark_waypoint_complete(dest)
+    # wp.mark_waypoint_complete(dest)
 
     # set target to next waypoint and loop
-    #dest = wp.waypoint_next(ap=None)
+    # dest = wp.waypoint_next(ap=None)
 
 
 if __name__ == "__main__":

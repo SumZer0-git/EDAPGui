@@ -5,7 +5,7 @@ from numpy import array, sum
 
 
 def reg_scale_for_station(region, w: int, h: int) -> [int, int, int, int]:
-    """ Scale a station services region based on the target resolution.
+    """Scale a station services region based on the target resolution.
     This is performed because the tables on the station services screen do
     not increase proportionally with the screen size. The width changes with
     the screen size, the height does not change based on the screen size
@@ -33,20 +33,20 @@ def reg_scale_for_station(region, w: int, h: int) -> [int, int, int, int]:
     # reg_avg = (region['rect'][1] + region['rect'][3]) / 2
 
     # Recalc the region as a % above and below the center line.
-    pct_abv = (reg_avg - region['rect'][1]) * x_scale / y_scale
-    pct_blw = (region['rect'][3] - reg_avg) * x_scale / y_scale
+    pct_abv = (reg_avg - region["rect"][1]) * x_scale / y_scale
+    pct_blw = (region["rect"][3] - reg_avg) * x_scale / y_scale
 
     # Apply new % to the center line.
     new_rect1 = reg_avg - pct_abv
     new_rect3 = reg_avg + pct_blw
 
     # Return the update top and bottom Y percentages with the original X percentages.
-    new_reg = {'rect': [region['rect'][0], new_rect1, region['rect'][2], new_rect3]}
+    new_reg = {"rect": [region["rect"][0], new_rect1, region["rect"][2], new_rect3]}
     return new_reg
 
 
 def size_scale_for_station(width: int, height: int, w: int, h: int) -> (int, int):
-    """ Scale an item in the station services region based on the target resolution.
+    """Scale an item in the station services region based on the target resolution.
     This is performed because the tables on the station services screen do
     not increase proportionally with the screen size. The width changes with
     the screen size, the height does not change based on the screen size
@@ -87,65 +87,131 @@ class ScreenRegions:
         self.disengage_thresh = 0.25
 
         # array is in HSV order which represents color ranges for filtering
-        self.orange_color_range   = [array([0, 130, 123]),  array([25, 235, 220])]
+        self.orange_color_range = [array([0, 130, 123]), array([25, 235, 220])]
         self.orange_2_color_range = [array([16, 165, 220]), array([98, 255, 255])]
-        self.target_occluded_range= [array([16, 31, 85]),   array([26, 160, 212])]
-        self.blue_color_range     = [array([0, 28, 170]), array([180, 100, 255])]
+        self.target_occluded_range = [array([16, 31, 85]), array([26, 160, 212])]
+        self.blue_color_range = [array([0, 28, 170]), array([180, 100, 255])]
         self.blue_sco_color_range = [array([10, 0, 0]), array([100, 150, 255])]
-        self.fss_color_range      = [array([95, 210, 70]),  array([105, 255, 120])]
+        self.fss_color_range = [array([95, 210, 70]), array([105, 255, 120])]
 
         self.reg = {}
         # regions with associated filter and color ranges
         # The rect is [L, T, R, B] top left x, y, and bottom right x, y in fraction of screen resolution
-        self.reg['compass']   = {'rect': [0.33, 0.65, 0.46, 1.0], 'width': 1, 'height': 1, 'filterCB': self.equalize,                                'filter': None}
-        self.reg['target']    = {'rect': [0.33, 0.27, 0.66, 0.70], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.orange_2_color_range}   # also called destination
-        self.reg['target_occluded']    = {'rect': [0.33, 0.27, 0.66, 0.70], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.target_occluded_range}
-        self.reg['sun']       = {'rect': [0.30, 0.30, 0.70, 0.68], 'width': 1, 'height': 1, 'filterCB': self.filter_sun, 'filter': None}
-        self.reg['disengage'] = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.blue_sco_color_range}
-        self.reg['sco']       = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.blue_sco_color_range}
-        self.reg['fss']       = {'rect': [0.5045, 0.7545, 0.532, 0.7955], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
-        self.reg['mission_dest']  = {'rect': [0.46, 0.38, 0.65, 0.86], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
-        self.reg['missions']    = {'rect': [0.50, 0.78, 0.65, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
-        self.reg['nav_panel']   = {'rect': [0.25, 0.36, 0.60, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
+        self.reg["compass"] = {
+            "rect": [0.33, 0.65, 0.46, 1.0],
+            "width": 1,
+            "height": 1,
+            "filterCB": self.equalize,
+            "filter": None,
+        }
+        self.reg["target"] = {
+            "rect": [0.33, 0.27, 0.66, 0.70],
+            "width": 1,
+            "height": 1,
+            "filterCB": self.filter_by_color,
+            "filter": self.orange_2_color_range,
+        }  # also called destination
+        self.reg["target_occluded"] = {
+            "rect": [0.33, 0.27, 0.66, 0.70],
+            "width": 1,
+            "height": 1,
+            "filterCB": self.filter_by_color,
+            "filter": self.target_occluded_range,
+        }
+        self.reg["sun"] = {
+            "rect": [0.30, 0.30, 0.70, 0.68],
+            "width": 1,
+            "height": 1,
+            "filterCB": self.filter_sun,
+            "filter": None,
+        }
+        self.reg["disengage"] = {
+            "rect": [0.42, 0.65, 0.60, 0.80],
+            "width": 1,
+            "height": 1,
+            "filterCB": self.filter_by_color,
+            "filter": self.blue_sco_color_range,
+        }
+        self.reg["sco"] = {
+            "rect": [0.42, 0.65, 0.60, 0.80],
+            "width": 1,
+            "height": 1,
+            "filterCB": self.filter_by_color,
+            "filter": self.blue_sco_color_range,
+        }
+        self.reg["fss"] = {
+            "rect": [0.5045, 0.7545, 0.532, 0.7955],
+            "width": 1,
+            "height": 1,
+            "filterCB": self.equalize,
+            "filter": None,
+        }
+        self.reg["mission_dest"] = {
+            "rect": [0.46, 0.38, 0.65, 0.86],
+            "width": 1,
+            "height": 1,
+            "filterCB": self.equalize,
+            "filter": None,
+        }
+        self.reg["missions"] = {
+            "rect": [0.50, 0.78, 0.65, 0.85],
+            "width": 1,
+            "height": 1,
+            "filterCB": self.equalize,
+            "filter": None,
+        }
+        self.reg["nav_panel"] = {
+            "rect": [0.25, 0.36, 0.60, 0.85],
+            "width": 1,
+            "height": 1,
+            "filterCB": self.equalize,
+            "filter": None,
+        }
 
         # convert rect from percent of screen into pixel location, calc the width/height of the area
         for i, key in enumerate(self.reg):
-            xx = self.reg[key]['rect']
-            self.reg[key]['rect'] = [int(xx[0]*screen.screen_width), int(xx[1]*screen.screen_height),
-                                     int(xx[2]*screen.screen_width), int(xx[3]*screen.screen_height)]
-            self.reg[key]['width']  = self.reg[key]['rect'][2] - self.reg[key]['rect'][0]
-            self.reg[key]['height'] = self.reg[key]['rect'][3] - self.reg[key]['rect'][1]
+            xx = self.reg[key]["rect"]
+            self.reg[key]["rect"] = [
+                int(xx[0] * screen.screen_width),
+                int(xx[1] * screen.screen_height),
+                int(xx[2] * screen.screen_width),
+                int(xx[3] * screen.screen_height),
+            ]
+            self.reg[key]["width"] = self.reg[key]["rect"][2] - self.reg[key]["rect"][0]
+            self.reg[key]["height"] = self.reg[key]["rect"][3] - self.reg[key]["rect"][1]
 
     def capture_region(self, screen, region_name):
-        """ Just grab the screen based on the region name/rect.
-        Returns an unfiltered image. """
-        return screen.get_screen_region(self.reg[region_name]['rect'])
+        """Just grab the screen based on the region name/rect.
+        Returns an unfiltered image."""
+        return screen.get_screen_region(self.reg[region_name]["rect"])
 
     def capture_region_filtered(self, screen, region_name, inv_col=True):
-        """ Grab screen region and call its filter routine.
-        Returns the filtered image. """
-        scr = screen.get_screen_region(self.reg[region_name]['rect'], inv_col)
-        if self.reg[region_name]['filterCB'] is None:
+        """Grab screen region and call its filter routine.
+        Returns the filtered image."""
+        scr = screen.get_screen_region(self.reg[region_name]["rect"], inv_col)
+        if self.reg[region_name]["filterCB"] is None:
             # return the screen region untouched in BGRA format.
             return scr
         else:
             # return the screen region in the format returned by the filter.
-            return self.reg[region_name]['filterCB'](scr, self.reg[region_name]['filter'])
+            return self.reg[region_name]["filterCB"](scr, self.reg[region_name]["filter"])
 
     def match_template_in_region(self, region_name, templ_name, inv_col=True):
-        """ Attempt to match the given template in the given region which is filtered using the region filter.
-        Returns the filtered image, detail of match and the match mask. """
-        img_region = self.capture_region_filtered(self.screen, region_name, inv_col)    # which would call, reg.capture_region('compass') and apply defined filter
-        match = cv2.matchTemplate(img_region, self.templates.template[templ_name]['image'], cv2.TM_CCOEFF_NORMED)
+        """Attempt to match the given template in the given region which is filtered using the region filter.
+        Returns the filtered image, detail of match and the match mask."""
+        img_region = self.capture_region_filtered(
+            self.screen, region_name, inv_col
+        )  # which would call, reg.capture_region('compass') and apply defined filter
+        match = cv2.matchTemplate(img_region, self.templates.template[templ_name]["image"], cv2.TM_CCOEFF_NORMED)
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(match)
         return img_region, (minVal, maxVal, minLoc, maxLoc), match
 
     def match_template_in_region_x3(self, region_name, templ_name, inv_col=True):
-        """ Attempt to match the given template in the given region which is unfiltered.
+        """Attempt to match the given template in the given region which is unfiltered.
         The region's image is split into separate HSV channels, each channel tested and the best result kept.
-        Returns the image, detail of match and the match mask. """
-        img_region = self.screen.get_screen_region(self.reg[region_name]['rect'], rgb=False)
-        templ = self.templates.template[templ_name]['image']
+        Returns the image, detail of match and the match mask."""
+        img_region = self.screen.get_screen_region(self.reg[region_name]["rect"], rgb=False)
+        templ = self.templates.template[templ_name]["image"]
 
         # Convert to HSV and split.
         img_hsv = cv2.cvtColor(img_region, cv2.COLOR_BGR2HSV)
@@ -174,17 +240,17 @@ class ScreenRegions:
         return img_region, (minVal_h, maxVal_h, minLoc_h, maxLoc_h), match_h
 
     def match_template_in_image(self, image, template):
-        """ Attempt to match the given template in the (unfiltered) image.
-        Returns the original image, detail of match and the match mask. """
-        match = cv2.matchTemplate(image, self.templates.template[template]['image'], cv2.TM_CCOEFF_NORMED)
+        """Attempt to match the given template in the (unfiltered) image.
+        Returns the original image, detail of match and the match mask."""
+        match = cv2.matchTemplate(image, self.templates.template[template]["image"], cv2.TM_CCOEFF_NORMED)
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(match)
         return image, (minVal, maxVal, minLoc, maxLoc), match
 
     def match_template_in_image_x3(self, image, templ_name):
-        """ Attempt to match the given template in the (unfiltered) image.
+        """Attempt to match the given template in the (unfiltered) image.
         The image is split into separate HSV channels, each channel tested and the best result kept.
-        Returns the original image, detail of match and the match mask. """
-        templ = self.templates.template[templ_name]['image']
+        Returns the original image, detail of match and the match mask."""
+        templ = self.templates.template[templ_name]["image"]
 
         # Convert to HSV and split.
         img_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -216,7 +282,7 @@ class ScreenRegions:
         # Load the image in greyscale
         img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         # create a CLAHE object (Arguments are optional).  Histogram equalization, improves constrast
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         img_out = clahe.apply(img_gray)
 
         return img_out
@@ -235,9 +301,9 @@ class ScreenRegions:
     # not used
     def filter_bright(self, image=None, no_op=None):
         equalized = self.equalize(image)
-        equalized = cv2.cvtColor(equalized, cv2.COLOR_GRAY2BGR)    #hhhmm, equalize() already converts to gray
+        equalized = cv2.cvtColor(equalized, cv2.COLOR_GRAY2BGR)  # hhhmm, equalize() already converts to gray
         equalized = cv2.cvtColor(equalized, cv2.COLOR_BGR2HSV)
-        filtered  = cv2.inRange(equalized, array([0, 0, 215]), array([0, 0, 255]))  #only high value
+        filtered = cv2.inRange(equalized, array([0, 0, 215]), array([0, 0, 255]))  # only high value
 
         return filtered
 
@@ -255,11 +321,11 @@ class ScreenRegions:
 
     # percent the image is white
     def sun_percent(self, screen):
-        blackAndWhiteImage = self.capture_region_filtered(screen, 'sun')
+        blackAndWhiteImage = self.capture_region_filtered(screen, "sun")
 
         wht = sum(blackAndWhiteImage == 255)
         blk = sum(blackAndWhiteImage != 255)
 
-        result = int((wht / (wht+blk))*100)
+        result = int((wht / (wht + blk)) * 100)
 
         return result

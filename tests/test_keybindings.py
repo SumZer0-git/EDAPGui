@@ -10,7 +10,7 @@ from unittest import mock
 from controls.directinput import SCANCODE
 from game.keybindings import KeyBindings
 
-FIXTURE = Path(__file__).parent / 'fixtures' / 'bindings' / 'Test.4.2.binds'
+FIXTURE = Path(__file__).parent / "fixtures" / "bindings" / "Test.4.2.binds"
 
 SYNTHETIC = """<?xml version="1.0" encoding="UTF-8" ?>
 <Root PresetName="Synthetic" MajorVersion="4" MinorVersion="2">
@@ -47,15 +47,15 @@ class BindingsDirectoryMixin:
     def setUp(self):
         self.local_app_data = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.local_app_data, ignore_errors=True)
-        patcher = mock.patch.dict(os.environ, {'LOCALAPPDATA': self.local_app_data})
+        patcher = mock.patch.dict(os.environ, {"LOCALAPPDATA": self.local_app_data})
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.bindings_dir = Path(self.local_app_data, 'Frontier Developments', 'Elite Dangerous', 'Options', 'Bindings')
+        self.bindings_dir = Path(self.local_app_data, "Frontier Developments", "Elite Dangerous", "Options", "Bindings")
 
     def add_bindings(self, name, text, mtime=None):
         self.bindings_dir.mkdir(parents=True, exist_ok=True)
         path = self.bindings_dir / name
-        path.write_text(text, encoding='utf-8')
+        path.write_text(text, encoding="utf-8")
         if mtime is not None:
             os.utime(path, (mtime, mtime))
         return path
@@ -70,79 +70,84 @@ class RealBindingsTestCase(BindingsDirectoryMixin, unittest.TestCase):
         self.kb = KeyBindings(lambda *args: self.messages.append(args))
 
     def test_reads_simple_keys(self):
-        self.assertEqual(self.kb.keys['YawLeftButton'], {'key': SCANCODE['Key_A'], 'mods': []})
-        self.assertEqual(self.kb.keys['UI_Up'], {'key': SCANCODE['Key_W'], 'mods': []})
-        self.assertEqual(self.kb.keys['HyperSuperCombination'], {'key': SCANCODE['Key_J'], 'mods': []})
+        self.assertEqual(self.kb.keys["YawLeftButton"], {"key": SCANCODE["Key_A"], "mods": []})
+        self.assertEqual(self.kb.keys["UI_Up"], {"key": SCANCODE["Key_W"], "mods": []})
+        self.assertEqual(self.kb.keys["HyperSuperCombination"], {"key": SCANCODE["Key_J"], "mods": []})
 
     def test_reads_modifiers(self):
-        self.assertEqual(self.kb.keys['MouseReset'],
-                         {'key': SCANCODE['Key_R'], 'mods': [SCANCODE['Key_LeftControl'], SCANCODE['Key_LeftShift']]})
-        self.assertEqual(self.kb.keys['CamTranslateRight'], {'key': SCANCODE['Key_D'], 'mods': [SCANCODE['Key_LeftShift']]})
+        self.assertEqual(
+            self.kb.keys["MouseReset"],
+            {"key": SCANCODE["Key_R"], "mods": [SCANCODE["Key_LeftControl"], SCANCODE["Key_LeftShift"]]},
+        )
+        self.assertEqual(
+            self.kb.keys["CamTranslateRight"], {"key": SCANCODE["Key_D"], "mods": [SCANCODE["Key_LeftShift"]]}
+        )
 
     def test_only_requested_keys_are_returned(self):
         self.assertTrue(set(self.kb.keys) <= set(self.kb.keys_to_obtain))
         self.assertEqual(len(self.kb.keys), 38)
 
     def test_actions_without_keyboard_binding_are_missing(self):
-        self.assertEqual(sorted(self.kb.missing_keys), ['ExplorationFSSEnter', 'PrimaryFire'])
-        self.assertNotIn('PrimaryFire', self.kb.keys)
-        self.assertTrue(any('PrimaryFire' in message[1] for message in self.messages))
+        self.assertEqual(sorted(self.kb.missing_keys), ["ExplorationFSSEnter", "PrimaryFire"])
+        self.assertNotIn("PrimaryFire", self.kb.keys)
+        self.assertTrue(any("PrimaryFire" in message[1] for message in self.messages))
 
     def test_collisions(self):
-        self.assertEqual(self.kb.get_collisions('UI_Up'), ['UI_Up'])
-        self.assertEqual(sorted(self.kb.get_collisions('YawLeftButton')), ['UI_Left', 'YawLeftButton'])
+        self.assertEqual(self.kb.get_collisions("UI_Up"), ["UI_Up"])
+        self.assertEqual(sorted(self.kb.get_collisions("YawLeftButton")), ["UI_Left", "YawLeftButton"])
 
     def test_collisions_are_reported_to_the_gui(self):
-        self.assertTrue(any('Key_A' in message[1] and 'UI_Left' in message[1] for message in self.messages))
+        self.assertTrue(any("Key_A" in message[1] and "UI_Left" in message[1] for message in self.messages))
 
     def test_bindings_dict(self):
         bindings = self.kb.get_bindings_dict()
 
-        self.assertEqual(bindings['Root']['@PresetName'], 'Test')
-        self.assertEqual(bindings['Root']['YawLeftButton']['Primary']['@Key'], 'Key_A')
+        self.assertEqual(bindings["Root"]["@PresetName"], "Test")
+        self.assertEqual(bindings["Root"]["YawLeftButton"]["Primary"]["@Key"], "Key_A")
 
     def test_hotkey_check(self):
-        self.assertEqual(self.kb.check_hotkey_in_bindings('Key_DoesNotExist'), '')
-        usage = self.kb.check_hotkey_in_bindings('Key_A')
-        self.assertIn('YawLeftButton (Primary)', usage)
-        self.assertIn('UI_Left (Secondary)', usage)
+        self.assertEqual(self.kb.check_hotkey_in_bindings("Key_DoesNotExist"), "")
+        usage = self.kb.check_hotkey_in_bindings("Key_A")
+        self.assertIn("YawLeftButton (Primary)", usage)
+        self.assertIn("UI_Left (Secondary)", usage)
 
 
 class SyntheticBindingsTestCase(BindingsDirectoryMixin, unittest.TestCase):
     def make_keybindings(self):
         kb = KeyBindings.__new__(KeyBindings)
-        kb.keys_to_obtain = ['YawLeftButton', 'YawRightButton', 'SetSpeedZero', 'SetSpeed50']
+        kb.keys_to_obtain = ["YawLeftButton", "YawRightButton", "SetSpeedZero", "SetSpeed50"]
         return kb
 
     def test_secondary_is_preferred_and_hold_is_read(self):
-        self.add_bindings('a.binds', SYNTHETIC)
+        self.add_bindings("a.binds", SYNTHETIC)
 
         keys = self.make_keybindings().get_bindings()
 
-        self.assertEqual(keys['YawLeftButton'],
-                         {'key': SCANCODE['Key_B'], 'mods': [SCANCODE['Key_LeftShift']], 'hold': True})
+        self.assertEqual(
+            keys["YawLeftButton"], {"key": SCANCODE["Key_B"], "mods": [SCANCODE["Key_LeftShift"]], "hold": True}
+        )
 
     def test_non_keyboard_secondary_keeps_primary(self):
-        self.add_bindings('a.binds', SYNTHETIC)
+        self.add_bindings("a.binds", SYNTHETIC)
 
         keys = self.make_keybindings().get_bindings()
 
-        self.assertEqual(keys['YawRightButton'], {'key': SCANCODE['Key_D'], 'mods': []})
+        self.assertEqual(keys["YawRightButton"], {"key": SCANCODE["Key_D"], "mods": []})
 
     def test_unknown_key_and_unbound_actions_are_skipped(self):
-        self.add_bindings('a.binds', SYNTHETIC)
+        self.add_bindings("a.binds", SYNTHETIC)
 
         keys = self.make_keybindings().get_bindings()
 
         # An unknown key currently leaves an empty binding behind instead of no entry
-        self.assertNotIn('key', keys.get('SetSpeedZero', {}))
-        self.assertNotIn('SetSpeed50', keys)
-        self.assertNotIn('NotUsedByEdap', keys)
+        self.assertNotIn("key", keys.get("SetSpeedZero", {}))
+        self.assertNotIn("SetSpeed50", keys)
+        self.assertNotIn("NotUsedByEdap", keys)
 
     def test_latest_modified_file_wins(self):
-        old = self.add_bindings('old.binds', SYNTHETIC, mtime=1_000_000)
-        new = self.add_bindings('new.binds', SYNTHETIC, mtime=2_000_000)
-        self.add_bindings('ignored.txt', 'not a bindings file', mtime=3_000_000)
+        old = self.add_bindings("old.binds", SYNTHETIC, mtime=1_000_000)
+        new = self.add_bindings("new.binds", SYNTHETIC, mtime=2_000_000)
+        self.add_bindings("ignored.txt", "not a bindings file", mtime=3_000_000)
 
         self.assertEqual(Path(self.make_keybindings().get_latest_keybinds()), new)
         os.utime(old, (4_000_000, 4_000_000))
@@ -163,5 +168,5 @@ class SyntheticBindingsTestCase(BindingsDirectoryMixin, unittest.TestCase):
         self.assertEqual(kb.get_bindings(), {})
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -25,8 +25,8 @@ elite_dangerous_window = "Elite - Dangerous (CLIENT)"
 
 
 def set_focus_elite_window():
-    """ set focus to the ED window, if ED does not have focus then the keystrokes will go to the window
-    that does have focus. """
+    """set focus to the ED window, if ED does not have focus then the keystrokes will go to the window
+    that does have focus."""
     ed_title = "Elite - Dangerous (CLIENT)"
 
     # TODO - determine if GetWindowText is faster than FindWindow if ED is in foreground
@@ -53,32 +53,32 @@ class Screen:
         # Find ED window position to determine which monitor it is on
         ed_rect = self.get_elite_window_rect()
         if ed_rect is None:
-            self.ap_ckb('log', f"ERROR: Could not find window {elite_dangerous_window}.")
-            logger.error(f'Could not find window {elite_dangerous_window}.')
+            self.ap_ckb("log", f"ERROR: Could not find window {elite_dangerous_window}.")
+            logger.error(f"Could not find window {elite_dangerous_window}.")
         else:
-            logger.debug(f'Found Elite Dangerous window position: {ed_rect}')
+            logger.debug(f"Found Elite Dangerous window position: {ed_rect}")
 
         # Examine all monitors to determine match with ED
         self.mons = self.mss.monitors
         mon_num = 0
         for item in self.mons:
             if mon_num > 0:  # ignore monitor 0 as it is the complete desktop (dims of all monitors)
-                logger.debug(f'Found monitor {mon_num} with details: {item}')
+                logger.debug(f"Found monitor {mon_num} with details: {item}")
                 if ed_rect is None:
                     self.monitor_number = mon_num
                     self.mon = self.mss.monitors[self.monitor_number]
-                    logger.debug(f'Defaulting to monitor {mon_num}.')
-                    self.screen_width = item['width']
-                    self.screen_height = item['height']
+                    logger.debug(f"Defaulting to monitor {mon_num}.")
+                    self.screen_width = item["width"]
+                    self.screen_height = item["height"]
                     break
                 else:
-                    if item['left'] == ed_rect[0] and item['top'] == ed_rect[1]:
+                    if item["left"] == ed_rect[0] and item["top"] == ed_rect[1]:
                         # Get information of monitor 2
                         self.monitor_number = mon_num
                         self.mon = self.mss.monitors[self.monitor_number]
-                        logger.debug(f'Elite Dangerous is on monitor {mon_num}.')
-                        self.screen_width = item['width']
-                        self.screen_height = item['height']
+                        logger.debug(f"Elite Dangerous is on monitor {mon_num}.")
+                        self.screen_width = item["width"]
+                        self.screen_height = item["height"]
 
             # Next monitor
             mon_num = mon_num + 1
@@ -86,17 +86,17 @@ class Screen:
         # Add new screen resolutions here with tested scale factors
         # this table will be default, overwritten when loading resolution.json file
         self.scales = {  # scaleX, scaleY
-            '1024x768':   [0.39, 0.39],  # tested, but not has high match %
-            '1080x1080':  [0.5, 0.5],    # fix, not tested
-            '1280x800':   [0.48, 0.48],  # tested
-            '1280x1024':  [0.5, 0.5],    # tested
-            '1600x900':   [0.6, 0.6],    # tested
-            '1920x1080':  [0.75, 0.75],  # tested
-            '1920x1200':  [0.73, 0.73],  # tested
-            '1920x1440':  [0.8, 0.8],    # tested
-            '2560x1080':  [0.75, 0.75],  # tested
-            '2560x1440':  [1.0, 1.0],    # tested
-            '3440x1440':  [1.0, 1.0],    # tested
+            "1024x768": [0.39, 0.39],  # tested, but not has high match %
+            "1080x1080": [0.5, 0.5],  # fix, not tested
+            "1280x800": [0.48, 0.48],  # tested
+            "1280x1024": [0.5, 0.5],  # tested
+            "1600x900": [0.6, 0.6],  # tested
+            "1920x1080": [0.75, 0.75],  # tested
+            "1920x1200": [0.73, 0.73],  # tested
+            "1920x1440": [0.8, 0.8],  # tested
+            "2560x1080": [0.75, 0.75],  # tested
+            "2560x1440": [1.0, 1.0],  # tested
+            "3440x1440": [1.0, 1.0],  # tested
             # 'Calibrated': [-1.0, -1.0]
         }
 
@@ -108,12 +108,12 @@ class Screen:
         # if we read it then point to it, otherwise use the default table above
         if ss is not None:
             self.scales = ss
-            logger.debug("read json:"+str(ss))
+            logger.debug("read json:" + str(ss))
 
         # try to find the resolution/scale values in table
         # if not, then take current screen size and divide it out by 3440 x1440
         try:
-            scale_key = str(self.screen_width)+"x"+str(self.screen_height)
+            scale_key = str(self.screen_width) + "x" + str(self.screen_height)
             self.scaleX = self.scales[scale_key][0]
             self.scaleY = self.scales[scale_key][1]
         except Exception:
@@ -127,12 +127,12 @@ class Screen:
         # if self.scales['Calibrated'][1] != -1.0:
         #     self.scaleY = self.scales['Calibrated'][1]
 
-        logger.debug('screen size: '+str(self.screen_width)+" "+str(self.screen_height))
-        logger.debug('Default scale X, Y: '+str(self.scaleX)+", "+str(self.scaleY))
+        logger.debug("screen size: " + str(self.screen_width) + " " + str(self.screen_height))
+        logger.debug("Default scale X, Y: " + str(self.scaleX) + ", " + str(self.scaleY))
 
     @staticmethod
     def get_elite_window_rect() -> typing.Tuple[int, int, int, int] | None:
-        """ Gets the ED window rectangle.
+        """Gets the ED window rectangle.
         Returns (left, top, right, bottom) or None.
         """
         hwnd = win32gui.FindWindow(None, elite_dangerous_window)
@@ -144,8 +144,7 @@ class Screen:
 
     @staticmethod
     def elite_window_exists() -> bool:
-        """ Does the ED Client Window exist (i.e. is ED running)
-        """
+        """Does the ED Client Window exist (i.e. is ED running)"""
         hwnd = win32gui.FindWindow(None, elite_dangerous_window)
         if hwnd:
             return True
@@ -156,18 +155,18 @@ class Screen:
         if data is None:
             data = self.scales
         try:
-            with open(file_name,"w") as fp:
-                json.dump(data,fp, indent=4)
+            with open(file_name, "w") as fp:
+                json.dump(data, fp, indent=4)
         except Exception as e:
-            logger.warning("screen.py write_config error:"+str(e))
+            logger.warning("screen.py write_config error:" + str(e))
 
     def read_config(self, file_name=paths.RESOLUTION_CONFIG):
         s = None
         try:
-            with open(file_name,"r") as fp:
+            with open(file_name, "r") as fp:
                 s = json.load(fp)
-        except  Exception as e:
-            logger.warning("screen.py read_config error :"+str(e))
+        except Exception as e:
+            logger.warning("screen.py read_config error :" + str(e))
 
         return s
 
@@ -176,7 +175,7 @@ class Screen:
         image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]), rgb)
         return image
 
-    def get_screen(self, x_left, y_top, x_right, y_bot, rgb=True):    # if absolute need to scale??
+    def get_screen(self, x_left, y_top, x_right, y_bot, rgb=True):  # if absolute need to scale??
         monitor = {
             "top": self.mon["top"] + y_top,
             "left": self.mon["left"] + x_left,
@@ -191,7 +190,7 @@ class Screen:
         return image
 
     def get_screen_rect_pct(self, rect):
-        """ Grabs a screenshot and returns the selected region as an image.
+        """Grabs a screenshot and returns the selected region as an image.
         @param rect: A rect array ([L, T, R, B]) in percent (0.0 - 1.0)
         @return: An image defined by the region.
         """
@@ -209,17 +208,20 @@ class Screen:
             return image
 
     def screen_rect_to_abs(self, rect):
-        """ Converts and array of real percentage screen values to int absolutes.
+        """Converts and array of real percentage screen values to int absolutes.
         @param rect: A rect array ([L, T, R, B]) in percent (0.0 - 1.0)
         @return: A rect array ([L, T, R, B]) in pixels
         """
-        abs_rect = [int(rect[0] * self.screen_width), int(rect[1] * self.screen_height),
-                    int(rect[2] * self.screen_width), int(rect[3] * self.screen_height)]
+        abs_rect = [
+            int(rect[0] * self.screen_width),
+            int(rect[1] * self.screen_height),
+            int(rect[2] * self.screen_width),
+            int(rect[3] * self.screen_height),
+        ]
         return abs_rect
 
     def get_screen_full(self):
-        """ Grabs a full screenshot and returns the image.
-        """
+        """Grabs a full screenshot and returns the image."""
         if self.using_screen:
             image = self.get_screen(0, 0, self.screen_width, self.screen_height)
             # TODO delete this line when COLOR_RGB2BGR is removed from get_screen()
@@ -232,9 +234,9 @@ class Screen:
             return self._screen_image
 
     def crop_image_by_pct(self, image, rect):
-        """ Crop an image using a percentage values (0.0 - 1.0).
+        """Crop an image using a percentage values (0.0 - 1.0).
         Rect is an array of crop % [0.10, 0.20, 0.90, 0.95] = [Left, Top, Right, Bottom]
-        Returns the cropped image. """
+        Returns the cropped image."""
         # Existing size
         h, w, ch = image.shape
 
@@ -249,14 +251,14 @@ class Screen:
         return cropped
 
     def crop_image(self, image, rect):
-        """ Crop an image using a pixel values.
+        """Crop an image using a pixel values.
         Rect is an array of pixel values [100, 200, 1800, 1600] = [X0, Y0, X1, Y1]
         Returns the cropped image."""
-        cropped = image[rect[1]:rect[3], rect[0]:rect[2]]  # i.e. [y:y+h, x:x+w]
+        cropped = image[rect[1] : rect[3], rect[0] : rect[2]]  # i.e. [y:y+h, x:x+w]
         return cropped
 
     def set_screen_image(self, image):
-        """ Use an image instead of a screen capture. Sets the image and also sets the
+        """Use an image instead of a screen capture. Sets the image and also sets the
         screen width and height to the image properties.
         @param image: The image to use.
         """
@@ -269,4 +271,3 @@ class Screen:
         # Set the screen size to the original image size, not the region size
         self.screen_width = w
         self.screen_height = h
-

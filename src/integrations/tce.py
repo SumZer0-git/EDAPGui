@@ -9,27 +9,27 @@ from core.logger import logger
 
 @final
 class TceIntegration:
-    """ Handles TCE Integration. """
+    """Handles TCE Integration."""
 
     def __init__(self, ed_ap, cb):
         self.ap = ed_ap
         self.ap_ckb = cb
-        self.tce_path = self.ap.config['TCEInstallationPath']  # i.e. C:\TCE
+        self.tce_path = self.ap.config["TCEInstallationPath"]  # i.e. C:\TCE
         self.tce_destination_filepath = self.tce_path + "\\DUMP\\Destination.json"
 
     def write_shopping_list(self) -> bool:
-        """ Write the global shopping list to file.
+        """Write the global shopping list to file.
         @return: True once complete.
         """
         db_path = self.tce_path + "\\DB\\Resources.db"
-        public_goods = self.read_resources_db(db_path, 'public_Goods')
+        public_goods = self.read_resources_db(db_path, "public_Goods")
         if public_goods is None:
             return False
 
-        sl = self.ap.waypoint.waypoints['GlobalShoppingList']
+        sl = self.ap.waypoint.waypoints["GlobalShoppingList"]
         if sl is None:
             return False
-        global_buy_commodities = sl['BuyCommodities']
+        global_buy_commodities = sl["BuyCommodities"]
         if global_buy_commodities is None:
             return False
 
@@ -39,7 +39,7 @@ class TceIntegration:
             file.write("   <ShoppingListItems\r\n")
 
             count = len(global_buy_commodities)
-            file.write(f"      ItemCount=\"{count}\"\r\n")
+            file.write(f'      ItemCount="{count}"\r\n')
             file.write("" + "\r\n")
 
             # Go through each good and check if it in the shopping list
@@ -50,17 +50,17 @@ class TceIntegration:
                     qty = global_buy_commodities[commodity]
                     # if qty > 0:
                     print(f"Need {commodity}: {global_buy_commodities[commodity]}")
-                    if good['Tradegood'].upper() == commodity.upper():
-                        good_id = good['ID']
-                        name = good['Tradegood'].upper()
-                        price = good['AvgPrice']
+                    if good["Tradegood"].upper() == commodity.upper():
+                        good_id = good["ID"]
+                        name = good["Tradegood"].upper()
+                        price = good["AvgPrice"]
 
-                        file.write(f"      Category{index}=\"1\"\r\n")
-                        file.write(f"      ItemID{index}=\"{good_id}\"\r\n")
-                        file.write(f"      ItemName{index}=\"{name}\"\r\n")
-                        file.write(f"      ItemType{index}=\"COMMODITY\"\r\n")
-                        file.write(f"      ItemNumber{index}=\"{qty}\"\r\n")
-                        file.write(f"      ItemAvgPrice{index}=\"{price}\"\r\n")
+                        file.write(f'      Category{index}="1"\r\n')
+                        file.write(f'      ItemID{index}="{good_id}"\r\n')
+                        file.write(f'      ItemName{index}="{name}"\r\n')
+                        file.write(f'      ItemType{index}="COMMODITY"\r\n')
+                        file.write(f'      ItemNumber{index}="{qty}"\r\n')
+                        file.write(f'      ItemAvgPrice{index}="{price}"\r\n')
                         file.write("\r\n")
                         index = index + 1
                         break
@@ -95,7 +95,7 @@ class TceIntegration:
 
         except Exception as e:
             # By this way we can know about the type of error occurring
-            self.ap.ap_ckb('log', f"Error reading database '{db_path}': " + str(e))
+            self.ap.ap_ckb("log", f"Error reading database '{db_path}': " + str(e))
             logger.error(f"Error reading database '{db_path}': " + str(e))
 
         finally:
@@ -104,7 +104,7 @@ class TceIntegration:
             return result
 
     def read_resources_db(self, filepath: str, table_name: str) -> list[Union[dict, dict[str, Any], dict[str, str]]]:
-        """ Reads the resources database. Returns a dict of the data."""
+        """Reads the resources database. Returns a dict of the data."""
         if table_name == "":
             raise Exception("Requested table name is blank.")
 

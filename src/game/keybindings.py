@@ -15,51 +15,50 @@ from core.logger import logger
 
 
 class KeyBindings:
-
     def __init__(self, cb):
         self.ap_ckb = cb
 
         self.keys_to_obtain = [
-            'YawLeftButton',
-            'YawRightButton',
-            'RollLeftButton',
-            'RollRightButton',
-            'PitchUpButton',
-            'PitchDownButton',
-            'SetSpeedZero',
-            'SetSpeed50',
-            'SetSpeed100',
-            'HyperSuperCombination',
-            'SelectTarget',
-            'DeployHeatSink',
-            'UIFocus',
-            'UI_Up',
-            'UI_Down',
-            'UI_Left',
-            'UI_Right',
-            'UI_Select',
-            'UI_Back',
-            'CycleNextPanel',
-            'HeadLookReset',
-            'PrimaryFire',
-            'SecondaryFire',
-            'ExplorationFSSEnter',
-            'ExplorationFSSQuit',
-            'MouseReset',
-            'DeployHardpointToggle',
-            'IncreaseEnginesPower',
-            'IncreaseWeaponsPower',
-            'IncreaseSystemsPower',
-            'GalaxyMapOpen',
-            'CamZoomIn',  # Gal map zoom in
-            'SystemMapOpen',
-            'UseBoostJuice',
-            'Supercruise',
-            'UpThrustButton',
-            'LandingGearToggle',
-            'TargetNextRouteSystem',  # Target next system in route
-            'CamTranslateForward',
-            'CamTranslateRight',
+            "YawLeftButton",
+            "YawRightButton",
+            "RollLeftButton",
+            "RollRightButton",
+            "PitchUpButton",
+            "PitchDownButton",
+            "SetSpeedZero",
+            "SetSpeed50",
+            "SetSpeed100",
+            "HyperSuperCombination",
+            "SelectTarget",
+            "DeployHeatSink",
+            "UIFocus",
+            "UI_Up",
+            "UI_Down",
+            "UI_Left",
+            "UI_Right",
+            "UI_Select",
+            "UI_Back",
+            "CycleNextPanel",
+            "HeadLookReset",
+            "PrimaryFire",
+            "SecondaryFire",
+            "ExplorationFSSEnter",
+            "ExplorationFSSQuit",
+            "MouseReset",
+            "DeployHardpointToggle",
+            "IncreaseEnginesPower",
+            "IncreaseWeaponsPower",
+            "IncreaseSystemsPower",
+            "GalaxyMapOpen",
+            "CamZoomIn",  # Gal map zoom in
+            "SystemMapOpen",
+            "UseBoostJuice",
+            "Supercruise",
+            "UpThrustButton",
+            "LandingGearToggle",
+            "TargetNextRouteSystem",  # Target next system in route
+            "CamTranslateForward",
+            "CamTranslateRight",
         ]
         self.keys = self.get_bindings()
         self.bindings = self.get_bindings_dict()
@@ -73,21 +72,23 @@ class KeyBindings:
         for key in self.keys_to_obtain:
             try:
                 # lookup the keyname in the SCANCODE reverse dictionary and output that key name
-                keyname = self.reversed_dict.get(self.keys[key]['key'], "Key not found")
+                keyname = self.reversed_dict.get(self.keys[key]["key"], "Key not found")
                 keymod = " "
                 # if key modifier, then look up that modifier name also
-                if len(self.keys[key]['mods']) != 0:
-                    keymod = self.reversed_dict.get(self.keys[key]['mods'][0], " ")
+                if len(self.keys[key]["mods"]) != 0:
+                    keymod = self.reversed_dict.get(self.keys[key]["mods"][0], " ")
 
-                logger.info('\tget_bindings_<{}>={} Key: <{}> Mod: <{}>'.format(key, self.keys[key], keyname, keymod))
+                logger.info("\tget_bindings_<{}>={} Key: <{}> Mod: <{}>".format(key, self.keys[key], keyname, keymod))
                 if key not in self.keys:
-                    self.ap_ckb('log',
-                                f"WARNING: \tget_bindings_<{key}>= does not have a valid keyboard keybind {keyname}.")
+                    self.ap_ckb(
+                        "log", f"WARNING: \tget_bindings_<{key}>= does not have a valid keyboard keybind {keyname}."
+                    )
                     logger.warning(
-                        "\tget_bindings_<{}>= does not have a valid keyboard keybind {}".format(key, keyname).upper())
+                        "\tget_bindings_<{}>= does not have a valid keyboard keybind {}".format(key, keyname).upper()
+                    )
                     self.missing_keys.append(key)
             except Exception:
-                self.ap_ckb('log', f"WARNING: \tget_bindings_<{key}>= does not have a valid keyboard keybind.")
+                self.ap_ckb("log", f"WARNING: \tget_bindings_<{key}>= does not have a valid keyboard keybind.")
                 logger.warning("\tget_bindings_<{}>= does not have a valid keyboard keybind.".format(key).upper())
                 self.missing_keys.append(key)
 
@@ -96,39 +97,49 @@ class KeyBindings:
             collisions = self.get_collisions(key)
             if len(collisions) > 1:
                 # lookup the keyname in the SCANCODE reverse dictionary and output that key name
-                keyname = self.reversed_dict.get(self.keys[key]['key'], "Key not found")
-                warn_text = (f"Key '{keyname}' is used for the following bindings: {collisions}. "
-                             "This MAY causes issues when using EDAP. Monitor and adjust accordingly.")
-                self.ap_ckb('log', f"WARNING: {warn_text}")
+                keyname = self.reversed_dict.get(self.keys[key]["key"], "Key not found")
+                warn_text = (
+                    f"Key '{keyname}' is used for the following bindings: {collisions}. "
+                    "This MAY causes issues when using EDAP. Monitor and adjust accordingly."
+                )
+                self.ap_ckb("log", f"WARNING: {warn_text}")
                 logger.warning(f"{warn_text}")
 
         # Check if the hotkeys are used in ED
-        binding_name = self.check_hotkey_in_bindings('Key_End')
+        binding_name = self.check_hotkey_in_bindings("Key_End")
         if binding_name != "":
-            warn_text = (f"Hotkey 'Key_End' is used in the ED keybindings for '{binding_name}'. Recommend changing in"
-                         f" ED to another key to avoid EDAP accidentally being triggered.")
-            self.ap_ckb('log', f"WARNING: {warn_text}")
+            warn_text = (
+                f"Hotkey 'Key_End' is used in the ED keybindings for '{binding_name}'. Recommend changing in"
+                f" ED to another key to avoid EDAP accidentally being triggered."
+            )
+            self.ap_ckb("log", f"WARNING: {warn_text}")
             logger.warning(f"{warn_text}")
 
-        binding_name = self.check_hotkey_in_bindings('Key_Insert')
+        binding_name = self.check_hotkey_in_bindings("Key_Insert")
         if binding_name != "":
-            warn_text = (f"Hotkey 'Key_Insert' is used in the ED keybindings for '{binding_name}'. Recommend changing in"
-                         f" ED to another key to avoid EDAP accidentally being triggered.")
-            self.ap_ckb('log', f"WARNING: {warn_text}")
+            warn_text = (
+                f"Hotkey 'Key_Insert' is used in the ED keybindings for '{binding_name}'. Recommend changing in"
+                f" ED to another key to avoid EDAP accidentally being triggered."
+            )
+            self.ap_ckb("log", f"WARNING: {warn_text}")
             logger.warning(f"{warn_text}")
 
-        binding_name = self.check_hotkey_in_bindings('Key_PageUp')
+        binding_name = self.check_hotkey_in_bindings("Key_PageUp")
         if binding_name != "":
-            warn_text = (f"Hotkey 'Key_PageUp' is used in the ED keybindings for '{binding_name}'. Recommend changing in"
-                         f" ED to another key to avoid EDAP accidentally being triggered.")
-            self.ap_ckb('log', f"WARNING: {warn_text}")
+            warn_text = (
+                f"Hotkey 'Key_PageUp' is used in the ED keybindings for '{binding_name}'. Recommend changing in"
+                f" ED to another key to avoid EDAP accidentally being triggered."
+            )
+            self.ap_ckb("log", f"WARNING: {warn_text}")
             logger.warning(f"{warn_text}")
 
-        binding_name = self.check_hotkey_in_bindings('Key_Home')
+        binding_name = self.check_hotkey_in_bindings("Key_Home")
         if binding_name != "":
-            warn_text = (f"Hotkey 'Key_Home' is used in the ED keybindings for '{binding_name}'. Recommend changing in"
-                         f" ED to another key to avoid EDAP accidentally being triggered.")
-            self.ap_ckb('log', f"WARNING: {warn_text}")
+            warn_text = (
+                f"Hotkey 'Key_Home' is used in the ED keybindings for '{binding_name}'. Recommend changing in"
+                f" ED to another key to avoid EDAP accidentally being triggered."
+            )
+            self.ap_ckb("log", f"WARNING: {warn_text}")
             logger.warning(f"{warn_text}")
 
     def get_bindings(self) -> dict[str, Any]:
@@ -146,21 +157,21 @@ class KeyBindings:
                 mods = []
                 hold = None
                 # Check primary
-                if item[0].attrib['Device'].strip() == "Keyboard":
-                    key = item[0].attrib['Key']
+                if item[0].attrib["Device"].strip() == "Keyboard":
+                    key = item[0].attrib["Key"]
                     for modifier in item[0]:
                         if modifier.tag == "Modifier":
-                            mods.append(modifier.attrib['Key'])
+                            mods.append(modifier.attrib["Key"])
                         elif modifier.tag == "Hold":
                             hold = True
                 # Check secondary (and prefer secondary)
-                if item[1].attrib['Device'].strip() == "Keyboard":
-                    key = item[1].attrib['Key']
+                if item[1].attrib["Device"].strip() == "Keyboard":
+                    key = item[1].attrib["Key"]
                     mods = []
                     hold = None
                     for modifier in item[1]:
                         if modifier.tag == "Modifier":
-                            mods.append(modifier.attrib['Key'])
+                            mods.append(modifier.attrib["Key"])
                         elif modifier.tag == "Hold":
                             hold = True
                 # Prepare final binding
@@ -168,15 +179,20 @@ class KeyBindings:
                 try:
                     if key is not None:
                         binding = {}
-                        binding['key'] = SCANCODE[key]
-                        binding['mods'] = []
+                        binding["key"] = SCANCODE[key]
+                        binding["mods"] = []
                         for mod in mods:
-                            binding['mods'].append(SCANCODE[mod])
+                            binding["mods"].append(SCANCODE[mod])
                         if hold is not None:
-                            binding['hold'] = True
+                            binding["hold"] = True
                 except KeyError:
-                    print("Unrecognised key '" + (
-                        json.dumps(binding) if binding else '?') + "' for bind '" + item.tag + "'")
+                    print(
+                        "Unrecognised key '"
+                        + (json.dumps(binding) if binding else "?")
+                        + "' for bind '"
+                        + item.tag
+                        + "'"
+                    )
                 if binding is not None:
                     direct_input_keys[item.tag] = binding
 
@@ -209,7 +225,7 @@ class KeyBindings:
             return {}
 
         try:
-            with open(latest_bindings, 'r') as file:
+            with open(latest_bindings, "r") as file:
                 my_xml = file.read()
                 my_dict = xmltodict.parse(my_xml)
                 return my_dict
@@ -219,37 +235,40 @@ class KeyBindings:
             raise Exception(f"OS Error reading Elite Dangerous bindings file: {latest_bindings}.")
 
     def check_hotkey_in_bindings(self, key_name: str) -> str:
-        """ Check for the action keys. """
+        """Check for the action keys."""
         ret = []
-        for key, value in self.bindings['Root'].items():
+        for key, value in self.bindings["Root"].items():
             if type(value) is dict:
-                primary = value.get('Primary', None)
+                primary = value.get("Primary", None)
                 if primary is not None:
-                    if primary['@Key'] == key_name:
+                    if primary["@Key"] == key_name:
                         ret.append(f"{key} (Primary)")
-                secondary = value.get('Secondary', None)
+                secondary = value.get("Secondary", None)
                 if secondary is not None:
-                    if secondary['@Key'] == key_name:
+                    if secondary["@Key"] == key_name:
                         ret.append(f"{key} (Secondary)")
         return " and ".join(ret)
 
     # Note:  this routine will grab the *.binds file which is the latest modified
     def get_latest_keybinds(self):
-        path_bindings = environ['LOCALAPPDATA'] + r"\Frontier Developments\Elite Dangerous\Options\Bindings"
+        path_bindings = environ["LOCALAPPDATA"] + r"\Frontier Developments\Elite Dangerous\Options\Bindings"
         try:
-            list_of_bindings = [join(path_bindings, f) for f in listdir(path_bindings) if
-                                isfile(join(path_bindings, f)) and f.endswith('.binds')]
+            list_of_bindings = [
+                join(path_bindings, f)
+                for f in listdir(path_bindings)
+                if isfile(join(path_bindings, f)) and f.endswith(".binds")
+            ]
         except FileNotFoundError:
             return None
 
         if not list_of_bindings:
             return None
         latest_bindings = max(list_of_bindings, key=getmtime)
-        logger.info(f'Latest keybindings file:{latest_bindings}')
+        logger.info(f"Latest keybindings file:{latest_bindings}")
         return latest_bindings
 
     def get_collisions(self, key_name: str) -> list[str]:
-        """ Get key name collisions (keys used for more than one binding).
+        """Get key name collisions (keys used for more than one binding).
         @param key_name: The key name (i.e. UI_Up, UI_Down).
         """
         key = self.keys.get(key_name)
