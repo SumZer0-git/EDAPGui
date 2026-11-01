@@ -1,6 +1,7 @@
 # Unreleased
  - Important notice: Runtime files moved to the new `user_data/` folder. Existing users must manually copy `configs/AP.json`, `configs/ship_configs.json` and their own waypoint files from `waypoints/` into `user_data/configs/` and `user_data/waypoints/`.
  - Added the Ruff linter (`pyproject.toml`, `requirements-dev.txt`) with the rule groups `F` (pyflakes), `I` (import sorting), `W` (whitespace) and the checks `E711`, `E712`, `E713`, `E714`, `E722` and `F841`; run `ruff check .`.
+ - Added offline unit tests (no game needed) for the status, cargo, market and navigation route parsers, journal event handling, waypoint files and routing, localization, shared paths, reference data and screen region scaling.
  - Added `docs/Structure.md` describing the folder structure and rules for where new files belong.
  - Changed config, waypoint and log files to be stored in `user_data/` (configs, waypoints, logs, debug output). The folder is created on first start.
  - Changed reference files (`resolution.json` and the example waypoint files) to live in `data/` and be copied to `user_data/` when missing.
