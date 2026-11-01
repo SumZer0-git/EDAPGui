@@ -6,6 +6,7 @@ import json
 import os
 import queue
 import sys
+import threading
 import tkinter as tk
 import webbrowser
 from datetime import datetime
@@ -43,16 +44,10 @@ from tkinter import filedialog as fd
 import keyboard
 
 from controls.mouse_point import MousePoint
-from core import paths
+from core import paths, updates
 from core.autopilot import EDAutopilot
 from core.logger import logger
-
-# ---------------------------------------------------------------------------
-# must be updated with a new release so that the update check works properly!
-# contains the names of the release.
-EDAP_VERSION = "V1.7.0"
-# depending on how release versions are best marked you could also change it to the release tag, see function check_update.
-# ---------------------------------------------------------------------------
+from core.version import EDAP_VERSION
 
 FORM_TYPE_CHECKBOX = 0
 FORM_TYPE_SPINBOX = 1
@@ -209,9 +204,7 @@ class APGui:
         keyboard.add_hotkey(self.ed_ap.config["HotKey_StartRobigo"], self.callback, args=("robigo_start", None))
 
         # check for updates
-        self.check_updates()
-
-        self.ed_ap.gui_loaded = True
+        self.check_updates(manual=False)
         self.gui_loaded = True
         # Send a log entry which will flush out the buffer.
         self.callback("log", "ED Autopilot loaded successfully.")
@@ -433,13 +426,31 @@ class APGui:
     def about(self):
         webbrowser.open_new("https://github.com/DopeEx/EDAPGui")
 
-    def check_updates(self):
-        # response = requests.get("https://api.github.com/repos/DopeEx/EDAPGui/releases/latest")
-        # if EDAP_VERSION != response.json()["name"]:
-        #     mb = messagebox.askokcancel("Update Check", "A new release version is available. Download now?")
-        #     if mb == True:
-        #         webbrowser.open_new("https://github.com/DopeEx/EDAPGui/releases/latest")
-        pass
+    def check_updates(self, manual=True):
+        """Look for a newer release in the background. The result is shown from the GUI thread.
+        At startup (manual=False) the user is only asked if a newer release exists."""
+        result = {}
+
+        def worker():
+            result["tag"] = updates.get_latest_release()
+            result["done"] = True
+
+        def show_result():
+            if not result.get("done"):
+                self.root.after(200, show_result)
+                return
+            tag = result["tag"]
+            if tag is not None and updates.is_newer(tag):
+                if messagebox.askokcancel("Update Check", f"A new release version ({tag}) is available. Download now?"):
+                    webbrowser.open_new(updates.LATEST_RELEASE_PAGE)
+            elif manual:
+                if tag is None:
+                    messagebox.showinfo("Update Check", "Could not find a published release.")
+                else:
+                    messagebox.showinfo("Update Check", f"You are up to date ({EDAP_VERSION}).")
+
+        threading.Thread(target=worker, daemon=True).start()
+        self.root.after(200, show_result)
 
     def open_changelog(self):
         webbrowser.open_new("https://github.com/DopeEx/EDAPGui/blob/main/CHANGELOG.md")

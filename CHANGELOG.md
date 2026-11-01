@@ -1,5 +1,7 @@
 # Unreleased
  - Important notice: Runtime files moved to the new `user_data/` folder. Existing users must manually copy `configs/AP.json`, `configs/ship_configs.json` and their own waypoint files from `waypoints/` into `user_data/configs/` and `user_data/waypoints/`.
+ - Added `core/version.py` as the single place for the application version (still 1.7.0); the window title and log read it from there.
+ - Added the update check (`core/updates.py`): at startup, and via Help > Check for Updates, the program looks up the latest release of `DopeEx/EDAPGui` in the background and offers to open the download page if it is newer. Nothing happens at startup if there is no release yet or GitHub cannot be reached.
  - Added the Ruff linter (`pyproject.toml`, `requirements-dev.txt`) with the rule groups `F` (pyflakes), `I` (import sorting), `N` (pep8-naming, except `N806`), `W` (whitespace) and the checks `E711`, `E712`, `E713`, `E714`, `E722` and `F841`; run `ruff check .`. The code is formatted with `ruff format .` (check with `ruff format --check .`).
  - Added offline unit tests (no game needed) for the status, cargo, market and navigation route parsers, journal event handling, waypoint files and routing, localization, shared paths, reference data and screen region scaling.
  - Added offline unit tests for reading the Elite Dangerous keybindings (`game/keybindings.py`), using an anonymized sample bindings file in `tests/fixtures/bindings/`.
