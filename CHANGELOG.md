@@ -7,6 +7,7 @@
  - Changed `readme.md` and `ChangeLog.md` to `README.md` and `CHANGELOG.md`.
  - Changed the in-app links (About, Changelog) and the clone URL in the README to point to this repository instead of the upstream repository.
  - Removed the "Join Discord" menu entry, the Discord link and the email contact addresses; source headers now name the author without an email address.
+ - Changed `controls/keys.py` (`EDKeys`) to be split: reading the Elite Dangerous keybindings now lives in `game/keybindings.py` (`KeyBindings`), while `controls/keys.py` only sends keys.
  - Changed `EDWayPoint.py`, `Robigo.py` and `EDafk_combat.py` to live in the new `routines/` package as `routines/waypoints.py`, `routines/robigo.py` and `routines/afk_combat.py`.
  - Changed `TCE_Integration.py`, `Voice.py` and the `EDAP_EDMesg_*.py` modules to live in the new `integrations/` package as `integrations/tce.py`, `integrations/voice.py` and `integrations/edmesg/{interface,client,server}.py`.
  - Changed `Overlay.py` to `gui/overlay.py` and the `simple_localization/` package to `i18n/`.
