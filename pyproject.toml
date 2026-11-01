@@ -1,0 +1,8 @@
+[tool.ruff]
+line-length = 120
+extend-exclude = ["EDMesg", "venv", "user_data"]
+
+[tool.ruff.lint]
+select = ["F", "I"]
+# Unused local variables: some are kept on purpose (GUI objects that must stay referenced); review individually later.
+ignore = ["F841"]

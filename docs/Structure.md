@@ -7,6 +7,8 @@ main.py                 Start script (python main.py / start_ed_ap.bat). Only ca
 start_ed_ap.bat         Start script for users (creates the venv on first start).
 install_requirements.bat  Creates the venv and installs requirements.txt.
 requirements.txt        Python dependencies.
+requirements-dev.txt    Development tools (Ruff). Install: pip install -r requirements-dev.txt
+pyproject.toml          Ruff configuration. Check the code with: ruff check .
 README.md, CHANGELOG.md, LICENSE
 
 core/                   Application core, no game or GUI knowledge beyond the autopilot itself
