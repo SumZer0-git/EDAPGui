@@ -85,10 +85,12 @@ class RealBindingsTestCase(BindingsDirectoryMixin, unittest.TestCase):
 
     def test_only_requested_keys_are_returned(self):
         self.assertTrue(set(self.kb.keys) <= set(self.kb.keys_to_obtain))
-        self.assertEqual(len(self.kb.keys), 38)
+        self.assertEqual(len(self.kb.keys), 37)
+        self.assertNotIn("ExplorationFSSEnter", self.kb.keys_to_obtain)
+        self.assertNotIn("ExplorationFSSQuit", self.kb.keys_to_obtain)
 
     def test_actions_without_keyboard_binding_are_missing(self):
-        self.assertEqual(sorted(self.kb.missing_keys), ["ExplorationFSSEnter", "PrimaryFire"])
+        self.assertEqual(self.kb.missing_keys, ["PrimaryFire"])
         self.assertNotIn("PrimaryFire", self.kb.keys)
         self.assertTrue(any("PrimaryFire" in message[1] for message in self.messages))
 

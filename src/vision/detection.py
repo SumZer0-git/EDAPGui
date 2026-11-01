@@ -1,7 +1,6 @@
 """Detection of targets, the compass and supercruise state on screen."""
 
 import math
-from datetime import datetime
 from math import atan, degrees
 from time import sleep
 
@@ -18,88 +17,6 @@ from core.logger import logger
 
 
 class DetectionMixin:
-    # Go into FSS, check to see if we have a signal waveform in the Earth, Water or Ammonia zone
-    #  if so, announce finding and log the type of world found
-    #
-    def fss_detect_elw(self, scr_reg):
-
-        # open fss
-        self.keys.send("SetSpeedZero")
-        sleep(0.1)
-        self.keys.send("ExplorationFSSEnter")
-        sleep(2.5)
-
-        # look for a circle or signal in this region
-        elw_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region("fss", "elw")
-        elw_sig_image, (minVal1, maxVal1, minLoc1, maxLoc1), match = scr_reg.match_template_in_image(
-            elw_image, "elw_sig"
-        )
-
-        # dvide the region in thirds.  Earth, then Water, then Ammonio
-        wid_div3 = scr_reg.reg["fss"]["width"] / 3
-
-        # Exit out of FSS, we got the images we need to process
-        self.keys.send("ExplorationFSSQuit")
-
-        # Uncomment this to show on the ED Window where the region is define.  Must run this file as an App, so uncomment out
-        # the main at the bottom of file
-        # self.overlay.overlay_rect('fss', (scr_reg.reg['fss']['rect'][0], scr_reg.reg['fss']['rect'][1]),
-        #                (scr_reg.reg['fss']['rect'][2],  scr_reg.reg['fss']['rect'][3]), (120, 255, 0),2)
-        # self.overlay.overlay_paint()
-
-        if self.cv_view:
-            elw_image_d = elw_image.copy()
-            elw_image_d = cv2.cvtColor(elw_image_d, cv2.COLOR_GRAY2RGB)
-            # self.draw_match_rect(elw_image_d, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1)
-            self.draw_match_rect(elw_image_d, maxLoc1, (maxLoc1[0] + 15, maxLoc1[1] + 25), (0, 0, 255), 1)
-            cv2.putText(
-                elw_image_d,
-                f"{maxVal1:5.2f}> .70",
-                (1, 40),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.30,
-                (255, 255, 255),
-                1,
-                cv2.LINE_AA,
-            )
-            cv2.imshow("fss", elw_image_d)
-            cv2.moveWindow("fss", self.cv_view_x, self.cv_view_y + 100)
-            cv2.waitKey(30)
-
-        logger.info("elw detected:{0:6.2f} ".format(maxVal) + " sig:{0:6.2f}".format(maxVal1))
-
-        # check if the circle or the signal meets probability number, if so, determine which type by its region
-        # if (maxVal > 0.65 or (maxVal1 > 0.60 and maxLoc1[1] < 30) ):
-        # only check for singal
-        if maxVal1 > 0.70 and maxLoc1[1] < 30:
-            if maxLoc1[0] < wid_div3:
-                sstr = "Earth"
-            elif maxLoc1[0] > (wid_div3 * 2):
-                sstr = "Water"
-            else:
-                sstr = "Ammonia"
-            # log the entry into the elw.txt file
-            f = open("elw.txt", "a")
-            f.write(
-                self.jn.ship_state()["location"]
-                + ", Type: "
-                + sstr
-                + ", Probabilty: {0:3.0f}% ".format((maxVal1 * 100))
-                + ", Date: "
-                + str(datetime.now())
-                + str("\n")
-            )
-            f.close()
-            self.vce.say(sstr + " like world detected ")
-            self.fss_detected = sstr + " like world detected "
-            logger.info(sstr + " world at: " + str(self.jn.ship_state()["location"]))
-        else:
-            self.fss_detected = "nothing found"
-
-        self.keys.send("SetSpeed100")
-
-        return
-
     def have_destination(self, scr_reg) -> bool:
         """Check to see if the compass is on the screen."""
         icompass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region_x3(

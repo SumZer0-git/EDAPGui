@@ -11,17 +11,12 @@ class ImageTemplates:
     def __init__(self, scale_x, scale_y, compass_scale: float):
 
         self.template = {
-            "elw": {"image": None, "width": 1, "height": 1},
-            "elw_sig": {"image": None, "width": 1, "height": 1},
             "navpoint": {"image": None, "width": 1, "height": 1},
             "navpoint-behind": {"image": None, "width": 1, "height": 1},
             "compass": {"image": None, "width": 1, "height": 1},
             "target": {"image": None, "width": 1, "height": 1},
             "target_occluded": {"image": None, "width": 1, "height": 1},
             "disengage": {"image": None, "width": 1, "height": 1},
-            "missions": {"image": None, "width": 1, "height": 1},
-            "dest_sirius": {"image": None, "width": 1, "height": 1},
-            "sirius_atmos": {"image": None, "width": 1, "height": 1},
         }
 
         # load the templates and scale them.  Default templates assumed 3440x1440 screen resolution
@@ -39,8 +34,6 @@ class ImageTemplates:
 
     def reload_templates(self, scale_x, scale_y, compass_scale: float):
         """Load the full set of image templates."""
-        self.template["elw"] = self.load_template("assets/templates/elw-template.png", scale_x, scale_y)
-        self.template["elw_sig"] = self.load_template("assets/templates/elw-sig-template.png", scale_x, scale_y)
         self.template["navpoint"] = self.load_template("assets/templates/navpoint.png", compass_scale, compass_scale)
         self.template["navpoint-behind"] = self.load_template(
             "assets/templates/navpoint-behind.png", compass_scale, compass_scale
@@ -49,14 +42,6 @@ class ImageTemplates:
         self.template["target"] = self.load_template("assets/templates/destination.png", scale_x, scale_y)
         self.template["target_occluded"] = self.load_template("assets/templates/target_occluded.png", scale_x, scale_y)
         self.template["disengage"] = self.load_template("assets/templates/sc-disengage.png", scale_x, scale_y)
-        self.template["missions"] = self.load_template("assets/templates/completed-missions.png", scale_x, scale_y)
-        self.template["dest_sirius"] = self.load_template("assets/templates/dest-sirius-atmos-HL.png", scale_x, scale_y)
-        self.template["robigo_mines"] = self.load_template(
-            "assets/templates/robigo-mines-selected.png", scale_x, scale_y
-        )
-        self.template["sirius_atmos"] = self.load_template(
-            "assets/templates/sirius-atmos-selected.png", scale_x, scale_y
-        )
 
     def resource_path(self, relative_path):
         """Get absolute path to resource, works for dev and for PyInstaller"""

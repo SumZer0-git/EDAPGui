@@ -38,7 +38,6 @@ from panels.system_map import EDSystemMap
 from routines.afk_combat import AfkCombat
 from routines.assists import AssistsMixin
 from routines.flight import FlightMixin
-from routines.robigo import Robigo
 from routines.waypoints import EDWayPoint
 from vision.calibration import CalibrationMixin
 from vision.detection import DetectionMixin
@@ -63,9 +62,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
             "DockingRetries": 30,  # number of time to attempt docking
             "HotKey_StartFSD": "home",  # if going to use other keys, need to look at the python keyboard package
             "HotKey_StartSC": "ins",  # to determine other keynames, make sure these keys are not used in ED bindings
-            "HotKey_StartRobigo": "pgup",  #
             "HotKey_StopAllAssists": "end",
-            "Robigo_Single_Loop": False,  # True means only 1 loop will executed and then terminate the Robigo, will not perform mission processing
             "EnableRandomness": False,  # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
             "ActivateEliteEachKey": False,  # Activate Elite window before each key or group of keys
             "OverlayTextEnable": False,  # Experimental at this stage
@@ -79,7 +76,6 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
             "DiscordUserID": "",
             "VoiceEnable": False,
             "VoiceID": 1,  # my Windows only have 3 defined (0-2)
-            "ElwScannerEnable": False,
             "LogDEBUG": False,  # enable for debug messages
             "LogINFO": True,
             "Enable_CV_View": 0,  # Should CV View be enabled by default
@@ -143,6 +139,9 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 cnf["EDMesgEventsPort"] = 15571
             if "DebugOverlay" not in cnf:
                 cnf["DebugOverlay"] = False
+            cnf.pop("HotKey_StartRobigo", None)
+            cnf.pop("Robigo_Single_Loop", None)
+            cnf.pop("ElwScannerEnable", None)
             self.config = cnf
             logger.debug("read AP json:" + str(cnf))
         else:
@@ -186,7 +185,6 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
         self.sc_assist_enabled = False
         self.afk_combat_assist_enabled = False
         self.waypoint_assist_enabled = False
-        self.robigo_assist_enabled = False
         self.dss_assist_enabled = False
         self.single_waypoint_enabled = False
 
@@ -205,7 +203,6 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
         self.keys.activate_window = self.config["ActivateEliteEachKey"]
         self.afk_combat = AfkCombat(self.keys, self.jn, self.vce)
         self.waypoint = EDWayPoint(self, self.jn.ship_state()["odyssey"])
-        self.robigo = Robigo(self)
         self.status = StatusParser()
         self.nav_route = NavRouteParser()
         self.ship_control = EDShipControl(self, self.scr, self.keys, cb)
@@ -245,7 +242,6 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
 
         # Overlay vars
         self.ap_state = "Idle"
-        self.fss_detected = "nothing found"
 
         # Initialize the Overlay class
         self.overlay = Overlay("", elite=1)
@@ -281,8 +277,6 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
             ap_mode = "Offline"
             if self.fsd_assist_enabled:
                 ap_mode = "FSD Route Assist"
-            elif self.robigo_assist_enabled:
-                ap_mode = "Robigo Assist"
             elif self.sc_assist_enabled:
                 ap_mode = "SC Assist"
             elif self.waypoint_assist_enabled:
@@ -310,8 +304,6 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
             self.overlay.overlay_text(
                 "5", "JUMPS: {} of {}".format(self.jump_cnt, self.total_jumps), 5, 1, (136, 53, 0)
             )
-            if self.config["ElwScannerEnable"]:
-                self.overlay.overlay_text("6", "ELW SCANNER: " + self.fss_detected, 6, 1, (136, 53, 0))
             self.overlay.overlay_paint()
 
     def update_ap_status(self, txt):
@@ -372,11 +364,6 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
             self.ctype_async_raise(self.ap_thread, EdapInterruptError)
         self.waypoint_assist_enabled = enable
 
-    def set_robigo_assist(self, enable=True):
-        if not enable and self.robigo_assist_enabled:
-            self.ctype_async_raise(self.ap_thread, EdapInterruptError)
-        self.robigo_assist_enabled = enable
-
     def set_afk_combat_assist(self, enable=True):
         if not enable and self.afk_combat_assist_enabled:
             self.ctype_async_raise(self.ap_thread, EdapInterruptError)
@@ -427,9 +414,6 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
             self.vce.set_on()
         else:
             self.vce.set_off()
-
-    def set_fss_scan(self, enable=False):
-        self.config["ElwScannerEnable"] = enable
 
     def set_log_error(self, enable=False):
         self.config["LogDEBUG"] = False
@@ -538,22 +522,6 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
 
                 self.waypoint_assist_enabled = False
                 self.ap_ckb("waypoint_stop")
-                self.update_overlay()
-
-            elif self.robigo_assist_enabled:
-                logger.debug("Running robigo_assist")
-                set_focus_elite_window()
-                self.update_overlay()
-                try:
-                    self.robigo_assist()
-                except EdapInterruptError:
-                    logger.debug("Caught stop exception")
-                except Exception as e:
-                    print("Trapped generic:" + str(e))
-                    traceback.print_exc()
-
-                self.robigo_assist_enabled = False
-                self.ap_ckb("robigo_stop")
                 self.update_overlay()
 
             elif self.afk_combat_assist_enabled:
@@ -711,7 +679,6 @@ def main():
         # target_align(scrReg)
         print("Calling nav_align")
         # ed_ap.nav_align(ed_ap.scrReg)
-        ed_ap.fss_detect_elw(ed_ap.scrReg)
 
         # loc = get_destination_offset(scrReg)
         # print("get_dest: " +str(loc))
@@ -722,7 +689,3 @@ def main():
         sleep(8)
 
     ed_ap.overlay.overlay_quit()
-
-
-if __name__ == "__main__":
-    main()

@@ -1,4 +1,4 @@
-"""The assist routines: FSD, SC, waypoint, Robigo, AFK combat, DSS."""
+"""The assist routines: FSD, SC, waypoint, AFK combat, DSS."""
 
 import threading
 import time
@@ -162,7 +162,7 @@ class AssistsMixin:
 
     # Supercruise Assist loop to travel to target in system and perform autodock
     #
-    def sc_assist(self, scr_reg, do_docking=True):
+    def sc_assist(self, scr_reg):
         logger.debug("Entered sc_assist")
 
         # Goto cockpit view
@@ -246,7 +246,7 @@ class AssistsMixin:
             self.overlay.overlay_paint()
 
         # if no error, we must have gotten disengage
-        if not align_failed and do_docking:
+        if not align_failed:
             sleep(4)  # wait for the journal to catch up
 
             # Check if this is a target we cannot dock at
@@ -283,9 +283,6 @@ class AssistsMixin:
             self.ap_ckb("log", "Supercruise dropped, terminating SC Assist")
 
         self.ap_ckb("log+vce", "Supercruise Assist complete")
-
-    def robigo_assist(self):
-        self.robigo.loop(self)
 
     # Simply monitor for Shields down so we can boost away or our fighter got destroyed
     # and thus redeploy another one
