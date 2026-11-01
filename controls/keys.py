@@ -12,7 +12,7 @@ import win32gui
 import xmltodict
 
 from vision.screen import set_focus_elite_window
-from directinput import *
+from controls.directinput import *
 from core.logger import logger
 
 """

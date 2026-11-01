@@ -22,7 +22,7 @@ import vision.screen
 import vision.regions
 from EDWayPoint import *
 from EDJournal import *
-from EDKeys import *
+from controls.keys import *
 from EDafk_combat import AFK_Combat
 from EDInternalStatusPanel import EDInternalStatusPanel
 from NavRouteParser import NavRouteParser

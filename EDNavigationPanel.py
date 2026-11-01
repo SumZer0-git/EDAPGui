@@ -4,7 +4,7 @@ import logging
 from time import sleep
 
 from core.constants import GuiFocusExternalPanel
-from EDKeys import EDKeys
+from controls.keys import EDKeys
 from core.logger import logger
 from vision.ocr import OCR
 from vision.screen import Screen

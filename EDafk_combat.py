@@ -5,7 +5,7 @@ import keyboard
 import win32gui
 
 from EDJournal import *
-from EDKeys import *
+from controls.keys import *
 from core.logger import logger
 from Voice import *
 

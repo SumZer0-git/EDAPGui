@@ -22,13 +22,13 @@ from tkinter import ttk
 from idlelib.tooltip import Hovertip
 
 from Voice import *
-from MousePt import MousePoint
+from controls.mouse_point import MousePoint
 from core import paths
 
 from vision.templates import *
 from vision.screen import *
 from vision.regions import *
-from EDKeys import *
+from controls.keys import *
 from EDJournal import *
 from ED_AP import *
 

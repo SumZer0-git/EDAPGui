@@ -5,7 +5,7 @@ from time import sleep
 import cv2
 from core import paths
 from core.constants import *
-from EDKeys import EDKeys
+from controls.keys import EDKeys
 from vision.ocr import OCR
 from vision.screen import Screen
 from vision.regions import size_scale_for_station

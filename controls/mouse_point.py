@@ -4,7 +4,7 @@ from time import sleep
 
 
 """
-File:MousePt.py    
+File:controls/mouse_point.py    
 
 Description:
   Class to handles getting x,y location for a mouse click, and a routine to click on a x, y location
