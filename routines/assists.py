@@ -109,10 +109,10 @@ class AssistsMixin:
                 # update jump counters
                 self.total_dist_jumped += self.jn.ship_state()['dist_jumped']
                 self.total_jumps = self.jump_cnt+self.jn.ship_state()['jumps_remains']
-                
+
                 # reset, upon next Jump the Journal will be updated again, unless last jump,
                 # so we need to clear this out
-                
+
                 self.jn.ship_state()['jumps_remains'] = 0
 
                 self.update_overlay()
@@ -144,7 +144,7 @@ class AssistsMixin:
         if not self.have_destination(scr_reg):
             self.keys.send('SetSpeedZero')
             self.vce.say("Destination Reached, distance jumped:"+str(int(self.total_dist_jumped))+" lightyears")
-            if self.config["AutomaticLogout"] == True:
+            if self.config["AutomaticLogout"]:
                 sleep(5)
                 self.logout()
             return True
@@ -250,7 +250,7 @@ class AssistsMixin:
                 self.ap_ckb('log', "Skipping docking. No Docking Computer fitted.")
                 skip_docking = True
 
-            if not self.jn.ship_state()['SupercruiseDestinationDrop_type'] is None:
+            if self.jn.ship_state()['SupercruiseDestinationDrop_type'] is not None:
                 if (self.jn.ship_state()['SupercruiseDestinationDrop_type'].startswith("$USS_Type")
                         # Bulk Cruisers
                         or "-class Cropper" in self.jn.ship_state()['SupercruiseDestinationDrop_type']
@@ -284,7 +284,7 @@ class AssistsMixin:
     # and thus redeploy another one
     def afk_combat_loop(self):
         while True:
-            if self.afk_combat.check_shields_up() == False:
+            if not self.afk_combat.check_shields_up():
                 set_focus_elite_window()
                 self.vce.say("Shields down, evading")
                 self.afk_combat.evade()
@@ -292,7 +292,7 @@ class AssistsMixin:
                 self.afk_combat.launch_fighter()  # at new location launch fighter
                 break
 
-            if self.afk_combat.check_fighter_destroyed() == True:
+            if self.afk_combat.check_fighter_destroyed():
                 set_focus_elite_window()
                 self.vce.say("Fighter Destroyed, redeploying")
                 self.afk_combat.launch_fighter()  # assuming two fighter bays

@@ -27,13 +27,13 @@ class Vector:
         return this != _other
 
 class Overlay:
-       
+
     def __init__(self, parent_window, elite=0):
 
         self.parent = parent_window
         if elite == 1:
             self.parent = elite_dangerous_window
-        
+
         self.hWindow = None
         self.overlay_thr = threading.Thread(target=self.overlay_win32_run)
         self.overlay_thr.setDaemon(False)
@@ -88,7 +88,7 @@ class Overlay:
             win32con.SWP_NOACTIVATE | win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW)
 
         # If a parent was specified, and we found it move our window over that window
-        if self.tHwnd != None:
+        if self.tHwnd is not None:
             win32gui.MoveWindow(self.hWindow, self.targetRect.x, self.targetRect.y, self.targetRect.w, self.targetRect.h, True)
 
 
@@ -132,7 +132,7 @@ class Overlay:
                 self.targetRect = Vector(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1])
                 win32gui.MoveWindow(self.hWindow, self.targetRect.x, self.targetRect.y, self.targetRect.w, self.targetRect.h, True)
 
-        win32gui.RedrawWindow(self.hWindow, None, None, win32con.RDW_INVALIDATE | win32con.RDW_ERASE) 
+        win32gui.RedrawWindow(self.hWindow, None, None, win32con.RDW_INVALIDATE | win32con.RDW_ERASE)
 
     def overlay_clear(self):
         lines.clear()
@@ -152,16 +152,16 @@ class Overlay:
             floating_text.pop(key)
 
     def overlay_quit(self):
-        win32gui.PostMessage(self.hWindow, win32con.WM_CLOSE, 0, 0)  
+        win32gui.PostMessage(self.hWindow, win32con.WM_CLOSE, 0, 0)
 
-    @staticmethod 
+    @staticmethod
     def overlay_draw_rect(hdc, pt1, pt2, line_type, color, thick):
         wid = pt2[0] - pt1[0]
         hgt = pt2[1] - pt1[1]
 
         pin_thick = win32gui.CreatePen(line_type, thick, win32api.RGB(color[0], color[1], color[2]))
         pin_thin  = win32gui.CreatePen(line_type, 1, win32api.RGB(color[0], color[1], color[2]))
-   
+
         if wid < 20:
             win32gui.SelectObject(hdc, pin_thin)
             win32gui.Rectangle(hdc, pt1[0], pt1[1], pt2[0], pt2[1])
@@ -234,7 +234,7 @@ class Overlay:
             win32gui.MoveToEx(hdc, int(pt2[0]),    int(pt1[1]+half_hgt))
             win32gui.LineTo  (hdc, int(pt2[0]+tic_len),   int(pt1[1]+half_hgt))
 
-    @staticmethod 
+    @staticmethod
     def overlay_set_font(hdc, fontname, fontSize):
         global fnt
         dpiScale = win32ui.GetDeviceCaps(hdc, win32con.LOGPIXELSX) / 60.0
@@ -248,16 +248,16 @@ class Overlay:
         hf = win32gui.CreateFontIndirect(lf)
         win32gui.SelectObject(hdc, hf)
         fnt[2] = lf.lfHeight
-   
 
-    @staticmethod 
+
+    @staticmethod
     def overlay_draw_text(hWnd, hdc, txt, row, col, color):
         global pos, fnt
 
         x = pos[0]+col*fnt[1]
         y = pos[1]+row*fnt[2]
-        rect = (x, y, 1, 1) 
-        win32gui.SetTextColor(hdc,win32api.RGB(color[0], color[1], color[2]))    
+        rect = (x, y, 1, 1)
+        win32gui.SetTextColor(hdc,win32api.RGB(color[0], color[1], color[2]))
 
         win32gui.DrawText(hdc,  txt,  -1,  rect,   win32con.DT_LEFT | win32con.DT_NOCLIP | win32con.DT_SINGLELINE | win32con.DT_TOP   )
 
@@ -270,7 +270,7 @@ class Overlay:
         win32gui.DrawText(hdc,  txt,  -1,  rect,   win32con.DT_LEFT | win32con.DT_NOCLIP | win32con.DT_SINGLELINE | win32con.DT_TOP   )
 
 
-    @staticmethod 
+    @staticmethod
     def wndProc(hWnd, message, wParam, lParam):
         global lines, text
         if message == win32con.WM_PAINT:
@@ -309,7 +309,7 @@ def main():
     #       key    x,y       x,y end      color      thinkness
     rect = {'a': [(50,50), (500, 500), (120, 255, 0),2],
             'b': [(800,800), (1000, 1000), (20, 10, 255),15] ,
-            'c': [(220,30), (350, 700), (255, 20, 10),1] 
+            'c': [(220,30), (350, 700), (255, 20, 10),1]
            }
 
 
@@ -324,20 +324,20 @@ def main():
         print("Adding")
         print(rect[key])
 
-    ov.overlay_paint()  
+    ov.overlay_paint()
     sleep(5)
     rect['d'] = [(400,150), (900, 550), (255, 10, 255),25]
-    ov.overlay_rect('d', rect['d'][0], rect['d'][1], rect['d'][2], rect['d'][3])    
+    ov.overlay_rect('d', rect['d'][0], rect['d'][1], rect['d'][2], rect['d'][3])
     ov.overlay_text('3', "Changed", 3, 3,(255,0,0) )
     ov.overlay_setfont("Times New Roman", 16 )
     ov.overlay_set_pos(1800, 50)
-    ov.overlay_paint() 
+    ov.overlay_paint()
 
     sleep(5)
     rect['b'] = [(40,150), (90, 550), (155, 10, 255),10]
-    ov.overlay_rect('b', rect['b'][0], rect['b'][1], rect['b'][2], rect['b'][3])  
+    ov.overlay_rect('b', rect['b'][0], rect['b'][1], rect['b'][2], rect['b'][3])
     ov.overlay_text('3', "", 3, 3,(255,0,0) )
-    ov.overlay_paint()   
+    ov.overlay_paint()
     sleep(5)
     ov.overlay_quit()
     sleep(2)
@@ -346,4 +346,3 @@ if __name__ == "__main__":
     main()
 
 
- 

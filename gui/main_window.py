@@ -496,9 +496,9 @@ class APGui():
                 self.wp_filelabel.set("<no list loaded>")
 
     def reset_wp_file(self):
-        if self.WP_A_running != True:
+        if not self.WP_A_running:
             mb = messagebox.askokcancel("Waypoint List Reset", "After resetting the Waypoint List, the Waypoint Assist will start again from the first point in the list at the next start.")
-            if mb == True:
+            if mb:
                 self.ed_ap.waypoint.mark_all_waypoints_not_complete()
         else:
             mb = messagebox.showerror("Waypoint List Error", "Waypoint Assist must be disabled before you can reset the list.")
@@ -543,7 +543,7 @@ class APGui():
             self.ed_ap.config['VoiceEnable'] = self.checkboxvar['Enable Voice'].get()
             self.ed_ap.config['TCEDestinationFilepath'] = str(self.TCE_Destination_Filepath.get())
             self.ed_ap.config['DebugOverlay'] = self.checkboxvar['Debug Overlay'].get()
-        except:
+        except Exception:
             messagebox.showinfo("Exception", "Invalid float entered")
 
     # ckbox.state:(ACTIVE | DISABLED)
@@ -552,7 +552,7 @@ class APGui():
     def check_cb(self, field):
         # print("got event:",  checkboxvar['FSD Route Assist'].get(), " ", str(FSD_A_running))
         if field == 'FSD Route Assist':
-            if self.checkboxvar['FSD Route Assist'].get() == 1 and self.FSD_A_running == False:
+            if self.checkboxvar['FSD Route Assist'].get() == 1 and not self.FSD_A_running:
                 self.lab_ck['AFK Combat Assist'].config(state='disabled')
                 self.lab_ck['Supercruise Assist'].config(state='disabled')
                 self.lab_ck['Waypoint Assist'].config(state='disabled')
@@ -560,7 +560,7 @@ class APGui():
                 self.lab_ck['DSS Assist'].config(state='disabled')
                 self.start_fsd()
 
-            elif self.checkboxvar['FSD Route Assist'].get() == 0 and self.FSD_A_running == True:
+            elif self.checkboxvar['FSD Route Assist'].get() == 0 and self.FSD_A_running:
                 self.stop_fsd()
                 self.lab_ck['Supercruise Assist'].config(state='active')
                 self.lab_ck['AFK Combat Assist'].config(state='active')
@@ -569,7 +569,7 @@ class APGui():
                 self.lab_ck['DSS Assist'].config(state='active')
 
         if field == 'Supercruise Assist':
-            if self.checkboxvar['Supercruise Assist'].get() == 1 and self.SC_A_running == False:
+            if self.checkboxvar['Supercruise Assist'].get() == 1 and not self.SC_A_running:
                 self.lab_ck['FSD Route Assist'].config(state='disabled')
                 self.lab_ck['AFK Combat Assist'].config(state='disabled')
                 self.lab_ck['Waypoint Assist'].config(state='disabled')
@@ -577,7 +577,7 @@ class APGui():
                 self.lab_ck['DSS Assist'].config(state='disabled')
                 self.start_sc()
 
-            elif self.checkboxvar['Supercruise Assist'].get() == 0 and self.SC_A_running == True:
+            elif self.checkboxvar['Supercruise Assist'].get() == 0 and self.SC_A_running:
                 self.stop_sc()
                 self.lab_ck['FSD Route Assist'].config(state='active')
                 self.lab_ck['AFK Combat Assist'].config(state='active')
@@ -586,7 +586,7 @@ class APGui():
                 self.lab_ck['DSS Assist'].config(state='active')
 
         if field == 'Waypoint Assist':
-            if self.checkboxvar['Waypoint Assist'].get() == 1 and self.WP_A_running == False:
+            if self.checkboxvar['Waypoint Assist'].get() == 1 and not self.WP_A_running:
                 self.lab_ck['FSD Route Assist'].config(state='disabled')
                 self.lab_ck['Supercruise Assist'].config(state='disabled')
                 self.lab_ck['AFK Combat Assist'].config(state='disabled')
@@ -594,7 +594,7 @@ class APGui():
                 self.lab_ck['DSS Assist'].config(state='disabled')
                 self.start_waypoint()
 
-            elif self.checkboxvar['Waypoint Assist'].get() == 0 and self.WP_A_running == True:
+            elif self.checkboxvar['Waypoint Assist'].get() == 0 and self.WP_A_running:
                 self.stop_waypoint()
                 self.lab_ck['FSD Route Assist'].config(state='active')
                 self.lab_ck['Supercruise Assist'].config(state='active')
@@ -603,7 +603,7 @@ class APGui():
                 self.lab_ck['DSS Assist'].config(state='active')
 
         if field == 'Robigo Assist':
-            if self.checkboxvar['Robigo Assist'].get() == 1 and self.RO_A_running == False:
+            if self.checkboxvar['Robigo Assist'].get() == 1 and not self.RO_A_running:
                 self.lab_ck['FSD Route Assist'].config(state='disabled')
                 self.lab_ck['Supercruise Assist'].config(state='disabled')
                 self.lab_ck['AFK Combat Assist'].config(state='disabled')
@@ -611,7 +611,7 @@ class APGui():
                 self.lab_ck['DSS Assist'].config(state='disabled')
                 self.start_robigo()
 
-            elif self.checkboxvar['Robigo Assist'].get() == 0 and self.RO_A_running == True:
+            elif self.checkboxvar['Robigo Assist'].get() == 0 and self.RO_A_running:
                 self.stop_robigo()
                 self.lab_ck['FSD Route Assist'].config(state='active')
                 self.lab_ck['Supercruise Assist'].config(state='active')
@@ -706,9 +706,9 @@ class APGui():
             self.ed_ap.set_log_info(True)
 
         if field == 'Single Waypoint Assist':
-            if self.checkboxvar['Single Waypoint Assist'].get() == 1 and self.SWP_A_running == False:
+            if self.checkboxvar['Single Waypoint Assist'].get() == 1 and not self.SWP_A_running:
                 self.start_single_waypoint_assist()
-            elif self.checkboxvar['Single Waypoint Assist'].get() == 0 and self.SWP_A_running == True:
+            elif self.checkboxvar['Single Waypoint Assist'].get() == 0 and self.SWP_A_running:
                 self.stop_single_waypoint_assist()
 
         if field == 'Debug Overlay':

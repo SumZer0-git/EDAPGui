@@ -235,7 +235,7 @@ class KeyBindings:
 
     # Note:  this routine will grab the *.binds file which is the latest modified
     def get_latest_keybinds(self):
-        path_bindings = environ['LOCALAPPDATA'] + "\Frontier Developments\Elite Dangerous\Options\Bindings"
+        path_bindings = environ['LOCALAPPDATA'] + r"\Frontier Developments\Elite Dangerous\Options\Bindings"
         try:
             list_of_bindings = [join(path_bindings, f) for f in listdir(path_bindings) if
                                 isfile(join(path_bindings, f)) and f.endswith('.binds')]

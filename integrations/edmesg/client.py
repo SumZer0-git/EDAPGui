@@ -39,7 +39,7 @@ class EDMesgClient:
                         self._handle_launch_complete()
 
                 sleep(0.1)
-        except:
+        except Exception:
             print("Shutting down client.")
         finally:
             self.client.close()

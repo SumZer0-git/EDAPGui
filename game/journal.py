@@ -155,7 +155,7 @@ class EDJournal:
         return os.path.getmtime(self.current_log)
 
     # these items do not have respective log entries to clear them.  After initial reading of log file, clear these items
-    # also the App will need to reset these to False after detecting they were True    
+    # also the App will need to reset these to False after detecting they were True
     def reset_items(self):
         self.ship['under_attack'] = False
         self.ship['fighter_destroyed'] = False
@@ -163,7 +163,7 @@ class EDJournal:
     def get_latest_log(self, path_logs=None):
         """Returns the full path of the latest (most recent) elite log file (journal) from specified path"""
         if not path_logs:
-            path_logs = get_path(FOLDERID.SavedGames, UserHandle.current) + "\Frontier Developments\Elite Dangerous"
+            path_logs = get_path(FOLDERID.SavedGames, UserHandle.current) + r"\Frontier Developments\Elite Dangerous"
         list_of_logs = [join(path_logs, f) for f in listdir(path_logs) if isfile(join(path_logs, f)) and f.startswith('Journal.')]
         if not list_of_logs:
             return None
@@ -193,7 +193,7 @@ class EDJournal:
                 self.ship['odyssey'] = True   # hardset to true for ED 4.0 since menus now same for Horizon
 
             elif log_event == 'ShieldState':
-                if log['ShieldsUp'] == True:
+                if log['ShieldsUp']:
                     self.ship['shieldsup'] = True
                 else:
                     self.ship['shieldsup'] = False
@@ -205,10 +205,10 @@ class EDJournal:
                 self.ship['fighter_destroyed'] = True
 
             elif  log_event == 'MissionCompleted':
-                self.ship['mission_completed'] = self.ship['mission_completed'] + 1  
+                self.ship['mission_completed'] = self.ship['mission_completed'] + 1
 
             elif  log_event == 'MissionRedirected':
-                self.ship['mission_redirected'] = self.ship['mission_redirected'] + 1  
+                self.ship['mission_redirected'] = self.ship['mission_redirected'] + 1
 
             elif log_event == 'StartJump':
                 self.ship['status'] = str('starting_'+log['JumpType']).lower()
@@ -235,7 +235,7 @@ class EDJournal:
 
             elif log_event == 'DockingCancelled':
                 self.ship['status'] = 'in_space'
-                
+
             elif log_event == 'Undocked':
                 self.ship['status'] = 'starting_undocking'
                 #self.ship['status'] = 'in_space'
@@ -251,7 +251,7 @@ class EDJournal:
 
             elif log_event == "Music" and log['MusicTrack'] == "NoTrack" and self.ship['status'] == 'in_undocking':
                 self.ship['status'] = 'in_space'
-                
+
                 # for unodck from outpost
             elif log_event == "Music" and log['MusicTrack'] == "Exploration" and self.ship['status'] == 'in_undocking':
                 self.ship['status'] = 'in_space'
@@ -285,7 +285,7 @@ class EDJournal:
                 self.ship['cur_star_system'] = log['StarSystem']
                 self.ship['cur_station'] = log['StationName']
                 self.ship['cur_station_type'] = log['StationType']
-                if log['Docked'] == True:
+                if log['Docked']:
                     self.ship['status'] = 'in_station'
 
             elif log_event == 'Interdicted':
@@ -314,7 +314,7 @@ class EDJournal:
             if 'FuelCapacity' in log and self.ship['type'] != 'TestBuggy':
                     try:
                         self.ship['fuel_capacity'] = log['FuelCapacity']['Main']
-                    except:
+                    except Exception:
                         self.ship['fuel_capacity'] = log['FuelCapacity']
             if log_event == 'FuelScoop' and 'Total' in log:
                 self.ship['fuel_level'] = log['Total']
@@ -324,7 +324,7 @@ class EDJournal:
                 self.ship['fuel_percent'] = 10
 
             # parse scoop
-            # 
+            #
             if log_event == 'FuelScoop' and self.ship['time'] < 10 and self.ship['fuel_percent'] < 100:
                 self.ship['is_scooping'] = True
             else:
@@ -345,7 +345,7 @@ class EDJournal:
                     self.ship['target'] = log['Name']
                     try:
                             self.ship['jumps_remains'] = log['RemainingJumpsInRoute']
-                    except:
+                    except Exception:
                         pass
                             #
                             #    'Log did not have jumps remaining. This happens most if you have less than .' +

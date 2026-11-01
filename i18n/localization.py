@@ -85,7 +85,7 @@ class LocalizationManager:
         """
 
         # Check if the language is available
-        if not language in self.available_languages:
+        if language not in self.available_languages:
             raise Exception(
                 f"Language not found in {self.folder_path}. Is there a {self.folder_path}/{language}.json file?")
 

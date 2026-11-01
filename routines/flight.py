@@ -300,7 +300,7 @@ class FlightMixin:
         hold_yaw = 0.300
         new = None  # Initialize to avoid unbound variable
         off = None  # Initialize to avoid unbound variable
-        
+
         for i in range(5):
             new = self.get_destination_offset(scr_reg)
             if new:
@@ -317,12 +317,12 @@ class FlightMixin:
             else:
                 logger.debug('  out of fine -not off-'+'\n')
                 return
-        
+
         # Safety check to ensure off is valid before using it
         if off is None:
             logger.debug('  off is None, cannot continue alignment')
             return
-            
+
         while (off['x'] > close) or \
               (off['x'] < -close) or \
               (off['y'] > close) or \
@@ -533,14 +533,14 @@ class FlightMixin:
 
         # Need time to move past Sun, account for slowed ship if refuled
         pause_time = add_time
-        if self.config["EnableRandomness"] == True:
+        if self.config["EnableRandomness"]:
             pause_time = pause_time+random.randint(0, 3)
         # need time to get away from the Sun so heat will disipate before we use FSD
         sleep(pause_time)
 
-        if self.config["ElwScannerEnable"] == True:
+        if self.config["ElwScannerEnable"]:
             self.fss_detect_elw(scr_reg)
-            if self.config["EnableRandomness"] == True:
+            if self.config["EnableRandomness"]:
                 sleep(random.randint(0, 3))
             sleep(3)
         else:
@@ -643,7 +643,7 @@ class FlightMixin:
         # sun types.  Since we won't scoop it doesn't matter how much we pitch up
         # if scoopable we know white/yellow stars are bright, so set higher threshold, this will allow us to
         #  mast out the galaxy edge (which is bright) and not pitch up too much and avoid scooping
-        if is_star_scoopable == False or not has_fuel_scoop:
+        if not is_star_scoopable or not has_fuel_scoop:
             scr_reg.set_sun_threshold(25)
         else:
             scr_reg.set_sun_threshold(self.config['SunBrightThreshold'])
@@ -702,7 +702,7 @@ class FlightMixin:
             logger.debug('refuel=complete')
             return True
 
-        elif is_star_scoopable == False:
+        elif not is_star_scoopable:
             self.ap_ckb('log', 'Skip refuel - not a fuel star')
             logger.debug('refuel= needed, unsuitable star')
             self.pitchUp(20)

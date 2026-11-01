@@ -281,36 +281,36 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
     def update_overlay(self):
         if self.config['OverlayTextEnable']:
             ap_mode = "Offline"
-            if self.fsd_assist_enabled == True:
+            if self.fsd_assist_enabled:
                 ap_mode = "FSD Route Assist"
-            elif self.robigo_assist_enabled == True:
+            elif self.robigo_assist_enabled:
                 ap_mode = "Robigo Assist"
-            elif self.sc_assist_enabled == True:
+            elif self.sc_assist_enabled:
                 ap_mode = "SC Assist"
-            elif self.waypoint_assist_enabled == True:
+            elif self.waypoint_assist_enabled:
                 ap_mode = "Waypoint Assist"
-            elif self.afk_combat_assist_enabled == True:
+            elif self.afk_combat_assist_enabled:
                 ap_mode = "AFK Combat Assist"
-            elif self.dss_assist_enabled == True:
+            elif self.dss_assist_enabled:
                 ap_mode = "DSS Assist"
 
             ship_state = self.jn.ship_state()['status']
-            if ship_state == None:
+            if ship_state is None:
                 ship_state = '<init>'
 
             sclass = self.jn.ship_state()['star_class']
-            if sclass == None:
+            if sclass is None:
                 sclass = "<init>"
 
             location = self.jn.ship_state()['location']
-            if location == None:
+            if location is None:
                 location = "<init>"
             self.overlay.overlay_text('1', "AP MODE: "+ap_mode, 1, 1, (136, 53, 0))
             self.overlay.overlay_text('2', "AP STATUS: "+self.ap_state, 2, 1, (136, 53, 0))
             self.overlay.overlay_text('3', "SHIP STATUS: "+ship_state, 3, 1, (136, 53, 0))
             self.overlay.overlay_text('4', "CURRENT SYSTEM: "+location+", "+sclass, 4, 1, (136, 53, 0))
             self.overlay.overlay_text('5', "JUMPS: {} of {}".format(self.jump_cnt, self.total_jumps), 5, 1, (136, 53, 0))
-            if self.config["ElwScannerEnable"] == True:
+            if self.config["ElwScannerEnable"]:
                 self.overlay.overlay_text('6', "ELW SCANNER: "+self.fss_detected, 6, 1, (136, 53, 0))
             self.overlay.overlay_paint()
 
@@ -362,37 +362,37 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
     # Setter routines for state variables
     #
     def set_fsd_assist(self, enable=True):
-        if enable == False and self.fsd_assist_enabled == True:
+        if not enable and self.fsd_assist_enabled:
             self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.fsd_assist_enabled = enable
 
     def set_sc_assist(self, enable=True):
-        if enable == False and self.sc_assist_enabled == True:
+        if not enable and self.sc_assist_enabled:
             self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.sc_assist_enabled = enable
 
     def set_waypoint_assist(self, enable=True):
-        if enable == False and self.waypoint_assist_enabled == True:
+        if not enable and self.waypoint_assist_enabled:
             self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.waypoint_assist_enabled = enable
 
     def set_robigo_assist(self, enable=True):
-        if enable == False and self.robigo_assist_enabled == True:
+        if not enable and self.robigo_assist_enabled:
             self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.robigo_assist_enabled = enable
 
     def set_afk_combat_assist(self, enable=True):
-        if enable == False and self.afk_combat_assist_enabled == True:
+        if not enable and self.afk_combat_assist_enabled:
             self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.afk_combat_assist_enabled = enable
 
     def set_dss_assist(self, enable=True):
-        if enable == False and self.dss_assist_enabled == True:
+        if not enable and self.dss_assist_enabled:
             self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.dss_assist_enabled = enable
 
     def set_single_waypoint_assist(self, system: str, station: str, enable=True):
-        if enable == False and self.single_waypoint_enabled == True:
+        if not enable and self.single_waypoint_enabled:
             self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self._single_waypoint_system = system
         self._single_waypoint_station = station
@@ -402,7 +402,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
         self.cv_view = enable
         self.config['Enable_CV_View'] = int(self.cv_view)  # update the config
         self.update_config()  # save the config
-        if enable == True:
+        if enable:
             self.cv_view_x = x
             self.cv_view_y = y
         else:
@@ -427,7 +427,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
         self.overlay.overlay_paint()
 
     def set_voice(self, enable=False):
-        if enable == True:
+        if enable:
             self.vce.set_on()
         else:
             self.vce.set_off()
@@ -453,9 +453,9 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
     # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
     # have then then kill python exec
     def quit(self):
-        if self.vce != None:
+        if self.vce is not None:
             self.vce.quit()
-        if self.overlay != None:
+        if self.overlay is not None:
             self.overlay.overlay_quit()
         self.terminate = True
 
@@ -472,7 +472,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                     self._sc_sco_active_loop_thread = threading.Thread(target=self._sc_sco_active_loop, daemon=True)
                     self._sc_sco_active_loop_thread.start()
 
-            if self.fsd_assist_enabled == True:
+            if self.fsd_assist_enabled:
                 logger.debug("Running fsd_assist")
                 set_focus_elite_window()
                 self.update_overlay()
@@ -498,14 +498,14 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 # defined.  So lets enable Supercruise assist to get us there
                 # Note: this is tricky, in normal FSD jumps the target is pretty much on the other side of Sun
                 #  when we arrive, but not so when we are in the final system
-                if fin == False:
+                if fin is False:
                     self.ap_ckb("sc_start")
 
                 # drop all out debug windows
                 #cv2.destroyAllWindows()
                 #cv2.waitKey(10)
 
-            elif self.sc_assist_enabled == True:
+            elif self.sc_assist_enabled:
                 logger.debug("Running sc_assist")
                 set_focus_elite_window()
                 self.update_overlay()
@@ -523,7 +523,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 self.ap_ckb('sc_stop')
                 self.update_overlay()
 
-            elif self.waypoint_assist_enabled == True:
+            elif self.waypoint_assist_enabled:
                 logger.debug("Running waypoint_assist")
 
                 set_focus_elite_window()
@@ -544,7 +544,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 self.ap_ckb('waypoint_stop')
                 self.update_overlay()
 
-            elif self.robigo_assist_enabled == True:
+            elif self.robigo_assist_enabled:
                 logger.debug("Running robigo_assist")
                 set_focus_elite_window()
                 self.update_overlay()
@@ -560,7 +560,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 self.ap_ckb('robigo_stop')
                 self.update_overlay()
 
-            elif self.afk_combat_assist_enabled == True:
+            elif self.afk_combat_assist_enabled:
                 self.update_overlay()
                 try:
                     self.afk_combat_loop()
@@ -570,7 +570,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 self.ap_ckb('afk_stop')
                 self.update_overlay()
 
-            elif self.dss_assist_enabled == True:
+            elif self.dss_assist_enabled:
                 logger.debug("Running dss_assist")
                 set_focus_elite_window()
                 self.update_overlay()

@@ -50,7 +50,7 @@ class ConfigMixin:
             if self.current_ship_type not in self.ship_configs['Ship_Configs']:
                 self.ship_configs['Ship_Configs'][self.current_ship_type] = {}
                 logger.debug(f"Created new ship config entry for: {self.current_ship_type}")
-            
+
             self.ship_configs['Ship_Configs'][self.current_ship_type]['compass_scale'] = round(self.compass_scale, 4)
             self.ship_configs['Ship_Configs'][self.current_ship_type]['PitchRate'] = self.pitchrate
             self.ship_configs['Ship_Configs'][self.current_ship_type]['RollRate'] = self.rollrate
@@ -87,7 +87,7 @@ class ConfigMixin:
                 self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
                 logger.info(f"Loaded your custom configuration for {ship_type} from ship_configs.json")
                 return
-        
+
         # Step 2: Try to load defaults from ship file
         if ship_type in ship_rpy_sc_50:
             ship_defaults = ship_rpy_sc_50[ship_type]
@@ -107,7 +107,7 @@ class ConfigMixin:
         self.yawrate = 8.0
         self.sunpitchuptime = 0.0
         logger.info(f"Using hardcoded default configuration for {ship_type}")
-        
+
         # Add empty entry to ship_configs for future customization
         if ship_type not in self.ship_configs['Ship_Configs']:
             self.ship_configs['Ship_Configs'][ship_type] = dict()

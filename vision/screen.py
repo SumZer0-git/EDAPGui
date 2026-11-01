@@ -38,7 +38,7 @@ def set_focus_elite_window():
         try:
             win32gui.ShowWindow(handle, win32con.SW_NORMAL)  # give focus to ED
             win32gui.SetForegroundWindow(handle)  # give focus to ED
-        except:
+        except Exception:
             print("set_focus_elite_window ERROR")
             pass
 
@@ -86,7 +86,7 @@ class Screen:
         # Add new screen resolutions here with tested scale factors
         # this table will be default, overwritten when loading resolution.json file
         self.scales = {  # scaleX, scaleY
-            '1024x768':   [0.39, 0.39],  # tested, but not has high match % 
+            '1024x768':   [0.39, 0.39],  # tested, but not has high match %
             '1080x1080':  [0.5, 0.5],    # fix, not tested
             '1280x800':   [0.48, 0.48],  # tested
             '1280x1024':  [0.5, 0.5],    # tested
@@ -102,7 +102,7 @@ class Screen:
 
         # used this to write the self.scales table to the json file
         # self.write_config(self.scales)
-        
+
         ss = self.read_config()
 
         # if we read it then point to it, otherwise use the default table above
@@ -116,17 +116,17 @@ class Screen:
             scale_key = str(self.screen_width)+"x"+str(self.screen_height)
             self.scaleX = self.scales[scale_key][0]
             self.scaleY = self.scales[scale_key][1]
-        except:            
+        except Exception:
             # if we don't have a definition for the resolution then use calculation
             self.scaleX = self.screen_width / 3440.0
             self.scaleY = self.screen_height / 1440.0
-            
+
         # if the calibration scale values are not -1, then use those regardless of above
         # if self.scales['Calibrated'][0] != -1.0:
         #     self.scaleX = self.scales['Calibrated'][0]
         # if self.scales['Calibrated'][1] != -1.0:
         #     self.scaleY = self.scales['Calibrated'][1]
-        
+
         logger.debug('screen size: '+str(self.screen_width)+" "+str(self.screen_height))
         logger.debug('Default scale X, Y: '+str(self.scaleX)+", "+str(self.scaleY))
 
@@ -189,7 +189,7 @@ class Screen:
         if rgb:
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         return image
-        
+
     def get_screen_rect_pct(self, rect):
         """ Grabs a screenshot and returns the selected region as an image.
         @param rect: A rect array ([L, T, R, B]) in percent (0.0 - 1.0)
@@ -204,7 +204,7 @@ class Screen:
         else:
             if self._screen_image is None:
                 return None
-       
+
             image = self.crop_image_by_pct(self._screen_image, rect)
             return image
 

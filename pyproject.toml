@@ -3,6 +3,7 @@ line-length = 120
 extend-exclude = ["EDMesg", "venv", "user_data"]
 
 [tool.ruff.lint]
-select = ["F", "I"]
-# Unused local variables: some are kept on purpose (GUI objects that must stay referenced); review individually later.
+select = ["F", "I", "W", "E711", "E712", "E713", "E714", "E722"]
+# Not enforced yet: E501 (line length) and the pep8-naming group N (many names mirror the game or are public API).
+# F841 (unused local variables): some are kept on purpose (GUI objects that must stay referenced); review individually later.
 ignore = ["F841"]
