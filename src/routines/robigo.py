@@ -407,7 +407,7 @@ Test Code pre-integration with the GUI, run standalone
 global main_thrd
 global ap1
 
-class EDAP_Interrupt(Exception):
+class EdapInterruptError(Exception):
     pass
 
 def key_callback(name):
@@ -415,7 +415,7 @@ def key_callback(name):
     print("exiting")
 
     # if name == "end":
-    ap1.ctype_async_raise(main_thrd, EDAP_Interrupt)
+    ap1.ctype_async_raise(main_thrd, EdapInterruptError)
 
 
 
@@ -451,7 +451,7 @@ def main():
     # print("Going to sleep")
     try:
         robigo.loop(ap)
-    except EDAP_Interrupt:
+    except EdapInterruptError:
         logger.debug("Caught stop exception")
     except Exception as e:
         print("Trapped generic:" + str(e))

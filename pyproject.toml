@@ -4,5 +4,7 @@ src = ["src", "third_party"]
 extend-exclude = ["third_party", "venv", "user_data"]
 
 [tool.ruff.lint]
-select = ["F", "I", "W", "E711", "E712", "E713", "E714", "E722"]
-# Not enforced yet: E501 (line length) and the pep8-naming group N (many names mirror the game or are public API).
+select = ["F", "I", "N", "W", "E711", "E712", "E713", "E714", "E722"]
+# N806 is ignored: local names such as minVal/maxLoc mirror OpenCV and the game.
+ignore = ["N806"]
+# Not enforced yet: E501 (line length).

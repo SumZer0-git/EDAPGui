@@ -3,7 +3,7 @@
 from time import sleep
 from typing import final
 
-from controls.directinput import PressKey, ReleaseKey
+from controls.directinput import press_key, release_key
 from core.logger import logger
 from game.keybindings import KeyBindings
 from vision.screen import set_focus_elite_window
@@ -26,9 +26,9 @@ class EDKeys(KeyBindings):
             sleep(0.05)
 
         if type == 'Up':
-            ReleaseKey(key)
+            release_key(key)
         else:
-            PressKey(key)
+            press_key(key)
 
     def send(self, key_binding, hold=None, repeat=1, repeat_delay=None, state=None):
         key = self.keys.get(key_binding)
@@ -51,10 +51,10 @@ class EDKeys(KeyBindings):
 
             if state is None or state == 1:
                 for mod in key['mods']:
-                    PressKey(mod)
+                    press_key(mod)
                     sleep(self.key_mod_delay)
 
-                PressKey(key['key'])
+                press_key(key['key'])
 
             if state is None:
                 if hold:
@@ -66,11 +66,11 @@ class EDKeys(KeyBindings):
                 sleep(0.1)
 
             if state is None or state == 0:
-                ReleaseKey(key['key'])
+                release_key(key['key'])
 
                 for mod in key['mods']:
                     sleep(self.key_mod_delay)
-                    ReleaseKey(mod)
+                    release_key(mod)
 
             if repeat_delay:
                 sleep(repeat_delay)

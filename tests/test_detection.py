@@ -12,8 +12,8 @@ import numpy as np
 
 from tests.helpers import FakeScreen, load_fixture_image
 from vision.detection import DetectionMixin
-from vision.regions import Screen_Regions
-from vision.templates import Image_Templates
+from vision.regions import ScreenRegions
+from vision.templates import ImageTemplates
 
 
 class Detector(DetectionMixin):
@@ -23,13 +23,13 @@ class Detector(DetectionMixin):
 class MatchingTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.templates = Image_Templates(1.0, 1.0, 1.0)
+        cls.templates = ImageTemplates(1.0, 1.0, 1.0)
         cls.images = {name: load_fixture_image(name) for name in
                       ('compass', 'navpoint', 'navpoint-behind', 'target', 'disengage')}
         cls.images['empty'] = np.zeros((700, 700, 3), np.uint8)
 
     def regions(self, image_name):
-        return Screen_Regions(FakeScreen(self.images[image_name]), self.templates)
+        return ScreenRegions(FakeScreen(self.images[image_name]), self.templates)
 
     def detect(self, method, image_name):
         return getattr(Detector(), method)(self.regions(image_name))
@@ -43,7 +43,7 @@ class TemplateTestCase(MatchingTestCase):
                 self.assertEqual(template['image'].shape[::-1], (template['width'], template['height']))
 
     def test_templates_are_scaled(self):
-        half = Image_Templates(0.5, 0.5, 0.5)
+        half = ImageTemplates(0.5, 0.5, 0.5)
 
         for name in ('compass', 'navpoint', 'target', 'disengage'):
             with self.subTest(template=name):
@@ -145,7 +145,7 @@ class TargetTestCase(MatchingTestCase):
         mask = template > 128
         image[:template.shape[0], :template.shape[1]][mask] = cv2.cvtColor(
             np.uint8([[[20, 120, 180]]]), cv2.COLOR_HSV2BGR)[0, 0]
-        regions = Screen_Regions(FakeScreen(image), self.templates)
+        regions = ScreenRegions(FakeScreen(image), self.templates)
 
         self.assertTrue(Detector().is_destination_occluded(regions))
 
@@ -165,7 +165,7 @@ class DisengageTestCase(MatchingTestCase):
 
 class RegionFilterTestCase(MatchingTestCase):
     def test_region_rects_follow_the_screen_size(self):
-        regions = Screen_Regions(FakeScreen(None, 1920, 1080), self.templates)
+        regions = ScreenRegions(FakeScreen(None, 1920, 1080), self.templates)
 
         compass = regions.reg['compass']
         self.assertEqual(compass['rect'], [633, 702, 883, 1080])
@@ -173,7 +173,7 @@ class RegionFilterTestCase(MatchingTestCase):
 
     def test_all_regions_lie_inside_the_screen(self):
         for width, height in ((1920, 1080), (3440, 1440), (2560, 1440)):
-            regions = Screen_Regions(FakeScreen(None, width, height), self.templates)
+            regions = ScreenRegions(FakeScreen(None, width, height), self.templates)
             for name, region in regions.reg.items():
                 with self.subTest(resolution=f'{width}x{height}', region=name):
                     left, top, right, bottom = region['rect']
@@ -209,7 +209,7 @@ class RegionFilterTestCase(MatchingTestCase):
     def test_sun_percent(self):
         image = np.zeros((100, 100, 3), np.uint8)
         image[:, :50] = 255
-        regions = Screen_Regions(FakeScreen(image), self.templates)
+        regions = ScreenRegions(FakeScreen(image), self.templates)
 
         self.assertEqual(regions.sun_percent(regions.screen), 50)
 

@@ -11,10 +11,10 @@ class ConfigMixin:
 
     # Loads the configuration file
     #
-    def read_config(self, fileName=paths.AP_CONFIG):
+    def read_config(self, file_name=paths.AP_CONFIG):
         s = None
         try:
-            with open(fileName, "r") as fp:
+            with open(file_name, "r") as fp:
                 s = json.load(fp)
         except  Exception as e:
             logger.warning("core/config.py read_config error :"+str(e))
@@ -24,9 +24,9 @@ class ConfigMixin:
     def update_config(self):
         self.write_config(self.config)
 
-    def write_config(self, data, fileName=paths.AP_CONFIG):
+    def write_config(self, data, file_name=paths.AP_CONFIG):
         try:
-            with open(fileName, "w") as fp:
+            with open(file_name, "w") as fp:
                 json.dump(data, fp, indent=4)
         except Exception as e:
             logger.warning("core/config.py write_config error:"+str(e))

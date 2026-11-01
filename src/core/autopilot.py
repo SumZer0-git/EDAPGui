@@ -19,7 +19,7 @@ from core import paths
 from core.config import ConfigMixin
 from core.constants import FlagsSupercruise, ship_size_map
 from core.logger import logger
-from core.types import EDAP_Interrupt
+from core.types import EdapInterruptError
 from game.graphics_settings import EDGraphicsSettings
 from game.journal import EDJournal, get_ship_fullname
 from game.nav_route import NavRouteParser
@@ -35,7 +35,7 @@ from panels.navigation import EDNavigationPanel
 from panels.ship_control import EDShipControl
 from panels.station_services import EDStationServicesInShip
 from panels.system_map import EDSystemMap
-from routines.afk_combat import AFK_Combat
+from routines.afk_combat import AfkCombat
 from routines.assists import AssistsMixin
 from routines.flight import FlightMixin
 from routines.robigo import Robigo
@@ -48,7 +48,7 @@ from vision.screen import set_focus_elite_window
 
 class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, AssistsMixin):
 
-    def __init__(self, cb, doThread=True):
+    def __init__(self, cb, do_thread=True):
 
         # NOTE!!! When adding a new config value below, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
@@ -199,12 +199,12 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
         self.scr.scaleY = self.config['TargetScale']
 
         self.ocr = OCR(self.scr, self.config['OCRLanguage'])
-        self.templ = vision.templates.Image_Templates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
-        self.scrReg = vision.regions.Screen_Regions(self.scr, self.templ)
+        self.templ = vision.templates.ImageTemplates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
+        self.scrReg = vision.regions.ScreenRegions(self.scr, self.templ)
         self.jn = EDJournal(cb)
         self.keys = EDKeys(cb)
         self.keys.activate_window = self.config['ActivateEliteEachKey']
-        self.afk_combat = AFK_Combat(self.keys, self.jn, self.vce)
+        self.afk_combat = AfkCombat(self.keys, self.jn, self.vce)
         self.waypoint = EDWayPoint(self, self.jn.ship_state()['odyssey'])
         self.robigo = Robigo(self)
         self.status = StatusParser()
@@ -264,7 +264,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
 
         #start the engine thread
         self.terminate = False  # terminate used by the thread to exit its loop
-        if doThread:
+        if do_thread:
             self.ap_thread = kthread.KThread(target=self.engine_loop, name="EDAutopilot")
             self.ap_thread.start()
 
@@ -363,37 +363,37 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
     #
     def set_fsd_assist(self, enable=True):
         if not enable and self.fsd_assist_enabled:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            self.ctype_async_raise(self.ap_thread, EdapInterruptError)
         self.fsd_assist_enabled = enable
 
     def set_sc_assist(self, enable=True):
         if not enable and self.sc_assist_enabled:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            self.ctype_async_raise(self.ap_thread, EdapInterruptError)
         self.sc_assist_enabled = enable
 
     def set_waypoint_assist(self, enable=True):
         if not enable and self.waypoint_assist_enabled:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            self.ctype_async_raise(self.ap_thread, EdapInterruptError)
         self.waypoint_assist_enabled = enable
 
     def set_robigo_assist(self, enable=True):
         if not enable and self.robigo_assist_enabled:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            self.ctype_async_raise(self.ap_thread, EdapInterruptError)
         self.robigo_assist_enabled = enable
 
     def set_afk_combat_assist(self, enable=True):
         if not enable and self.afk_combat_assist_enabled:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            self.ctype_async_raise(self.ap_thread, EdapInterruptError)
         self.afk_combat_assist_enabled = enable
 
     def set_dss_assist(self, enable=True):
         if not enable and self.dss_assist_enabled:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            self.ctype_async_raise(self.ap_thread, EdapInterruptError)
         self.dss_assist_enabled = enable
 
     def set_single_waypoint_assist(self, system: str, station: str, enable=True):
         if not enable and self.single_waypoint_enabled:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            self.ctype_async_raise(self.ap_thread, EdapInterruptError)
         self._single_waypoint_system = system
         self._single_waypoint_station = station
         self.single_waypoint_enabled = enable
@@ -484,7 +484,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 # could be deep in call tree when user disables FSD, so need to trap that exception
                 try:
                     fin = self.fsd_assist(self.scrReg)
-                except EDAP_Interrupt:
+                except EdapInterruptError:
                     logger.debug("Caught stop exception")
                 except Exception as e:
                     print("Trapped generic:"+str(e))
@@ -512,7 +512,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 try:
                     self.update_ap_status("SC to Target")
                     self.sc_assist(self.scrReg)
-                except EDAP_Interrupt:
+                except EdapInterruptError:
                     logger.debug("Caught stop exception")
                 except Exception as e:
                     print("Trapped generic:"+str(e))
@@ -534,7 +534,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 self.total_jumps = 0
                 try:
                     self.waypoint_assist(self.keys, self.scrReg)
-                except EDAP_Interrupt:
+                except EdapInterruptError:
                     logger.debug("Caught stop exception")
                 except Exception as e:
                     print("Trapped generic:"+str(e))
@@ -550,7 +550,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 self.update_overlay()
                 try:
                     self.robigo_assist()
-                except EDAP_Interrupt:
+                except EdapInterruptError:
                     logger.debug("Caught stop exception")
                 except Exception as e:
                     print("Trapped generic:"+str(e))
@@ -564,7 +564,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 self.update_overlay()
                 try:
                     self.afk_combat_loop()
-                except EDAP_Interrupt:
+                except EdapInterruptError:
                     logger.debug("Stopping afk_combat")
                 self.afk_combat_assist_enabled = False
                 self.ap_ckb('afk_stop')
@@ -576,7 +576,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 self.update_overlay()
                 try:
                     self.dss_assist()
-                except EDAP_Interrupt:
+                except EdapInterruptError:
                     logger.debug("Stopping DSS Assist")
                 self.dss_assist_enabled = False
                 self.ap_ckb('dss_stop')
@@ -586,7 +586,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                 self.update_overlay()
                 try:
                     self.single_waypoint_assist()
-                except EDAP_Interrupt:
+                except EdapInterruptError:
                     logger.debug("Stopping Single Waypoint Assist")
                 self.single_waypoint_enabled = False
                 self.ap_ckb('single_waypoint_stop')
@@ -651,7 +651,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
         set_focus_elite_window()
         sleep(0.25)
         self.keys.send('SetSpeed50')
-        self.pitchUp(360)
+        self.pitch_up(360)
 
     def ship_tst_roll(self):
         """ Performs a ship roll test by pitching 360 degrees.
@@ -669,7 +669,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
         set_focus_elite_window()
         sleep(0.25)
         self.keys.send('SetSpeed50')
-        self.rotateLeft(360)
+        self.rotate_left(360)
 
     def ship_tst_yaw(self):
         """ Performs a ship yaw test by pitching 360 degrees.
@@ -687,7 +687,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
         set_focus_elite_window()
         sleep(0.25)
         self.keys.send('SetSpeed50')
-        self.yawLeft(360)
+        self.yaw_left(360)
 
 
 #
@@ -698,7 +698,7 @@ def main():
     #if handle != None:
     #    win32gui.SetForegroundWindow(handle)  # put the window in foreground
 
-    ed_ap = EDAutopilot(cb=None, doThread=False)
+    ed_ap = EDAutopilot(cb=None, do_thread=False)
     ed_ap.cv_view = True
     ed_ap.cv_view_x = 4000
     ed_ap.cv_view_y = 100

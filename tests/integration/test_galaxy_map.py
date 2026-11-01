@@ -19,19 +19,19 @@ class GalaxyMapTestCase(unittest.TestCase):
 
         cls.gal_map = EDGalaxyMap(cls.ed_ap, scr, keys, dummy_cb, True)
 
-    def test_System1(self):
+    def test_system1(self):
         """ A single system (no duplicates). """
         system = "ROBIGO"
         res = self.select_system(system)
         self.assertTrue(res, f"Unable to find system {system}")  # add assertion here
 
-    def test_System2(self):
+    def test_system2(self):
         """ A duplicate system with multiple similar named systems. """
         system = "LHS 54"
         res = self.select_system(system)
         self.assertTrue(res, f"Unable to find system {system}")  # add assertion here
 
-    def test_System3(self):
+    def test_system3(self):
         system = "Cubeo"
         res = self.select_system(system)
         self.assertTrue(res, f"Unable to find system {system}")  # add assertion here

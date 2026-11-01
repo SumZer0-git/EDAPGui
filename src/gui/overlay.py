@@ -95,7 +95,7 @@ class Overlay:
         # Dispatch messages, this function needs to be its own task to run forever until Quit
         win32gui.PumpMessages()
 
-    def _GetTargetWindowRect(self):
+    def _get_target_window_rect(self):
         rect = win32gui.GetWindowRect(self.tHwnd)
         ret = Vector(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1])
         return ret
@@ -127,7 +127,7 @@ class Overlay:
     def overlay_paint(self):
         # if a parent was specified check to see if it moved, if so reposition our origin to new window location
         if self.tHwnd:
-            if self.targetRect != self._GetTargetWindowRect():
+            if self.targetRect != self._get_target_window_rect():
                 rect = win32gui.GetWindowRect(self.tHwnd)
                 self.targetRect = Vector(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1])
                 win32gui.MoveWindow(self.hWindow, self.targetRect.x, self.targetRect.y, self.targetRect.w, self.targetRect.h, True)
@@ -235,13 +235,13 @@ class Overlay:
             win32gui.LineTo  (hdc, int(pt2[0]+tic_len),   int(pt1[1]+half_hgt))
 
     @staticmethod
-    def overlay_set_font(hdc, fontname, fontSize):
+    def overlay_set_font(hdc, fontname, font_size):
         global fnt
         dpiScale = win32ui.GetDeviceCaps(hdc, win32con.LOGPIXELSX) / 60.0
 
         lf = win32gui.LOGFONT()
         lf.lfFaceName = fontname
-        lf.lfHeight = int(round(dpiScale * fontSize))
+        lf.lfHeight = int(round(dpiScale * font_size))
         #lf.lfWeight = 150
         # Use nonantialiased to remove the white edges around the text.
         lf.lfQuality = win32con.NONANTIALIASED_QUALITY
@@ -251,7 +251,7 @@ class Overlay:
 
 
     @staticmethod
-    def overlay_draw_text(hWnd, hdc, txt, row, col, color):
+    def overlay_draw_text(hWnd, hdc, txt, row, col, color):  # noqa: N803
         global pos, fnt
 
         x = pos[0]+col*fnt[1]
@@ -263,7 +263,7 @@ class Overlay:
 
 
     @staticmethod
-    def overlay_draw_floating_text(hWnd, hdc, txt, x, y, color):
+    def overlay_draw_floating_text(hWnd, hdc, txt, x, y, color):  # noqa: N803
         rect = (x, y, 1, 1)
         win32gui.SetTextColor(hdc,win32api.RGB(color[0], color[1], color[2]))
 
@@ -271,7 +271,7 @@ class Overlay:
 
 
     @staticmethod
-    def wndProc(hWnd, message, wParam, lParam):
+    def wndProc(hWnd, message, wParam, lParam):  # noqa: N802, N803
         global lines, text
         if message == win32con.WM_PAINT:
             hdc, paintStruct = win32gui.BeginPaint(hWnd)
@@ -315,7 +315,7 @@ def main():
 
     ov.overlay_setfont("Times New Roman", 12 )
     ov.overlay_set_pos(2000, 50)
-    #                                        row,col, color   based on fontSize
+    #                                        row,col, color   based on font_size
     ov.overlay_text('1', "Hello World",       1, 1,(0,0,255) )
     ov.overlay_text('2', "next test in line", 2, 1,(255,0,255) )
 
