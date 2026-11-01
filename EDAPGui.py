@@ -437,18 +437,18 @@ class APGui():
         self.update_statusline("Idle")
 
     def about(self):
-        webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui")
+        webbrowser.open_new("https://github.com/DopeEx/EDAPGui")
 
     def check_updates(self):
-        # response = requests.get("https://api.github.com/repos/SumZer0-git/EDAPGui/releases/latest")
+        # response = requests.get("https://api.github.com/repos/DopeEx/EDAPGui/releases/latest")
         # if EDAP_VERSION != response.json()["name"]:
         #     mb = messagebox.askokcancel("Update Check", "A new release version is available. Download now?")
         #     if mb == True:
-        #         webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui/releases/latest")
+        #         webbrowser.open_new("https://github.com/DopeEx/EDAPGui/releases/latest")
         pass
 
     def open_changelog(self):
-        webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui/blob/main/ChangeLog.md")
+        webbrowser.open_new("https://github.com/DopeEx/EDAPGui/blob/main/CHANGELOG.md")
 
     def open_discord(self):
         webbrowser.open_new("https://discord.gg/HCgkfSc")

@@ -101,7 +101,7 @@ If you are interested in Python and making changes to the code, or seeing how it
 
 1. Clone this repository
 ```sh
-> git clone https://github.com/sumzer0-git/EDAPGui
+> git clone https://github.com/DopeEx/EDAPGui
 ```
 2. Install requirements
 ```sh
