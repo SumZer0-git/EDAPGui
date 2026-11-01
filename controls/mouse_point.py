@@ -1,16 +1,9 @@
+"""Gets the x,y location of a mouse click and clicks on a given x,y location."""
+
 from pynput.mouse import *
 
 from time import sleep
 
-
-"""
-File:controls/mouse_point.py    
-
-Description:
-  Class to handles getting x,y location for a mouse click, and a routine to click on a x, y location
-
-Author: SumZer0
-"""
 
 class MousePoint:
     def __init__(self):

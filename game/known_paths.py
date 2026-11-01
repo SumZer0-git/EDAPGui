@@ -1,3 +1,5 @@
+"""Lookup of Windows known folder paths."""
+
 import ctypes, sys
 from ctypes import windll, wintypes
 from uuid import UUID

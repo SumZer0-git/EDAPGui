@@ -1,3 +1,5 @@
+"""Screen grabs."""
+
 from __future__ import annotations
 import typing
 import cv2
@@ -11,14 +13,6 @@ from core import paths
 from core.logger import logger
 
 
-"""
-File:vision/screen.py    
-
-Description:
-  Class to handle screen grabs
-
-Author: SumZer0
-"""
 # size() return (ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1))
 # TODO: consider update to handle ED running in a window
 #   find the ED Window

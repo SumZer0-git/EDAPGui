@@ -1,3 +1,7 @@
+"""Main window for controlling the ED Autopilot.
+
+Ideas taken from: https://github.com/skai2/EDAutopilot"""
+
 import queue
 import sys
 import os
@@ -34,24 +38,6 @@ from core.autopilot import *
 
 from core.logger import logger
 
-
-"""
-File:gui/main_window.py
-
-Description:
-User interface for controlling the ED Autopilot
-
-Note:
-Ideas taken from:  https://github.com/skai2/EDAutopilot
-
- HotKeys:
-    Home - Start FSD Assist
-    INS  - Start SC Assist
-    PG UP - Start Robigo Assist
-    End - Terminate any ongoing assist (FSD, SC, AFK)
-
-Author: SumZer0
-"""
 
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!

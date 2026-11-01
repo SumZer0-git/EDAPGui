@@ -1,3 +1,5 @@
+"""Shared exceptions and enums."""
+
 from enum import Enum
 
 

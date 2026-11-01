@@ -1,3 +1,5 @@
+"""Handles the Galaxy Map."""
+
 from __future__ import annotations
 
 from core.constants import GuiFocusGalaxyMap

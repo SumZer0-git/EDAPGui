@@ -1,3 +1,5 @@
+"""EDMesg actions and events exchanged between EDAP and its clients."""
+
 from EDMesg.EDMesgBase import EDMesgAction, EDMesgEvent
 from EDMesg.EDMesgProvider import EDMesgProvider
 from EDMesg.EDMesgClient import EDMesgClient

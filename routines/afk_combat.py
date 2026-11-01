@@ -1,3 +1,8 @@
+"""AFK combat in a resource extraction site (see Type 10 AFK videos).
+
+Monitors the shields; if they are lost it boosts and supercruises away, drops out later,
+sets pips to system/weapons and deploys the fighter. A destroyed fighter is replaced
+if another fighter is ready. The ship must point away from the site at the start."""
 
 from time import sleep
 
@@ -9,31 +14,14 @@ from controls.keys import *
 from core.logger import logger
 from integrations.voice import *
 
-"""
-Description:  AFK Combat in Rez site (see Type 10 AFK videos).
-  This script will monitor shields (from Journal file), if shields are lost (ShieldsUp == False) then
-  boost and supercruise away, after a bit, drop from supercruise, pips to System/Weapons and deploy fighter
-  This script will also monitor if a deployed Fighter is destroyed, if so it will deploy another fighter,
-  this requires another fighter bay with a fighter ready (could modify to wait for fighter rebuild)
-
-Required State:
-  - Point away from Rez sight (so when boost away can get out of mass lock)
-
-Author: SumZer0
-"""
-
-"""
-TODO: consider the following enhancements
-  - If a key is not mapped need to list which are needed and exit
-  - Need key for commading fighter to 'attack at will' or defend
-  - After retreat complete, could go into while loop looking for "UnderAttack" or 
-    simply go back into shields down logic again.  Would have to wait until shields are up
-  - 
-    
-"""
-
 
 class AFK_Combat:
+
+    # TODO: consider the following enhancements
+    #  - If a key is not mapped need to list which are needed and exit
+    #  - Need key for commanding fighter to 'attack at will' or defend
+    #  - After retreat complete, could go into while loop looking for "UnderAttack" or
+    #    simply go back into shields down logic again. Would have to wait until shields are up
 
     def __init__(self, k, journal, v=None):
         self.k = k
@@ -133,7 +121,6 @@ class AFK_Combat:
         # Command fighter to attack at will
         # self.k.send().... ??OrderAggressiveBehaviour
         self.k.send('SetSpeedZero')
-
 
 
 """

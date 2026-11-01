@@ -1,3 +1,5 @@
+"""Calibration of the template matching scale."""
+
 import math
 import traceback
 from enum import Enum
@@ -31,8 +33,6 @@ from integrations.voice import *
 from routines.robigo import *
 from integrations.tce import TceIntegration
 from core.types import EDAP_Interrupt, ScTargetAlignReturn
-
-"""Calibration of the template matching scale."""
 
 
 class CalibrationMixin:

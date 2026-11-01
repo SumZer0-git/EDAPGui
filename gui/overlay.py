@@ -1,3 +1,5 @@
+"""Draws lines and text as an overlay on top of the game screen."""
+
 import threading
 from ctypes.wintypes import PRECT
 from time import sleep
@@ -7,29 +9,6 @@ import win32con
 import win32gui
 import win32ui
 
-"""
-File:gui/overlay.py    
-
-Description:
-  Class to support drawing lines and text which would overlay the parent screen
-
-Author: SumZer0
-
-to use:
-ov = Overlay("")
-# key = a string to be any identifier you want it to be
-ov.overlay_rect(key, (pt[0]+x_start, pt[1]+y_start), (pt[0] + compass_width+x_start, pt[1] + compass_height+y_start), (R,G,B), thinkness)
-
-ov.overlay_setfont("Times New Roman", 12 )
-ov.overlay_set_pos(2000, 50)
-#                                        row,col, color   based on fontSize
-ov.overlay_text('1', "Hello World",       1, 1,(0,0,255) )
-
-ov.overlay_paint()
-
-#@end
-ov.overlay_quit()
-"""
 
 lines = {}
 text = {}
@@ -367,8 +346,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
 
 
  

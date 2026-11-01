@@ -1,3 +1,5 @@
+"""Template images used with OpenCV to match in screen regions."""
+
 import sys
 from os.path import abspath, getmtime, isfile, join, dirname
 
@@ -5,14 +7,6 @@ import cv2
 from core import paths
 from core.logger import logger
 
-"""
-File:Image_Templates.py    
-
-Description:
-  Class defines template images that will be used with opencv to match in screen regions
-
-Author: SumZer0
-"""
 
 class Image_Templates:
     def __init__(self, scaleX, scaleY, compass_scale: float):

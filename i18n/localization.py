@@ -1,3 +1,5 @@
+"""Manages localization (language files are in assets/locales/)."""
+
 import os
 import json
 

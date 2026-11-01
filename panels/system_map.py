@@ -1,3 +1,5 @@
+"""Handles the System Map."""
+
 from __future__ import annotations
 
 from core.constants import GuiFocusSystemMap

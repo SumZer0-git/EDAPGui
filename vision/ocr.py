@@ -1,3 +1,5 @@
+"""Text recognition using PaddleOCR."""
+
 from __future__ import annotations
 
 import time
@@ -9,15 +11,6 @@ from strsimpy.jaro_winkler import JaroWinkler
 
 from core import paths
 from core.logger import logger
-
-"""
-File:OCR.py    
-
-Description:
-  Class for OCR processing using PaddleOCR. 
-
-Author: Stumpii
-"""
 
 
 class OCR:

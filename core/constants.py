@@ -1,13 +1,7 @@
-"""
-Static data.
+"""Static data.
 
-For easy reference any variable should be prefixed with the name of the file it
-was either in originally, or where the primary code utilising it is.
-
-Note: Some of this file comes from EDMarketConnector's edmc_data.py file
-(https://github.com/EDCD/EDMarketConnector/blob/main/edmc_data.py).
-
-"""
+Some of this file comes from EDMarketConnector's edmc_data.py file
+(https://github.com/EDCD/EDMarketConnector/blob/main/edmc_data.py)."""
 
 # Status.json / Dashboard Flags constants
 FlagsDocked = 1 << 0             # on a landing pad in space or planet

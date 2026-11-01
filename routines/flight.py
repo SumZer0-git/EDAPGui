@@ -1,3 +1,5 @@
+"""Ship maneuvers: aligning, jumping, docking, undocking and refueling."""
+
 import math
 import traceback
 from enum import Enum
@@ -31,8 +33,6 @@ from integrations.voice import *
 from routines.robigo import *
 from integrations.tce import TceIntegration
 from core.types import EDAP_Interrupt, ScTargetAlignReturn
-
-"""Ship maneuvers: aligning, jumping, docking, undocking and refueling."""
 
 
 class FlightMixin:
@@ -742,7 +742,6 @@ class FlightMixin:
         on_planet = self.status.get_flag(FlagsHasLatLong)
         on_orbital_construction_site = self.jn.ship_state()['cur_station_type'].upper() == "SpaceConstructionDepot".upper()
         fleet_carrier = self.jn.ship_state()['cur_station_type'].upper() == "FleetCarrier".upper()
-
 
 
         # Leave starport or planetary port

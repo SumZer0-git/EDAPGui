@@ -1,3 +1,5 @@
+"""EDMesg client: connects to EDAP, sends actions and receives events."""
+
 import threading
 
 from integrations.edmesg.interface import (

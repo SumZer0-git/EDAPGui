@@ -1,3 +1,5 @@
+"""Loads a waypoint file (list of systems and stations to visit) and provides the next waypoint."""
+
 from __future__ import annotations
 from time import sleep
 from game.cargo import CargoParser
@@ -9,16 +11,6 @@ from core import paths
 from game.market import MarketParser
 from controls.mouse_point import MousePoint
 from pathlib import Path
-
-"""
-File: routines/waypoints.py    
-
-Description:
-   Class will load file called waypoints.json which contains a list of System name to jump to.
-   Provides methods to select a waypoint pass into it.  
-
-Author: SumZer0
-"""
 
 
 class EDWayPoint:

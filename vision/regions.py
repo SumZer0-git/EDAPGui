@@ -1,17 +1,8 @@
+"""Screen regions to capture, with filters, and template matching within a region."""
+
 import numpy as np
 from numpy import array, sum
 import cv2
-
-
-"""
-File:Screen_Regions.py    
-
-Description:
-  Class to rectangle areas of the screen to capture along with filters to apply. Includes functions to
-  match a image template to the region using opencv 
-
-Author: SumZer0
-"""
 
 
 def reg_scale_for_station(region, w: int, h: int) -> [int, int, int, int]:

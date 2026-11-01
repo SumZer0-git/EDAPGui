@@ -1,3 +1,5 @@
+"""Handles ship control, FSD, SC, etc."""
+
 from __future__ import annotations
 
 from core.constants import *

@@ -1,3 +1,5 @@
+"""Handles the station services panel."""
+
 from __future__ import annotations
 
 import cv2
@@ -8,15 +10,6 @@ from vision.regions import reg_scale_for_station, size_scale_for_station
 from game.status import StatusParser
 from time import sleep
 from core.logger import logger
-
-"""
-File:panels/station_services.py    
-
-Description:
-  TBD 
-
-Author: Stumpii
-"""
 
 
 class EDStationServicesInShip:
@@ -239,6 +232,5 @@ if __name__ == "__main__":
     test_ed_ap.keys.activate_window = True
     svcs = EDStationServicesInShip(test_ed_ap, test_ed_ap.scr, test_ed_ap.keys, test_ed_ap.ap_ckb)
     svcs.goto_station_services()
-
 
 

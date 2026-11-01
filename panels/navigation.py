@@ -1,3 +1,5 @@
+"""Handles the navigation panel."""
+
 from __future__ import annotations
 
 import logging
@@ -10,15 +12,6 @@ from vision.ocr import OCR
 from vision.screen import Screen
 from vision.regions import size_scale_for_station
 from game.status import StatusParser
-
-"""
-File:panels/navigation.py    
-
-Description:
-  TBD 
-
-Author: Stumpii
-"""
 
 
 class EDNavigationPanel:

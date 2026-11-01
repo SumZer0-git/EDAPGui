@@ -1,3 +1,5 @@
+"""Reading and writing of the autopilot and ship configuration."""
+
 import math
 import traceback
 from enum import Enum
@@ -31,8 +33,6 @@ from integrations.voice import *
 from routines.robigo import *
 from integrations.tce import TceIntegration
 from core.types import EDAP_Interrupt, ScTargetAlignReturn
-
-"""Reading and writing of the autopilot and ship configuration."""
 
 
 class ConfigMixin:

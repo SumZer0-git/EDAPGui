@@ -1,40 +1,12 @@
+"""Robigo passenger mission loop (Odyssey only).
+
+Before the first run, verify that Sirius Atmospherics is in the Nav Panel after entering
+the Sothis system and set the Nav Panel filter to "Stations and POI only".
+Set the refuel threshold low (about 35%) for ships without a fuel scoop."""
 
 from time import sleep
 import time
 
-
-'''
-import keyboard
-import win32gui
-
-import vision.regions
-from game.journal import *
-from controls.keys import *
-from core.logger import logger
-from vision.templates import *
-from gui.overlay import *
-from vision.screen import *
-from integrations.voice import *
-'''
-
-
-"""
-File:routines/robigo.py   
-
-Description:
-This class contains the script required to execute the Robigo passenger mission loop
-
-Constraints:
-- Odyssey only (due to unique Mission Selection and Mission Completion menus)
-- In first run most verify that Sirius Atmospherics is in the Nav Panel after entering the Sothis System
-  - if not 'end' the Robigo Assist,  Target 'Don's Inheritence'  Supercuise there, when < 1000 ls 
-    Sirius Athmospherics will be in the Nav Panel, select it, and restart Robigo Assist
-- Set Nav Menu Filter to: Stations and POI only
-    - Removes the clutter and allows faster selection of Robigo Mines and Sirius Athmos
-- Set refuelthreshold low.. like 35%  so not attempt refuel with a ship that doesn't have fuel scoop
-
-Author: SumZer0
-"""
 
 # TODO:  
 
@@ -56,7 +28,6 @@ STATE_ROUTE_TO_ROBIGO = 7
 STATE_FSD_TO_ROBIGO = 8
 STATE_TARGET_ROBIGO_MINES = 9
 STATE_SC_TO_ROBIGO_MINES = 10
-
 
 
 class Robigo:

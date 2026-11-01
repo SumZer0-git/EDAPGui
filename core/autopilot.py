@@ -1,3 +1,7 @@
+"""The EDAutopilot class: setup, engine loop and setters.
+
+Ideas taken from: https://github.com/skai2/EDAutopilot"""
+
 import math
 import traceback
 from enum import Enum
@@ -39,17 +43,6 @@ from vision.calibration import CalibrationMixin
 from vision.detection import DetectionMixin
 from routines.flight import FlightMixin
 from routines.assists import AssistsMixin
-
-"""
-File:EDAP.py    EDAutopilot
-
-Description:
-
-Note:
-Ideas taken from: https://github.com/skai2/EDAutopilot
-
-Author: SumZer0
-"""
 
 
 class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, AssistsMixin):

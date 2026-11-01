@@ -1,3 +1,5 @@
+"""Simple check of OCR to bring back text of a known image."""
+
 import unittest
 from core import paths
 from vision.ocr import OCR

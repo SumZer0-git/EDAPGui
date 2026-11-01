@@ -1,3 +1,5 @@
+"""Sends the keys bound in Elite Dangerous to the game window (ED must have focus)."""
+
 from time import sleep
 from typing import final
 
@@ -5,10 +7,6 @@ from controls.directinput import *
 from core.logger import logger
 from game.keybindings import KeyBindings
 from vision.screen import set_focus_elite_window
-
-"""
-Sends the keys bound in Elite Dangerous to the window that has focus (ED must have focus).
-"""
 
 
 @final

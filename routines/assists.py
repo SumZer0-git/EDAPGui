@@ -1,3 +1,5 @@
+"""The assist routines: FSD, SC, waypoint, Robigo, AFK combat, DSS."""
+
 import math
 import traceback
 from enum import Enum
@@ -31,8 +33,6 @@ from integrations.voice import *
 from routines.robigo import *
 from integrations.tce import TceIntegration
 from core.types import EDAP_Interrupt, ScTargetAlignReturn
-
-"""The assist routines: FSD, SC, waypoint, Robigo, AFK combat, DSS."""
 
 
 class AssistsMixin:

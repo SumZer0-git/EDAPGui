@@ -1,3 +1,5 @@
+"""Integration with the Trade Computer Extension (TCE)."""
+
 import os
 import sqlite3
 from typing import Union, Any, final

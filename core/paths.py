@@ -1,14 +1,11 @@
+"""All file and folder locations used by the application.
+
+Paths are resolved relative to the project folder, so the working directory does not matter.
+Files written at runtime live in USER_DATA, versioned reference files live in DATA."""
+
 import shutil
 from pathlib import Path
 
-"""
-File: paths.py
-
-Description:
-  Single place that defines all file and folder locations used by the application.
-  Paths are resolved relative to the project folder, so the working directory does not matter.
-  Files written at runtime live in USER_DATA, versioned reference files live in DATA.
-"""
 
 ROOT = Path(__file__).resolve().parent.parent
 

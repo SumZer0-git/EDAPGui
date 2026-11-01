@@ -1,3 +1,5 @@
+"""Handles the Graphics DisplaySettings.xml and Settings.xml files."""
+
 from os.path import isfile
 
 from core.logger import logger

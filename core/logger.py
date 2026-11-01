@@ -1,3 +1,5 @@
+"""Logging setup and rotation of the log files."""
+
 import colorlog
 import datetime
 import logging

@@ -1,3 +1,5 @@
+"""Reads the keybindings used by EDAP from the latest Elite Dangerous *.binds file."""
+
 from __future__ import annotations
 
 import json
@@ -11,11 +13,6 @@ import xmltodict
 
 from controls.directinput import SCANCODE
 from core.logger import logger
-
-"""
-Reads the keybindings for the controls used by EDAP from the Elite Dangerous bindings file.
-The latest modified *.binds file is used.
-"""
 
 
 class KeyBindings:

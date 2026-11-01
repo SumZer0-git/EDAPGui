@@ -1,3 +1,5 @@
+"""EDMesg server: lets EDMesg clients connect to EDAP, send actions and receive events."""
+
 import os
 import sys
 import threading

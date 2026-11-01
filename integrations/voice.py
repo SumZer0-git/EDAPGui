@@ -1,3 +1,5 @@
+"""Text to speech output."""
+
 # pip install pyttsx3
 
 from threading import Thread
@@ -11,19 +13,6 @@ from time import sleep
 #voice = voiceEngine.getProperty('voice')
 #voiceEngine.setProperty('rate', newVoiceRate)
 #voiceEngine.setProperty('voice', voice.id)   id = 0, 1, ...
-
-"""
-File:integrations/voice.py    
-
-Description:
-  Class to enapsulate the Text to Speech package in python
-
-To Use:
-  See main() at bottom as example
-  
-Author: SumZer0
-
-"""
 
 
 class Voice:

@@ -1,3 +1,8 @@
+"""Processes the Elite Dangerous journal files.
+
+Opens the latest Journal* file and keeps the ship state up to date; new lines are loaded
+whenever the state is accessed. Leveraged from https://github.com/skai2/EDAutopilot."""
+
 from __future__ import annotations
 
 import os
@@ -11,33 +16,7 @@ from core.constants import ship_size_map, ship_name_map
 from core.logger import logger
 from game.known_paths import *
 
-"""
-File game/journal.py  (leveraged the EDAutopilot on github, turned into a 
-                   class and enhanced, see https://github.com/skai2/EDAutopilot
-
-Description: This file perform journal file processing.  It opens the latest updated Journal* 
-file in the Saved directory, loads in the entries.  Specific entries are stored in a dictionary.
-Every time the dictionary is access the file will be read and if new lines exist those will be loaded
-and parsed.
-
-The dictionary can be accesses via:  
-    jn = EDJournal()
-
-    print("Ship = ", jn.ship_state())
-    ... jn.ship_state()['shieldsup']
-
-Design:
-  - open the file once
-  - when accessing a field in the ship_state() first see if more to read from open file, if so 
-    process it
-    - also check if a new journal file present, if so close current one and open new one
- 
-Author: SumZer0
-"""
-
-"""                             
-TODO: thinking self.ship()[name]  uses the same names as in the journal, so can lookup same construct     
-"""
+# TODO: thinking self.ship()[name] uses the same names as in the journal, so can lookup same construct
 
 
 def get_ship_size(ship: str) -> str:
@@ -437,6 +416,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 

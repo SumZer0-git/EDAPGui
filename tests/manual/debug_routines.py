@@ -1,3 +1,7 @@
+"""Manual debug tool for the routines, not a unit test.
+
+Run it from the project folder with: python -m tests.manual.debug_routines"""
+
 import logging
 import cv2
 import os
@@ -9,15 +13,6 @@ from vision.screen import *
 from vision.templates import *
 from time import sleep
 import numpy as np
-
-"""
-File: debug_routines.py
-
-Description:
-  Class to allow testing. This is a manual debug tool and not a unit test.
-  Run it from the project folder with: python -m tests.manual.debug_routines
-  Run this instead of the main EDAPGui file.
-"""
 
 
 def main():
