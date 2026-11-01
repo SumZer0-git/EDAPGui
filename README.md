@@ -297,6 +297,9 @@ about 6 times due to jumping into a system that had 2 suns next to each other an
 and dropped out of supercruise.   The ship did not get destroyed but had to use a heat sink to get out of the
 situation
 
+# Development
+See [Project structure](docs/Structure.md) for the folder layout and where new files belong.
+
 # Screen Shots
 ![Alt text](docs/screenshots/screen_cap_main.png?raw=true "Main Tab")
 ![Alt text](docs/screenshots/screen_cap_settings.png?raw=true "Settings Tab")

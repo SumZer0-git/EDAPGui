@@ -1,5 +1,6 @@
 # Unreleased
  - Important notice: Runtime files moved to the new `user_data/` folder. Existing users must manually copy `configs/AP.json`, `configs/ship_configs.json` and their own waypoint files from `waypoints/` into `user_data/configs/` and `user_data/waypoints/`.
+ - Added `docs/Structure.md` describing the folder structure and rules for where new files belong.
  - Changed config, waypoint and log files to be stored in `user_data/` (configs, waypoints, logs, debug output). The folder is created on first start.
  - Changed reference files (`resolution.json` and the example waypoint files) to live in `data/` and be copied to `user_data/` when missing.
  - Changed paths to be resolved relative to the project folder instead of the working directory.
