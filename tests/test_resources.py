@@ -7,7 +7,23 @@ from pathlib import Path
 
 from core import paths
 from core.constants import commodities, ship_name_map, ship_size_map, sorted_commodities
-from i18n.localization import LocalizationManager
+from i18n.localization import LocalizationManager, normalize_text
+
+
+class NormalizeTextTestCase(unittest.TestCase):
+    def test_case_accents_and_punctuation_are_ignored(self):
+        self.assertEqual(normalize_text("Drücke  zum, Deaktivieren!"), "DRUCKE ZUM DEAKTIVIEREN")
+
+    def test_disengage_messages_exist_for_de_and_en(self):
+        manager = LocalizationManager(str(paths.LOCALES_DIR), "en")
+
+        self.assertEqual(len(manager.all_values("PRESS_TO_DISENGAGE_MSG")), len(manager.available_languages))
+        self.assertIn("DRÜCKE ZUM DEAKTIVIEREN", manager.all_values("PRESS_TO_DISENGAGE_MSG"))
+        for language in ("de", "en"):
+            manager = LocalizationManager(str(paths.LOCALES_DIR), language)
+            with self.subTest(language=language):
+                self.assertTrue(normalize_text(manager["PRESS_TO_DISENGAGE_MSG"]))
+                self.assertTrue(normalize_text(manager["LINE_OF_SIGHT_MSG"]))
 
 
 class LocalizationTestCase(unittest.TestCase):

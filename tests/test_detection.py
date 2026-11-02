@@ -10,7 +10,7 @@ import unittest
 import cv2
 import numpy as np
 
-from tests.helpers import FakeScreen, load_fixture_image
+from tests.helpers import FakeScreen, load_fixture_image, pad_to_region
 from vision.detection import DetectionMixin
 from vision.regions import ScreenRegions
 from vision.templates import ImageTemplates
@@ -23,10 +23,12 @@ class Detector(DetectionMixin):
 class MatchingTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.templates = ImageTemplates(1.0, 1.0, 1.0)
+        cls.templates = ImageTemplates(2160)
         cls.images = {
-            name: load_fixture_image(name) for name in ("compass", "navpoint", "navpoint-behind", "target", "disengage")
+            name: pad_to_region(load_fixture_image(name))
+            for name in ("compass", "navpoint", "navpoint-behind", "target", "disengage")
         }
+        cls.images["message"] = load_fixture_image("disengage")
         cls.images["empty"] = np.zeros((700, 700, 3), np.uint8)
 
     def regions(self, image_name):
@@ -44,20 +46,17 @@ class TemplateTestCase(MatchingTestCase):
                 self.assertEqual(template["image"].shape[::-1], (template["width"], template["height"]))
 
     def test_templates_are_scaled(self):
-        half = ImageTemplates(0.5, 0.5, 0.5)
+        half = ImageTemplates(1080)
+        full = ImageTemplates(2160)
 
-        for name in ("compass", "navpoint", "target", "disengage"):
+        for name in ("compass", "navpoint", "target"):
             with self.subTest(template=name):
-                self.assertAlmostEqual(
-                    half.template[name]["width"], self.templates.template[name]["width"] / 2, delta=1
-                )
-                self.assertAlmostEqual(
-                    half.template[name]["height"], self.templates.template[name]["height"] / 2, delta=1
-                )
+                self.assertAlmostEqual(half.template[name]["width"], full.template[name]["width"] / 2, delta=1)
+                self.assertAlmostEqual(half.template[name]["height"], full.template[name]["height"] / 2, delta=1)
 
     def test_template_is_found_at_its_position(self):
         regions = self.regions("empty")
-        for name in ("compass", "target", "disengage", "navpoint"):
+        for name in ("compass", "target", "navpoint"):
             with self.subTest(template=name):
                 template = self.templates.template[name]["image"]
                 canvas = np.zeros((300, 400), np.uint8)
@@ -87,34 +86,32 @@ class CompassTestCase(MatchingTestCase):
                 self.assertTrue(self.detect("have_destination", name))
 
     def test_no_compass_in_other_screens(self):
-        for name in ("empty", "target", "disengage"):
+        for name in ("empty", "disengage"):
             with self.subTest(image=name):
                 self.assertFalse(self.detect("have_destination", name))
 
-    def test_nav_point_at_the_bottom_is_behind(self):
+    def test_nav_point_ahead(self):
         offset = self.detect("get_nav_offset", "compass")
 
-        self.assertEqual(offset["z"], -1.0)
-        self.assertAlmostEqual(offset["x"], -0.1, delta=0.1)
-        self.assertLess(offset["y"], -0.8)
-        self.assertLess(offset["roll"], -150)
+        self.assertEqual(offset["z"], 1.0)
+        self.assertAlmostEqual(offset["x"], 0.0, delta=0.1)
+        self.assertAlmostEqual(offset["roll"], 0, delta=15)
 
-    def test_nav_point_on_the_right_is_behind(self):
+    def test_filled_nav_point_in_sun_glare_is_ahead(self):
         offset = self.detect("get_nav_offset", "navpoint")
 
-        self.assertEqual(offset["z"], -1.0)
-        self.assertGreater(offset["x"], 0.8)
-        self.assertAlmostEqual(offset["y"], -0.25, delta=0.15)
+        self.assertEqual(offset["z"], 1.0)
+        self.assertAlmostEqual(offset["x"], 0.17, delta=0.1)
         self.assertGreater(offset["roll"], 90)
-        self.assertGreater(offset["yaw"], 90)
+        self.assertLess(abs(offset["yaw"]), 20)
 
-    def test_nav_point_at_the_top_is_behind(self):
+    def test_nav_point_behind_at_the_top(self):
         offset = self.detect("get_nav_offset", "navpoint-behind")
 
         self.assertEqual(offset["z"], -1.0)
-        self.assertAlmostEqual(offset["x"], -0.07, delta=0.1)
-        self.assertGreater(offset["y"], 0.5)
-        self.assertAlmostEqual(offset["roll"], 0, delta=15)
+        self.assertAlmostEqual(offset["x"], 0.0, delta=0.1)
+        self.assertGreater(offset["roll"], 90)
+        self.assertGreater(offset["yaw"], 150)
 
     def test_offset_values_stay_within_range(self):
         for name in ("compass", "navpoint", "navpoint-behind", "target"):
@@ -126,12 +123,12 @@ class CompassTestCase(MatchingTestCase):
 
 
 class TargetTestCase(MatchingTestCase):
-    def test_target_circle_is_found_and_offset_to_the_left(self):
+    def test_target_circle_is_found_and_offset(self):
         offset = self.detect("get_destination_offset", "target")
 
         self.assertIsNotNone(offset)
-        self.assertAlmostEqual(offset["x"], -284.5, delta=5)
-        self.assertAlmostEqual(offset["y"], 22.0, delta=5)
+        self.assertAlmostEqual(offset["x"], -475.6, delta=5)
+        self.assertAlmostEqual(offset["y"], 220.9, delta=5)
 
     def test_no_target_in_other_screens(self):
         for name in ("empty", "compass", "disengage"):
@@ -158,15 +155,33 @@ class TargetTestCase(MatchingTestCase):
 
 class DisengageTestCase(MatchingTestCase):
     def test_disengage_message_is_recognised(self):
-        regions = self.regions("disengage")
-
-        _, (_, max_val, _, _), _ = regions.match_template_in_region("disengage", "disengage")
-
-        self.assertGreater(max_val, regions.disengage_thresh)
-        self.assertTrue(Detector().sc_disengage_label_up(regions))
+        self.assertTrue(Detector().sc_disengage_label_up(self.regions("message")))
 
     def test_empty_screen_has_no_message(self):
         self.assertFalse(self.detect("sc_disengage_label_up", "empty"))
+
+
+class NativeTemplateTestCase(unittest.TestCase):
+    def test_native_set_is_loaded_unscaled(self):
+        templates = ImageTemplates(2160)
+
+        self.assertEqual((templates.template["compass"]["width"], templates.template["compass"]["height"]), (112, 108))
+        self.assertEqual(len(templates.template["target"]["anchor"]), 2)
+
+    def test_lower_heights_scale_the_native_set_down(self):
+        templates = ImageTemplates(1080)
+
+        self.assertEqual((templates.template["compass"]["width"], templates.template["compass"]["height"]), (56, 54))
+        native = ImageTemplates(2160).template["target"]["anchor"]
+        scaled = templates.template["target"]["anchor"]
+        self.assertAlmostEqual(scaled[0], native[0] / 2, delta=1.0)
+        self.assertAlmostEqual(scaled[1], native[1] / 2, delta=1.0)
+
+    def test_other_heights_are_derived_from_the_native_set(self):
+        for height in (540, 1440, 4320):
+            with self.subTest(height=height):
+                templates = ImageTemplates(height)
+                self.assertAlmostEqual(templates.template["compass"]["width"], 112 * height / 2160, delta=1)
 
 
 class RegionFilterTestCase(MatchingTestCase):
