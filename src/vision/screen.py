@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import ctypes
 import json
 import typing
 
@@ -13,6 +15,27 @@ from numpy import array
 
 from core import paths
 from core.logger import logger
+
+_DPI_PER_MONITOR_AWARE_V2 = ctypes.c_void_p(-4)
+
+
+@contextlib.contextmanager
+def dpi_aware():
+    """Make the current thread per-monitor DPI aware for the duration of the block.
+    The GUI process is not DPI aware (so the UI and the overlay keep their size). With monitors of different
+    scaling Windows would then report virtualized monitor and window coordinates, so the screen detection and
+    capture run in this context to get real pixels."""
+    user32 = ctypes.windll.user32
+    try:
+        previous = user32.SetThreadDpiAwarenessContext(_DPI_PER_MONITOR_AWARE_V2)
+    except (AttributeError, OSError):
+        previous = None
+    try:
+        yield
+    finally:
+        if previous:
+            user32.SetThreadDpiAwarenessContext(ctypes.c_void_p(previous))
+
 
 # size() return (ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1))
 # TODO: consider update to handle ED running in a window
@@ -46,7 +69,9 @@ def set_focus_elite_window():
 class Screen:
     def __init__(self, cb):
         self.ap_ckb = cb
-        self.mss = mss.mss()
+        with dpi_aware():
+            self.mss = mss.mss()
+            self.mons = self.mss.monitors
         self.using_screen = True  # True to use screen, false to use an image. Set screen_image to the image
         self._screen_image = None  # Screen image captured from screen, or loaded by user for testing.
 
@@ -59,7 +84,6 @@ class Screen:
             logger.debug(f"Found Elite Dangerous window position: {ed_rect}")
 
         # Examine all monitors to determine match with ED
-        self.mons = self.mss.monitors
         mon_num = 0
         for item in self.mons:
             if mon_num > 0:  # ignore monitor 0 as it is the complete desktop (dims of all monitors)
@@ -137,7 +161,8 @@ class Screen:
         """
         hwnd = win32gui.FindWindow(None, elite_dangerous_window)
         if hwnd:
-            rect = win32gui.GetWindowRect(hwnd)
+            with dpi_aware():
+                rect = win32gui.GetWindowRect(hwnd)
             return rect
         else:
             return None
@@ -170,6 +195,10 @@ class Screen:
 
         return s
 
+    def grab(self, monitor):
+        with dpi_aware():
+            return array(self.mss.grab(monitor))
+
     # reg defines a box as a percentage of screen width and height
     def get_screen_region(self, reg, rgb=True):
         image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]), rgb)
@@ -183,7 +212,7 @@ class Screen:
             "height": y_bot - y_top,
             "mon": self.monitor_number,
         }
-        image = array(self.mss.grab(monitor))
+        image = self.grab(monitor)
         # TODO - mss.grab returns the image in BGR format, so no need to convert to RGB2BGR
         if rgb:
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)

@@ -3,6 +3,7 @@
 Paths are resolved relative to the project folder, so the working directory does not matter.
 Files written at runtime live in USER_DATA, versioned reference files live in DATA."""
 
+import os
 import shutil
 from pathlib import Path
 
@@ -24,7 +25,8 @@ AP_CONFIG = CONFIG_DIR / "AP.json"
 SHIP_CONFIGS = CONFIG_DIR / "ship_configs.json"
 RESOLUTION_CONFIG = CONFIG_DIR / "resolution.json"
 WAYPOINTS_DIR = USER_DATA / "waypoints"
-LOG_DIR = USER_DATA / "logs"
+# The tests set EDAP_LOG_DIR so that they do not rotate away the logs of real sessions
+LOG_DIR = Path(os.environ["EDAP_LOG_DIR"]) if os.environ.get("EDAP_LOG_DIR") else USER_DATA / "logs"
 LOG_FILE = LOG_DIR / "autopilot.log"
 DEBUG_DIR = USER_DATA / "debug"
 

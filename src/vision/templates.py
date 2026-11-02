@@ -1,55 +1,78 @@
-"""Template images used with OpenCV to match in screen regions."""
+"""Template images used with OpenCV to match in screen regions.
 
-from os.path import join
+The templates are native screenshots in assets/templates/<height>p/ (for example 2160p). They are used unscaled
+when the screen height matches. Otherwise the next larger set is scaled down (INTER_AREA), or, above the largest
+set, the largest set is scaled up. The HUD scales with the screen height, so the scale factor is the ratio of
+the screen height to the set height.
+"""
+
+from pathlib import Path
 
 import cv2
+import numpy as np
 
 from core import paths
 
+# Template name -> file name in a template folder
+TEMPLATE_FILES = {
+    "navpoint": "navpoint.png",
+    "navpoint-behind": "navpoint-behind.png",
+    "compass": "compass.png",
+    "target": "destination.png",
+    "target_occluded": "target_occluded.png",
+}
+
+
+def circle_center(image) -> tuple[float, float]:
+    """Fit a circle to the white pixels of a template and return its center (x, y) in template pixels.
+    The target template is only an arc of the circle, so the circle center is not the center of the image."""
+    ys, xs = np.nonzero(image > 64)
+    a = np.c_[2 * xs, 2 * ys, np.ones(len(xs))]
+    b = xs**2 + ys**2
+    cx, cy, _ = np.linalg.lstsq(a, b, rcond=None)[0]
+    return float(cx), float(cy)
+
 
 class ImageTemplates:
-    def __init__(self, scale_x, scale_y, compass_scale: float):
+    def __init__(self, screen_height: int):
+        self.screen_height = screen_height
+        self.template = {name: {"image": None, "width": 1, "height": 1} for name in TEMPLATE_FILES}
+        self.reload_templates()
 
-        self.template = {
-            "navpoint": {"image": None, "width": 1, "height": 1},
-            "navpoint-behind": {"image": None, "width": 1, "height": 1},
-            "compass": {"image": None, "width": 1, "height": 1},
-            "target": {"image": None, "width": 1, "height": 1},
-            "target_occluded": {"image": None, "width": 1, "height": 1},
-            "disengage": {"image": None, "width": 1, "height": 1},
-        }
+    @staticmethod
+    def complete_folder(height: int) -> Path | None:
+        folder = paths.TEMPLATES_DIR / f"{height}p"
+        if all((folder / file_name).is_file() for file_name in TEMPLATE_FILES.values()):
+            return folder
+        return None
 
-        # load the templates and scale them.  Default templates assumed 3440x1440 screen resolution
-        self.reload_templates(scale_x, scale_y, compass_scale)
+    def source_set(self) -> tuple[Path, float]:
+        """Folder of the template set to use and the scale factor for it: the exact set for the screen height,
+        else the next larger set, else the largest set."""
+        heights = sorted(
+            int(folder.name[:-1])
+            for folder in paths.TEMPLATES_DIR.glob("*p")
+            if folder.name[:-1].isdigit() and self.complete_folder(int(folder.name[:-1])) is not None
+        )
+        if not heights:
+            raise FileNotFoundError(f"No complete template set in {paths.TEMPLATES_DIR}")
+        height = next((h for h in heights if h >= self.screen_height), heights[-1])
+        return self.complete_folder(height), self.screen_height / height
 
-    def load_template(self, file_name, scale_x, scale_y):
-        """Load the template image in color. If we need grey scale for matching, we can apply that later as needed.
-        Resize the image, as the templates are based on 3440x1440 resolution, so scale to current screen resolution
-         return image and size info."""
-        template = cv2.imread(self.resource_path(file_name), cv2.IMREAD_GRAYSCALE)
-        # logger.debug("File:"+self.resource_path(file_name)+" template:"+str(template))
-        template = cv2.resize(template, (0, 0), fx=scale_x, fy=scale_y)
+    def read_template(self, path, scale=1.0):
+        """Load a template in grey scale, optionally resize it, and return the image and size info."""
+        template = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+        if scale != 1.0:
+            interpolation = cv2.INTER_AREA if scale < 1.0 else cv2.INTER_LINEAR
+            template = cv2.resize(template, (0, 0), fx=scale, fy=scale, interpolation=interpolation)
         width, height = template.shape[::-1]
         return {"image": template, "width": width, "height": height}
 
-    def reload_templates(self, scale_x, scale_y, compass_scale: float):
+    def reload_templates(self):
         """Load the full set of image templates."""
-        self.template["navpoint"] = self.load_template("assets/templates/navpoint.png", compass_scale, compass_scale)
-        self.template["navpoint-behind"] = self.load_template(
-            "assets/templates/navpoint-behind.png", compass_scale, compass_scale
-        )
-        self.template["compass"] = self.load_template("assets/templates/compass.png", compass_scale, compass_scale)
-        self.template["target"] = self.load_template("assets/templates/destination.png", scale_x, scale_y)
-        self.template["target_occluded"] = self.load_template("assets/templates/target_occluded.png", scale_x, scale_y)
-        self.template["disengage"] = self.load_template("assets/templates/sc-disengage.png", scale_x, scale_y)
+        folder, scale = self.source_set()
+        for name, file_name in TEMPLATE_FILES.items():
+            self.template[name] = self.read_template(folder / file_name, scale)
 
-    def resource_path(self, relative_path):
-        """Get absolute path to resource, works for dev and for PyInstaller"""
-        # try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        #    base_path = sys._MEIPASS
-        # except Exception:
-        # base_path = abspath(".")
-
-        base_path = paths.ROOT
-        return join(base_path, relative_path)
+        # Center of the target circle, the point that must be at the center of the screen when aligned
+        self.template["target"]["anchor"] = circle_center(self.template["target"]["image"])

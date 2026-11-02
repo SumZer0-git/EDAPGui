@@ -117,7 +117,7 @@ def compass_test():
     ed_ap = EDAutopilot(cb=None)
     scr = ed_ap.scr
 
-    templ = ImageTemplates(scr.scaleX, scr.scaleY, ed_ap.compass_scale)
+    templ = ImageTemplates(scr.screen_height)
     scr_reg = ScreenRegions(scr, templ)
 
     while True:
@@ -155,7 +155,7 @@ def template_matching_test(region_name, template):
     # scr = ed_ap.scr
     scr = Screen(cb=None)
 
-    templ = ImageTemplates(scr.scaleX, scr.scaleY, scr.scaleX)
+    templ = ImageTemplates(scr.screen_height)
 
     scr_reg = ScreenRegions(scr, templ)
 
@@ -186,7 +186,7 @@ def show_regions(region_names):
     scr = ed_ap.scr
     ov = ed_ap.overlay
 
-    templ = ImageTemplates(scr.scaleX, scr.scaleY, scr.scaleX)
+    templ = ImageTemplates(scr.screen_height)
     scrReg = ScreenRegions(scr, templ)
 
     overlay_colors = [

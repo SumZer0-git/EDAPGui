@@ -163,7 +163,7 @@ class AssistsMixin:
     # Supercruise Assist loop to travel to target in system and perform autodock
     #
     def sc_assist(self, scr_reg):
-        logger.debug("Entered sc_assist")
+        logger.info("Entered sc_assist")
 
         # Goto cockpit view
         self.ship_control.goto_cockpit_view()

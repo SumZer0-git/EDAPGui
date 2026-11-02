@@ -32,8 +32,7 @@ of Elite Dangerous, it is an external-ED construct (similar to us commanders)
 
   ```
   ./docs
-  * Calibration.md for details on how to calibrate EDAPGui for your system if required 
-  * Waypoint.md for details on how to generate a waypoint file 
+  * Waypoint.md for details on how to generate a waypoint file
   * RollPitchYaw.md for details on how to tune the Pitch, Roll, Yaw values
   ```
 
@@ -46,14 +45,11 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 * Will only work with Windows (not Linux)
 * Default HUD colors must be used, if you changed those colors, this autopilot will not work
 * Borderless Elite Dangerous (ED) configuration required,  Windowed does not work due to how the screen is grabbed
-* Screen Resolution/scale X, Y:  The templates were captured on a 3440x1440 resolution/game configuration.  These need to be scaled
-  for different resolutions.  The _user_data/configs/resolution.json_ file captures these resolutions with the corresponding ScaleX, Y values.  If a resolution is not defined
-  for your monitor the code will attempt to divide /3440  and /1440 to get the scale factor (not likely to be correct)
-  ```
-  * See docs/Calibration.md for details on how to calibrate EDAPGui for your system *
-  ```
-  * Field of View (Graphics->Display) setting plays here.  I run about 10-15% on the slider scale.  If you have a large FOV then the 
-    template images will likely be too large
+* Screen resolution: the templates are native screenshots at 3840x2160 (_assets/templates/2160p/_) and are scaled to your screen
+  height automatically, so no calibration is needed. HDR and SDR are both supported (the occluded target ring is white
+  with HDR and beige without).
+* Field of View (Graphics->Display) setting plays here.  I run about 10-15% on the slider scale.  If you have a large FOV then the 
+  template images will likely be too large
 * Focus: ED must have focus when running, so you can't do other things on other windows if AP is active.
            If you change focus, then keyboard events will be sent to the focused window, can mess with the 
            window
@@ -130,9 +126,8 @@ The error is usually as a result of mss incompatibility. Try pip install mss==8.
 
 # Getting Started
 Once ED_AP is running there are few steps to complete the first time ED AP is run. These will help avoid common issues.
-1. Perform screen calibration, detailed [here](docs/Calibration.md). This will configure ED_AP for your screen resolution. Many issues can be avoided with correct calibration.
-2. Check and if necessary, change keybinding options, detailed below. Pay special attention that the Ins, Home, End and Pg Up are not used by ED as these are used by EDAP.
-3. Note: the user_data/logs/autopilot.log file will capture any required keybindings that are not set.
+1. Check and if necessary, change keybinding options, detailed below. Pay special attention that the Ins, Home, End and Pg Up are not used by ED as these are used by EDAP.
+2. Note: the user_data/logs/autopilot.log file will capture any required keybindings that are not set.
 4. Select the correct ship file matching the ship you are flying, this will configure the pitch, roll and yaw rates to match. Depending on the ship, you may need to tune the values for best response a detailed [here](docs/RollPitchYaw.md).
 5. Perform an in-system test:
     * In ED, use Left Panel to select a local target.
@@ -222,7 +217,6 @@ The following keybindings are required by AP, so make sure a key is assigned to 
     dropped and if so, will boost away and go into supercruise for ~10sec... then drop, put pips to
     system and weapons and deploy fighter, then terminate.  While in the Rez Zone, if your fighter has
     been destroyed it will deploy another figher (assumes you have two bays)
-* Calibrate: will iterate through a set of scaling values getting the best match for your system.  See HOWTO-Calibrate.md
 * Cap Mouse X, Y:  this will provide the StationCoord value of the Station in the SystemMap.  Selecting this button
     and then clicking on the Station in the SystemMap will return the x,y value that can be pasted in the waypoints file
 * SunPitchUp+Time field are for ship that tend to overheat. Providing 1-2 more seconds of Pitch up when avoiding the Sun
@@ -254,7 +248,7 @@ The following settings from the AP.json file (created in `user_data/configs/` on
     "DiscordUserID": "",
     "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
     "FCDepartureTime": 30.0,       # When leaving a Fleet Carrier, this is the amount of time in Secs to fly away before enabling SC.
-    "Language": "en"               # Language for OCR checks (i.e. 'en', 'fr', 'de')
+    "Language": "en"               # Language for OCR checks (i.e. 'en', 'de')
 ```
                                                               
 ## Elite Dangerous, Role Play and Autopilot

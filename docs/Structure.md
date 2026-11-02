@@ -26,10 +26,9 @@ src/                    All program code (this is the import root; run the progr
 
   vision/                 Everything that looks at the screen
     screen.py, regions.py   Screen capture, resolution handling, screen regions
-    templates.py            Template image loading (images are in assets/templates/)
+    templates.py            Template image loading (images are in assets/templates/<height>p/)
     ocr.py                  Text recognition
-    calibration.py          Calibration of the template matching scale (CalibrationMixin)
-    detection.py            Detection of target, compass, supercruise state (DetectionMixin)
+    detection.py             Detection of target, compass, supercruise state (DetectionMixin)
 
   controls/               Everything that sends input to the game
     keys.py                 EDKeys: sends keys bound in the game
