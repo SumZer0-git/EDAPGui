@@ -50,7 +50,6 @@ class ConfigMixin:
                 self.ship_configs["Ship_Configs"][self.current_ship_type] = {}
                 logger.debug(f"Created new ship config entry for: {self.current_ship_type}")
 
-            self.ship_configs["Ship_Configs"][self.current_ship_type]["compass_scale"] = round(self.compass_scale, 4)
             self.ship_configs["Ship_Configs"][self.current_ship_type]["PitchRate"] = self.pitchrate
             self.ship_configs["Ship_Configs"][self.current_ship_type]["RollRate"] = self.rollrate
             self.ship_configs["Ship_Configs"][self.current_ship_type]["YawRate"] = self.yawrate
@@ -77,12 +76,8 @@ class ConfigMixin:
         if ship_type in self.ship_configs["Ship_Configs"]:
             current_ship_cfg = self.ship_configs["Ship_Configs"][ship_type]
             # Check if the custom config has actual values (not just empty dict)
-            if any(
-                key in current_ship_cfg
-                for key in ["compass_scale", "RollRate", "PitchRate", "YawRate", "SunPitchUp+Time"]
-            ):
+            if any(key in current_ship_cfg for key in ["RollRate", "PitchRate", "YawRate", "SunPitchUp+Time"]):
                 # Use custom configuration - this means it's been modified and saved to ship_configs.json
-                self.compass_scale = current_ship_cfg.get("compass_scale", self.scr.scaleX)
                 self.rollrate = current_ship_cfg.get("RollRate", 80.0)
                 self.pitchrate = current_ship_cfg.get("PitchRate", 33.0)
                 self.yawrate = current_ship_cfg.get("YawRate", 8.0)
@@ -93,8 +88,7 @@ class ConfigMixin:
         # Step 2: Try to load defaults from ship file
         if ship_type in ship_rpy_sc_50:
             ship_defaults = ship_rpy_sc_50[ship_type]
-            # Use default configuration - this means it's been modified and saved to ship_configs.json
-            self.compass_scale = self.scr.scaleX  # Always use current scale for compass
+            # Use default configuration
             self.rollrate = ship_defaults.get("RollRate", 80.0)
             self.pitchrate = ship_defaults.get("PitchRate", 33.0)
             self.yawrate = ship_defaults.get("YawRate", 8.0)
@@ -103,7 +97,6 @@ class ConfigMixin:
             return
 
         # Step 3: Use hardcoded defaults
-        self.compass_scale = self.scr.scaleX
         self.rollrate = 80.0
         self.pitchrate = 33.0
         self.yawrate = 8.0

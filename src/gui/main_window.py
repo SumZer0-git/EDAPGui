@@ -93,7 +93,6 @@ class APGui:
             "X Offset": "Offset left the screen to start place overlay text.",
             "Y Offset": "Offset down the screen to start place overlay text.",
             "Font Size": "Font size of the overlay.",
-            "Calibrate": "Will iterate through a set of scaling values \ngetting the best match for your system. \nSee HOWTO-Calibrate.md",
             "Waypoint List Button": "Read in a file with with your Waypoints.",
             "Cap Mouse XY": "This will provide the StationCoord value of the Station in the SystemMap. \nSelecting this button and then clicking on the Station in the SystemMap \nwill return the x,y value that can be pasted in the waypoints file",
             "Reset Waypoint List": "Reset your waypoint list, \nthe waypoint assist will start again at the first point in the list.",
@@ -286,12 +285,6 @@ class APGui:
         self.entries["ship"]["RollRate"].insert(0, self.ed_ap.rollrate)
         self.entries["ship"]["YawRate"].insert(0, self.ed_ap.yawrate)
         self.entries["ship"]["SunPitchUp+Time"].insert(0, self.ed_ap.sunpitchuptime)
-
-    def calibrate_callback(self):
-        self.ed_ap.calibrate_target()
-
-    def calibrate_compass_callback(self):
-        self.ed_ap.calibrate_compass()
 
     def quit(self):
         logger.debug("Entered: quit")
@@ -731,8 +724,6 @@ class APGui:
             win, background="#ff8000", foreground="black", activebackground="white", activeforeground="black"
         )
         file = Menu(menubar, tearoff=0)
-        file.add_command(label="Calibrate Target", command=self.calibrate_callback)
-        file.add_command(label="Calibrate Compass", command=self.calibrate_compass_callback)
         self.checkboxvar["Enable CV View"] = IntVar()
         self.checkboxvar["Enable CV View"].set(
             int(self.ed_ap.config["Enable_CV_View"])

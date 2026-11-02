@@ -38,13 +38,12 @@ from routines.afk_combat import AfkCombat
 from routines.assists import AssistsMixin
 from routines.flight import FlightMixin
 from routines.waypoints import EDWayPoint
-from vision.calibration import CalibrationMixin
 from vision.detection import DetectionMixin
 from vision.ocr import OCR
 from vision.screen import set_focus_elite_window
 
 
-class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, AssistsMixin):
+class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
     def __init__(self, cb, do_thread=True):
 
         # NOTE!!! When adding a new config value below, add the same after read_config() to set
@@ -79,7 +78,6 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
             "LogINFO": True,
             "Enable_CV_View": 0,  # Should CV View be enabled by default
             "ShipConfigFile": None,  # Ship config to load on start - deprecated
-            "TargetScale": 1.0,  # Scaling of the target when a system is selected
             "TCEDestinationFilepath": "C:\\TCE\\DUMP\\Destination.json",  # Destination file for TCE
             "TCEInstallationPath": "C:\\TCE",
             "AutomaticLogout": False,  # Logout when we are done with the mission
@@ -113,8 +111,6 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
             # NOTE!!! Add default values for new entries below!
             if "SunBrightThreshold" not in cnf:
                 cnf["SunBrightThreshold"] = 125
-            if "TargetScale" not in cnf:
-                cnf["TargetScale"] = 1.0
             if "TCEDestinationFilepath" not in cnf:
                 cnf["TCEDestinationFilepath"] = "C:\\TCE\\DUMP\\Destination.json"
             if "TCEInstallationPath" not in cnf:
@@ -185,12 +181,11 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
         self.gfx_settings = EDGraphicsSettings()
 
         self.scr = vision.screen.Screen(cb)
-        self.scr.scaleX = self.config["TargetScale"]
-        self.scr.scaleY = self.config["TargetScale"]
 
         self.ocr = OCR(self.scr, self.config["OCRLanguage"])
-        self.templ = vision.templates.ImageTemplates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
+        self.templ = vision.templates.ImageTemplates(self.scr.screen_height)
         self.scrReg = vision.regions.ScreenRegions(self.scr, self.templ)
+        logger.info(f"Screen {self.scr.screen_width}x{self.scr.screen_height}")
         self.jn = EDJournal(cb)
         self.keys = EDKeys(cb)
         self.keys.activate_window = self.config["ActivateEliteEachKey"]
@@ -212,7 +207,6 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
         # If you find that you are overshoot in pitch or roll, need to adjust these numbers.
         # Algorithm will roll the vehicle for the nav point to be north or south and then pitch to get the nave point
         # to center
-        self.compass_scale = 1.0
         self.yawrate = 8.0
         self.rollrate = 80.0
         self.pitchrate = 33.0
@@ -587,7 +581,7 @@ class EDAutopilot(ConfigMixin, CalibrationMixin, DetectionMixin, FlightMixin, As
                         self.ap_ckb("update_ship_cfg")
 
                         # Reload templates
-                        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale)
+                        self.templ.reload_templates()
 
             self.update_overlay()
             cv2.waitKey(10)
