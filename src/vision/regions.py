@@ -81,15 +81,26 @@ class ScreenRegions:
         # Define the thresholds for template matching to be consistent throughout the program
         self.compass_match_thresh = 0.35
         self.navpoint_match_thresh = 0.8
+        self.navpoint_glare_thresh = 0.7
         self.target_thresh = 0.54
-        self.target_occluded_thresh = 0.55
         self.sun_threshold = 125
-        self.disengage_thresh = 0.25
+        # The templates are made from true BGR screenshots, so the regions are captured without a channel swap.
+        # The occluded target is matched in a white mask.
+        self.target_occluded_thresh = 0.3
+        # In SDR the occluded ring is beige instead of white (HDR). The beige mask also matches some bright
+        # surfaces weakly, so it needs a higher threshold.
+        self.target_occluded_tan_thresh = 0.4
+        # Share of the text color pixels in the message region above which a message may be shown
+        self.message_text_fraction = 0.08
+        # A scene counts as extremely bright (sun) when this share of the target region is almost white
+        self.bright_scene_fraction = 0.5
 
         # array is in HSV order which represents color ranges for filtering
         self.orange_color_range = [array([0, 130, 123]), array([25, 235, 220])]
         self.orange_2_color_range = [array([16, 165, 220]), array([98, 255, 255])]
         self.target_occluded_range = [array([16, 31, 85]), array([26, 160, 212])]
+        self.white_color_range = [array([0, 0, 215]), array([180, 40, 255])]
+        self.tan_color_range = [array([8, 40, 150]), array([30, 140, 255])]
         self.blue_color_range = [array([0, 28, 170]), array([180, 100, 255])]
         self.blue_sco_color_range = [array([10, 0, 0]), array([100, 150, 255])]
 
@@ -115,7 +126,14 @@ class ScreenRegions:
             "width": 1,
             "height": 1,
             "filterCB": self.filter_by_color,
-            "filter": self.target_occluded_range,
+            "filter": self.white_color_range,
+        }
+        self.reg["target_occluded_tan"] = {
+            "rect": [0.33, 0.27, 0.66, 0.70],
+            "width": 1,
+            "height": 1,
+            "filterCB": self.filter_by_color,
+            "filter": self.tan_color_range,
         }
         self.reg["sun"] = {
             "rect": [0.30, 0.30, 0.70, 0.68],
@@ -137,6 +155,14 @@ class ScreenRegions:
             "height": 1,
             "filterCB": self.filter_by_color,
             "filter": self.blue_sco_color_range,
+        }
+        # "MOVE TO OBTAIN LINE OF SIGHT TO TARGET" message, which is only shown with Supercruise Assist
+        self.reg["line_of_sight"] = {
+            "rect": [0.30, 0.30, 0.70, 0.40],
+            "width": 1,
+            "height": 1,
+            "filterCB": None,
+            "filter": None,
         }
         self.reg["nav_panel"] = {
             "rect": [0.25, 0.36, 0.60, 0.85],
@@ -216,6 +242,31 @@ class ScreenRegions:
             return img_region, (minVal_s, maxVal_s, minLoc_s, maxLoc_s), match_s
         # H must be the best match
         return img_region, (minVal_h, maxVal_h, minLoc_h, maxLoc_h), match_h
+
+    def message_text_present(self, region_name="disengage") -> bool:
+        """Cheap, language independent check if a (blue/white) HUD message is shown in the message region.
+        The OCR is only needed when this is True."""
+        img = self.screen.get_screen_region(self.reg[region_name]["rect"], rgb=False)
+        mask = self.filter_by_color(img, self.blue_sco_color_range)
+        self.last_message_fraction = float((mask > 0).mean())
+        return self.last_message_fraction >= self.message_text_fraction
+
+    def message_image(self, region_name="disengage", raw=False, upscale=1):
+        """Return the message region as a BGR image with everything but the HUD message text blacked out,
+        ready for OCR. With raw=True the color filter is skipped, upscale enlarges the image for small text."""
+        img = self.screen.get_screen_region(self.reg[region_name]["rect"], rgb=False)[:, :, :3]
+        if not raw:
+            mask = self.filter_by_color(img, self.blue_sco_color_range)
+            img = cv2.bitwise_and(img, img, mask=mask)
+        if upscale != 1:
+            img = cv2.resize(img, None, fx=upscale, fy=upscale, interpolation=cv2.INTER_CUBIC)
+        return img
+
+    def scene_is_bright(self) -> bool:
+        """True if the target region is extremely bright, like looking into a sun."""
+        img = self.screen.get_screen_region(self.reg["target"]["rect"], rgb=False)
+        value = cv2.cvtColor(img[:, :, :3], cv2.COLOR_BGR2HSV)[:, :, 2]
+        return float((value >= 235).mean()) >= self.bright_scene_fraction
 
     def match_template_in_image(self, image, template):
         """Attempt to match the given template in the (unfiltered) image.

@@ -1,6 +1,7 @@
 """Detection of targets, the compass and supercruise state on screen."""
 
 import math
+import time
 from math import atan, degrees
 from time import sleep
 
@@ -14,6 +15,7 @@ from core.constants import (
     FlagsSupercruise,
 )
 from core.logger import logger
+from i18n.localization import normalize_text
 
 
 class DetectionMixin:
@@ -27,6 +29,11 @@ class DetectionMixin:
 
         # need > x in the match to say we do have a destination
         if maxVal < scr_reg.compass_match_thresh:
+            logger.info(
+                f"Compass not found: score {maxVal:5.3f} (needs {scr_reg.compass_match_thresh}), "
+                f"screen {scr_reg.screen.screen_width}x{scr_reg.screen.screen_height}, compass template "
+                f"{scr_reg.templates.template['compass']['width']}x{scr_reg.templates.template['compass']['height']}"
+            )
             return False
         else:
             return True
@@ -114,14 +121,18 @@ class DetectionMixin:
         compass_y_min = pad
         compass_y_max = c_hgt + pad - hgt
 
-        if n_maxVal < scr_reg.navpoint_match_thresh:
-            final_z_pct = -1.0  # Behind
+        # Bright backgrounds (sun glare) lower the score of the filled nav point, so it also counts as ahead when
+        # it clearly matches better than the hollow one.
+        behind_image, (_, behind_val, _, behind_loc), _ = scr_reg.match_template_in_image_x3(
+            compass_image, "navpoint-behind"
+        )
+        ahead = n_maxVal >= scr_reg.navpoint_match_thresh or (
+            n_maxVal >= scr_reg.navpoint_glare_thresh and n_maxVal > behind_val + 0.1
+        )
 
-            # find the nav point within the compass box using the -behind template
-            navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = scr_reg.match_template_in_image_x3(
-                compass_image, "navpoint-behind"
-            )
-            n_pt = n_maxLoc
+        if not ahead:
+            final_z_pct = -1.0  # Behind
+            n_pt = behind_loc
         else:
             final_z_pct = 1.0  # Ahead
 
@@ -289,14 +300,63 @@ class DetectionMixin:
         if maxVal > scr_reg.target_occluded_thresh:
             logger.debug(f"Target is occluded ({maxVal:5.4f} > {scr_reg.target_occluded_thresh:5.2f})")
             return True
-        else:
-            # logger.debug(f"Target is not occluded ({maxVal:5.4f} < {scr_reg.target_occluded_thresh:5.2f})")
+
+        _, (_, tan_val, _, _), _ = scr_reg.match_template_in_region(
+            "target_occluded_tan", "target_occluded", inv_col=False
+        )
+        if tan_val > scr_reg.target_occluded_tan_thresh:
+            logger.debug(f"Target is occluded, beige ring ({tan_val:5.4f} > {scr_reg.target_occluded_tan_thresh:5.2f})")
+            return True
+        logger.debug(f"Occluded ring scores: white {maxVal:5.4f}, beige {tan_val:5.4f}")
+
+        return self.is_destination_hidden_ahead(scr_reg)
+
+    def is_destination_hidden_ahead(self, scr_reg) -> bool:
+        """Additional occlusion checks for when the dashed circle cannot be seen: the nav point is ahead, but the
+        target circle is not shown. This is the case when the target is behind a planet in front of a very
+        bright sun, or while the game shows the 'move to obtain line of sight' message (Supercruise Assist).
+        @return: True if the target is occluded."""
+        _, (_, target_val, _, _), _ = scr_reg.match_template_in_region("target", "target", inv_col=False)
+        if target_val >= scr_reg.target_thresh:
+            return False  # target circle is visible
+
+        if not self.have_destination(scr_reg) or self.get_nav_offset(scr_reg)["z"] < 0:
+            return False  # no nav point, or it is behind us
+
+        if scr_reg.scene_is_bright():
+            logger.debug("Target is occluded (nav point ahead, no target circle, bright scene)")
+            return True
+
+        if self.line_of_sight_message(scr_reg):
+            logger.debug("Target is occluded (line of sight message)")
+            return True
+
+        return False
+
+    def message_similarity(self, key: str, textlist) -> float:
+        """Best similarity of the OCR text to the message in any available language, so detection does not
+        depend on the configured program language."""
+        text = normalize_text(" ".join(textlist))
+        return max(self.ocr.string_similarity(normalize_text(msg), text) for msg in self.locale.all_values(key))
+
+    def line_of_sight_message(self, scr_reg) -> bool:
+        """Look for the 'move to obtain line of sight to target' message using OCR. The game only shows it
+        when Supercruise Assist is active, so not seeing it says nothing."""
+        image = scr_reg.screen.get_screen_region(scr_reg.reg["line_of_sight"]["rect"], rgb=False)[:, :, :3]
+        ocr_textlist = self.ocr.image_simple_ocr(image)
+        if not ocr_textlist:
             return False
+
+        sim = self.message_similarity("LINE_OF_SIGHT_MSG", ocr_textlist)
+        logger.debug(f"Line of sight similarity with {ocr_textlist} is {sim}")
+        return sim >= 0.5
 
     def get_destination_offset(self, scr_reg):
         """Determine how far off we are from the target being in the middle of the screen
         (in this case the specified region)."""
-        dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region("target", "target")
+        dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region(
+            "target", "target", inv_col=False
+        )
 
         pt = maxLoc
 
@@ -306,9 +366,12 @@ class DetectionMixin:
         width = scr_reg.templates.template["target"]["width"]
         height = scr_reg.templates.template["target"]["height"]
 
-        # need some fug numbers since our template is not symetric to determine center
-        final_x = ((pt[0] + ((1 / 2) * width)) - ((1 / 2) * destination_width)) - 7
-        final_y = (((1 / 2) * destination_height) - (pt[1] + ((1 / 2) * height))) + 22
+        # The target is aligned when the center of its circle is at the center of the screen. The template is only
+        # an arc, so use the circle center (anchor) instead of the center of the template.
+        anchor_x, anchor_y = scr_reg.templates.template["target"]["anchor"]
+        region_left, region_top = scr_reg.reg["target"]["rect"][:2]
+        final_x = (pt[0] + anchor_x) - (scr_reg.screen.screen_width / 2 - region_left)
+        final_y = (scr_reg.screen.screen_height / 2 - region_top) - (pt[1] + anchor_y)
 
         #  print("get dest, final:" + str(final_x)+ " "+str(final_y))
         #  print(destination_width, destination_height, width, height)
@@ -349,31 +412,33 @@ class DetectionMixin:
         return result
 
     def sc_disengage_label_up(self, scr_reg) -> bool:
-        """look for messages like "PRESS [J] TO DISENGAGE" or "SUPERCRUISE OVERCHARGE ACTIVE",
+        """look for messages like "PRESS [Y] TO DISENGAGE" or "SUPERCRUISE OVERCHARGE ACTIVE",
          if in this region then return true.
         The aim of this function is to return that a message is there, and then use OCR to determine
-        what the message is. This will only use the high CPU usage OCR when necessary."""
-        dis_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region("disengage", "disengage")
+        what the message is. This will only use the high CPU usage OCR when necessary.
+        The check only looks for message text colored pixels, so it does not depend on the game language."""
+        text_present = scr_reg.message_text_present("disengage")
 
-        pt = maxLoc
+        # Heartbeat every 5 s, so the log shows that the check runs and how much message-colored area it sees
+        now = time.monotonic()
+        if now - getattr(self, "_message_log_time", 0.0) >= 5.0:
+            self._message_log_time = now
+            fraction = getattr(scr_reg, "last_message_fraction", 0.0)
+            logger.info(
+                f"Disengage message check: message-colored area {fraction:.3f} (needs {scr_reg.message_text_fraction})"
+            )
 
-        width = scr_reg.templates.template["disengage"]["width"]
-        height = scr_reg.templates.template["disengage"]["height"]
-
-        # # Draw box around region
-        # reg_rect = scr_reg.reg['disengage']['rect']
-        # if self.debug_overlay:
-        #     abs_rect = [pt[0] + reg_rect[0], pt[1] + reg_rect[1], pt[0] + reg_rect[0] + width, pt[1] + reg_rect[1] + height]
-        #     self.overlay.overlay_rect1('sc_disengage_label_up', abs_rect, (0, 255, 0), 2)
-        #     self.overlay.overlay_floating_text('sc_disengage_label_up', f'Match: {maxVal:5.4f} > {scr_reg.disengage_thresh}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
-        #     self.overlay.overlay_paint()
-
+        # Log only when a message appears, so the log shows whether the detection saw it
+        if text_present != getattr(self, "_message_was_present", False):
+            self._message_was_present = text_present
+            if text_present:
+                logger.info("HUD message text detected in the disengage region, reading it with OCR.")
         if self.cv_view:
-            self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0, 255, 0), 2)
+            dis_image = scr_reg.message_image("disengage")
             dis_image = cv2.rectangle(dis_image, (0, 0), (1000, 25), (0, 0, 0), -1)
             cv2.putText(
                 dis_image,
-                f"{maxVal:5.4f} > {scr_reg.disengage_thresh}",
+                f"Message text: {text_present}",
                 (1, 20),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.4,
@@ -385,65 +450,25 @@ class DetectionMixin:
             cv2.moveWindow("sc_disengage_label_up", self.cv_view_x - 460, self.cv_view_y + 575)
             cv2.waitKey(1)
 
-        if maxVal > scr_reg.disengage_thresh:
-            return True
-        else:
-            return False
-
-    def sc_disengage(self, scr_reg) -> bool:
-        """DEPRECATED - Replaced with 'sc_disengage_label_up' and 'sc_disengage_active' using OCR.
-        look for the "PRESS [J] TO DISENGAGE" image, if in this region then return true
-        """
-        dis_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region("disengage", "disengage")
-
-        pt = maxLoc
-
-        width = scr_reg.templates.template["disengage"]["width"]
-        height = scr_reg.templates.template["disengage"]["height"]
-
-        if self.cv_view:
-            self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0, 255, 0), 2)
-            dis_image = cv2.rectangle(dis_image, (0, 0), (1000, 25), (0, 0, 0), -1)
-            cv2.putText(
-                dis_image,
-                f"{maxVal:5.4f} > {scr_reg.disengage_thresh}",
-                (1, 20),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.4,
-                (255, 255, 255),
-                1,
-                cv2.LINE_AA,
-            )
-            cv2.imshow("disengage", dis_image)
-            cv2.moveWindow("disengage", self.cv_view_x - 460, self.cv_view_y + 575)
-            cv2.waitKey(1)
-
-        # logger.debug("Disenage = "+str(maxVal))
-
-        if maxVal > scr_reg.disengage_thresh:
-            logger.info("'PRESS [] TO DISENGAGE' detected. Disengaging Supercruise")
-            self.vce.say("Disengaging Supercruise")
-            return True
-        else:
-            return False
+        return text_present
 
     def sc_disengage_active(self, scr_reg) -> bool:
-        """look for the "SUPERCRUISE OVERCHARGE ACTIVE" text using OCR, if in this region then return true."""
-        image = self.scr.get_screen_region(scr_reg.reg["disengage"]["rect"])
-        # TODO delete this line when COLOR_RGB2BGR is removed from get_screen()
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        mask = scr_reg.capture_region_filtered(self.scr, "disengage")
-        masked_image = cv2.bitwise_and(image, image, mask=mask)
-        image = masked_image
-
-        # OCR the selected item
+        """look for the "PRESS [Y] TO DISENGAGE" text using OCR, if in this region then return true."""
+        # OCR the selected item. The enlarged raw image is a fallback for messages partly covered by the cockpit frame.
         sim_match = 0.35  # Similarity match 0.0 - 1.0 for 0% - 100%)
         sim = 0.0
-        ocr_textlist = self.ocr.image_simple_ocr(image)
-        if ocr_textlist is not None:
-            sim = self.ocr.string_similarity(self.locale["PRESS_TO_DISENGAGE_MSG"], str(ocr_textlist))
-            logger.info(f"Disengage similarity with {str(ocr_textlist)} is {sim}")
-
+        ocr_textlist = None
+        for variant in ({}, {"raw": True, "upscale": 2}):
+            image = scr_reg.message_image("disengage", **variant)
+            textlist = self.ocr.image_simple_ocr(image)
+            if textlist is None:
+                continue
+            variant_sim = self.message_similarity("PRESS_TO_DISENGAGE_MSG", textlist)
+            logger.info(f"Disengage similarity with {str(textlist)} is {variant_sim} ({variant or 'masked'})")
+            if variant_sim > sim or ocr_textlist is None:
+                sim, ocr_textlist = variant_sim, textlist
+            if sim > sim_match:
+                break
         # Draw box around region
         if self.debug_overlay:
             abs_rect = scr_reg.reg["disengage"]["rect"]
@@ -480,7 +505,7 @@ class DetectionMixin:
             cv2.waitKey(30)
 
         if sim > sim_match:
-            logger.info("'PRESS [] TO DISENGAGE' detected. Disengaging Supercruise")
+            logger.info("Disengage message detected, sending the supercruise exit.")
             # cv2.imwrite(paths.debug_path('disengage.png'), image)
             return True
 

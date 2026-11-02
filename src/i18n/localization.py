@@ -2,6 +2,15 @@
 
 import json
 import os
+import unicodedata
+
+
+def normalize_text(text: str) -> str:
+    """Normalize text for comparing it with OCR results: upper case, without accents and umlauts (the OCR reads
+    'DRÜCKE' as 'DRUCKE'), and only letters, digits and single spaces."""
+    text = unicodedata.normalize("NFKD", text.upper())
+    text = "".join(char for char in text if char.isalnum() or char == " ")
+    return " ".join(text.split())
 
 
 class LocalizationManager:
@@ -63,6 +72,15 @@ class LocalizationManager:
             str: The localized string from the json file.
         """
         return self._data[key]
+
+    def all_values(self, key: str) -> list[str]:
+        """Get the localized strings for the key in every available language, e.g. to recognize a game message
+        regardless of the configured language."""
+        values = []
+        for language in self.available_languages:
+            with open(f"{self.folder_path}/{language}.json", "r", encoding="utf-8") as file:
+                values.append(json.load(file)[key])
+        return values
 
     def refresh(self) -> None:
         """Load localization files from specified folder.
