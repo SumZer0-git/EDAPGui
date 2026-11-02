@@ -9,7 +9,13 @@
  - Added offline unit tests (no game needed) for the status, cargo, market and navigation route parsers, journal event handling, waypoint files and routing, localization, shared paths, reference data and screen region scaling.
  - Added offline unit tests for reading the Elite Dangerous keybindings (`game/keybindings.py`), using an anonymized sample bindings file in `tests/fixtures/bindings/`.
  - Added offline tests for template matching and screen detection (compass, nav point, target, occlusion, supercruise disengage message, region filters) using the screenshot crops in `tests/fixtures/` and a fake screen instead of the game.
+ - Added a regression test with real game screenshots (`tests/test_screenshots.py`, 3840x2160 and 1920x1080, HDR and SDR) that is skipped when the git-excluded screenshots in `tests/fixtures/screenshots/` are missing.
  - Added `docs/Structure.md` describing the folder structure and rules for where new files belong.
+ - Added native templates for 3840x2160 (`assets/templates/2160p/`), used unscaled at that resolution; for every other screen height the nearest larger set is scaled down (for example for 1920x1080), or the largest set is scaled up. `tools/make_templates.py` creates them from full screenshots (the raw screenshots in `tests/fixtures/screenshots/` are git-excluded and never committed).
+ - Added language-independent detection of the supercruise disengage message (blue text gate plus OCR compared with the localized text) instead of the English-only `sc-disengage` template, which works for German and English.
+ - Added detection of a target hidden behind a planet or moon with a white-filter ring template (`target_occluded`) that is also matched in a beige filter (the ring is white with HDR and beige without), plus fallbacks for very bright scenes (stars) and the localized "line of sight" message of Supercruise Assist.
+ - Changed the target offset to be computed from the fitted center of the target circle instead of fixed correction values, so it is independent of the resolution.
+ - Changed the supported languages to German and English; removed the French and Russian locales, the `sc-disengage` template and the deprecated `sc_disengage`.
  - Added GitHub workflows: `ci.yml` runs Ruff and the unit tests (without the OCR test, using the slim `requirements-ci.txt`) on pushes and pull requests to `main`; `release.yml` runs the full checks including OCR when a `vX.Y.Z` tag is pushed, verifies that the tag is on `main` and matches `core/version.py`, and creates a GitHub release with the changelog notes and a source ZIP.
  - Changed class names to CapWords and exception names to end with `Error`: `Screen_Regions` to `ScreenRegions`, `Image_Templates` to `ImageTemplates`, `AFK_Combat` to `AfkCombat`, `EDAP_Interrupt` to `EdapInterruptError` and `PathNotFoundException` to `PathNotFoundError`.
  - Changed function and argument names to snake_case: `PressKey`/`ReleaseKey` to `press_key`/`release_key`, `rotateLeft`, `rotateRight`, `pitchUp`, `pitchDown`, `yawLeft` and `yawRight` to `rotate_left` etc., and arguments such as `scaleX`/`scaleY`, `fileName`, `doThread`, `fontSize`, `vSay` and `noOp` to `scale_x`/`scale_y`, `file_name`, `do_thread`, `font_size`, `text` and `no_op`. Names that follow the Windows API (`wndProc`, `hWnd`, `wParam`, `lParam`, `Input_I`) are kept.
@@ -22,6 +28,7 @@
  - Removed the disabled `build-executable.yml` workflow; a build of the executable will be added later.
  - Removed the "Join Discord" menu entry, the Discord link and the email contact addresses.
  - Changed `controls/keys.py` (`EDKeys`) to be split: reading the Elite Dangerous keybindings now lives in `game/keybindings.py` (`KeyBindings`), while `controls/keys.py` only sends keys.
+ - Removed the manual template calibration (File > Calibrate Target/Compass, `vision/calibration.py`, `docs/Calibration.md`), the `TargetScale` setting and the per-ship `compass_scale`, as well as the legacy 3440x1440 templates: all templates are now derived from the native 2160p set.
  - Changed `ED_AP.py` to `core/autopilot.py` and split `EDAutopilot` into mixin classes with identical behavior: `core/config.py` (`ConfigMixin`), `vision/calibration.py` (`CalibrationMixin`), `vision/detection.py` (`DetectionMixin`), `routines/flight.py` (`FlightMixin`) and `routines/assists.py` (`AssistsMixin`). `EDAP_Interrupt` and `ScTargetAlignReturn` moved to `core/types.py`.
  - Changed the GUI code of `EDAPGui.py` to `gui/main_window.py`; `EDAPGui.py` in the project root remains as the thin start script (`python EDAPGui.py`, `start_ed_ap.bat`).
  - Changed the file headers of all source files to a short module docstring; author lines and the copy of the hotkey list (see README) were removed. Credits to the original projects stay in the affected modules and the README.
@@ -43,6 +50,8 @@
  - Fixed the OCR unit test to check only the known text of its screenshot instead of the complete HUD text.
  - Fixed circular imports between `ED_AP.py` and the `routines/` and `panels/` modules; all modules can now be imported on their own.
  - Fixed a startup error when the previous log file could not be renamed because a rotated log with the same timestamp already existed.
+ - Fixed the screen detection and capture on setups with monitors of different Windows scaling (for example a 100% monitor next to a 150% one), where the monitor size and the Elite window position were reported scaled and the compass was not found; the detection now runs in a per-monitor DPI aware context without changing the DPI behavior of the UI and the overlay.
+ - Fixed the unit tests rotating away the log files of real sessions; the tests now log to a temporary folder (`EDAP_LOG_DIR`).
  - Cleaned up `.gitignore`.
 
 # 8/19/2025 v1.7.0: General updates.
