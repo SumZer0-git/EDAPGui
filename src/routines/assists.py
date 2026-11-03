@@ -200,11 +200,13 @@ class AssistsMixin:
                 # Align and stay on target. If false is returned, we have lost the target behind us.
                 align_res = self.sc_target_align(scr_reg)
                 if align_res == ScTargetAlignReturn.Lost:
-                    # Continue ahead before aligning to prevent us circling the target
-                    # self.keys.send('SetSpeed100')
-                    sleep(10)
+                    # Continue ahead before aligning to prevent us circling the target.
+                    # The target ring changes shortly before arrival, so keep watching for the disengage prompt.
+                    if self.wait_for_sc_disengage(scr_reg, 10):
+                        break
                     self.keys.send("SetSpeed50")
-                    self.nav_align(scr_reg)  # Compass Align
+                    if self.nav_align(scr_reg, abort_on_disengage=True):  # Compass Align
+                        break
 
                 elif align_res == ScTargetAlignReturn.Found:
                     pass

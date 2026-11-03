@@ -182,7 +182,7 @@ class DisengageTestCase(MatchingTestCase):
     def test_small_dropout_prompt_passes_the_message_gate(self):
         image = np.zeros((100, 100, 3), np.uint8)
         prompt = np.uint8([[[90, 150, 255]]])
-        image[20:40, 20:42] = cv2.cvtColor(prompt, cv2.COLOR_HSV2BGR)[0, 0]
+        image[20:40, 20:50] = cv2.cvtColor(prompt, cv2.COLOR_HSV2BGR)[0, 0]
         regions = ScreenRegions(FakeScreen(image), self.templates)
 
         self.assertTrue(regions.message_text_present())
