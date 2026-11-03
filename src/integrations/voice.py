@@ -8,6 +8,8 @@ from time import sleep
 import kthread
 import pyttsx3
 
+from core.logger import logger
+
 # rate = voiceEngine.getProperty('rate')
 # volume = voiceEngine.getProperty('volume')
 # voice = voiceEngine.getProperty('voice')
@@ -57,7 +59,7 @@ class Voice:
                 try:
                     engine.setProperty("voice", voices[v_id_current].id)
                 except Exception:
-                    print("Voice ID out of range")
+                    logger.warning("Voice ID out of range")
 
             try:
                 words = self.q.get(timeout=1)

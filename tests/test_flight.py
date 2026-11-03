@@ -46,3 +46,20 @@ class TargetAlignmentTestCase(unittest.TestCase):
         self.assertEqual(result, ScTargetAlignReturn.Disengage)
         self.assertEqual(alignment.keys.sent, ["HyperSuperCombination"])
         self.assertTrue(alignment.stopped_monitoring)
+
+    def test_wait_for_disengage_returns_when_requested(self):
+        alignment = TargetAlignment()
+
+        with patch("routines.flight.sleep"):
+            self.assertTrue(alignment.wait_for_sc_disengage(None, 10))
+
+        self.assertEqual(alignment.keys.sent, ["HyperSuperCombination"])
+
+    def test_wait_for_disengage_times_out_without_message(self):
+        alignment = TargetAlignment()
+        alignment.sc_disengage_label_up = lambda scr_reg: False
+
+        with patch("routines.flight.sleep"), patch("routines.flight.time.time", side_effect=[0, 1, 11]):
+            self.assertFalse(alignment.wait_for_sc_disengage(None, 10))
+
+        self.assertEqual(alignment.keys.sent, [])

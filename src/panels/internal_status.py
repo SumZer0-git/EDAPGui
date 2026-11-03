@@ -53,7 +53,6 @@ class EDInternalStatusPanel:
             cv2.imwrite(paths.debug_path("internal-panel", "int_panel_full.png"), image)
             return active, active_tab_name
         else:
-            print("Open Internal Panel")
             logger.debug("show_right_panel: Open Internal Panel")
             self.ap.ship_control.goto_cockpit_view()
 
@@ -84,7 +83,7 @@ class EDInternalStatusPanel:
         if active is None:
             return None
         if not active:
-            print("Internal (Right) Panel could not be opened")
+            logger.warning("Internal (Right) Panel could not be opened")
             return False
         elif active_tab_name is self.inventory_tab_text:
             # Do nothing
@@ -225,7 +224,7 @@ class EDInternalStatusPanel:
         ap.keys.send("UI_Back", repeat=4)
         sleep(0.2)
         ap.keys.send("HeadLookReset")
-        print("End of unload FC")
+        logger.debug("End of unload FC")
         # quit()
 
     def transfer_from_fleetcarrier(self, ap, buy_commodities):
@@ -262,7 +261,7 @@ class EDInternalStatusPanel:
         ap.keys.send("UI_Back", repeat=4)
         sleep(0.2)
         ap.keys.send("HeadLookReset")
-        print("End of transfer from FC")
+        logger.debug("End of transfer from FC")
 
 
 def dummy_cb(msg, body=None):

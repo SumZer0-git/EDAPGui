@@ -197,8 +197,7 @@ class FlightMixin:
 
             # if we are pitching more than N seconds break, may be in high density area star area (close to core)
             if (time.time() - starttime) > fail_safe_timeout:
-                logger.debug("sun avoid failsafe timeout")
-                print("sun avoid failsafe timeout")
+                logger.warning("Sun avoid failsafe timeout")
                 break
 
         sleep(0.35)  # up slightly so not to overheat when scooping
@@ -213,9 +212,21 @@ class FlightMixin:
             sleep(-1.0 * self.sunpitchuptime)
             self.keys.send("PitchDownButton", state=0)
 
-    def nav_align(self, scr_reg):
+    def wait_for_sc_disengage(self, scr_reg, seconds) -> bool:
+        """Wait up to the given seconds, keeping watch for the disengage prompt.
+        Returns True if the supercruise exit was requested."""
+        end = time.time() + seconds
+        while time.time() < end:
+            if self.try_sc_disengage(scr_reg):
+                return True
+            sleep(0.1)
+        return False
+
+    def nav_align(self, scr_reg, abort_on_disengage=False) -> bool:
         """Use the compass to find the nav point position.  Will then perform rotation and pitching
-        to put the nav point in the middle of the compass, i.e. target right in front of us"""
+        to put the nav point in the middle of the compass, i.e. target right in front of us.
+        With abort_on_disengage the alignment is cancelled as soon as the supercruise exit was requested,
+        and True is returned."""
 
         close = 10  # in degrees
         if not (self.jn.ship_state()["status"] == "in_supercruise" or self.jn.ship_state()["status"] == "in_space"):
@@ -227,6 +238,8 @@ class FlightMixin:
         # try multiple times to get aligned.  If the sun is shining on console, this it will be hard to match
         # the vehicle should be positioned with the sun below us via the sun_avoid() routine after a jump
         for ii in range(self.config["NavAlignTries"]):
+            if abort_on_disengage and self.try_sc_disengage(scr_reg):
+                return True
             off = self.get_nav_offset(scr_reg)
 
             # Check if we are close enough already
@@ -252,6 +265,8 @@ class FlightMixin:
                             # bottom left quad, then roll right
                             self.rotate_right(180 + off["roll"])
                         sleep(1)
+                        if abort_on_disengage and self.try_sc_disengage(scr_reg):
+                            return True
                         off = self.get_nav_offset(scr_reg)
                     else:
                         break
@@ -264,6 +279,8 @@ class FlightMixin:
                     else:
                         self.pitch_up(abs(off["pit"]))
                     sleep(0.5)
+                    if abort_on_disengage and self.try_sc_disengage(scr_reg):
+                        return True
                     off = self.get_nav_offset(scr_reg)
                 else:
                     break
@@ -276,12 +293,15 @@ class FlightMixin:
                     else:
                         self.yaw_right(abs(off["yaw"]))
                     sleep(0.5)
+                    if abort_on_disengage and self.try_sc_disengage(scr_reg):
+                        return True
                     off = self.get_nav_offset(scr_reg)
                 else:
                     break
 
             sleep(0.1)
             logger.debug("final x:" + str(off["x"]) + " y:" + str(off["y"]))
+        return False
 
     def fsd_target_align(self, scr_reg):
         """Coarse align to the target to support FSD jumping"""

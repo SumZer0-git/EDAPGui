@@ -6,6 +6,7 @@ none. The file names tell what is expected:
  - target-occluded / target-visible / aligned-target: the target ring is detected as occluded or not
  - compass / aligned-target: the compass is found
  - disengage-msg: the message gate (message-colored area) lets the message region pass; the OCR is not run
+ - no-msg: the message gate must not pass (guards against false alarms that trigger slow OCR runs)
 Screenshots whose names contain "crop" or "head-turned" are ignored.
 """
 
@@ -61,6 +62,8 @@ class ScreenshotTestCase(unittest.TestCase):
                 # The message gate is only a cheap pre-check (bright scenes may pass it, the OCR decides)
                 if "disengage-msg" in name:
                     self.assertTrue(regions.message_text_present(), "disengage message")
+                if "no-msg" in name:
+                    self.assertFalse(regions.message_text_present(), "false message alarm")
 
 
 if __name__ == "__main__":

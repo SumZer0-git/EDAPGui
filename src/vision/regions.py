@@ -90,8 +90,11 @@ class ScreenRegions:
         # In SDR the occluded ring is beige instead of white (HDR). The beige mask also matches some bright
         # surfaces weakly, so it needs a higher threshold.
         self.target_occluded_tan_thresh = 0.4
-        # Share of the text color pixels in the message region above which a message may be shown
-        self.message_text_fraction = 0.03
+        # Share of the message colored (cyan) pixels in the message region above which a message may be shown.
+        # The cyan text and frame lines of the message are 0.6 % to 3 % of the region, other scenes stay below 0.3 %.
+        self.message_text_fraction = 0.005
+        # The message has long horizontal cyan frame lines: at least this share of a pixel row must be message colored
+        self.message_line_fraction = 0.25
         # A scene counts as extremely bright (sun) when this share of the target region is almost white
         self.bright_scene_fraction = 0.5
 
@@ -103,6 +106,8 @@ class ScreenRegions:
         self.tan_color_range = [array([8, 40, 150]), array([30, 140, 255])]
         self.blue_color_range = [array([0, 28, 170]), array([180, 100, 255])]
         self.blue_sco_color_range = [array([10, 0, 0]), array([100, 150, 255])]
+        # Cyan of the HUD messages, saturated in dark scenes and pale when overexposed
+        self.message_color_range = [array([88, 60, 170]), array([102, 255, 255])]
 
         self.reg = {}
         # regions with associated filter and color ranges
@@ -244,12 +249,16 @@ class ScreenRegions:
         return img_region, (minVal_h, maxVal_h, minLoc_h, maxLoc_h), match_h
 
     def message_text_present(self, region_name="disengage") -> bool:
-        """Cheap, language independent check if a (blue/white) HUD message is shown in the message region.
+        """Cheap, language independent check if a (cyan) HUD message is shown in the message region.
         The OCR is only needed when this is True."""
-        img = self.screen.get_screen_region(self.reg[region_name]["rect"], rgb=False)
-        mask = self.filter_by_color(img, self.blue_sco_color_range)
-        self.last_message_fraction = float((mask > 0).mean())
-        return self.last_message_fraction >= self.message_text_fraction
+        img = self.screen.get_screen_region(self.reg[region_name]["rect"], rgb=False)[:, :, :3]
+        mask = self.filter_by_color(img, self.message_color_range) > 0
+        self.last_message_fraction = float(mask.mean())
+        self.last_message_line = float(mask.mean(axis=1).max())
+        return (
+            self.last_message_fraction >= self.message_text_fraction
+            and self.last_message_line >= self.message_line_fraction
+        )
 
     def message_image(self, region_name="disengage", raw=False, upscale=1):
         """Return the message region as a BGR image with everything but the HUD message text blacked out,

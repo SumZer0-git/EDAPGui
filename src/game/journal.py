@@ -373,8 +373,7 @@ class EDJournal:
 
         # exceptions
         except Exception as e:
-            # logger.exception("Exception occurred")
-            print(e)
+            logger.error(f"Error while reading journal: {e}")
 
     def ship_state(self):
         latest_log = self.get_latest_log()

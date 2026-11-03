@@ -47,8 +47,8 @@ _file_handler.setFormatter(logging.Formatter("%(asctime)s.%(msecs)03d %(levelnam
 
 logger = colorlog.getLogger("ed_log")
 
-# Change this to debug if want to see debug lines in log file
-logger.setLevel(logging.INFO)  # change to INFO for more... DEBUG for much more
+# Default level of the log file; the UI switch (Error/Info/Debug) changes it at runtime.
+logger.setLevel(logging.INFO)
 
 handler = logging.StreamHandler()
 handler.setLevel(logging.WARNING)  # change this to what is shown on console
@@ -66,6 +66,18 @@ handler.setFormatter(
     )
 )
 logger.addHandler(handler)
+
+
+def set_log_level(level: int, reason: str = "changed") -> None:
+    """Central place to switch the log level. Always writes a marker line so the log shows where it changed."""
+    old = logging.getLevelName(logger.level)
+    new = logging.getLevelName(level)
+    if logger.level == level and reason != "at startup":
+        return
+    logger.setLevel(logging.DEBUG)  # make sure the marker is written regardless of the old and new level
+    logger.info(f"=== Log level {reason}: {old} -> {new} ===")
+    logger.setLevel(level)
+
 
 # logger.disabled = True
 # logger.disabled = False

@@ -1,70 +1,98 @@
-# Unreleased
- - Important notice: Runtime files moved to the new `user_data/` folder. Existing users must manually copy `configs/AP.json`, `configs/ship_configs.json` and their own waypoint files from `waypoints/` into `user_data/configs/` and `user_data/waypoints/`.
- - Removed the unused EDMesg integration, its bundled library, configuration settings and dependencies.
- - Removed the obsolete ELW scanner, its FSS automation, GUI option, configuration, vision templates, and documentation.
- - Removed the obsolete Robigo passenger-mission assist, its GUI controls and configuration, dedicated vision templates, and documentation.
- - Added `core/version.py` as the single place for the application version (still 1.7.0); the window title and log read it from there.
- - Added the update check (`core/updates.py`): at startup, and via Help > Check for Updates, the program looks up the latest release of `DopeEx/EDAPGui` in the background and offers to open the download page if it is newer. Nothing happens at startup if there is no release yet or GitHub cannot be reached.
- - Added status badges to the README (CI, Ruff, license, and the tested Python versions, which are read from the CI test matrix).
- - Added the Ruff linter (`pyproject.toml`, `requirements-dev.txt`) with the rule groups `F` (pyflakes), `I` (import sorting), `N` (pep8-naming, except `N806`), `W` (whitespace) and the checks `E711`, `E712`, `E713`, `E714`, `E722` and `F841`; run `ruff check .`. The code is formatted with `ruff format .` (check with `ruff format --check .`).
- - Added offline unit tests (no game needed) for the status, cargo, market and navigation route parsers, journal event handling, waypoint files and routing, localization, shared paths, reference data and screen region scaling.
- - Added offline unit tests for reading the Elite Dangerous keybindings (`game/keybindings.py`), using an anonymized sample bindings file in `tests/fixtures/bindings/`.
- - Added offline tests for template matching and screen detection (compass, nav point, target, occlusion, supercruise disengage message, region filters) using the screenshot crops in `tests/fixtures/` and a fake screen instead of the game.
- - Added a regression test with real game screenshots (`tests/test_screenshots.py`, 3840x2160 and 1920x1080, HDR and SDR) that is skipped when the git-excluded screenshots in `tests/fixtures/screenshots/` are missing.
- - Added `docs/Structure.md` describing the folder structure and rules for where new files belong.
- - Added native templates for 3840x2160 (`assets/templates/2160p/`), used unscaled at that resolution; for every other screen height the nearest larger set is scaled down (for example for 1920x1080), or the largest set is scaled up. `tools/make_templates.py` creates them from full screenshots (the raw screenshots in `tests/fixtures/screenshots/` are git-excluded and never committed).
- - Added language-independent detection of the supercruise disengage message (blue text gate plus OCR compared with the localized text) instead of the English-only `sc-disengage` template, which works for German and English.
- - Added detection of a target hidden behind a planet or moon with a white-filter ring template (`target_occluded`) that is also matched in a beige filter (the ring is white with HDR and beige without), plus fallbacks for very bright scenes (stars) and the localized "line of sight" message of Supercruise Assist.
- - Changed the target offset to be computed from the fitted center of the target circle instead of fixed correction values, so it is independent of the resolution.
- - Changed the supported languages to German and English; removed the French and Russian locales, the `sc-disengage` template and the deprecated `sc_disengage`.
- - Changed the supported Python range to 3.12–3.13, with Python 3.13 recommended; CI and release checks cover both versions, and the installer prefers 3.13 while retaining 3.12 as a fallback. Python 3.14 and newer are not supported because PaddlePaddle does not provide compatible Windows wheels.
- - Changed the dependencies that are independent of PaddleOCR to `mss` 10.2.0, `Pillow` 11.3.0, `colorlog` 6.12.0, `kthread` 0.2.3, `PyAutoGUI` 0.9.54, `pynput` 1.8.2, `pywin32` 312, `strsimpy` 0.3 and `xmltodict` 1.0 (`requirements.txt` and `requirements-ci.txt`). Existing installations must run `install_requirements.bat` to install the updates; starting EDAPGui does not update packages in an existing virtual environment.
- - Updated OCR to PaddleOCR 3.6.0 and PaddlePaddle 3.2.2, migrated to the v3 prediction/result API, and aligned NumPy 2.2.6, OpenCV contrib 4.10.0.84 and Requests 2.34.2 with the OCR stack. Existing installations must remove the old `venv` folder and run `install_requirements.bat` to avoid leftover PaddleOCR 2 dependencies.
- - Removed the unused legacy PaddleOCR result conversion; panel detection now consumes recognized text directly from PaddleOCR 3 results.
- - Fixed application log file setup so its output is retained even when another library has already configured Python logging.
- - Fixed supercruise disengage checks being skipped when the target ring cannot be found, lowered the HUD prompt gate so smaller dropout messages trigger OCR, and log when OCR returns no text.
- - Added debug logging of the target-ring match score and its screen offset during alignment.
- - Added GitHub workflows: `ci.yml` runs Ruff and the unit tests (without the OCR test, using the slim `requirements-ci.txt`) on pushes and pull requests to `main`; `release.yml` runs the full checks including OCR when a `vX.Y.Z` tag is pushed, verifies that the tag is on `main` and matches `core/version.py`, and creates a GitHub release with the changelog notes and a source ZIP.
- - Changed class names to CapWords and exception names to end with `Error`: `Screen_Regions` to `ScreenRegions`, `Image_Templates` to `ImageTemplates`, `AFK_Combat` to `AfkCombat`, `EDAP_Interrupt` to `EdapInterruptError` and `PathNotFoundException` to `PathNotFoundError`.
- - Changed function and argument names to snake_case: `PressKey`/`ReleaseKey` to `press_key`/`release_key`, `rotateLeft`, `rotateRight`, `pitchUp`, `pitchDown`, `yawLeft` and `yawRight` to `rotate_left` etc., and arguments such as `scaleX`/`scaleY`, `fileName`, `doThread`, `fontSize`, `vSay` and `noOp` to `scale_x`/`scale_y`, `file_name`, `do_thread`, `font_size`, `text` and `no_op`. Names that follow the Windows API (`wndProc`, `hWnd`, `wParam`, `lParam`, `Input_I`) are kept.
- - Changed config, waypoint and log files to be stored in `user_data/` (configs, waypoints, logs, debug output). The folder is created on first start.
- - Changed reference files (`resolution.json` and the example waypoint files) to live in `data/` and be copied to `user_data/` when missing.
- - Changed paths to be resolved relative to the project folder instead of the working directory.
- - Changed `templates/`, `locales/` and `screen/edap.ico` to `assets/templates/`, `assets/locales/` and `assets/icons/edap.ico`; the documentation screenshots from `screen/` to `docs/screenshots/`. The disabled build workflow still references the old `screen\` paths and will be reworked separately.
- - Changed `readme.md` and `ChangeLog.md` to `README.md` and `CHANGELOG.md`.
- - Changed the in-app links (About, Changelog) and the clone URL in the README to point to this repository instead of the upstream repository.
- - Removed the disabled `build-executable.yml` workflow; a build of the executable will be added later.
- - Removed the "Join Discord" menu entry, the Discord link and the email contact addresses.
- - Changed `controls/keys.py` (`EDKeys`) to be split: reading the Elite Dangerous keybindings now lives in `game/keybindings.py` (`KeyBindings`), while `controls/keys.py` only sends keys.
- - Removed the manual template calibration (File > Calibrate Target/Compass, `vision/calibration.py`, `docs/Calibration.md`), the `TargetScale` setting and the per-ship `compass_scale`, as well as the legacy 3440x1440 templates: all templates are now derived from the native 2160p set.
- - Changed `ED_AP.py` to `core/autopilot.py` and split `EDAutopilot` into mixin classes with identical behavior: `core/config.py` (`ConfigMixin`), `vision/calibration.py` (`CalibrationMixin`), `vision/detection.py` (`DetectionMixin`), `routines/flight.py` (`FlightMixin`) and `routines/assists.py` (`AssistsMixin`). `EDAP_Interrupt` and `ScTargetAlignReturn` moved to `core/types.py`.
- - Changed the GUI code of `EDAPGui.py` to `gui/main_window.py`; `EDAPGui.py` in the project root remains as the thin start script (`python EDAPGui.py`, `start_ed_ap.bat`).
- - Changed the file headers of all source files to a short module docstring; author lines and the copy of the hotkey list (see README) were removed. Credits to the original projects stay in the affected modules and the README.
- - Changed the start script `EDAPGui.py` in the project root to `main.py` (`python main.py`); `start_ed_ap.bat` is unchanged for users.
- - Changed all program packages (`controls/`, `core/`, `game/`, `gui/`, `i18n/`, `integrations/`, `panels/`, `routines/`, `vision/`) and `main.py` to live in the new `src/` folder; start the program with `python src/main.py` (`start_ed_ap.bat` is unchanged for users). The bundled `EDMesg/` library moved to `third_party/EDMesg/`.
- - Changed `EDWayPoint.py`, `Robigo.py` and `EDafk_combat.py` to live in the new `routines/` package as `routines/waypoints.py`, `routines/robigo.py` and `routines/afk_combat.py`.
- - Changed `TCE_Integration.py`, `Voice.py` and the `EDAP_EDMesg_*.py` modules to live in the new `integrations/` package as `integrations/tce.py`, `integrations/voice.py` and `integrations/edmesg/{interface,client,server}.py`.
- - Changed `Overlay.py` to `gui/overlay.py` and the `simple_localization/` package to `i18n/`.
- - Changed `EDNavigationPanel.py`, `EDInternalStatusPanel.py`, `EDGalaxyMap.py`, `EDSystemMap.py`, `EDStationServicesInShip.py` and `EDShipControl.py` to live in the new `panels/` package as `panels/navigation.py`, `panels/internal_status.py`, `panels/galaxy_map.py`, `panels/system_map.py`, `panels/station_services.py` and `panels/ship_control.py`.
- - Changed `EDJournal.py`, `StatusParser.py`, `CargoParser.py`, `MarketParser.py`, `NavRouteParser.py`, `EDGraphicsSettings.py` and `WindowsKnownPaths.py` to live in the new `game/` package as `game/journal.py`, `game/status.py`, `game/cargo.py`, `game/market.py`, `game/nav_route.py`, `game/graphics_settings.py` and `game/known_paths.py`.
- - Changed `EDKeys.py`, `directinput.py` and `MousePt.py` to live in the new `controls/` package as `controls/keys.py`, `controls/directinput.py` and `controls/mouse_point.py`.
- - Changed `Screen.py`, `Screen_Regions.py`, `OCR.py` and `Image_Templates.py` to live in the new `vision/` package as `vision/screen.py`, `vision/regions.py`, `vision/ocr.py` and `vision/templates.py`.
- - Changed `paths.py`, `EDlogger.py` and `EDAP_data.py` to live in the new `core/` package as `core/paths.py`, `core/logger.py` and `core/constants.py`.
- - Changed tests to live in `tests/` (`tests/test_*.py`), test images in `tests/fixtures/`, and the manual debug tool `Test_Routines.py` to `tests/manual/debug_routines.py` (run with `python -m tests.manual.debug_routines`). Run the unit tests with `python -m unittest discover -s tests -t .`. Tests that need the running game live in `tests/integration/` and are skipped unless `EDAP_INTEGRATION=1` is set.
- - Changed all `from x import *` to explicit imports, removed unused imports and sorted the imports in all modules. Comparisons with `None`, `True` and `False` were rewritten to `is None` or plain truth checks, bare `except:` became `except Exception:`, trailing whitespace was removed, and unused local variables were removed.
- - Changed log rotation to keep only the 10 newest rotated log files in `user_data/logs/`.
- - Fixed the discovery scan (honk) ending early during FSD route assist: the scan button is now held until the journal reports the finished scan (`FSSDiscoveryScan`) instead of a fixed 7 seconds, and the scan is retried up to three times (10 s each) if no confirmation arrives, while the scan keeps running in parallel to refueling and positioning. Keys that share a physical key or modifier with a currently held button (for example `S` for pitch up and the scanner button) now wait until it is released instead of cutting the scan off.
- - Fixed rotated log files (`autopilot <date>.log`) not being excluded by `.gitignore`.
- - Fixed the OCR unit test to check only the known text of its screenshot instead of the complete HUD text.
- - Fixed circular imports between `ED_AP.py` and the `routines/` and `panels/` modules; all modules can now be imported on their own.
- - Fixed a startup error when the previous log file could not be renamed because a rotated log with the same timestamp already existed.
- - Fixed the screen detection and capture on setups with monitors of different Windows scaling (for example a 100% monitor next to a 150% one), where the monitor size and the Elite window position were reported scaled and the compass was not found; the detection now runs in a per-monitor DPI aware context without changing the DPI behavior of the UI and the overlay.
- - Fixed the unit tests rotating away the log files of real sessions; the tests now log to a temporary folder (`EDAP_LOG_DIR`).
- - Cleaned up `.gitignore`.
- - Added `fix_keybinds.bat` (`src/fix_keybinds.py`), a console tool that works with the game closed: it fills the gaps in the active General and Ship controls bindings that EDAP needs and reports conflicts, in German or English. Existing bindings are only changed after you confirm each conflict; gaps are filled from the shipped default presets first, then with single keys without modifiers. A timestamped backup of the `.binds` file is created before writing; `--dry-run` only previews.
- - Changed the key collision warning at startup to ignore sharing that the game's own default presets use (for example `A`/`D` for yaw and UI left/right) and to report each collision group once; it uses the same rule as `fix_keybinds.bat`.
- - Changed the keybinding reader to take the active presets from `StartPreset.4.start` (the newest `.binds` file is only a fallback) and to no longer require the five unused binds (`SelectTarget`, `DeployHeatSink`, `MouseReset`, `CamTranslateForward`, `CamTranslateRight`).
- - Fixed key names of German keyboard layouts (`de-DE`, `de-AT`): Y/Z are swapped and umlauts, ß, ´, + and < are now recognized, so the correct physical keys are sent (for example for `CamZoomIn`).
+# Changelog
+
+All notable changes to EDAPGui, the Elite Dangerous autopilot.
+
+Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [Unreleased]
+
+### Important notice
+
+- Runtime files moved to the new `user_data/` folder. Existing users must manually copy `configs/AP.json`, `configs/ship_configs.json` and their own waypoint files from `waypoints/` into `user_data/configs/` and `user_data/waypoints/`.
+
+### Added
+
+- Added `core/version.py` as the single place for the application version (still 1.7.0); the window title and log read it from there.
+- Added the update check (`core/updates.py`): at startup, and via Help > Check for Updates, the program looks up the latest release of `DopeEx/EDAPGui` in the background and offers to open the download page if it is newer. Nothing happens at startup if there is no release yet or GitHub cannot be reached.
+- Added status badges to the README (CI, Ruff, license, and the tested Python versions, which are read from the CI test matrix).
+- Added the Ruff linter (`pyproject.toml`, `requirements-dev.txt`) with the rule groups `F` (pyflakes), `I` (import sorting), `N` (pep8-naming, except `N806`), `W` (whitespace) and the checks `E711`, `E712`, `E713`, `E714`, `E722` and `F841`; run `ruff check .`. The code is formatted with `ruff format .` (check with `ruff format --check .`).
+- Added offline unit tests (no game needed) for the status, cargo, market and navigation route parsers, journal event handling, waypoint files and routing, localization, shared paths, reference data and screen region scaling.
+- Added offline unit tests for reading the Elite Dangerous keybindings (`game/keybindings.py`), using an anonymized sample bindings file in `tests/fixtures/bindings/`.
+- Added offline tests for template matching and screen detection (compass, nav point, target, occlusion, supercruise disengage message, region filters) using the screenshot crops in `tests/fixtures/` and a fake screen instead of the game.
+- Added a regression test with real game screenshots (`tests/test_screenshots.py`, 3840x2160 and 1920x1080, HDR and SDR) that is skipped when the git-excluded screenshots in `tests/fixtures/screenshots/` are missing.
+- Added `docs/Structure.md` describing the folder structure and rules for where new files belong.
+- Added native templates for 3840x2160 (`assets/templates/2160p/`), used unscaled at that resolution; for every other screen height the nearest larger set is scaled down (for example for 1920x1080), or the largest set is scaled up. `tools/make_templates.py` creates them from full screenshots (the raw screenshots in `tests/fixtures/screenshots/` are git-excluded and never committed).
+- Added language-independent detection of the supercruise disengage message (blue text gate plus OCR compared with the localized text) instead of the English-only `sc-disengage` template, which works for German and English.
+- Added detection of a target hidden behind a planet or moon with a white-filter ring template (`target_occluded`) that is also matched in a beige filter (the ring is white with HDR and beige without), plus fallbacks for very bright scenes (stars) and the localized "line of sight" message of Supercruise Assist.
+- Added debug logging of the target-ring match score and its screen offset during alignment.
+- Added GitHub workflows: `ci.yml` runs Ruff and the unit tests (without the OCR test, using the slim `requirements-ci.txt`) on pushes and pull requests to `main`; `release.yml` runs the full checks including OCR when a `vX.Y.Z` tag is pushed, verifies that the tag is on `main` and matches `core/version.py`, and creates a GitHub release with the changelog notes and a source ZIP.
+- Added `fix_keybinds.bat` (`src/fix_keybinds.py`), a console tool that works with the game closed: it fills the gaps in the active General and Ship controls bindings that EDAP needs and reports conflicts, in German or English. Existing bindings are only changed after you confirm each conflict; gaps are filled from the shipped default presets first, then with single keys without modifiers. A timestamped backup of the `.binds` file is created before writing; `--dry-run` only previews.
+- Added a central log level record: `=== Log level changed/at startup: OLD -> NEW ===` is written to the log at startup and whenever the level is switched in the UI, so it is visible from which line on debug details are present.
+- Added a check for the supercruise disengage message while waiting after the target ring was lost and during the following alignment, which aborts as soon as the message appears (`wait_for_sc_disengage`, `nav_align(..., abort_on_disengage)`).
+- Added `no-msg` screenshot fixtures that must not pass the message gate, and more real screenshots (dark scenes, arc-shaped target ring close to the target) to the regression test.
+
+### Changed
+
+- Changed the target offset to be computed from the fitted center of the target circle instead of fixed correction values, so it is independent of the resolution.
+- Changed the supported languages to German and English; removed the French and Russian locales, the `sc-disengage` template and the deprecated `sc_disengage`.
+- Changed the supported Python range to 3.12–3.13, with Python 3.13 recommended; CI and release checks cover both versions, and the installer prefers 3.13 while retaining 3.12 as a fallback. Python 3.14 and newer are not supported because PaddlePaddle does not provide compatible Windows wheels.
+- Changed the dependencies that are independent of PaddleOCR to `mss` 10.2.0, `Pillow` 11.3.0, `colorlog` 6.12.0, `kthread` 0.2.3, `PyAutoGUI` 0.9.54, `pynput` 1.8.2, `pywin32` 312, `strsimpy` 0.3 and `xmltodict` 1.0 (`requirements.txt` and `requirements-ci.txt`). Existing installations must run `install_requirements.bat` to install the updates; starting EDAPGui does not update packages in an existing virtual environment.
+- Updated OCR to PaddleOCR 3.6.0 and PaddlePaddle 3.2.2, migrated to the v3 prediction/result API, and aligned NumPy 2.2.6, OpenCV contrib 4.10.0.84 and Requests 2.34.2 with the OCR stack. Existing installations must remove the old `venv` folder and run `install_requirements.bat` to avoid leftover PaddleOCR 2 dependencies.
+- Changed class names to CapWords and exception names to end with `Error`: `Screen_Regions` to `ScreenRegions`, `Image_Templates` to `ImageTemplates`, `AFK_Combat` to `AfkCombat`, `EDAP_Interrupt` to `EdapInterruptError` and `PathNotFoundException` to `PathNotFoundError`.
+- Changed function and argument names to snake_case: `PressKey`/`ReleaseKey` to `press_key`/`release_key`, `rotateLeft`, `rotateRight`, `pitchUp`, `pitchDown`, `yawLeft` and `yawRight` to `rotate_left` etc., and arguments such as `scaleX`/`scaleY`, `fileName`, `doThread`, `fontSize`, `vSay` and `noOp` to `scale_x`/`scale_y`, `file_name`, `do_thread`, `font_size`, `text` and `no_op`. Names that follow the Windows API (`wndProc`, `hWnd`, `wParam`, `lParam`, `Input_I`) are kept.
+- Changed config, waypoint and log files to be stored in `user_data/` (configs, waypoints, logs, debug output). The folder is created on first start.
+- Changed reference files (`resolution.json` and the example waypoint files) to live in `data/` and be copied to `user_data/` when missing.
+- Changed paths to be resolved relative to the project folder instead of the working directory.
+- Changed `templates/`, `locales/` and `screen/edap.ico` to `assets/templates/`, `assets/locales/` and `assets/icons/edap.ico`; the documentation screenshots from `screen/` to `docs/screenshots/`. The disabled build workflow still references the old `screen\` paths and will be reworked separately.
+- Changed `readme.md` and `ChangeLog.md` to `README.md` and `CHANGELOG.md`.
+- Changed the in-app links (About, Changelog) and the clone URL in the README to point to this repository instead of the upstream repository.
+- Changed `controls/keys.py` (`EDKeys`) to be split: reading the Elite Dangerous keybindings now lives in `game/keybindings.py` (`KeyBindings`), while `controls/keys.py` only sends keys.
+- Changed `ED_AP.py` to `core/autopilot.py` and split `EDAutopilot` into mixin classes with identical behavior: `core/config.py` (`ConfigMixin`), `vision/calibration.py` (`CalibrationMixin`), `vision/detection.py` (`DetectionMixin`), `routines/flight.py` (`FlightMixin`) and `routines/assists.py` (`AssistsMixin`). `EDAP_Interrupt` and `ScTargetAlignReturn` moved to `core/types.py`.
+- Changed the GUI code of `EDAPGui.py` to `gui/main_window.py`; `EDAPGui.py` in the project root remains as the thin start script (`python EDAPGui.py`, `start_ed_ap.bat`).
+- Changed the file headers of all source files to a short module docstring; author lines and the copy of the hotkey list (see README) were removed. Credits to the original projects stay in the affected modules and the README.
+- Changed the start script `EDAPGui.py` in the project root to `main.py` (`python main.py`); `start_ed_ap.bat` is unchanged for users.
+- Changed all program packages (`controls/`, `core/`, `game/`, `gui/`, `i18n/`, `integrations/`, `panels/`, `routines/`, `vision/`) and `main.py` to live in the new `src/` folder; start the program with `python src/main.py` (`start_ed_ap.bat` is unchanged for users). The bundled `EDMesg/` library moved to `third_party/EDMesg/`.
+- Changed `EDWayPoint.py`, `Robigo.py` and `EDafk_combat.py` to live in the new `routines/` package as `routines/waypoints.py`, `routines/robigo.py` and `routines/afk_combat.py`.
+- Changed `TCE_Integration.py`, `Voice.py` and the `EDAP_EDMesg_*.py` modules to live in the new `integrations/` package as `integrations/tce.py`, `integrations/voice.py` and `integrations/edmesg/{interface,client,server}.py`.
+- Changed `Overlay.py` to `gui/overlay.py` and the `simple_localization/` package to `i18n/`.
+- Changed `EDNavigationPanel.py`, `EDInternalStatusPanel.py`, `EDGalaxyMap.py`, `EDSystemMap.py`, `EDStationServicesInShip.py` and `EDShipControl.py` to live in the new `panels/` package as `panels/navigation.py`, `panels/internal_status.py`, `panels/galaxy_map.py`, `panels/system_map.py`, `panels/station_services.py` and `panels/ship_control.py`.
+- Changed `EDJournal.py`, `StatusParser.py`, `CargoParser.py`, `MarketParser.py`, `NavRouteParser.py`, `EDGraphicsSettings.py` and `WindowsKnownPaths.py` to live in the new `game/` package as `game/journal.py`, `game/status.py`, `game/cargo.py`, `game/market.py`, `game/nav_route.py`, `game/graphics_settings.py` and `game/known_paths.py`.
+- Changed `EDKeys.py`, `directinput.py` and `MousePt.py` to live in the new `controls/` package as `controls/keys.py`, `controls/directinput.py` and `controls/mouse_point.py`.
+- Changed `Screen.py`, `Screen_Regions.py`, `OCR.py` and `Image_Templates.py` to live in the new `vision/` package as `vision/screen.py`, `vision/regions.py`, `vision/ocr.py` and `vision/templates.py`.
+- Changed `paths.py`, `EDlogger.py` and `EDAP_data.py` to live in the new `core/` package as `core/paths.py`, `core/logger.py` and `core/constants.py`.
+- Changed tests to live in `tests/` (`tests/test_*.py`), test images in `tests/fixtures/`, and the manual debug tool `Test_Routines.py` to `tests/manual/debug_routines.py` (run with `python -m tests.manual.debug_routines`). Run the unit tests with `python -m unittest discover -s tests -t .`. Tests that need the running game live in `tests/integration/` and are skipped unless `EDAP_INTEGRATION=1` is set.
+- Changed all `from x import *` to explicit imports, removed unused imports and sorted the imports in all modules. Comparisons with `None`, `True` and `False` were rewritten to `is None` or plain truth checks, bare `except:` became `except Exception:`, trailing whitespace was removed, and unused local variables were removed.
+- Changed log rotation to keep only the 10 newest rotated log files in `user_data/logs/`.
+- Cleaned up `.gitignore`.
+- Changed the key collision warning at startup to ignore sharing that the game's own default presets use (for example `A`/`D` for yaw and UI left/right) and to report each collision group once; it uses the same rule as `fix_keybinds.bat`.
+- Changed the keybinding reader to take the active presets from `StartPreset.4.start` (the newest `.binds` file is only a fallback) and to no longer require the five unused binds (`SelectTarget`, `DeployHeatSink`, `MouseReset`, `CamTranslateForward`, `CamTranslateRight`).
+- Changed the runtime `print()` output to the central logger (`core/logger.py`): status details, keybinding and graphics settings lines are debug messages, problems are warnings or errors, and unexpected exceptions are logged with their stack trace. Info shows only status messages. The UI status window is unchanged.
+- Changed the startup console to hide the harmless PaddlePaddle noise (ccache warning, oneDNN and glog info lines); the model loading lines and all warnings and errors stay visible. Restarting the program prints `Restarting EDAPGui...` to the console.
+- Changed the disengage message gate to a dedicated cyan filter that also matches dark scenes and requires the long frame lines of the message, and the message OCR to also try a faster unscaled variant.
+
+### Fixed
+
+- Fixed application log file setup so its output is retained even when another library has already configured Python logging.
+- Fixed supercruise disengage checks being skipped when the target ring cannot be found, lowered the HUD prompt gate so smaller dropout messages trigger OCR, and log when OCR returns no text.
+- Fixed the discovery scan (honk) ending early during FSD route assist: the scan button is now held until the journal reports the finished scan (`FSSDiscoveryScan`) instead of a fixed 7 seconds, and the scan is retried up to three times (10 s each) if no confirmation arrives, while the scan keeps running in parallel to refueling and positioning. Keys that share a physical key or modifier with a currently held button (for example `S` for pitch up and the scanner button) now wait until it is released instead of cutting the scan off.
+- Fixed rotated log files (`autopilot <date>.log`) not being excluded by `.gitignore`.
+- Fixed the OCR unit test to check only the known text of its screenshot instead of the complete HUD text.
+- Fixed circular imports between `ED_AP.py` and the `routines/` and `panels/` modules; all modules can now be imported on their own.
+- Fixed a startup error when the previous log file could not be renamed because a rotated log with the same timestamp already existed.
+- Fixed the screen detection and capture on setups with monitors of different Windows scaling (for example a 100% monitor next to a 150% one), where the monitor size and the Elite window position were reported scaled and the compass was not found; the detection now runs in a per-monitor DPI aware context without changing the DPI behavior of the UI and the overlay.
+- Fixed the unit tests rotating away the log files of real sessions; the tests now log to a temporary folder (`EDAP_LOG_DIR`).
+- Fixed key names of German keyboard layouts (`de-DE`, `de-AT`): Y/Z are swapped and umlauts, ß, ´, + and < are now recognized, so the correct physical keys are sent (for example for `CamZoomIn`).
+- Fixed missing supercruise disengage at the destination when the target ring turns into an open arc shortly before arrival and the message was not read in time.
+
+### Removed
+
+- Removed the unused EDMesg integration, its bundled library, configuration settings and dependencies.
+- Removed the obsolete ELW scanner, its FSS automation, GUI option, configuration, vision templates, and documentation.
+- Removed the obsolete Robigo passenger-mission assist, its GUI controls and configuration, dedicated vision templates, and documentation.
+- Removed the unused legacy PaddleOCR result conversion; panel detection now consumes recognized text directly from PaddleOCR 3 results.
+- Removed the disabled `build-executable.yml` workflow; a build of the executable will be added later.
+- Removed the "Join Discord" menu entry, the Discord link and the email contact addresses.
+- Removed the manual template calibration (File > Calibrate Target/Compass, `vision/calibration.py`, `docs/Calibration.md`), the `TargetScale` setting and the per-ship `compass_scale`, as well as the legacy 3440x1440 templates: all templates are now derived from the native 2160p set.
 
 # 8/19/2025 v1.7.0: General updates.
  - Changed all Parser files to UTF-8 format.
@@ -115,7 +143,7 @@
 # 6/1/2025 Stumpii: Bug fix.
  - Removed 'deprecated' warning that does not work in old python versions.
 
-# 5/30/2025 Stumpii: Various minor updates. 
+# 5/30/2025 Stumpii: Various minor updates.
  - Added check for disengage while in target align.
  - Log new file on each startup of EDAP. Store previous runs.
  - Increase scroll up time for buy/sell to make sure at top of list.
@@ -150,11 +178,11 @@
 
 # 4/8/2025 Stumpii: Added Corsair.
  - Added Corsair to ED_Data and ship config.
- - 
+ -
 # 3/31/2025 Stumpii: Flags2 bug fix.
  - Added None check for Flags2 giving error when ED is not running.
  - Moved new auto property to the end of the config. Set default value.
- 
+
 # 3/30/2025 DopeEx
  - Added DSS Assist mode - activates DSS scanner when changing system with manual jump
  - Added automatic logout to the main menu option when the FSD assist has arrived at the destination and the destination is in space

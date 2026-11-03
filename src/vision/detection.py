@@ -294,7 +294,7 @@ class DetectionMixin:
                 cv2.imshow("occluded", img)
                 cv2.moveWindow("occluded", self.cv_view_x, self.cv_view_y + 650)
             except Exception as e:
-                print("exception in getdest: " + str(e))
+                logger.error(f"Exception in debug view (occluded): {e}")
             cv2.waitKey(30)
 
         if maxVal > scr_reg.target_occluded_thresh:
@@ -402,7 +402,7 @@ class DetectionMixin:
                 # cv2.imshow('tt', scr_reg.templates.template['target']['image'])
                 cv2.moveWindow("target", self.cv_view_x, self.cv_view_y + 425)
             except Exception as e:
-                print("exception in getdest: " + str(e))
+                logger.error(f"Exception in debug view (target): {e}")
             cv2.waitKey(30)
 
         # print (maxVal)
@@ -434,8 +434,10 @@ class DetectionMixin:
         if now - getattr(self, "_message_log_time", 0.0) >= 5.0:
             self._message_log_time = now
             fraction = getattr(scr_reg, "last_message_fraction", 0.0)
+            line = getattr(scr_reg, "last_message_line", 0.0)
             logger.info(
-                f"Disengage message check: message-colored area {fraction:.3f} (needs {scr_reg.message_text_fraction})"
+                f"Disengage message check: message-colored area {fraction:.3f} (needs {scr_reg.message_text_fraction}), "
+                f"longest line {line:.2f} (needs {scr_reg.message_line_fraction})"
             )
 
         # Log only when a message appears, so the log shows whether the detection saw it
@@ -464,11 +466,12 @@ class DetectionMixin:
 
     def sc_disengage_active(self, scr_reg) -> bool:
         """look for the "PRESS [Y] TO DISENGAGE" text using OCR, if in this region then return true."""
-        # OCR the selected item. The enlarged raw image is a fallback for messages partly covered by the cockpit frame.
+        # OCR the selected item. The raw images are a fallback for messages partly covered by the cockpit frame,
+        # the plain raw image is tried before the slower enlarged one.
         sim_match = 0.35  # Similarity match 0.0 - 1.0 for 0% - 100%)
         sim = 0.0
         ocr_textlist = None
-        for variant in ({}, {"raw": True, "upscale": 2}):
+        for variant in ({}, {"raw": True}, {"raw": True, "upscale": 2}):
             image = scr_reg.message_image("disengage", **variant)
             textlist = self.ocr.image_simple_ocr(image)
             if textlist is None:

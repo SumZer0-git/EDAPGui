@@ -45,11 +45,11 @@ class EDGraphicsSettings:
             raise Exception(f"Elite Dangerous settings file does not exist: {self.settings_filepath}.")
 
         # Read graphics display settings xml file data
-        logger.info(f"Reading ED graphics display settings from '{self.display_settings_filepath}'.")
+        logger.debug(f"Reading ED graphics display settings from '{self.display_settings_filepath}'.")
         self.display_settings = self.read_settings(self.display_settings_filepath)
 
         # Read graphics display settings xml file data
-        logger.info(f"Reading ED graphics settings from '{self.settings_filepath}'.")
+        logger.debug(f"Reading ED graphics settings from '{self.settings_filepath}'.")
         self.settings = self.read_settings(self.settings_filepath)
 
         # Process graphics display settings

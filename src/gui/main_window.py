@@ -1057,16 +1057,14 @@ class APGui:
 
     def restart_program(self):
         logger.debug("Entered: restart_program")
-        print("restart now")
 
         self.stop_fsd()
         self.stop_sc()
         self.ed_ap.quit()
         sleep(0.1)
 
-        print("argv was", sys.argv)
-        print("sys.executable was", sys.executable)
-        print("restart now")
+        logger.info(f"Restarting: {sys.executable} {sys.argv}")
+        print("Restarting EDAPGui...")
 
         import os
 
