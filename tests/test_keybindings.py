@@ -76,16 +76,14 @@ class RealBindingsTestCase(BindingsDirectoryMixin, unittest.TestCase):
 
     def test_reads_modifiers(self):
         self.assertEqual(
-            self.kb.keys["MouseReset"],
-            {"key": SCANCODE["Key_R"], "mods": [SCANCODE["Key_LeftControl"], SCANCODE["Key_LeftShift"]]},
+            self.kb.keys["HeadLookReset"],
+            {"key": SCANCODE["Key_K"], "mods": [SCANCODE["Key_LeftControl"], SCANCODE["Key_LeftShift"]]},
         )
-        self.assertEqual(
-            self.kb.keys["CamTranslateRight"], {"key": SCANCODE["Key_D"], "mods": [SCANCODE["Key_LeftShift"]]}
-        )
+        self.assertEqual(self.kb.keys["UseBoostJuice"], {"key": SCANCODE["Key_B"], "mods": [SCANCODE["Key_LeftShift"]]})
 
     def test_only_requested_keys_are_returned(self):
         self.assertTrue(set(self.kb.keys) <= set(self.kb.keys_to_obtain))
-        self.assertEqual(len(self.kb.keys), 37)
+        self.assertEqual(len(self.kb.keys), 32)
         self.assertNotIn("ExplorationFSSEnter", self.kb.keys_to_obtain)
         self.assertNotIn("ExplorationFSSQuit", self.kb.keys_to_obtain)
 
@@ -96,10 +94,15 @@ class RealBindingsTestCase(BindingsDirectoryMixin, unittest.TestCase):
 
     def test_collisions(self):
         self.assertEqual(self.kb.get_collisions("UI_Up"), ["UI_Up"])
-        self.assertEqual(sorted(self.kb.get_collisions("YawLeftButton")), ["UI_Left", "YawLeftButton"])
 
-    def test_collisions_are_reported_to_the_gui(self):
-        self.assertTrue(any("Key_A" in message[1] and "UI_Left" in message[1] for message in self.messages))
+    def test_sharing_that_the_game_allows_is_no_collision(self):
+        self.assertEqual(self.kb.get_collisions("YawLeftButton"), ["YawLeftButton"])
+        self.assertFalse(any("Key_A" in message[1] for message in self.messages))
+
+    def test_real_collisions_are_found(self):
+        self.kb.keys = dict(self.kb.keys, SetSpeedZero=self.kb.keys["YawLeftButton"])
+
+        self.assertEqual(sorted(self.kb.get_collisions("YawLeftButton")), ["SetSpeedZero", "YawLeftButton"])
 
     def test_bindings_dict(self):
         bindings = self.kb.get_bindings_dict()
@@ -168,6 +171,29 @@ class SyntheticBindingsTestCase(BindingsDirectoryMixin, unittest.TestCase):
 
         self.assertIsNone(kb.get_latest_keybinds())
         self.assertEqual(kb.get_bindings(), {})
+
+    def test_start_preset_wins_over_modification_time(self):
+        self.add_bindings("Chosen.4.2.binds", SYNTHETIC, mtime=1_000_000)
+        self.add_bindings("Newer.4.2.binds", SYNTHETIC.replace("Key_B", "Key_Q"), mtime=2_000_000)
+        self.add_bindings("StartPreset.4.start", "Chosen\nChosen\nChosen\nChosen\n")
+
+        keys = self.make_keybindings().get_bindings()
+
+        self.assertEqual(keys["YawLeftButton"]["key"], SCANCODE["Key_B"])
+
+    def test_key_names_follow_the_keyboard_layout_of_the_file(self):
+        german = SYNTHETIC.replace(
+            "<YawLeftButton>",
+            '<KeyboardLayout>de-DE</KeyboardLayout>\n\t<CamZoomIn>\n\t\t<Primary Device="Keyboard" Key="Key_Y" />\n'
+            '\t\t<Secondary Device="{NoDevice}" Key="" />\n\t</CamZoomIn>\n\t<YawLeftButton>',
+        )
+        self.add_bindings("a.binds", german)
+        kb = self.make_keybindings()
+        kb.keys_to_obtain = ["CamZoomIn"]
+
+        # The key the German keyboard calls Y sits where the US keyboard has Z
+        self.assertEqual(kb.get_bindings()["CamZoomIn"]["key"], SCANCODE["Key_Z"])
+        self.assertEqual(kb.layout, "de-DE")
 
 
 if __name__ == "__main__":

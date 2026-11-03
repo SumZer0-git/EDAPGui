@@ -162,8 +162,6 @@ The following keybindings are required by AP, so make sure a key is assigned to 
 | UI_Back               | UI Back                  | GENERAL CONTROLS > INTERFACE MODE            |
 | CycleNextPanel        | NEXT PANEL TAB           | GENERAL CONTROLS > INTERFACE MODE            |
 |                       |                          |                                              |
-| MouseReset            | RESET MOUSE              | SHIP CONTROLS > MOUSE CONTROLS               |
-|                       |                          |                                              |
 | YawLeftButton         | YAW LEFT                 | SHIP CONTROLS > FLIGHT ROTATION              |
 | YawRightButton        | YAW RIGHT                | SHIP CONTROLS > FLIGHT ROTATION              |
 | RollLeftButton        | ROLL LEFT                | SHIP CONTROLS > FLIGHT ROTATION              |
@@ -171,7 +169,7 @@ The following keybindings are required by AP, so make sure a key is assigned to 
 | PitchUpButton         | PITCH UP                 | SHIP CONTROLS > FLIGHT ROTATION              |
 | PitchDownButton       | PITCH DOWN               | SHIP CONTROLS > FLIGHT ROTATION              |
 |                       |                          |                                              |
-| ThrustUpButton        | THRUST UP                | SHIP CONTROLS > FLIGHT THRUST                |
+| UpThrustButton        | THRUST UP                | SHIP CONTROLS > FLIGHT THRUST                |
 |                       |                          |                                              |
 | SetSpeedZero          | SET SPEED TO 0%          | SHIP CONTROLS > FLIGHT THROTTLE              |
 | SetSpeed50            | SET SPEED TO 50%         | SHIP CONTROLS > FLIGHT THROTTLE              |
@@ -181,13 +179,9 @@ The following keybindings are required by AP, so make sure a key is assigned to 
 | HyperSuperCombination | TOGGLE FRAME SHIFT DRIVE | SHIP CONTROLS > FLIGHT MISCELLANEOUS         |
 | Supercruise           | SUPERCRUISE              | SHIP CONTROLS > FLIGHT MISCELLANEOUS         |
 |                       |                          |                                              |
-| SelectTarget          | SELECT TARGET AHEAD      | SHIP CONTROLS > TARGETING                    |
-|                       |                          |                                              |
 | PrimaryFire           | PRIMARY FIRE             | SHIP CONTROLS > WEAPONS                      |
 | SecondaryFire         | SECONDARY FIRE           | SHIP CONTROLS > WEAPONS                      |
 | DeployHardpointToggle | DEPLOY HARDPOINTS        | SHIP CONTROLS > WEAPONS                      |
-|                       |                          |                                              |
-| DeployHeatSink        | DEPLOY HEATSINK          | SHIP CONTROLS > COOLING                      |
 |                       |                          |                                              |
 | IncreaseEnginesPower  | DIVERT POWER TO ENGINES  | SHIP CONTROLS > MISCELLANEOUS                |
 | IncreaseWeaponsPower  | DIVERT POWER TO WEAPONS  | SHIP CONTROLS > MISCELLANEOUS                |
@@ -198,7 +192,17 @@ The following keybindings are required by AP, so make sure a key is assigned to 
 | GalaxyMapOpen         | OPEN GALAXY MAP          | SHIP CONTROLS > MODE SWITCHES                |
 | SystemMapOpen         | OPEN SYSTEM MAP          | SHIP CONTROLS > MODE SWITCHES                |
 | HeadLookReset         | RESET HEADLOOK           | SHIP CONTROLS > HEADLOOK MODE                |
+| CamZoomIn             | CAMERA ZOOM IN           | GENERAL CONTROLS (galaxy map camera)         |
 
+
+## Fill missing keybindings automatically
+With Elite Dangerous closed, run `fix_keybinds.bat` (English and German). It reads the presets named in `StartPreset.4.start`, so it works on what the game really uses, and checks the General and Ship controls for the keys above. Missing keys are filled with the key of the game's own default presets first (keyboard and mouse, keyboard only, controller), otherwise with a single key without modifiers. Existing keys are only changed for real conflicts and only after you confirm each one; if both slots of an action are taken by non-keyboard devices you choose which one is overwritten. German and English keyboard layouts are supported.
+
+* `fix_keybinds.bat --dry-run` only shows what would change.
+* A backup `<preset>.4.2.binds.edap-<time>.backup` is created before a file is written.
+* The built-in presets of the game (for example Joypad Standard) have no file and cannot be changed; switch to a custom preset in the game first.
+
+Run the tool again after changing the keybindings in the game, then start the game and AP.
 
 
 # Autopilot Options:

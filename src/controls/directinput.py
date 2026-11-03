@@ -267,6 +267,46 @@ SCANCODE = {
     "??_254": 254,
 }
 
+# SCANCODE holds the physical key positions under their US names. The key names in the Elite Dangerous .binds files
+# follow the keyboard layout of the player (<KeyboardLayout> in the file), so a few names move to another position.
+_GERMAN_LAYOUT = {
+    "Key_Y": 44,
+    "Key_Z": 21,
+    "Key_Minus": 53,
+    "Key_ß": 12,
+    "Key_Acute": 13,
+    "Key_ü": 26,
+    "Key_Plus": 27,
+    "Key_ö": 39,
+    "Key_ä": 40,
+    "Key_LessThan": 86,
+}
+_LAYOUT_OVERRIDES = {"de-DE": _GERMAN_LAYOUT, "de-AT": _GERMAN_LAYOUT}
+
+
+def keyboard_layout_table(layout: str | None = None) -> dict[str, int]:
+    """Key name -> scancode for the given <KeyboardLayout> value. Unknown layouts use the US names."""
+    overrides = _LAYOUT_OVERRIDES.get(layout or "")
+    if not overrides:
+        return dict(SCANCODE)
+    claimed = set(overrides.values())
+    table = {name: code for name, code in SCANCODE.items() if code not in claimed}
+    table.update(overrides)
+    return table
+
+
+def scancode_for(name: str, layout: str | None = None) -> int:
+    """Scancode of a key name from a .binds file. Raises KeyError for names unknown in that layout."""
+    return keyboard_layout_table(layout)[name]
+
+
+def key_name_for(scancode: int, layout: str | None = None) -> str | None:
+    """Key name a .binds file with the given layout uses for a scancode, or None if there is none."""
+    for name, code in keyboard_layout_table(layout).items():
+        if code == scancode and not name.startswith("??"):
+            return name
+    return None
+
 
 # C struct redefinitions
 

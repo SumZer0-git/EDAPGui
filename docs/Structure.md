@@ -59,6 +59,7 @@ assets/                 Static files shipped with the program
   templates/              Template images for matching
   locales/                Language files (en.json, de.json, ...)
   icons/                  Icons
+  keybind_presets/        Default Elite Dangerous presets (source of src/game/keybind_defaults.py, see tools/make_keybind_defaults.py)
 
 data/                   Reference files that are copied to user_data/ when missing
   configs/                resolution.json
