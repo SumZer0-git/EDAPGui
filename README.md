@@ -1,3 +1,8 @@
+[![CI](https://github.com/DopeEx/EDAPGui/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DopeEx/EDAPGui/actions/workflows/ci.yml)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Python](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2FDopeEx%2FEDAPGui%2Fmain%2F.github%2Fworkflows%2Fci.yml&query=%24.jobs.checks.strategy.matrix%5B%27python-version%27%5D&label=python&color=blue)](.github/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/DopeEx/EDAPGui)](LICENSE)
+
 See [ChangeLog](/CHANGELOG.md) for latest updates.<br>
 <br>
 
