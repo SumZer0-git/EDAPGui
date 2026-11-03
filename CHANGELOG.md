@@ -61,6 +61,10 @@
  - Fixed the screen detection and capture on setups with monitors of different Windows scaling (for example a 100% monitor next to a 150% one), where the monitor size and the Elite window position were reported scaled and the compass was not found; the detection now runs in a per-monitor DPI aware context without changing the DPI behavior of the UI and the overlay.
  - Fixed the unit tests rotating away the log files of real sessions; the tests now log to a temporary folder (`EDAP_LOG_DIR`).
  - Cleaned up `.gitignore`.
+ - Added `fix_keybinds.bat` (`src/fix_keybinds.py`), a console tool that works with the game closed: it fills the gaps in the active General and Ship controls bindings that EDAP needs and reports conflicts, in German or English. Existing bindings are only changed after you confirm each conflict; gaps are filled from the shipped default presets first, then with single keys without modifiers. A timestamped backup of the `.binds` file is created before writing; `--dry-run` only previews.
+ - Changed the key collision warning at startup to ignore sharing that the game's own default presets use (for example `A`/`D` for yaw and UI left/right) and to report each collision group once; it uses the same rule as `fix_keybinds.bat`.
+ - Changed the keybinding reader to take the active presets from `StartPreset.4.start` (the newest `.binds` file is only a fallback) and to no longer require the five unused binds (`SelectTarget`, `DeployHeatSink`, `MouseReset`, `CamTranslateForward`, `CamTranslateRight`).
+ - Fixed key names of German keyboard layouts (`de-DE`, `de-AT`): Y/Z are swapped and umlauts, ß, ´, + and < are now recognized, so the correct physical keys are sent (for example for `CamZoomIn`).
 
 # 8/19/2025 v1.7.0: General updates.
  - Changed all Parser files to UTF-8 format.
