@@ -1,19 +1,17 @@
-colorlog==6.5.0
-httpcore<0.14 # Specific version required for paddlepaddle (OCR).
+colorlog==6.12.0
 keyboard==0.13.5
-kthread==0.2.2
+kthread==0.2.3
 logger==1.4
-mss==8.0.3
-numpy~=1.26.4 # <2.0 # Specific version required for paddleOCR.
-opencv_python==4.5.5.64
-paddleocr~=2.9.1
-paddlepaddle==2.6.2
-Pillow==10.4.0
-PyAutoGUI==0.9.53
-pynput==1.7.6
+mss==10.2.0
+numpy==2.2.6
+opencv-contrib-python==4.10.0.84
+paddleocr==3.6.0
+paddlepaddle==3.2.2
+Pillow==11.3.0
+PyAutoGUI==0.9.54
+pynput==1.8.2
 pyttsx3==2.90
-pywin32==303
-protobuf<=3.20.2 # Specific version required for paddlepaddle (OCR).
-requests~=2.32.3
-strsimpy~=0.2.1
-xmltodict~=0.14.2
+pywin32==312
+requests==2.34.2
+strsimpy~=0.3.0
+xmltodict~=1.0.4

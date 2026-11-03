@@ -357,6 +357,9 @@ class DetectionMixin:
         dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region(
             "target", "target", inv_col=False
         )
+        roi_height, roi_width = dst_image.shape[:2]
+        filter_pixels = cv2.countNonZero(dst_image)
+        roi_pixels = roi_width * roi_height
 
         pt = maxLoc
 
@@ -404,10 +407,17 @@ class DetectionMixin:
 
         # print (maxVal)
         # must be > x to have solid hit, otherwise we are facing wrong way (empty circle)
+        diagnostics = (
+            f"roi={roi_width}x{roi_height}, filter_pixels={filter_pixels}/{roi_pixels} "
+            f"({filter_pixels / roi_pixels:.2%}), template={width}x{height}, "
+            f"score={maxVal:.4f}, threshold={scr_reg.target_thresh:.2f}"
+        )
         if maxVal < scr_reg.target_thresh:
             result = None
+            logger.debug(f"Target detection: {diagnostics} (below threshold)")
         else:
             result = {"x": final_x, "y": final_y}
+            logger.debug(f"Target detection: {diagnostics}, offset x={final_x:.1f}, y={final_y:.1f}")
 
         return result
 
@@ -462,6 +472,7 @@ class DetectionMixin:
             image = scr_reg.message_image("disengage", **variant)
             textlist = self.ocr.image_simple_ocr(image)
             if textlist is None:
+                logger.info(f"Disengage OCR returned no text ({variant or 'masked'}).")
                 continue
             variant_sim = self.message_similarity("PRESS_TO_DISENGAGE_MSG", textlist)
             logger.info(f"Disengage similarity with {str(textlist)} is {variant_sim} ({variant or 'masked'})")

@@ -44,6 +44,7 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 # Limitations:
 * Will only work with Windows (not Linux)
 * Default HUD colors must be used, if you changed those colors, this autopilot will not work
+* Set the in-game UI brightness to at least 50%. Lower values can make target detection unreliable.
 * Borderless Elite Dangerous (ED) configuration required,  Windowed does not work due to how the screen is grabbed
 * Screen resolution: the templates are native screenshots at 3840x2160 (_assets/templates/2160p/_) and are scaled to your screen
   height automatically, so no calibration is needed. HDR and SDR are both supported (the occluded target ring is white
@@ -70,8 +71,8 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 # Installation
 _Requires **python 3** and **git**_
 
-_Python 3.11 is the recommended version of Python. Python 3.9 or 3.10 may also be used._
-If you don't have Python installed, here is a link to [Python 3.11 installer](https://www.python.org/downloads/release/python-3110/). Scroll to the bottom and select the installer with the description "Recommended".
+_Python 3.12 is the supported and recommended version of Python. Python 3.13 has not been validated yet._
+If you don't have Python installed, download the [Python 3.12 installer](https://www.python.org/downloads/release/python-31210/). Scroll to the bottom and select the installer with the description "Recommended".
 
 ## Simple
 If you just want to download and run EDAP and have no interest in the source code, use this method:

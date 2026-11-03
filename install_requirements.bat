@@ -10,31 +10,28 @@ cd /d "%~dp0"
 echo Installing EDAPGui Requirements...
 echo ================================
 
-if exist "venv\Scripts\python.exe" goto install
+if exist "venv\Scripts\python.exe" (
+    venv\Scripts\python.exe -c "import sys; sys.exit(0 if sys.version_info[:2] == (3, 12) else 1)"
+    if errorlevel 1 (
+        echo Error: The existing virtual environment must use Python 3.12.
+        echo Remove the existing "venv" folder and run this installer again.
+        goto fail
+    )
+    venv\Scripts\python.exe -c "import importlib.metadata as m,sys; expected={'paddleocr':'3.6.0','paddlepaddle':'3.2.2','numpy':'2.2.6','opencv-contrib-python':'4.10.0.84','requests':'2.34.2'}; names={d.metadata['Name'].lower() for d in m.distributions() if d.metadata.get('Name')}; sys.exit(0 if all(m.version(name)==version for name,version in expected.items()) and not names.intersection({'opencv-python','opencv-python-headless'}) else 1)"
+    if errorlevel 1 (
+        echo Error: The existing virtual environment has outdated or conflicting dependencies.
+        echo Remove the existing "venv" folder and run this installer again.
+        goto fail
+    )
+    goto install
+)
 
-set PYTHON_CMD=
-py -3.11 --version >nul 2>&1
-if %errorlevel% == 0 set PYTHON_CMD=py -3.11
-if defined PYTHON_CMD goto create_venv
-
-py -3.10 --version >nul 2>&1
-if %errorlevel% == 0 set PYTHON_CMD=py -3.10
-if defined PYTHON_CMD goto create_venv
-
-py -3.9 --version >nul 2>&1
-if %errorlevel% == 0 set PYTHON_CMD=py -3.9
-if defined PYTHON_CMD goto create_venv
-
-py --version >nul 2>&1
-if %errorlevel% == 0 set PYTHON_CMD=py
-if defined PYTHON_CMD goto create_venv
-
-python --version >nul 2>&1
-if %errorlevel% == 0 set PYTHON_CMD=python
-if defined PYTHON_CMD goto create_venv
-
-echo Error: No Python installation found. Please install Python 3.9, 3.10, or 3.11.
-goto fail
+py -3.12 --version >nul 2>&1
+if errorlevel 1 (
+    echo Error: Python 3.12 was not found. Please install Python 3.12.
+    goto fail
+)
+set PYTHON_CMD=py -3.12
 
 :create_venv
 echo Creating virtual environment using: %PYTHON_CMD%
@@ -49,6 +46,14 @@ venv\Scripts\python.exe -m pip install --upgrade pip
 venv\Scripts\python.exe -m pip install -r requirements.txt
 if errorlevel 1 (
     echo Error: Failed to install requirements
+    REM Remove the incomplete venv so the next run starts clean
+    rmdir /s /q venv
+    goto fail
+)
+
+venv\Scripts\python.exe -c "import importlib.metadata as m,sys; expected={'paddleocr':'3.6.0','paddlepaddle':'3.2.2','numpy':'2.2.6','opencv-contrib-python':'4.10.0.84','requests':'2.34.2'}; names={d.metadata['Name'].lower() for d in m.distributions() if d.metadata.get('Name')}; sys.exit(0 if all(m.version(name)==version for name,version in expected.items()) and not names.intersection({'opencv-python','opencv-python-headless'}) else 1)"
+if errorlevel 1 (
+    echo Error: The installed dependencies do not match the supported OCR stack.
     REM Remove the incomplete venv so the next run starts clean
     rmdir /s /q venv
     goto fail

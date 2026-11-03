@@ -130,6 +130,25 @@ class TargetTestCase(MatchingTestCase):
         self.assertAlmostEqual(offset["x"], -475.6, delta=5)
         self.assertAlmostEqual(offset["y"], 220.9, delta=5)
 
+    def test_target_match_score_and_offset_are_logged(self):
+        with self.assertLogs("ed_log", level="DEBUG") as captured:
+            self.detect("get_destination_offset", "target")
+
+        target_log = next(message for message in captured.output if "Target detection:" in message)
+        self.assertIn("roi=700x700", target_log)
+        self.assertRegex(target_log, r"filter_pixels=\d+/490000 \(\d+\.\d+%\)")
+        self.assertRegex(target_log, r"template=\d+x\d+, score=0\.\d{4}, threshold=0\.54")
+        self.assertIn("offset x=", target_log)
+
+    def test_target_miss_logs_filter_pixel_count(self):
+        with self.assertLogs("ed_log", level="DEBUG") as captured:
+            self.detect("get_destination_offset", "empty")
+
+        target_log = next(message for message in captured.output if "Target detection:" in message)
+        self.assertIn("filter_pixels=0/490000 (0.00%)", target_log)
+        self.assertIn("score=0.0000, threshold=0.54", target_log)
+        self.assertIn("(below threshold)", target_log)
+
     def test_no_target_in_other_screens(self):
         for name in ("empty", "compass", "disengage"):
             with self.subTest(image=name):
@@ -159,6 +178,15 @@ class DisengageTestCase(MatchingTestCase):
 
     def test_empty_screen_has_no_message(self):
         self.assertFalse(self.detect("sc_disengage_label_up", "empty"))
+
+    def test_small_dropout_prompt_passes_the_message_gate(self):
+        image = np.zeros((100, 100, 3), np.uint8)
+        prompt = np.uint8([[[90, 150, 255]]])
+        image[20:40, 20:42] = cv2.cvtColor(prompt, cv2.COLOR_HSV2BGR)[0, 0]
+        regions = ScreenRegions(FakeScreen(image), self.templates)
+
+        self.assertTrue(regions.message_text_present())
+        self.assertGreaterEqual(regions.last_message_fraction, 0.03)
 
 
 class NativeTemplateTestCase(unittest.TestCase):

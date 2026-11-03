@@ -379,6 +379,8 @@ class FlightMixin:
             if new:
                 off = new
                 break
+            if self.try_sc_disengage(scr_reg):
+                return ScTargetAlignReturn.Disengage
             if self.is_destination_occluded(scr_reg):
                 self.occluded_reposition(scr_reg)
                 self.ap_ckb("log+vce", "Target Align")
@@ -422,12 +424,8 @@ class FlightMixin:
                 self.ap_ckb("log+vce", "Target Align")
 
             # check for SC Disengage
-            if self.sc_disengage_label_up(scr_reg):
-                if self.sc_disengage_active(scr_reg):
-                    self.ap_ckb("log+vce", "Disengage Supercruise")
-                    self.keys.send("HyperSuperCombination")
-                    self.stop_sco_monitoring()
-                    return ScTargetAlignReturn.Disengage
+            if self.try_sc_disengage(scr_reg):
+                return ScTargetAlignReturn.Disengage
 
             new = self.get_destination_offset(scr_reg)
             if new:
@@ -449,6 +447,16 @@ class FlightMixin:
             self.overlay.overlay_paint()
 
         return ScTargetAlignReturn.Found
+
+    def try_sc_disengage(self, scr_reg) -> bool:
+        """Check the disengage prompt and request the supercruise exit when it is active."""
+        if not self.sc_disengage_label_up(scr_reg) or not self.sc_disengage_active(scr_reg):
+            return False
+
+        self.ap_ckb("log+vce", "Disengage Supercruise")
+        self.keys.send("HyperSuperCombination")
+        self.stop_sco_monitoring()
+        return True
 
     def occluded_reposition(self, scr_reg):
         """Reposition is use when the target is occluded by a planet or other.
