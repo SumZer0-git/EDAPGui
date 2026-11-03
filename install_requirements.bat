@@ -17,6 +17,12 @@ if exist "venv\Scripts\python.exe" (
         echo Remove the existing "venv" folder and run this installer again.
         goto fail
     )
+    venv\Scripts\python.exe -c "import importlib.metadata as m,sys; expected={'paddleocr':'3.6.0','paddlepaddle':'3.2.2','numpy':'2.2.6','opencv-contrib-python':'4.10.0.84','requests':'2.34.2'}; names={d.metadata['Name'].lower() for d in m.distributions() if d.metadata.get('Name')}; sys.exit(0 if all(m.version(name)==version for name,version in expected.items()) and not names.intersection({'opencv-python','opencv-python-headless'}) else 1)"
+    if errorlevel 1 (
+        echo Error: The existing virtual environment has outdated or conflicting dependencies.
+        echo Remove the existing "venv" folder and run this installer again.
+        goto fail
+    )
     goto install
 )
 
@@ -40,6 +46,14 @@ venv\Scripts\python.exe -m pip install --upgrade pip
 venv\Scripts\python.exe -m pip install -r requirements.txt
 if errorlevel 1 (
     echo Error: Failed to install requirements
+    REM Remove the incomplete venv so the next run starts clean
+    rmdir /s /q venv
+    goto fail
+)
+
+venv\Scripts\python.exe -c "import importlib.metadata as m,sys; expected={'paddleocr':'3.6.0','paddlepaddle':'3.2.2','numpy':'2.2.6','opencv-contrib-python':'4.10.0.84','requests':'2.34.2'}; names={d.metadata['Name'].lower() for d in m.distributions() if d.metadata.get('Name')}; sys.exit(0 if all(m.version(name)==version for name,version in expected.items()) and not names.intersection({'opencv-python','opencv-python-headless'}) else 1)"
+if errorlevel 1 (
+    echo Error: The installed dependencies do not match the supported OCR stack.
     REM Remove the incomplete venv so the next run starts clean
     rmdir /s /q venv
     goto fail

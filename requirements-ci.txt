@@ -5,14 +5,14 @@ keyboard==0.13.5
 kthread==0.2.3
 logger==1.4
 mss==10.2.0
-numpy~=1.26.4
-opencv_python==4.5.5.64
+numpy==2.2.6
+opencv-contrib-python==4.10.0.84
 Pillow==11.3.0
 PyAutoGUI==0.9.54
 pynput==1.8.2
 pyttsx3==2.90
 pywin32==312
-requests~=2.32.5
+requests==2.34.2
 strsimpy~=0.3.0
 xmltodict~=1.0.4
 ruff==0.17.3

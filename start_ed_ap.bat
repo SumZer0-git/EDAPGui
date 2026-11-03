@@ -23,5 +23,13 @@ if errorlevel 1 (
     exit /b 1
 )
 
+venv\Scripts\python.exe -c "import importlib.metadata as m,sys; expected={'paddleocr':'3.6.0','paddlepaddle':'3.2.2','numpy':'2.2.6','opencv-contrib-python':'4.10.0.84','requests':'2.34.2'}; names={d.metadata['Name'].lower() for d in m.distributions() if d.metadata.get('Name')}; sys.exit(0 if all(m.version(name)==version for name,version in expected.items()) and not names.intersection({'opencv-python','opencv-python-headless'}) else 1)"
+if errorlevel 1 (
+    echo Error: The virtual environment has outdated or conflicting OCR dependencies.
+    echo Remove the existing "venv" folder and run install_requirements.bat.
+    pause
+    exit /b 1
+)
+
 echo Starting EDAPGui...
 venv\Scripts\python.exe src\main.py

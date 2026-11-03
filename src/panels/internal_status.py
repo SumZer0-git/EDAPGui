@@ -138,7 +138,7 @@ class EDInternalStatusPanel:
                 self.nav_pnl_tab_width, self.nav_pnl_tab_height, self.screen.screen_width, self.screen.screen_height
             )
 
-            img_selected, ocr_data, ocr_textlist = self.ocr.get_highlighted_item_data(image, scl_row_w, scl_row_h)
+            img_selected, ocr_textlist = self.ocr.get_highlighted_item_data(image, scl_row_w, scl_row_h)
             if img_selected is not None:
                 logger.debug("is_right_panel_active: image selected")
                 logger.debug(f"is_right_panel_active: OCR: {ocr_textlist}")

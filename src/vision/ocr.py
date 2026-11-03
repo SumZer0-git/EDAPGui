@@ -18,7 +18,11 @@ class OCR:
     def __init__(self, screen, language: str = "en"):
         self.screen = screen
         self.paddleocr = PaddleOCR(
-            use_angle_cls=True, lang=language, use_gpu=False, show_log=False, use_dilation=True, use_space_char=True
+            lang=language,
+            use_doc_orientation_classify=False,
+            use_doc_unwarping=False,
+            use_textline_orientation=True,
+            device="cpu",
         )
         # Class for text similarity metrics
         self.jarowinkler = JaroWinkler()
@@ -33,61 +37,28 @@ class OCR:
         # return self.jarowinkler.similarity(s1, s2)
         return self.sorensendice.similarity(s1, s2)
 
-    def image_ocr(self, image):
-        """Perform OCR with no filtering. Returns the full OCR data and a simplified list of strings.
-        This routine is the slower than the simplified OCR.
-
-        OCR Data is returned in the following format, or (None, None):
-        [[[[[86.0, 8.0], [208.0, 8.0], [208.0, 34.0], [86.0, 34.0]], ('ROBIGO 1 A', 0.9815958738327026)]]]
-        """
-        ocr_data = self.paddleocr.ocr(image)
-
-        # print(ocr_data)
-
-        if ocr_data is None:
-            return None, None
-        else:
-            ocr_textlist = []
-            for res in ocr_data:
-                if res is None:
-                    return None, None
-                for line in res:
-                    ocr_textlist.append(line[1][0])
-
-            # print(ocr_textlist)
-            return ocr_data, ocr_textlist
-
     def image_simple_ocr(self, image) -> list[str] | None:
-        """Perform OCR with no filtering. Returns a simplified list of strings with no positional data.
-        This routine is faster than the function that returns the full data. Generally good when you
-        expect to only return one or two lines of text.
+        """Return recognized text from an image, or None when OCR produced no result.
 
-        OCR Data is returned in the following format, or None:
-        [[[[[86.0, 8.0], [208.0, 8.0], [208.0, 34.0], [86.0, 34.0]], ('ROBIGO 1 A', 0.9815958738327026)]]]
+        This is intended for callers that compare text and do not need PaddleOCR's
+        positional, confidence, or other result metadata.
         """
-        ocr_data = self.paddleocr.ocr(image)
-
-        # print(f"image_simple_ocr: {ocr_data}")
-
-        if ocr_data is None:
+        results = self.paddleocr.predict(input=image)
+        if results is None:
             return None
-        else:
-            ocr_textlist = []
-            for res in ocr_data:
-                if res is None:
-                    return None
 
-                for line in res:
-                    ocr_textlist.append(line[1][0])
+        ocr_textlist = []
+        for result in results:
+            if result is None:
+                return None
+            ocr_textlist.extend(result.json["res"]["rec_texts"])
 
-            # print(f"image_simple_ocr: {ocr_textlist}")
-            # logger.info(f"image_simple_ocr: {ocr_textlist}")
-            return ocr_textlist
+        return ocr_textlist
 
     def get_highlighted_item_data(self, image, min_w, min_h):
         """Attempts to find a selected item in an image. The selected item is identified by being solid orange or blue
         rectangle with dark text, instead of orange/blue text on a dark background.
-        The OCR daya of the first item matching the criteria is returned, otherwise None.
+        The selected image and its recognized text are returned, otherwise (None, None).
         @param image: The image to check.
         @param min_w: The minimum width of the text block.
         @param min_h: The minimum height of the text block.
@@ -97,15 +68,15 @@ class OCR:
         if img_selected is not None:
             # cv2.imshow("img", img_selected)
 
-            ocr_data, ocr_textlist = self.image_ocr(img_selected)
+            ocr_textlist = self.image_simple_ocr(img_selected)
 
-            if ocr_data is not None:
-                return img_selected, ocr_data, ocr_textlist
+            if ocr_textlist is not None:
+                return img_selected, ocr_textlist
             else:
-                return None, None, None
+                return None, None
 
         else:
-            return None, None, None
+            return None, None
 
     def get_highlighted_item_in_image(self, image, min_w, min_h):
         """Attempts to find a selected item in an image. The selected item is identified by being solid orange or blue
