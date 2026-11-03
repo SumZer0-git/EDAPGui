@@ -28,13 +28,22 @@ for _old in _rotated[:-_MAX_ROTATED_LOGS]:
     except OSError:
         pass
 
-# Define the logging config.
-logging.basicConfig(
-    filename=_filename,
-    level=logging.ERROR,
-    format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
-    datefmt="%H:%M:%S",
+_root_logger = logging.getLogger()
+_log_path = Path(_filename).resolve()
+_file_handler = next(
+    (
+        handler
+        for handler in _root_logger.handlers
+        if isinstance(handler, logging.FileHandler) and Path(handler.baseFilename).resolve() == _log_path
+    ),
+    None,
 )
+if _file_handler is None:
+    if not _root_logger.handlers:
+        _root_logger.setLevel(logging.ERROR)
+    _file_handler = logging.FileHandler(_filename, encoding="utf-8")
+    _root_logger.addHandler(_file_handler)
+_file_handler.setFormatter(logging.Formatter("%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s", "%H:%M:%S"))
 
 logger = colorlog.getLogger("ed_log")
 
