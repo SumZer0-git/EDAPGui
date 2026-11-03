@@ -33,6 +33,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Reorganized the README and user guides, added a dedicated keybindings guide, and documented current assist behavior and follow-up items in place of the obsolete design notes.
+- Expanded the project structure guide into a compact file-by-file tree with short responsibilities and placement boundaries.
 - Changed the target offset to be computed from the fitted center of the target circle instead of fixed correction values, so it is independent of the resolution.
 - Changed the supported languages to German and English; removed the French and Russian locales, the `sc-disengage` template and the deprecated `sc_disengage`.
 - Changed the supported Python range to 3.12–3.13, with Python 3.13 recommended; CI and release checks cover both versions, and the installer prefers 3.13 while retaining 3.12 as a fallback. Python 3.14 and newer are not supported because PaddlePaddle does not provide compatible Windows wheels.

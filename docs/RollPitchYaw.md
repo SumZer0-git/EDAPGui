@@ -1,38 +1,25 @@
-# Roll, Pitch, Yaw (RPY)
-The values for Pitch and Roll are critical for proper Autopilot behavior. Yaw is also used, but to a lesser degree.
-Each ship type will have different RPY values that need to be determined using the instructions below. Once the RPY
-values have been determined for a ship type, EDAP will store the values and will automatically load the correct values
-when the active ship is changed. A ship config can also be manually loaded using the load button.
+# Ship roll, pitch, and yaw tuning
 
-Take the RPY values from Outfitting, pay attention to the order, it is Pitch, Roll, Yaw in Outfitting.  Also pay
-attention to the order on the GUI as it is Roll, Pitch, Yaw.
+EDAPGui uses each ship's roll, pitch, and yaw rates to estimate how long to hold its controls while aligning in
+supercruise. The rates differ between ships and may need tuning for reliable alignment. EDAPGui loads the profile
+for the active ship automatically; the values and test buttons are in the **SHIP** panel on the **Main** tab.
 
-The RPY values from Outfitting are the rates the ship can achieve while in normal space, while in supercruise
-the rates are much lower.  Since Autopilot utilizes these rates in Supercruise, they must be adjusted.  See tests
-done by one CMDR: https://forums.frontier.co.uk/threads/supercruise-handling-of-ships.396845/.  
-Also see: https://lavewiki.com/ship-control
+Outfitting lists rates in **Pitch, Roll, Yaw** order; the EDAPGui fields are **Roll, Pitch, Yaw**. Outfitting values
+are a starting point: ship rotation is slower in supercruise, so check and tune the values in-game.
 
-1. To start, use the values from Outfitting or start with the values from another similar ship.  
-2. Go into supercruise with a system as target. Set speed to 50%.
-3. For the Roll Rate:
-   1. Maneuver so that the navigation dot is at the top of the compass (at the 12 o'clock position).
-   2. Press the Test Roll button. The ship will roll 360 degrees so that the navigation dot is at 12 o'clock again.
-   3. If the roll overshoots, then increase the value in the Roll field, decrease if the roll undershoots. Overshooting 
-   translates into not being able to control properly, it is better to undershoot than overshoot.
-   4. Repeat the above a couple of times until the roll rate is acceptable.
-4. For the Pitch Rate:
-   1. Maneuver so that the navigation dot is in the center of the compass ahead of the ship.
-   2. Press the Test Pitch button. The ship will pitch 360 degrees so that the navigation dot is at the center again.
-   3. If the pitch overshoots target then the pitch value needs to be increased, decrease if pitch undershoots. Overshooting 
-   translates into not being able to control properly, it is better to undershoot than overshoot.  
-   4. Repeat the above a couple of times until the pitch rate is acceptable.
-5. For the Yaw Rate:
-   1. Maneuver so that the navigation dot is in the center of the compass ahead of the ship.
-   2. Press the Test Yaw button. The ship will yaw 360 degrees so that the navigation dot is at the center again.
-   3. If the pitch overshoots target then the yaw value needs to be increased, decrease if yaw undershoots. Overshooting 
-   translates into not being able to control properly, it is better to undershoot than overshoot.  
-   4. Repeat the above a couple of times until the pitch rate is acceptable.
-6. Save your settings.
+## Tune the rates
 
-As of this writing, only the DBX, ASPX, Cutter, and Sidewinder configuration files (RPY values) were tested.  
-Additional configs were provided in this release but not tested (based on values from Outfitting)
+1. Use the ship's outfitting rates as a starting point, keeping in mind the different order in the game and EDAPGui.
+   The currently active ship profile is loaded automatically.
+2. Enter supercruise and select a system as the target. For **Roll**, place the navigation dot at the top of the
+   compass. For **Pitch** and **Yaw**, place it in the center.
+3. Select the matching **Test Roll Rate**, **Test Pitch Rate**, or **Test Yaw Rate** button in the **SHIP** panel.
+   EDAPGui checks that the ship is in supercruise and has a target, sets speed to 50%, then performs a 360-degree
+   maneuver (roll left, pitch up, or yaw left, respectively).
+4. Compare the navigation dot with its starting position. If the maneuver overshoots, increase that rate; if it
+   undershoots, decrease it. Repeat until the maneuver finishes close to its starting position. A slight undershoot
+   is preferable to a substantial overshoot.
+5. Open **Settings** and select **Save All Settings** to save the current ship's rates.
+
+The rates are stored per ship in `user_data/configs/ship_configs.json` and loaded when the active ship changes. The
+optional **SunPitchUp +/- Time** field can adjust pitch time for ships that need more clearance from a star.
