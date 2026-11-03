@@ -11,9 +11,9 @@ echo Installing EDAPGui Requirements...
 echo ================================
 
 if exist "venv\Scripts\python.exe" (
-    venv\Scripts\python.exe -c "import sys; sys.exit(0 if sys.version_info[:2] == (3, 12) else 1)"
+    venv\Scripts\python.exe -c "import sys; sys.exit(0 if sys.version_info[:2] in ((3, 12), (3, 13)) else 1)"
     if errorlevel 1 (
-        echo Error: The existing virtual environment must use Python 3.12.
+        echo Error: The existing virtual environment must use Python 3.12 or 3.13.
         echo Remove the existing "venv" folder and run this installer again.
         goto fail
     )
@@ -26,9 +26,14 @@ if exist "venv\Scripts\python.exe" (
     goto install
 )
 
+py -3.13 --version >nul 2>&1
+if not errorlevel 1 (
+    set PYTHON_CMD=py -3.13
+    goto create_venv
+)
 py -3.12 --version >nul 2>&1
 if errorlevel 1 (
-    echo Error: Python 3.12 was not found. Please install Python 3.12.
+    echo Error: Python 3.12 or 3.13 was not found. Please install a supported version of Python.
     goto fail
 )
 set PYTHON_CMD=py -3.12

@@ -15,9 +15,9 @@ if not exist "venv\Scripts\python.exe" (
     )
 )
 
-venv\Scripts\python.exe -c "import sys; sys.exit(0 if sys.version_info[:2] == (3, 12) else 1)"
+venv\Scripts\python.exe -c "import sys; sys.exit(0 if sys.version_info[:2] in ((3, 12), (3, 13)) else 1)"
 if errorlevel 1 (
-    echo Error: The virtual environment must use Python 3.12.
+    echo Error: The virtual environment must use Python 3.12 or 3.13.
     echo Remove the existing "venv" folder and run install_requirements.bat.
     pause
     exit /b 1
