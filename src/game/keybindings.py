@@ -1,70 +1,35 @@
-"""Reads the keybindings used by EDAP from the latest Elite Dangerous *.binds file."""
+"""Reads the keybindings used by EDAP from the *.binds files that are active in Elite Dangerous."""
 
 from __future__ import annotations
 
 import json
-from os import environ, listdir
+from os import listdir
 from os.path import getmtime, isfile, join
 from typing import Any
 from xml.etree.ElementTree import parse
 
 import xmltodict
 
-from controls.directinput import SCANCODE
+from controls.directinput import keyboard_layout_table, scancode_for
 from core.logger import logger
+from game.binds_files import GENERAL, SHIP, active_binds_files, bindings_dir
+from game.keybind_fixer import sharing_allowed
+from game.keybind_spec import REQUIRED_ACTIONS, category_of
 
 
 class KeyBindings:
     def __init__(self, cb):
         self.ap_ckb = cb
 
-        self.keys_to_obtain = [
-            "YawLeftButton",
-            "YawRightButton",
-            "RollLeftButton",
-            "RollRightButton",
-            "PitchUpButton",
-            "PitchDownButton",
-            "SetSpeedZero",
-            "SetSpeed50",
-            "SetSpeed100",
-            "HyperSuperCombination",
-            "SelectTarget",
-            "DeployHeatSink",
-            "UIFocus",
-            "UI_Up",
-            "UI_Down",
-            "UI_Left",
-            "UI_Right",
-            "UI_Select",
-            "UI_Back",
-            "CycleNextPanel",
-            "HeadLookReset",
-            "PrimaryFire",
-            "SecondaryFire",
-            "MouseReset",
-            "DeployHardpointToggle",
-            "IncreaseEnginesPower",
-            "IncreaseWeaponsPower",
-            "IncreaseSystemsPower",
-            "GalaxyMapOpen",
-            "CamZoomIn",  # Gal map zoom in
-            "SystemMapOpen",
-            "UseBoostJuice",
-            "Supercruise",
-            "UpThrustButton",
-            "LandingGearToggle",
-            "TargetNextRouteSystem",  # Target next system in route
-            "CamTranslateForward",
-            "CamTranslateRight",
-        ]
+        self.keys_to_obtain = list(REQUIRED_ACTIONS)
+        self.layout: str | None = None
         self.keys = self.get_bindings()
         self.bindings = self.get_bindings_dict()
 
         self.missing_keys = []
         # We want to log the keyboard name instead of just the key number so we build a reverse dictionary
         # so we can look up the name also
-        self.reversed_dict = {value: key for key, value in SCANCODE.items()}
+        self.reversed_dict = {value: key for key, value in keyboard_layout_table(self.layout).items()}
 
         # dump config to log
         for key in self.keys_to_obtain:
@@ -91,9 +56,11 @@ class KeyBindings:
                 self.missing_keys.append(key)
 
         # Check for key collisions with the keys EDAP uses.
+        reported = set()
         for key in self.keys_to_obtain:
             collisions = self.get_collisions(key)
-            if len(collisions) > 1:
+            if len(collisions) > 1 and frozenset(collisions) not in reported:
+                reported.add(frozenset(collisions))
                 # lookup the keyname in the SCANCODE reverse dictionary and output that key name
                 keyname = self.reversed_dict.get(self.keys[key]["key"], "Key not found")
                 warn_text = (
@@ -143,14 +110,19 @@ class KeyBindings:
     def get_bindings(self) -> dict[str, Any]:
         """Returns a dict struct with the direct input equivalent of the necessary elite keybindings"""
         direct_input_keys = {}
-        latest_bindings = self.get_latest_keybinds()
-        if not latest_bindings:
+        binds_files = self.get_binds_files()
+        if not binds_files:
             return {}
-        bindings_tree = parse(latest_bindings)
-        bindings_root = bindings_tree.getroot()
+        roots = {path: parse(path).getroot() for path in set(binds_files.values())}
+        layouts = {path: (root.findtext("KeyboardLayout") or "").strip() or None for path, root in roots.items()}
+        # Key names depend on the keyboard layout of the player, which the game writes into the file
+        self.layout = layouts[binds_files[SHIP]]
 
-        for item in bindings_root:
-            if item.tag in self.keys_to_obtain:
+        for category, path in binds_files.items():
+            for item in roots[path]:
+                if category_of(item.tag) != category or item.tag not in self.keys_to_obtain:
+                    continue
+                layout = layouts[path]
                 key = None
                 mods = []
                 hold = None
@@ -177,10 +149,10 @@ class KeyBindings:
                 try:
                     if key is not None:
                         binding = {}
-                        binding["key"] = SCANCODE[key]
+                        binding["key"] = scancode_for(key, layout)
                         binding["mods"] = []
                         for mod in mods:
-                            binding["mods"].append(SCANCODE[mod])
+                            binding["mods"].append(scancode_for(mod, layout))
                         if hold is not None:
                             binding["hold"] = True
                 except KeyError:
@@ -218,12 +190,13 @@ class KeyBindings:
         }
         }
         """
-        latest_bindings = self.get_latest_keybinds()
+        binds_files = self.get_binds_files()
+        latest_bindings = binds_files.get(SHIP)
         if not latest_bindings:
             return {}
 
         try:
-            with open(latest_bindings, "r") as file:
+            with open(latest_bindings, "r", encoding="utf-8") as file:
                 my_xml = file.read()
                 my_dict = xmltodict.parse(my_xml)
                 return my_dict
@@ -247,9 +220,28 @@ class KeyBindings:
                         ret.append(f"{key} (Secondary)")
         return " and ".join(ret)
 
-    # Note:  this routine will grab the *.binds file which is the latest modified
+    def get_binds_files(self) -> dict[str, Any]:
+        """The .binds file of each control category EDAP needs.
+
+        StartPreset.4.start names the presets the game really uses. A category whose preset has no file (an
+        unmodified preset built into the game) and the case that StartPreset.4.start is missing use the file that
+        was modified last."""
+        active = active_binds_files()
+        for category, path in active.items():
+            logger.info(f"Keybindings file for {category} controls: {path}")
+        if len(active) == 2:
+            return active
+        latest = self.get_latest_keybinds()
+        if latest:
+            for category in (GENERAL, SHIP):
+                if category not in active:
+                    logger.warning(f"No keybindings file for the {category} controls preset, using {latest}")
+                    active[category] = latest
+        return active
+
+    # Fallback: this routine will grab the *.binds file which is the latest modified
     def get_latest_keybinds(self):
-        path_bindings = environ["LOCALAPPDATA"] + r"\Frontier Developments\Elite Dangerous\Options\Bindings"
+        path_bindings = str(bindings_dir())
         try:
             list_of_bindings = [
                 join(path_bindings, f)
@@ -267,11 +259,12 @@ class KeyBindings:
 
     def get_collisions(self, key_name: str) -> list[str]:
         """Get key name collisions (keys used for more than one binding).
+        Sharing that the game itself allows (as in its default presets) is not a collision.
         @param key_name: The key name (i.e. UI_Up, UI_Down).
         """
         key = self.keys.get(key_name)
         collisions = []
         for k, v in self.keys.items():
-            if key == v:
+            if key == v and (k == key_name or not sharing_allowed(key_name, k)):
                 collisions.append(k)
         return collisions
