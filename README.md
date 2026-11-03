@@ -71,8 +71,8 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 # Installation
 _Requires **python 3** and **git**_
 
-_Python 3.12 is the supported and recommended version of Python. Python 3.13 has not been validated yet._
-If you don't have Python installed, download the [Python 3.12 installer](https://www.python.org/downloads/release/python-31210/). Scroll to the bottom and select the installer with the description "Recommended".
+_Python 3.12 and 3.13 are supported. Python 3.13 is recommended._
+If you don't have Python installed, download the [Python 3.13.17 Windows installer (64-bit)](https://www.python.org/downloads/release/python-31317/). It is the latest Python 3.13 release with an official Windows installer; Python 3.13.18 is source-only. Python 3.14 and newer are not currently supported because PaddlePaddle does not provide compatible Windows wheels for them.
 
 ## Simple
 If you just want to download and run EDAP and have no interest in the source code, use this method:
