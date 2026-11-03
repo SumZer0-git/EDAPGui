@@ -91,7 +91,7 @@ class ScreenRegions:
         # surfaces weakly, so it needs a higher threshold.
         self.target_occluded_tan_thresh = 0.4
         # Share of the text color pixels in the message region above which a message may be shown
-        self.message_text_fraction = 0.08
+        self.message_text_fraction = 0.03
         # A scene counts as extremely bright (sun) when this share of the target region is almost white
         self.bright_scene_fraction = 0.5
 

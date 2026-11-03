@@ -231,12 +231,8 @@ class AssistsMixin:
                 self.nav_align(scr_reg)  # realign with station
 
             # check for SC Disengage
-            if self.sc_disengage_label_up(scr_reg):
-                if self.sc_disengage_active(scr_reg):
-                    self.ap_ckb("log+vce", "Disengage Supercruise")
-                    self.keys.send("HyperSuperCombination")
-                    self.stop_sco_monitoring()
-                    break
+            if self.try_sc_disengage(scr_reg):
+                break
 
         # TODO - find a better way to clear these
         if self.debug_overlay:
