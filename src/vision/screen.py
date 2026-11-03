@@ -62,8 +62,7 @@ def set_focus_elite_window():
             win32gui.ShowWindow(handle, win32con.SW_NORMAL)  # give focus to ED
             win32gui.SetForegroundWindow(handle)  # give focus to ED
         except Exception:
-            print("set_focus_elite_window ERROR")
-            pass
+            logger.warning("Could not set focus to the Elite Dangerous window.")
 
 
 class Screen:

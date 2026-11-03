@@ -5,7 +5,6 @@ Ideas taken from: https://github.com/skai2/EDAutopilot"""
 import ctypes
 import logging
 import threading
-import traceback
 from time import sleep
 
 import cv2
@@ -18,7 +17,7 @@ from controls.keys import EDKeys
 from core import paths
 from core.config import ConfigMixin
 from core.constants import FlagsSupercruise, ship_size_map
-from core.logger import logger
+from core.logger import logger, set_log_level
 from core.types import EdapInterruptError
 from game.graphics_settings import EDGraphicsSettings
 from game.journal import EDJournal, get_ship_fullname
@@ -163,11 +162,12 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         self.vce.say("Welcome to Autopilot")
 
         # set log level based on config input, defaulting to warning
-        logger.setLevel(logging.WARNING)
+        level = logging.WARNING
         if self.config["LogINFO"]:
-            logger.setLevel(logging.INFO)
+            level = logging.INFO
         if self.config["LogDEBUG"]:
-            logger.setLevel(logging.DEBUG)
+            level = logging.DEBUG
+        set_log_level(level, "at startup")
 
         # initialize all to false
         self.fsd_assist_enabled = False
@@ -399,17 +399,17 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
     def set_log_error(self, enable=False):
         self.config["LogDEBUG"] = False
         self.config["LogINFO"] = False
-        logger.setLevel(logging.ERROR)
+        set_log_level(logging.ERROR)
 
     def set_log_debug(self, enable=False):
         self.config["LogDEBUG"] = True
         self.config["LogINFO"] = False
-        logger.setLevel(logging.DEBUG)
+        set_log_level(logging.DEBUG)
 
     def set_log_info(self, enable=False):
         self.config["LogDEBUG"] = False
         self.config["LogINFO"] = True
-        logger.setLevel(logging.INFO)
+        set_log_level(logging.INFO)
 
     # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
     # have then then kill python exec
@@ -448,8 +448,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                 except EdapInterruptError:
                     logger.debug("Caught stop exception")
                 except Exception as e:
-                    print("Trapped generic:" + str(e))
-                    traceback.print_exc()
+                    logger.exception(f"Unexpected error in FSD assist: {e}")
 
                 self.fsd_assist_enabled = False
                 self.ap_ckb("fsd_stop")
@@ -476,8 +475,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                 except EdapInterruptError:
                     logger.debug("Caught stop exception")
                 except Exception as e:
-                    print("Trapped generic:" + str(e))
-                    traceback.print_exc()
+                    logger.exception(f"Unexpected error in SC assist: {e}")
 
                 logger.debug("Completed sc_assist")
                 self.sc_assist_enabled = False
@@ -498,8 +496,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                 except EdapInterruptError:
                     logger.debug("Caught stop exception")
                 except Exception as e:
-                    print("Trapped generic:" + str(e))
-                    traceback.print_exc()
+                    logger.exception(f"Unexpected error in waypoint assist: {e}")
 
                 self.waypoint_assist_enabled = False
                 self.ap_ckb("waypoint_stop")

@@ -200,7 +200,7 @@ class StatusParser:
                     with open(self.file_path, "r", encoding="utf-8") as file:
                         data = json.load(file)
                         if attempt > 1:
-                            print(f"Status file attempt: {attempt}")
+                            logger.debug(f"Status file attempt: {attempt}")
                         break
                 except Exception:
                     logger.debug("An error occurred reading Status.json file. File may be open.")
@@ -303,12 +303,12 @@ class StatusParser:
         flags_on = new_flags & ~old_flags
         flag_array = self.translate_flags(flags_on)
         for item in flag_array:
-            print(f"Status Flags: '{item}' is ON")
+            logger.debug(f"Status Flags: '{item}' is ON")
 
         flags_off = ~new_flags & old_flags
         flag_array = self.translate_flags(flags_off)
         for item in flag_array:
-            print(f"Status Flags: '{item}' is OFF")
+            logger.debug(f"Status Flags: '{item}' is OFF")
 
         if self.last_data["Flags2"] is None:
             return
@@ -321,12 +321,12 @@ class StatusParser:
         flags_on2 = new_flags2 & ~old_flags2
         flag_array2 = self.translate_flags2(flags_on2)
         for item in flag_array2:
-            print(f"Status Flags2: '{item}' is ON")
+            logger.debug(f"Status Flags2: '{item}' is ON")
 
         flags_off2 = ~new_flags2 & old_flags2
         flag_array2 = self.translate_flags2(flags_off2)
         for item in flag_array2:
-            print(f"Status Flags2: '{item}' is OFF")
+            logger.debug(f"Status Flags2: '{item}' is OFF")
 
     def get_gui_focus(self) -> int:
         """Gets the value of the GUI Focus flag.

@@ -49,7 +49,7 @@ class TceIntegration:
                 for i, commodity in enumerate(global_buy_commodities):
                     qty = global_buy_commodities[commodity]
                     # if qty > 0:
-                    print(f"Need {commodity}: {global_buy_commodities[commodity]}")
+                    logger.debug(f"Need {commodity}: {global_buy_commodities[commodity]}")
                     if good["Tradegood"].upper() == commodity.upper():
                         good_id = good["ID"]
                         name = good["Tradegood"].upper()

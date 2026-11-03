@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import os
 import time
+import warnings
 
-import cv2
-import numpy as np
-from paddleocr import PaddleOCR
-from strsimpy import SorensenDice
+# Hide only the harmless Paddle startup noise (ccache hint, C++ INFO logs).
+# Warnings and errors stay visible. This must be set before importing paddle.
+os.environ.setdefault("GLOG_minloglevel", "1")
+warnings.filterwarnings("ignore", message="No ccache found")
+
+import cv2  # noqa: E402
+import numpy as np  # noqa: E402
+from paddleocr import PaddleOCR  # noqa: E402
+from strsimpy import SorensenDice  # noqa: E402
 from strsimpy.jaro_winkler import JaroWinkler
 
 from core import paths

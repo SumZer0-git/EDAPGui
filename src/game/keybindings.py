@@ -41,7 +41,7 @@ class KeyBindings:
                 if len(self.keys[key]["mods"]) != 0:
                     keymod = self.reversed_dict.get(self.keys[key]["mods"][0], " ")
 
-                logger.info("\tget_bindings_<{}>={} Key: <{}> Mod: <{}>".format(key, self.keys[key], keyname, keymod))
+                logger.debug("\tget_bindings_<{}>={} Key: <{}> Mod: <{}>".format(key, self.keys[key], keyname, keymod))
                 if key not in self.keys:
                     self.ap_ckb(
                         "log", f"WARNING: \tget_bindings_<{key}>= does not have a valid keyboard keybind {keyname}."
@@ -156,7 +156,7 @@ class KeyBindings:
                         if hold is not None:
                             binding["hold"] = True
                 except KeyError:
-                    print(
+                    logger.warning(
                         "Unrecognised key '"
                         + (json.dumps(binding) if binding else "?")
                         + "' for bind '"
@@ -228,7 +228,7 @@ class KeyBindings:
         was modified last."""
         active = active_binds_files()
         for category, path in active.items():
-            logger.info(f"Keybindings file for {category} controls: {path}")
+            logger.debug(f"Keybindings file for {category} controls: {path}")
         if len(active) == 2:
             return active
         latest = self.get_latest_keybinds()
