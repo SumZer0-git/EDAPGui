@@ -70,8 +70,8 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 # Installation
 _Requires **python 3** and **git**_
 
-_Python 3.11 is the recommended version of Python. Python 3.9 or 3.10 may also be used._
-If you don't have Python installed, here is a link to [Python 3.11 installer](https://www.python.org/downloads/release/python-3110/). Scroll to the bottom and select the installer with the description "Recommended".
+_Python 3.12 is the supported and recommended version of Python. Python 3.13 has not been validated yet._
+If you don't have Python installed, download the [Python 3.12 installer](https://www.python.org/downloads/release/python-31210/). Scroll to the bottom and select the installer with the description "Recommended".
 
 ## Simple
 If you just want to download and run EDAP and have no interest in the source code, use this method:

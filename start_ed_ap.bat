@@ -15,5 +15,13 @@ if not exist "venv\Scripts\python.exe" (
     )
 )
 
+venv\Scripts\python.exe -c "import sys; sys.exit(0 if sys.version_info[:2] == (3, 12) else 1)"
+if errorlevel 1 (
+    echo Error: The virtual environment must use Python 3.12.
+    echo Remove the existing "venv" folder and run install_requirements.bat.
+    pause
+    exit /b 1
+)
+
 echo Starting EDAPGui...
 venv\Scripts\python.exe src\main.py

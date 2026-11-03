@@ -10,31 +10,22 @@ cd /d "%~dp0"
 echo Installing EDAPGui Requirements...
 echo ================================
 
-if exist "venv\Scripts\python.exe" goto install
+if exist "venv\Scripts\python.exe" (
+    venv\Scripts\python.exe -c "import sys; sys.exit(0 if sys.version_info[:2] == (3, 12) else 1)"
+    if errorlevel 1 (
+        echo Error: The existing virtual environment must use Python 3.12.
+        echo Remove the existing "venv" folder and run this installer again.
+        goto fail
+    )
+    goto install
+)
 
-set PYTHON_CMD=
-py -3.11 --version >nul 2>&1
-if %errorlevel% == 0 set PYTHON_CMD=py -3.11
-if defined PYTHON_CMD goto create_venv
-
-py -3.10 --version >nul 2>&1
-if %errorlevel% == 0 set PYTHON_CMD=py -3.10
-if defined PYTHON_CMD goto create_venv
-
-py -3.9 --version >nul 2>&1
-if %errorlevel% == 0 set PYTHON_CMD=py -3.9
-if defined PYTHON_CMD goto create_venv
-
-py --version >nul 2>&1
-if %errorlevel% == 0 set PYTHON_CMD=py
-if defined PYTHON_CMD goto create_venv
-
-python --version >nul 2>&1
-if %errorlevel% == 0 set PYTHON_CMD=python
-if defined PYTHON_CMD goto create_venv
-
-echo Error: No Python installation found. Please install Python 3.9, 3.10, or 3.11.
-goto fail
+py -3.12 --version >nul 2>&1
+if errorlevel 1 (
+    echo Error: Python 3.12 was not found. Please install Python 3.12.
+    goto fail
+)
+set PYTHON_CMD=py -3.12
 
 :create_venv
 echo Creating virtual environment using: %PYTHON_CMD%
