@@ -612,7 +612,6 @@ class APGui:
         self.TRAVEL_A_running = False
         self.log_msg("Travel Assist stop")
         self.ed_ap.vce.say("Travel Assist Off")
-        self.update_statusline("Idle")
 
     def start_waypoint(self):
         logger.debug("Entered: start_waypoint")
@@ -627,7 +626,6 @@ class APGui:
         self.WP_A_running = False
         self.log_msg("Waypoint Assist stop")
         self.ed_ap.vce.say("Waypoint Assist Off")
-        self.update_statusline("Idle")
 
     def start_dss(self):
         logger.debug("Entered: start_dss")
@@ -642,7 +640,6 @@ class APGui:
         self.DSS_A_running = False
         self.log_msg("DSS Assist stop")
         self.ed_ap.vce.say("DSS Assist Off")
-        self.update_statusline("Idle")
 
     def toggle_single_waypoint(self):
         if self.swp_var.get() and not self.SWP_A_running:
@@ -671,7 +668,6 @@ class APGui:
         self.SWP_A_running = False
         self.log_msg("Single Waypoint Assist stop")
         self.ed_ap.vce.say("Single Waypoint Assist Off")
-        self.update_statusline("Idle")
 
     # info and updates
 

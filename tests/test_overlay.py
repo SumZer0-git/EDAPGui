@@ -3,11 +3,12 @@
 import unittest
 from threading import RLock
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 from PIL import ImageColor
 
 from core.autopilot import EDAutopilot, _overlay_status_role, _set_overlay_config_defaults
+from core.types import EdapInterruptError
 from gui.overlay import _WM_DPICHANGED, Overlay, _load_font, _render_image
 from gui.theme import BLUE, MUTED, ORANGE, PANEL, TEXT
 
@@ -488,6 +489,52 @@ class OverlayRenderingTests(unittest.TestCase):
             autopilot.overlay.overlay_clear.assert_called_once_with()
             autopilot.overlay.overlay_paint.assert_called_once_with()
             update_overlay.assert_called_once_with()
+
+    def test_every_assist_end_resets_status_to_idle_after_the_stop_callback(self):
+        assists = (
+            ("travel_assist_enabled", "travel_assist", "travel_stop"),
+            ("waypoint_assist_enabled", "waypoint_assist", "waypoint_stop"),
+            ("afk_combat_assist_enabled", "afk_combat_loop", "afk_stop"),
+            ("dss_assist_enabled", "dss_assist", "dss_stop"),
+            ("single_waypoint_enabled", "single_waypoint_assist", "single_waypoint_stop"),
+        )
+        endings = (("interrupted", EdapInterruptError()), ("finished", None))
+        for flag, routine, stop_msg in assists:
+            for ending, error in endings:
+                with self.subTest(assist=flag, ending=ending):
+                    autopilot = EDAutopilot.__new__(EDAutopilot)
+                    autopilot.terminate = False
+                    autopilot.gui_loaded = False
+                    autopilot._sc_sco_active_loop_thread = Mock(is_alive=Mock(return_value=True))
+                    for name, _, _ in assists:
+                        setattr(autopilot, name, name == flag)
+                    autopilot.keys = autopilot.scrReg = None
+                    autopilot.update_overlay = Mock()
+                    autopilot.ap_ckb = Mock()
+
+                    def run_assist(*args, error=error):
+                        autopilot.update_ap_status("Maneuvering")
+                        if error is not None:
+                            raise error
+
+                    setattr(autopilot, routine, run_assist)
+
+                    def stop_loop(_seconds, autopilot=autopilot):
+                        autopilot.terminate = True
+
+                    with (
+                        patch("core.autopilot.set_focus_elite_window"),
+                        patch("core.autopilot.cv2.waitKey"),
+                        patch("core.autopilot.sleep", side_effect=stop_loop),
+                    ):
+                        autopilot.engine_loop()
+
+                    self.assertFalse(getattr(autopilot, flag))
+                    self.assertEqual(autopilot.ap_state, "Idle")
+                    self.assertEqual(
+                        autopilot.ap_ckb.call_args_list[-2:],
+                        [call(stop_msg), call("statusline", "Idle")],
+                    )
 
     def test_status_lines_can_be_hidden_and_compacted(self):
         autopilot = EDAutopilot.__new__(EDAutopilot)

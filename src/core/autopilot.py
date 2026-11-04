@@ -492,9 +492,15 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             self.overlay.overlay_paint()
 
     def update_ap_status(self, txt):
+        """Single source for the AP status shown in the GUI status line and the overlay."""
         self.ap_state = txt
         self.update_overlay()
         self.ap_ckb("statusline", txt)
+
+    def _finish_assist(self, stop_msg):
+        """Reports the end of an assist after its thread work is done, so no late status can override Idle."""
+        self.ap_ckb(stop_msg)
+        self.update_ap_status("Idle")
 
         # Performs left menu ops to request docking
 
@@ -645,8 +651,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
 
                 logger.debug("Completed travel_assist")
                 self.travel_assist_enabled = False
-                self.ap_ckb("travel_stop")
-                self.update_overlay()
+                self._finish_assist("travel_stop")
 
             elif self.waypoint_assist_enabled:
                 logger.debug("Running waypoint_assist")
@@ -665,8 +670,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                     logger.exception(f"Unexpected error in waypoint assist: {e}")
 
                 self.waypoint_assist_enabled = False
-                self.ap_ckb("waypoint_stop")
-                self.update_overlay()
+                self._finish_assist("waypoint_stop")
 
             elif self.afk_combat_assist_enabled:
                 self.update_overlay()
@@ -675,8 +679,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                 except EdapInterruptError:
                     logger.debug("Stopping afk_combat")
                 self.afk_combat_assist_enabled = False
-                self.ap_ckb("afk_stop")
-                self.update_overlay()
+                self._finish_assist("afk_stop")
 
             elif self.dss_assist_enabled:
                 logger.debug("Running dss_assist")
@@ -687,8 +690,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                 except EdapInterruptError:
                     logger.debug("Stopping DSS Assist")
                 self.dss_assist_enabled = False
-                self.ap_ckb("dss_stop")
-                self.update_overlay()
+                self._finish_assist("dss_stop")
 
             elif self.single_waypoint_enabled:
                 self.update_overlay()
@@ -697,8 +699,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                 except EdapInterruptError:
                     logger.debug("Stopping Single Waypoint Assist")
                 self.single_waypoint_enabled = False
-                self.ap_ckb("single_waypoint_stop")
-                self.update_overlay()
+                self._finish_assist("single_waypoint_stop")
 
             # Check once EDAPGUI loaded to prevent errors logging to the listbox before loaded
             if self.gui_loaded:
