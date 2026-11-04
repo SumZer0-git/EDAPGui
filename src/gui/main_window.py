@@ -9,39 +9,15 @@ import sys
 import threading
 import tkinter as tk
 import webbrowser
+from collections import deque
 from datetime import datetime
-from idlelib.tooltip import Hovertip
 from pathlib import Path
 from time import sleep
-from tkinter import (
-    BOTH,
-    END,
-    LEFT,
-    RIGHT,
-    BooleanVar,
-    Button,
-    Checkbutton,
-    E,
-    Entry,
-    Frame,
-    IntVar,
-    Label,
-    LabelFrame,
-    Listbox,
-    Menu,
-    N,
-    Radiobutton,
-    S,
-    Scrollbar,
-    StringVar,
-    W,
-    Y,
-    messagebox,
-    ttk,
-)
 from tkinter import filedialog as fd
+from tkinter import messagebox
 
 import keyboard
+import ttkbootstrap as ttk
 
 from controls.hotkeys import ActionQueue, HotkeyListener
 from controls.mouse_point import MousePoint
@@ -49,10 +25,50 @@ from core import paths, updates
 from core.autopilot import EDAutopilot
 from core.logger import logger
 from core.version import EDAP_VERSION
+from gui import fields, window_state
+from gui.fields import FIELDS, fields_of
+from gui.pages import PAGES
+from gui.theme import (
+    BG,
+    GREEN,
+    MUTED,
+    ORANGE,
+    PANEL,
+    RED,
+    TEXT,
+    YELLOW,
+    Metrics,
+    Theme,
+    dark_titlebar,
+    enable_dpi_awareness,
+    min_caption_width,
+    remove_maximize,
+    window_dpi,
+)
+from gui.widgets import RoundButton, add_tooltip
 
-FORM_TYPE_CHECKBOX = 0
-FORM_TYPE_SPINBOX = 1
-FORM_TYPE_ENTRY = 2
+MODES = (
+    ("travel", "Travel Assist"),
+    ("waypoint", "Waypoint Assist"),
+    ("afk", "AFK Combat Assist"),
+    ("dss", "DSS Assist"),
+)
+MODE_KEYS = {key for key, _ in MODES}
+SAVE_TABS = ("Ship", "Settings", "Debug")
+SAVE_TEXT = {
+    "saved": ("\u2713 Saved", GREEN),
+    "dirty": ("\u25cf Unsaved changes", YELLOW),
+    "error": ("\u2715 Not saved", RED),
+}
+SAVE_DELAY_MS = 800
+SAVED_FADE_MS = 3000
+
+# Window size in logical pixels; 1000 fits next to other windows on a portrait 1080p monitor
+WINDOW_WIDTH = 820
+WINDOW_HEIGHT = 650
+COLLAPSED_HEIGHT = 392
+SIDEBAR_WIDTH = 200
+OUTER_PAD = 10
 
 
 def hyperlink_callback(url):
@@ -60,150 +76,386 @@ def hyperlink_callback(url):
 
 
 class APGui:
-    def __init__(self, root):
+    def __init__(self, root, ed_ap=None, services=True):
+        """ed_ap and services exist for tests: they allow a stand-in autopilot and no hotkeys or update check."""
         self.root = root
-        root.title("EDAutopilot " + EDAP_VERSION)
-        # root.overrideredirect(True)
-        # root.geometry("400x550")
-        # root.configure(bg="blue")
+        root.title("EDAutopilot")
         root.protocol("WM_DELETE_WINDOW", self.close_window)
-        root.resizable(False, False)
+        root.configure(bg=BG)
 
-        self.tooltips = {
-            "Travel Assist": "Follows your plotted system route and, if selected, continues to a local target.",
-            "Waypoint Assist": "When selected, will prompt for the waypoint file. \nThe waypoint file contains System names that \nwill be entered into Galaxy Map and route plotted.",
-            "DSS Assist": "When selected, will perform DSS scans while you are traveling between stars.",
-            "Single Waypoint Assist": "",
-            "AFK Combat Assist": "Used with a AFK Combat ship in a Rez Zone.",
-            "RollRate": "Roll rate your ship has in deg/sec. Higher the number the more maneuverable the ship.",
-            "PitchRate": "Pitch (up/down) rate your ship has in deg/sec. Higher the number the more maneuverable the ship.",
-            "YawRate": "Yaw rate (rudder) your ship has in deg/sec. Higher the number the more maneuverable the ship.",
-            "SunPitchUp+Time": "This field are for ship that tend to overheat. \nProviding 1-2 more seconds of Pitch up when avoiding the Sun \nwill overcome this problem.",
-            "Sun Bright Threshold": "The low level for brightness detection, \nrange 0-255, want to mask out darker items",
-            "Nav Align Tries": "How many attempts the ap should make at alignment.",
-            "Jump Tries": "How many attempts the ap should make to jump.",
-            "Docking Retries": "How many attempts to make to dock.",
-            "Wait For Autodock": "After docking granted, \nwait this amount of time for us to get docked with autodocking",
-            "Start Travel Assist": "Button to start Travel Assist.",
-            "Stop All": "Button to stop all assists.",
-            "Refuel Threshold": "If fuel level get below this level, \nit will attempt refuel.",
-            "Scoop Timeout": "Number of second to wait for full tank, \nmight mean we are not scooping well or got a small scooper",
-            "Fuel Threshold Abort": "Level at which AP will terminate, \nbecause we are not scooping well.",
-            "X Offset": "Offset left the screen to start place overlay text.",
-            "Y Offset": "Offset down the screen to start place overlay text.",
-            "Font Size": "Font size of the overlay.",
-            "Waypoint List Button": "Read in a file with with your Waypoints.",
-            "Cap Mouse XY": "This will provide the StationCoord value of the Station in the SystemMap. \nSelecting this button and then clicking on the Station in the SystemMap \nwill return the x,y value that can be pasted in the waypoints file",
-            "Reset Waypoint List": "Reset your waypoint list, \nthe waypoint assist will start again at the first point in the list.",
-        }
+        self.metrics = Metrics(root)
+        self.theme = Theme(root, self.metrics)
 
         self.gui_loaded = False
-        self.log_buffer = queue.Queue()
+        self.log_lines = deque(maxlen=2000)
+        self.log_text = None
+        self.ui_queue = queue.Queue()  # messages from other threads, handled by the GUI thread
         self.callback("log", f"Starting ED Autopilot {EDAP_VERSION}.")
 
-        self.ed_ap = EDAutopilot(cb=self.callback)
-
+        self.ed_ap = ed_ap if ed_ap is not None else EDAutopilot(cb=self.callback)
         self.mouse = MousePoint()
+        self.hotkeys = None
+        self.active_hotkeys = {}
+        self.hotkey_poll_id = None
 
-        self.checkboxvar = {}
-        self.radiobuttonvar = {}
-        self.entries = {}
-        self.lab_ck = {}
-        self.single_waypoint_system = StringVar()
-        self.single_waypoint_station = StringVar()
-        self.TCE_Destination_Filepath = StringVar()
+        self.single_waypoint_system = tk.StringVar()
+        self.single_waypoint_station = tk.StringVar()
+        self.swp_var = tk.BooleanVar()
+        self.wp_filelabel = tk.StringVar(value="<no list loaded>")
+        self.update_text = tk.StringVar(value="Not checked yet.")
+        self.update_tag = None
+        self.download_button = None
 
         self.TRAVEL_A_running = False
         self.WP_A_running = False
         self.DSS_A_running = False
         self.SWP_A_running = False
+        self.active_mode = None
 
-        self.cv_view = False
+        self.vars = {}
+        self.applied = {}
+        self._loading = False
+        self.save_state = {tab: "saved" for tab in SAVE_TABS}
+        self.save_faded = {tab: True for tab in SAVE_TABS}
+        self._fade_jobs = {}
+        self.save_labels = {}
+        self._save_jobs = {}
+        for field in FIELDS:
+            self.vars[field.key] = tk.BooleanVar() if field.kind == "bool" else tk.StringVar()
+        self.load_vars()
+        for field in FIELDS:
+            self.vars[field.key].trace_add("write", lambda *args, f=field: self._on_var(f))
 
-        self.TCE_Destination_Filepath.set(self.ed_ap.config["TCEDestinationFilepath"])
+        self.state = window_state.load()
+        self.collapsed = self.state["collapsed"]
+        self.pinned = self.state["topmost"]
+        self.status_text = "Ready"
+        self.jump_text = ""
+        self.status = None
+        self.jumpcount = None
+        self.tab_index = 0
+        root.attributes("-topmost", self.pinned)
 
-        self.msgList = self.gui_gen(root)
+        root.update_idletasks()
+        self._dpi = window_dpi(root)
+        self.metrics.set_dpi(self._dpi)
+        self.theme.apply()
+        self._build_all()
+        dark_titlebar(root)
+        remove_maximize(root)
+        self._restore_position()
+        root.bind("<Configure>", self._on_configure)
 
-        self.checkboxvar["Enable Randomness"].set(self.ed_ap.config["EnableRandomness"])
-        self.checkboxvar["Activate Elite for each key"].set(self.ed_ap.config["ActivateEliteEachKey"])
-        self.checkboxvar["Automatic logout"].set(self.ed_ap.config["AutomaticLogout"])
-        self.checkboxvar["Enable Overlay"].set(self.ed_ap.config["OverlayTextEnable"])
-        self.checkboxvar["Enable Voice"].set(self.ed_ap.config["VoiceEnable"])
+        if services:
+            self.hotkey_actions = ActionQueue()
+            self.hotkeys = HotkeyListener(keyboard)
+            # Hotkeys are only registered at startup, so the tooltips show these and not later edits.
+            self.active_hotkeys = {
+                "stop": self.ed_ap.config["HotKey_StopAllAssists"],
+                "travel": self.ed_ap.config["HotKey_StartTravel"],
+            }
+            self.hotkeys.add_hotkey(self.active_hotkeys["stop"], lambda: self.hotkey_actions.put(self.stop_all_assists))
+            self.hotkeys.add_hotkey(
+                self.active_hotkeys["travel"],
+                lambda: self.hotkey_actions.put(lambda: self.callback("travel_start", None)),
+            )
+            self.hotkeys.start()
+            self._refresh_modes()
+            self.hotkey_poll_id = self.root.after(50, self.process_hotkey_actions)
+            self.check_updates(manual=False)
 
-        self.radiobuttonvar["dss_button"].set(self.ed_ap.config["DSSButton"])
-
-        self.entries["ship"]["PitchRate"].delete(0, END)
-        self.entries["ship"]["RollRate"].delete(0, END)
-        self.entries["ship"]["YawRate"].delete(0, END)
-        self.entries["ship"]["SunPitchUp+Time"].delete(0, END)
-
-        self.entries["autopilot"]["Sun Bright Threshold"].delete(0, END)
-        self.entries["autopilot"]["Nav Align Tries"].delete(0, END)
-        self.entries["autopilot"]["Jump Tries"].delete(0, END)
-        self.entries["autopilot"]["Docking Retries"].delete(0, END)
-        self.entries["autopilot"]["Wait For Autodock"].delete(0, END)
-
-        self.entries["refuel"]["Refuel Threshold"].delete(0, END)
-        self.entries["refuel"]["Scoop Timeout"].delete(0, END)
-        self.entries["refuel"]["Fuel Threshold Abort"].delete(0, END)
-
-        self.entries["overlay"]["X Offset"].delete(0, END)
-        self.entries["overlay"]["Y Offset"].delete(0, END)
-        self.entries["overlay"]["Font Size"].delete(0, END)
-
-        self.entries["buttons"]["Start Travel Assist"].delete(0, END)
-        self.entries["buttons"]["Stop All"].delete(0, END)
-
-        self.entries["ship"]["PitchRate"].insert(0, float(self.ed_ap.pitchrate))
-        self.entries["ship"]["RollRate"].insert(0, float(self.ed_ap.rollrate))
-        self.entries["ship"]["YawRate"].insert(0, float(self.ed_ap.yawrate))
-        self.entries["ship"]["SunPitchUp+Time"].insert(0, float(self.ed_ap.sunpitchuptime))
-
-        self.entries["autopilot"]["Sun Bright Threshold"].insert(0, int(self.ed_ap.config["SunBrightThreshold"]))
-        self.entries["autopilot"]["Nav Align Tries"].insert(0, int(self.ed_ap.config["NavAlignTries"]))
-        self.entries["autopilot"]["Jump Tries"].insert(0, int(self.ed_ap.config["JumpTries"]))
-        self.entries["autopilot"]["Docking Retries"].insert(0, int(self.ed_ap.config["DockingRetries"]))
-        self.entries["autopilot"]["Wait For Autodock"].insert(0, int(self.ed_ap.config["WaitForAutoDockTimer"]))
-        self.entries["refuel"]["Refuel Threshold"].insert(0, int(self.ed_ap.config["RefuelThreshold"]))
-        self.entries["refuel"]["Scoop Timeout"].insert(0, int(self.ed_ap.config["FuelScoopTimeOut"]))
-        self.entries["refuel"]["Fuel Threshold Abort"].insert(0, int(self.ed_ap.config["FuelThreasholdAbortAP"]))
-        self.entries["overlay"]["X Offset"].insert(0, int(self.ed_ap.config["OverlayTextXOffset"]))
-        self.entries["overlay"]["Y Offset"].insert(0, int(self.ed_ap.config["OverlayTextYOffset"]))
-        self.entries["overlay"]["Font Size"].insert(0, int(self.ed_ap.config["OverlayTextFontSize"]))
-
-        self.entries["buttons"]["Start Travel Assist"].insert(0, str(self.ed_ap.config["HotKey_StartTravel"]))
-        self.entries["buttons"]["Stop All"].insert(0, str(self.ed_ap.config["HotKey_StopAllAssists"]))
-
-        if self.ed_ap.config["LogDEBUG"]:
-            self.radiobuttonvar["debug_mode"].set("Debug")
-        elif self.ed_ap.config["LogINFO"]:
-            self.radiobuttonvar["debug_mode"].set("Info")
-        else:
-            self.radiobuttonvar["debug_mode"].set("Error")
-
-        self.checkboxvar["Debug Overlay"].set(self.ed_ap.config["DebugOverlay"])
-
-        self.hotkey_actions = ActionQueue()
-        self.hotkeys = HotkeyListener(keyboard)
-        self.hotkeys.add_hotkey(
-            self.ed_ap.config["HotKey_StopAllAssists"], lambda: self.hotkey_actions.put(self.stop_all_assists)
-        )
-        self.hotkeys.add_hotkey(
-            self.ed_ap.config["HotKey_StartTravel"],
-            lambda: self.hotkey_actions.put(lambda: self.callback("travel_start", None)),
-        )
-        self.hotkeys.start()
-        self.hotkey_poll_id = self.root.after(50, self.process_hotkey_actions)
-
-        # check for updates
-        self.check_updates(manual=False)
         self.gui_loaded = True
         self.ed_ap.gui_loaded = True
-        # Send a log entry which will flush out the buffer.
         self.callback("log", "ED Autopilot loaded successfully.")
+
+    # window layout
+
+    def _build_all(self):
+        """Create all widgets. State lives in the Tk variables and attributes of this class, so it survives a rebuild."""
+        u = self.metrics.u
+        for child in self.root.winfo_children():
+            child.destroy()
+        self.save_labels = {}
+        self.root.columnconfigure(0, weight=0)
+        self.root.columnconfigure(1, weight=1)
+        self.root.rowconfigure(0, weight=1)
+        self._build_sidebar()
+        self._build_content()
+        self.statusbar = ttk.Frame(self.root)
+        self.statusbar.grid(row=1, column=0, columnspan=2, sticky="ew", padx=u(OUTER_PAD), pady=(0, u(4)))
+        self.statusbar.columnconfigure((0, 2), weight=1, uniform="footer")
+        self.status = ttk.Label(self.statusbar, text=self.status_text, padding=(u(4), u(2)), foreground=MUTED)
+        self.status.grid(row=0, column=0, sticky="w")
+        self.jumpcount = ttk.Label(self.statusbar, text=self.jump_text, padding=(u(4), u(2)), foreground=MUTED)
+        self.jumpcount.grid(row=0, column=1)
+        right = ttk.Frame(self.statusbar)
+        right.grid(row=0, column=2, sticky="e")
+        self.update_label = ttk.Label(
+            right, padding=(u(4), u(2)), foreground=ORANGE, cursor="hand2", font="TkDefaultFont"
+        )
+        self.update_label.grid(row=0, column=0, padx=(0, u(12)))
+        self.update_label.bind("<Button-1>", lambda e: self._open_info_tab())
+        self._show_update_notice()
+        ttk.Label(right, text=EDAP_VERSION, padding=(u(4), u(2)), foreground=MUTED).grid(row=0, column=1)
+        self._apply_layout()
+        self._refresh_modes()
+
+    def _build_sidebar(self):
+        u = self.metrics.u
+        self.sidebar = tk.Frame(self.root, bg=PANEL)
+        self.sidebar.grid(row=0, column=0, sticky="ns", padx=(u(OUTER_PAD), u(5)), pady=(u(OUTER_PAD), u(5)))
+        self.sidebar.grid_propagate(False)
+        self.sidebar.pack_propagate(False)
+        tk.Frame(self.sidebar, bg=PANEL, height=u(8)).pack()
+        self.items = {}
+        self.mode_tips = {}
+        self.mode_labels = dict(MODES)
+        for key, label in MODES:
+            button = RoundButton(self.sidebar, self.metrics, key, label, lambda k=key: self._mode_clicked(k))
+            button.pack(fill="x", padx=u(8), pady=u(2))
+            self.items[key] = button
+            self.mode_tips[key] = add_tooltip(button, label)
+        self.stop_button = RoundButton(
+            self.sidebar, self.metrics, "stop", "Stop All", self.stop_all_assists, danger=True
+        )
+        self.stop_button.pack(fill="x", padx=u(8), pady=(u(14), u(2)))
+        self.stop_tip = add_tooltip(self.stop_button, "Stop All")
+        self.bottom = tk.Frame(self.sidebar, bg=PANEL)
+        self.bottom.pack(side="bottom", fill="x", pady=u(8))
+        self.pin = RoundButton(self.bottom, self.metrics, "pin", command=self.toggle_pin, framed=False)
+        self.power = RoundButton(self.bottom, self.metrics, "power", command=self._power_menu, framed=False)
+        self.fold = RoundButton(self.bottom, self.metrics, "left", command=self.toggle_collapse, framed=False)
+        self.pin.active = self.pinned
+        self.menu = tk.Menu(
+            self.root, tearoff=0, bg=PANEL, fg=TEXT, activebackground=ORANGE, activeforeground=TEXT, bd=0
+        )
+        self.menu.add_command(label="Restart", command=self.restart_program)
+        self.menu.add_command(label="Exit", command=self.close_window)
+        for widget in (self.sidebar, self.bottom):
+            widget.bind("<Button-1>", self._drag_start)
+            widget.bind("<B1-Motion>", self._drag_move)
+
+    def _layout_bottom(self):
+        u = self.metrics.u
+        buttons = (self.pin, self.power, self.fold)
+        for button in buttons:
+            button.grid_forget()
+        for i, button in enumerate(buttons):
+            if self.collapsed:
+                button.grid(row=i, column=0, sticky="ew", pady=u(3), padx=u(8))
+            else:
+                button.grid(row=0, column=i, sticky="ew", padx=u(3))
+        for c in range(3):
+            self.bottom.columnconfigure(c, weight=1 if (not self.collapsed or c == 0) else 0)
+
+    def _build_content(self):
+        u = self.metrics.u
+        self.content = ttk.Frame(self.root)
+        self.content.grid(row=0, column=1, sticky="nsew", padx=(u(5), u(OUTER_PAD)), pady=(u(OUTER_PAD), u(5)))
+        self.content.columnconfigure(0, weight=1)
+        self.content.rowconfigure(0, weight=1)
+        self.tabs = ttk.Notebook(self.content)
+        self.tabs.grid(row=0, column=0, sticky="nsew")
+        for name, build in PAGES:
+            page = ttk.Frame(self.tabs, padding=(0, u(OUTER_PAD), 0, 0))
+            self.tabs.add(page, text=name)
+            build(self, page)
+        for tab, label in self.save_labels.items():
+            self._show_save(tab, label)
+        self.tabs.select(self.tab_index)
+        self.tabs.bind("<<NotebookTabChanged>>", lambda e: setattr(self, "tab_index", self.tabs.index("current")))
+
+    def _show_update_notice(self):
+        if self.update_tag:
+            self.update_label.configure(text=f"Update available: {self.update_tag}")
+            self.update_label.grid()
+        else:
+            self.update_label.grid_remove()
+
+    def _open_info_tab(self):
+        self.tabs.select(len(PAGES) - 1)
+
+    def _set_size(self, width, height):
+        self.root.minsize(1, 1)
+        self.root.maxsize(width, height)
+        self.root.minsize(width, height)
+        self.root.geometry(f"{width}x{height}")
+
+    def _apply_layout(self):
+        """Switch between the full window and the narrow icon strip. The size is fixed in both states."""
+        px, u = self.metrics.px, self.metrics.u
+        if self.collapsed:
+            self.content.grid_remove()
+            self.statusbar.grid_remove()
+            width = min_caption_width(self.root)
+            self.root.columnconfigure(0, weight=1)
+            self.root.columnconfigure(1, weight=0)
+            self.sidebar.configure(width=width - 2 * px(OUTER_PAD))
+            self.sidebar.grid(sticky="nsew", padx=u(OUTER_PAD))
+            self._set_size(width, px(COLLAPSED_HEIGHT))
+        else:
+            self.content.grid()
+            self.statusbar.grid()
+            self.root.columnconfigure(0, weight=0)
+            self.root.columnconfigure(1, weight=1)
+            self.sidebar.configure(width=px(SIDEBAR_WIDTH))
+            self.sidebar.grid(sticky="ns", padx=(u(OUTER_PAD), u(5)))
+            self._set_size(px(WINDOW_WIDTH), px(WINDOW_HEIGHT))
+        self._layout_bottom()
+        self.fold.set_icon("right" if self.collapsed else "left")
+        for item in (*self.items.values(), self.stop_button):
+            item.set_icon_only(self.collapsed)
+        for item in (self.pin, self.power, self.fold):
+            item.redraw()
+
+    def toggle_collapse(self):
+        self.collapsed = not self.collapsed
+        self._apply_layout()
+
+    def toggle_pin(self):
+        self.pinned = not self.pinned
+        self.pin.set_active(self.pinned)
+        self.root.attributes("-topmost", self.pinned)
+
+    def _power_menu(self):
+        self.menu.tk_popup(self.power.winfo_rootx() + self.power.winfo_width(), self.power.winfo_rooty())
+
+    def _drag_start(self, event):
+        self._drag = (event.x_root - self.root.winfo_x(), event.y_root - self.root.winfo_y())
+
+    def _drag_move(self, event):
+        self.root.geometry(f"+{event.x_root - self._drag[0]}+{event.y_root - self._drag[1]}")
+
+    def _restore_position(self):
+        x, y = self.state["x"], self.state["y"]
+        if x is None or y is None:
+            return
+        left, top = self.root.winfo_vrootx(), self.root.winfo_vrooty()
+        width, height = self.root.winfo_vrootwidth(), self.root.winfo_vrootheight()
+        if left <= x < left + width - 100 and top <= y < top + height - 100:
+            self.root.geometry(f"+{x}+{y}")
+
+    def _on_configure(self, event):
+        if event.widget is not self.root:
+            return
+        dpi = window_dpi(self.root)
+        if dpi != self._dpi:
+            self._dpi = dpi
+            self.root.after(10, self._rescale)
+
+    def _rescale(self):
+        """The window moved to a monitor with another scaling: rebuild everything at the new size."""
+        self.metrics.set_dpi(self._dpi)
+        self.theme.apply()
+        self._build_all()
+
+    # tab content helpers used by gui.pages
+
+    def fill_log(self):
+        self.log_text.configure(state="normal")
+        self.log_text.insert("end", "\n".join(self.log_lines) + ("\n" if self.log_lines else ""))
+        self.log_text.configure(state="disabled")
+        self.log_text.see("end")
+
+    def open_url(self, url):
+        hyperlink_callback(url)
+
+    def refresh_update_button(self):
+        if self.download_button is not None and self.download_button.winfo_exists():
+            self.download_button.set_disabled(not self.update_tag)
+
+    # settings: loading, autosave
+
+    def load_vars(self, tab=None):
+        """Show the values the autopilot currently has."""
+        self._loading = True
+        try:
+            for field in FIELDS:
+                if tab is not None and field.tab != tab:
+                    continue
+                value = fields.read(field, self.ed_ap)
+                self.vars[field.key].set(value)
+                try:
+                    self.applied[field.key] = fields.parse(field, value)
+                except ValueError:
+                    self.applied[field.key] = None
+        finally:
+            self._loading = False
+
+    def _on_var(self, field):
+        if self._loading:
+            return
+        self._set_save(field.tab, "dirty")
+        self._cancel_save_job(field.tab)
+        delay = 1 if field.kind in ("bool", "choice") else SAVE_DELAY_MS
+        self._save_jobs[field.tab] = self.root.after(delay, lambda: self.commit(field.tab))
+
+    def _cancel_save_job(self, tab):
+        job = self._save_jobs.pop(tab, None)
+        if job is not None:
+            self.root.after_cancel(job)
+
+    def commit(self, tab):
+        """Check the values of a tab and, if all are valid, apply them and write the configuration."""
+        self._cancel_save_job(tab)
+        if self.save_state.get(tab) == "saved":
+            return
+        tab_fields = fields_of(tab)
+        try:
+            parsed = {field.key: fields.parse(field, self.vars[field.key].get()) for field in tab_fields}
+        except (ValueError, tk.TclError) as e:
+            logger.debug(f"Settings not saved: {e}")
+            self._set_save(tab, "error")
+            return
+        try:
+            changed = False
+            pos = (self.root.winfo_x() + self.root.winfo_width() + 4, self.root.winfo_y())
+            for field in tab_fields:
+                if self.applied.get(field.key) != parsed[field.key]:
+                    fields.write(field, self.ed_ap, parsed[field.key], pos)
+                    self.applied[field.key] = parsed[field.key]
+                    changed = True
+            if changed:
+                if tab == "Ship":
+                    self.ed_ap.update_ship_configs()
+                else:
+                    self.ed_ap.update_config()
+        except Exception as e:
+            logger.warning(f"Settings of tab {tab} could not be saved: {e}")
+            self._set_save(tab, "error")
+            return
+        self._set_save(tab, "saved")
+
+    def _set_save(self, tab, state):
+        self.save_state[tab] = state
+        self.save_faded[tab] = False
+        job = self._fade_jobs.pop(tab, None)
+        if job:
+            self.root.after_cancel(job)
+        if state == "saved":
+            self._fade_jobs[tab] = self.root.after(SAVED_FADE_MS, lambda: self._fade_save(tab))
+        label = self.save_labels.get(tab)
+        if label is not None and label.winfo_exists():
+            self._show_save(tab, label)
+
+    def _fade_save(self, tab):
+        self._fade_jobs.pop(tab, None)
+        self.save_faded[tab] = True
+        label = self.save_labels.get(tab)
+        if label is not None and label.winfo_exists():
+            self._show_save(tab, label)
+
+    def _show_save(self, tab, label):
+        text, color = SAVE_TEXT[self.save_state[tab]]
+        if self.save_faded.get(tab):
+            text = ""
+        label.configure(text=text, fg=color)
 
     # callback from the EDAP, to configure GUI items
     def callback(self, msg, body=None):
+        if threading.current_thread() is not threading.main_thread():
+            self.ui_queue.put((msg, body))
+            return
         if msg == "log":
             self.log_msg(body)
         elif msg == "log+vce":
@@ -211,80 +463,113 @@ class APGui:
             self.ed_ap.vce.say(body)
         elif msg == "statusline":
             self.update_statusline(body)
-        elif msg == "travel_stop":
-            logger.debug("Detected 'travel_stop' callback msg")
-            self.checkboxvar["Travel Assist"].set(0)
-            self.check_cb("Travel Assist")
-        elif msg == "travel_start":
-            self.checkboxvar["Travel Assist"].set(1)
-            self.check_cb("Travel Assist")
-        elif msg == "waypoint_stop":
-            logger.debug("Detected 'waypoint_stop' callback msg")
-            self.checkboxvar["Waypoint Assist"].set(0)
-            self.check_cb("Waypoint Assist")
-        elif msg == "waypoint_start":
-            self.checkboxvar["Waypoint Assist"].set(1)
-            self.check_cb("Waypoint Assist")
-        elif msg == "afk_stop":
-            logger.debug("Detected 'afk_stop' callback msg")
-            self.checkboxvar["AFK Combat Assist"].set(0)
-            self.check_cb("AFK Combat Assist")
-        elif msg == "dss_start":
-            logger.debug("Detected 'dss_start' callback msg")
-            self.checkboxvar["DSS Assist"].set(1)
-            self.check_cb("DSS Assist")
-        elif msg == "dss_stop":
-            logger.debug("Detected 'dss_stop' callback msg")
-            self.checkboxvar["DSS Assist"].set(0)
-            self.check_cb("DSS Assist")
         elif msg == "single_waypoint_stop":
             logger.debug("Detected 'single_waypoint_stop' callback msg")
-            self.checkboxvar["Single Waypoint Assist"].set(0)
-            self.check_cb("Single Waypoint Assist")
-
+            self.swp_var.set(False)
+            self.toggle_single_waypoint()
         elif msg == "stop_all_assists":
             logger.debug("Detected 'stop_all_assists' callback msg")
-
-            self.checkboxvar["Travel Assist"].set(0)
-            self.check_cb("Travel Assist")
-
-            self.checkboxvar["Waypoint Assist"].set(0)
-            self.check_cb("Waypoint Assist")
-
-            self.checkboxvar["AFK Combat Assist"].set(0)
-            self.check_cb("AFK Combat Assist")
-
-            self.checkboxvar["DSS Assist"].set(0)
-            self.check_cb("DSS Assist")
-
-            self.checkboxvar["Single Waypoint Assist"].set(0)
-            self.check_cb("Single Waypoint Assist")
-
+            self.stop_active_mode()
+            self.swp_var.set(False)
+            self.toggle_single_waypoint()
         elif msg == "jumpcount":
             self.update_jumpcount(body)
         elif msg == "update_ship_cfg":
             self.update_ship_cfg()
+        else:
+            mode, _, action = msg.rpartition("_")
+            if mode in MODE_KEYS and action in ("start", "stop"):
+                if action == "stop":
+                    logger.debug(f"Detected '{msg}' callback msg")
+                self.set_mode(mode, action == "start")
 
     def update_ship_cfg(self):
-        # load up the display with what we read from ED_AP for the current ship
-        self.entries["ship"]["PitchRate"].delete(0, END)
-        self.entries["ship"]["RollRate"].delete(0, END)
-        self.entries["ship"]["YawRate"].delete(0, END)
-        self.entries["ship"]["SunPitchUp+Time"].delete(0, END)
+        """Load up the display with what we read from ED_AP for the current ship."""
+        self.load_vars("Ship")
+        self._cancel_save_job("Ship")
+        self._set_save("Ship", "saved")
 
-        self.entries["ship"]["PitchRate"].insert(0, self.ed_ap.pitchrate)
-        self.entries["ship"]["RollRate"].insert(0, self.ed_ap.rollrate)
-        self.entries["ship"]["YawRate"].insert(0, self.ed_ap.yawrate)
-        self.entries["ship"]["SunPitchUp+Time"].insert(0, self.ed_ap.sunpitchuptime)
+    def process_hotkey_actions(self):
+        self.hotkey_poll_id = self.root.after(50, self.process_hotkey_actions)
+        self.hotkey_actions.run_pending()
+        while True:
+            try:
+                msg, body = self.ui_queue.get_nowait()
+            except queue.Empty:
+                break
+            self.callback(msg, body)
+
+    # modes: only one can run at a time
+
+    def _mode_clicked(self, key):
+        self.set_mode(key, self.active_mode != key)
+
+    def set_mode(self, key, on):
+        if on:
+            if self.active_mode is not None:
+                return
+            self._start_mode(key)
+            self.active_mode = key
+        elif self.active_mode == key:
+            self._stop_mode(key)
+            self.active_mode = None
+        self._refresh_modes()
+
+    def stop_active_mode(self):
+        if self.active_mode is not None:
+            self.set_mode(self.active_mode, False)
+
+    def _start_mode(self, key):
+        if key == "travel":
+            self.start_travel()
+        elif key == "waypoint":
+            self.start_waypoint()
+        elif key == "dss":
+            self.start_dss()
+        else:
+            self.ed_ap.set_afk_combat_assist(True)
+            self.log_msg("AFK Combat Assist start")
+
+    def _stop_mode(self, key):
+        if key == "travel":
+            self.stop_travel()
+        elif key == "waypoint":
+            self.stop_waypoint()
+        elif key == "dss":
+            self.stop_dss()
+        else:
+            self.ed_ap.set_afk_combat_assist(False)
+            self.log_msg("AFK Combat Assist stop")
+
+    def _refresh_modes(self):
+        for key, button in self.items.items():
+            button.set_active(key == self.active_mode)
+            blocked = self.active_mode is not None and key != self.active_mode
+            button.set_disabled(blocked)
+            self.mode_tips[key].configure(text="Stop the running assist first." if blocked else self._tip(key))
+        self.stop_tip.configure(text=self._tip("stop", "Stop All"))
+
+    def _tip(self, key, label=None):
+        label = label or self.mode_labels[key]
+        hotkey = self.active_hotkeys.get(key)
+        return f"{label} ({hotkey.upper()})" if hotkey else label
 
     def quit(self):
         logger.debug("Entered: quit")
         self.close_window()
 
+    def _save_window_state(self):
+        window_state.save(
+            {"x": self.root.winfo_x(), "y": self.root.winfo_y(), "collapsed": self.collapsed, "topmost": self.pinned}
+        )
+
     def close_window(self):
         logger.debug("Entered: close_window")
-        self.hotkeys.stop()
-        self.root.after_cancel(self.hotkey_poll_id)
+        self._save_window_state()
+        if self.hotkeys is not None:
+            self.hotkeys.stop()
+        if self.hotkey_poll_id is not None:
+            self.root.after_cancel(self.hotkey_poll_id)
         self.stop_travel()
         self.ed_ap.quit()
         sleep(0.1)
@@ -294,10 +579,6 @@ class APGui:
     def stop_all_assists(self):
         logger.debug("Entered: stop_all_assists")
         self.callback("stop_all_assists")
-
-    def process_hotkey_actions(self):
-        self.hotkey_poll_id = self.root.after(50, self.process_hotkey_actions)
-        self.hotkey_actions.run_pending()
 
     def start_travel(self):
         logger.debug("Entered: start_travel")
@@ -344,6 +625,14 @@ class APGui:
         self.ed_ap.vce.say("DSS Assist Off")
         self.update_statusline("Idle")
 
+    def toggle_single_waypoint(self):
+        if self.swp_var.get() and not self.SWP_A_running:
+            self.start_single_waypoint_assist()
+            if not self.SWP_A_running:
+                self.swp_var.set(False)
+        elif not self.swp_var.get() and self.SWP_A_running:
+            self.stop_single_waypoint_assist()
+
     def start_single_waypoint_assist(self):
         """The debug command to go to a system or station or both."""
         logger.debug("Entered: start_single_waypoint_assist")
@@ -365,12 +654,13 @@ class APGui:
         self.ed_ap.vce.say("Single Waypoint Assist Off")
         self.update_statusline("Idle")
 
+    # info and updates
+
     def about(self):
         webbrowser.open_new("https://github.com/DopeEx/EDAPGui")
 
     def check_updates(self, manual=True):
-        """Look for a newer release in the background. The result is shown from the GUI thread.
-        At startup (manual=False) the user is only asked if a newer release exists."""
+        """Look for a newer release in the background. The result is shown on the Info tab."""
         result = {}
 
         def worker():
@@ -381,18 +671,28 @@ class APGui:
             if not result.get("done"):
                 self.root.after(200, show_result)
                 return
-            tag = result["tag"]
-            if tag is not None and updates.is_newer(tag):
-                if messagebox.askokcancel("Update Check", f"A new release version ({tag}) is available. Download now?"):
-                    webbrowser.open_new(updates.LATEST_RELEASE_PAGE)
-            elif manual:
-                if tag is None:
-                    messagebox.showinfo("Update Check", "Could not find a published release.")
-                else:
-                    messagebox.showinfo("Update Check", f"You are up to date ({EDAP_VERSION}).")
+            self._update_result(result["tag"], manual)
 
+        self.update_text.set("Checking for updates...")
         threading.Thread(target=worker, daemon=True).start()
         self.root.after(200, show_result)
+
+    def _update_result(self, tag, manual):
+        if tag is not None and updates.is_newer(tag):
+            self.update_tag = tag
+            self.update_text.set(f"A new release ({tag}) is available.")
+            self.log_msg(f"A new release version ({tag}) is available, see the Info tab.")
+        else:
+            self.update_tag = None
+            if tag is None:
+                self.update_text.set("Could not find a published release.")
+            else:
+                self.update_text.set(f"You are up to date ({EDAP_VERSION}).")
+        self._show_update_notice()
+        self.refresh_update_button()
+
+    def open_download(self):
+        webbrowser.open_new(updates.LATEST_RELEASE_PAGE)
 
     def open_changelog(self):
         webbrowser.open_new("https://github.com/DopeEx/EDAPGui/blob/main/CHANGELOG.md")
@@ -400,31 +700,28 @@ class APGui:
     def open_logfile(self):
         os.startfile(paths.LOG_FILE)
 
+    # log and status
+
     def log_msg(self, msg):
         message = datetime.now().strftime("%H:%M:%S: ") + msg
-
-        if not self.gui_loaded:
-            # Store message in queue
-            self.log_buffer.put(message)
-            logger.info(msg)
-        else:
-            # Add queued messages to the list
-            while not self.log_buffer.empty():
-                self.msgList.insert(END, self.log_buffer.get())
-
-            self.msgList.insert(END, message)
-            self.msgList.yview(END)
-            logger.info(msg)
-
-    def set_statusbar(self, txt):
-        self.statusbar.configure(text=txt)
+        logger.info(msg)
+        self.log_lines.append(message)
+        if self.log_text is not None and self.log_text.winfo_exists():
+            self.log_text.configure(state="normal")
+            self.log_text.insert("end", message + "\n")
+            self.log_text.configure(state="disabled")
+            self.log_text.see("end")
 
     def update_jumpcount(self, txt):
+        self.jump_text = txt
         self.jumpcount.configure(text=txt)
 
     def update_statusline(self, txt):
-        self.status.configure(text="Status: " + txt)
+        self.status_text = txt
+        self.status.configure(text=txt)
         self.log_msg(f"Status update: {txt}")
+
+    # ship and waypoints
 
     def ship_tst_pitch(self):
         self.ed_ap.ship_tst_pitch()
@@ -454,17 +751,12 @@ class APGui:
             if mb:
                 self.ed_ap.waypoint.mark_all_waypoints_not_complete()
         else:
-            mb = messagebox.showerror(
+            messagebox.showerror(
                 "Waypoint List Error", "Waypoint Assist must be disabled before you can reset the list."
             )
 
-    def save_settings(self):
-        self.entry_update()
-        self.ed_ap.update_config()
-        self.ed_ap.update_ship_configs()
-
     def load_tce_dest(self):
-        filename = self.ed_ap.config["TCEDestinationFilepath"]
+        filename = self.vars["TCEDestinationFilepath"].get()
         if os.path.exists(filename):
             with open(filename, "r") as json_file:
                 f_details = json.load(json_file)
@@ -472,546 +764,10 @@ class APGui:
             self.single_waypoint_system.set(f_details["StarSystem"])
             self.single_waypoint_station.set(f_details["Station"])
 
-    # new data was added to a field, re-read them all for simple logic
-    def entry_update(self, event=""):
-        try:
-            self.ed_ap.pitchrate = float(self.entries["ship"]["PitchRate"].get())
-            self.ed_ap.rollrate = float(self.entries["ship"]["RollRate"].get())
-            self.ed_ap.yawrate = float(self.entries["ship"]["YawRate"].get())
-            self.ed_ap.sunpitchuptime = float(self.entries["ship"]["SunPitchUp+Time"].get())
-
-            self.ed_ap.config["SunBrightThreshold"] = int(self.entries["autopilot"]["Sun Bright Threshold"].get())
-            self.ed_ap.config["NavAlignTries"] = int(self.entries["autopilot"]["Nav Align Tries"].get())
-            self.ed_ap.config["JumpTries"] = int(self.entries["autopilot"]["Jump Tries"].get())
-            self.ed_ap.config["DockingRetries"] = int(self.entries["autopilot"]["Docking Retries"].get())
-            self.ed_ap.config["WaitForAutoDockTimer"] = int(self.entries["autopilot"]["Wait For Autodock"].get())
-            self.ed_ap.config["RefuelThreshold"] = int(self.entries["refuel"]["Refuel Threshold"].get())
-            self.ed_ap.config["FuelScoopTimeOut"] = int(self.entries["refuel"]["Scoop Timeout"].get())
-            self.ed_ap.config["FuelThreasholdAbortAP"] = int(self.entries["refuel"]["Fuel Threshold Abort"].get())
-            self.ed_ap.config["OverlayTextXOffset"] = int(self.entries["overlay"]["X Offset"].get())
-            self.ed_ap.config["OverlayTextYOffset"] = int(self.entries["overlay"]["Y Offset"].get())
-            self.ed_ap.config["OverlayTextFontSize"] = int(self.entries["overlay"]["Font Size"].get())
-            self.ed_ap.config["HotKey_StartTravel"] = str(self.entries["buttons"]["Start Travel Assist"].get())
-            self.ed_ap.config["HotKey_StopAllAssists"] = str(self.entries["buttons"]["Stop All"].get())
-            self.ed_ap.config["VoiceEnable"] = self.checkboxvar["Enable Voice"].get()
-            self.ed_ap.config["TCEDestinationFilepath"] = str(self.TCE_Destination_Filepath.get())
-            self.ed_ap.config["DebugOverlay"] = self.checkboxvar["Debug Overlay"].get()
-        except Exception:
-            messagebox.showinfo("Exception", "Invalid float entered")
-
-    # ckbox.state:(ACTIVE | DISABLED)
-
-    def check_cb(self, field):
-        if field == "Travel Assist":
-            if self.checkboxvar["Travel Assist"].get() == 1 and not self.TRAVEL_A_running:
-                self.lab_ck["AFK Combat Assist"].config(state="disabled")
-                self.lab_ck["Waypoint Assist"].config(state="disabled")
-                self.lab_ck["DSS Assist"].config(state="disabled")
-                self.start_travel()
-
-            elif self.checkboxvar["Travel Assist"].get() == 0 and self.TRAVEL_A_running:
-                self.stop_travel()
-                self.lab_ck["AFK Combat Assist"].config(state="active")
-                self.lab_ck["Waypoint Assist"].config(state="active")
-                self.lab_ck["DSS Assist"].config(state="active")
-
-        if field == "Waypoint Assist":
-            if self.checkboxvar["Waypoint Assist"].get() == 1 and not self.WP_A_running:
-                self.lab_ck["Travel Assist"].config(state="disabled")
-                self.lab_ck["AFK Combat Assist"].config(state="disabled")
-                self.lab_ck["DSS Assist"].config(state="disabled")
-                self.start_waypoint()
-
-            elif self.checkboxvar["Waypoint Assist"].get() == 0 and self.WP_A_running:
-                self.stop_waypoint()
-                self.lab_ck["Travel Assist"].config(state="active")
-                self.lab_ck["AFK Combat Assist"].config(state="active")
-                self.lab_ck["DSS Assist"].config(state="active")
-
-        if field == "AFK Combat Assist":
-            if self.checkboxvar["AFK Combat Assist"].get() == 1:
-                self.ed_ap.set_afk_combat_assist(True)
-                self.log_msg("AFK Combat Assist start")
-                self.lab_ck["Travel Assist"].config(state="disabled")
-                self.lab_ck["Waypoint Assist"].config(state="disabled")
-                self.lab_ck["DSS Assist"].config(state="disabled")
-
-            elif self.checkboxvar["AFK Combat Assist"].get() == 0:
-                self.ed_ap.set_afk_combat_assist(False)
-                self.log_msg("AFK Combat Assist stop")
-                self.lab_ck["Travel Assist"].config(state="active")
-                self.lab_ck["Waypoint Assist"].config(state="active")
-                self.lab_ck["DSS Assist"].config(state="active")
-
-        if field == "DSS Assist":
-            if self.checkboxvar["DSS Assist"].get() == 1:
-                self.lab_ck["Travel Assist"].config(state="disabled")
-                self.lab_ck["AFK Combat Assist"].config(state="disabled")
-                self.lab_ck["Waypoint Assist"].config(state="disabled")
-                self.start_dss()
-
-            elif self.checkboxvar["DSS Assist"].get() == 0:
-                self.stop_dss()
-                self.lab_ck["Travel Assist"].config(state="active")
-                self.lab_ck["AFK Combat Assist"].config(state="active")
-                self.lab_ck["Waypoint Assist"].config(state="active")
-
-        if self.checkboxvar["Enable Randomness"].get():
-            self.ed_ap.set_randomness(True)
-        else:
-            self.ed_ap.set_randomness(False)
-
-        if self.checkboxvar["Activate Elite for each key"].get():
-            self.ed_ap.set_activate_elite_eachkey(True)
-            self.ed_ap.keys.activate_window = True
-        else:
-            self.ed_ap.set_activate_elite_eachkey(False)
-            self.ed_ap.keys.activate_window = False
-
-        if self.checkboxvar["Automatic logout"].get():
-            self.ed_ap.set_automatic_logout(True)
-        else:
-            self.ed_ap.set_automatic_logout(False)
-
-        if self.checkboxvar["Enable Overlay"].get():
-            self.ed_ap.set_overlay(True)
-        else:
-            self.ed_ap.set_overlay(False)
-
-        if self.checkboxvar["Enable Voice"].get():
-            self.ed_ap.set_voice(True)
-        else:
-            self.ed_ap.set_voice(False)
-
-        if self.checkboxvar["Enable CV View"].get() == 1:
-            self.cv_view = True
-            x = self.root.winfo_x() + self.root.winfo_width() + 4
-            y = self.root.winfo_y()
-            self.ed_ap.set_cv_view(True, x, y)
-        else:
-            self.cv_view = False
-            self.ed_ap.set_cv_view(False)
-
-        self.ed_ap.config["DSSButton"] = self.radiobuttonvar["dss_button"].get()
-
-        if self.radiobuttonvar["debug_mode"].get() == "Error":
-            self.ed_ap.set_log_error(True)
-        elif self.radiobuttonvar["debug_mode"].get() == "Debug":
-            self.ed_ap.set_log_debug(True)
-        elif self.radiobuttonvar["debug_mode"].get() == "Info":
-            self.ed_ap.set_log_info(True)
-
-        if field == "Single Waypoint Assist":
-            if self.checkboxvar["Single Waypoint Assist"].get() == 1 and not self.SWP_A_running:
-                self.start_single_waypoint_assist()
-            elif self.checkboxvar["Single Waypoint Assist"].get() == 0 and self.SWP_A_running:
-                self.stop_single_waypoint_assist()
-
-        if field == "Debug Overlay":
-            if self.checkboxvar["Debug Overlay"].get():
-                self.ed_ap.debug_overlay = True
-            else:
-                self.ed_ap.debug_overlay = False
-
-    def makeform(self, win, ftype, fields, r=0, inc=1, rfrom=0, rto=1000):
-        entries = {}
-
-        for field in fields:
-            row = tk.Frame(win)
-            row.grid(row=r, column=0, padx=2, pady=2, sticky=(N, S, E, W))
-            r += 1
-
-            if ftype == FORM_TYPE_CHECKBOX:
-                self.checkboxvar[field] = IntVar()
-                lab = Checkbutton(
-                    row,
-                    text=field,
-                    anchor="w",
-                    width=27,
-                    justify=LEFT,
-                    variable=self.checkboxvar[field],
-                    command=(lambda field=field: self.check_cb(field)),
-                )
-                self.lab_ck[field] = lab
-            else:
-                lab = tk.Label(row, anchor="w", width=20, pady=3, text=field + ": ")
-                if ftype == FORM_TYPE_SPINBOX:
-                    ent = tk.Spinbox(row, width=10, from_=rfrom, to=rto, increment=inc)
-                else:
-                    ent = tk.Entry(row, width=10)
-                ent.bind("<FocusOut>", self.entry_update)
-                ent.insert(0, "0")
-
-            lab.grid(row=0, column=0)
-            lab = Hovertip(row, self.tooltips[field], hover_delay=1000)
-
-            if ftype != FORM_TYPE_CHECKBOX:
-                ent.grid(row=0, column=1)
-                entries[field] = ent
-
-        return entries
-
-    def gui_gen(self, win):
-
-        modes_check_fields = (
-            "Travel Assist",
-            "Waypoint Assist",
-            "AFK Combat Assist",
-            "DSS Assist",
-        )
-        ship_entry_fields = ("RollRate", "PitchRate", "YawRate")
-        autopilot_entry_fields = (
-            "Sun Bright Threshold",
-            "Nav Align Tries",
-            "Jump Tries",
-            "Docking Retries",
-            "Wait For Autodock",
-        )
-        buttons_entry_fields = ("Start Travel Assist", "Stop All")
-        refuel_entry_fields = ("Refuel Threshold", "Scoop Timeout", "Fuel Threshold Abort")
-        overlay_entry_fields = ("X Offset", "Y Offset", "Font Size")
-
-        #
-        # Define all the menus
-        #
-        menubar = Menu(
-            win, background="#ff8000", foreground="black", activebackground="white", activeforeground="black"
-        )
-        file = Menu(menubar, tearoff=0)
-        self.checkboxvar["Enable CV View"] = IntVar()
-        self.checkboxvar["Enable CV View"].set(
-            int(self.ed_ap.config["Enable_CV_View"])
-        )  # set IntVar value to the one from config
-        file.add_checkbutton(
-            label="Enable CV View",
-            onvalue=1,
-            offvalue=0,
-            variable=self.checkboxvar["Enable CV View"],
-            command=(lambda field="Enable CV View": self.check_cb(field)),
-        )
-        file.add_separator()
-        file.add_command(label="Restart", command=self.restart_program)
-        file.add_command(label="Exit", command=self.close_window)  # win.quit)
-        menubar.add_cascade(label="File", menu=file)
-
-        help = Menu(menubar, tearoff=0)
-        help.add_command(label="Check for Updates", command=self.check_updates)
-        help.add_command(label="View Changelog", command=self.open_changelog)
-        help.add_separator()
-        help.add_command(label="About", command=self.about)
-        menubar.add_cascade(label="Help", menu=help)
-
-        win.config(menu=menubar)
-
-        # notebook pages
-        nb = ttk.Notebook(win)
-        nb.grid()
-        page0 = Frame(nb)
-        page1 = Frame(nb)
-        page2 = Frame(nb)
-        nb.add(page0, text="Main")  # main page
-        nb.add(page1, text="Settings")  # options page
-        nb.add(page2, text="Debug/Test")  # debug/test page
-
-        # main options block
-        blk_main = tk.Frame(page0)
-        blk_main.grid(row=0, column=0, padx=10, pady=5, sticky=(E, W))
-        blk_main.columnconfigure([0, 1], weight=1, minsize=100, uniform="group1")
-
-        # ap mode checkboxes block
-        blk_modes = LabelFrame(blk_main, text="MODE")
-        blk_modes.grid(row=0, column=0, padx=2, pady=2, sticky=(N, S, E, W))
-        self.makeform(blk_modes, FORM_TYPE_CHECKBOX, modes_check_fields)
-
-        # ship values block
-        blk_ship = LabelFrame(blk_main, text="SHIP")
-        blk_ship.grid(row=0, column=1, padx=2, pady=2, sticky=(N, S, E, W))
-        self.entries["ship"] = self.makeform(blk_ship, FORM_TYPE_SPINBOX, ship_entry_fields, 0, 0.5)
-
-        lbl_sun_pitch_up = tk.Label(blk_ship, text="SunPitchUp +/- Time:", anchor="w", width=20)
-        lbl_sun_pitch_up.grid(row=3, column=0, pady=3, sticky=(N, S, E, W))
-        spn_sun_pitch_up = tk.Spinbox(blk_ship, width=10, from_=-100, to=100, increment=0.5)
-        spn_sun_pitch_up.grid(row=3, column=1, padx=2, pady=2, sticky=(N, S, E, W))
-        spn_sun_pitch_up.bind("<FocusOut>", self.entry_update)
-        self.entries["ship"]["SunPitchUp+Time"] = spn_sun_pitch_up
-
-        btn_tst_roll = Button(blk_ship, text="Test Roll Rate", command=self.ship_tst_roll)
-        btn_tst_roll.grid(row=4, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-        btn_tst_pitch = Button(blk_ship, text="Test Pitch Rate", command=self.ship_tst_pitch)
-        btn_tst_pitch.grid(row=5, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-        btn_tst_yaw = Button(blk_ship, text="Test Yaw Rate", command=self.ship_tst_yaw)
-        btn_tst_yaw.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-
-        # waypoints button block
-        blk_wp_buttons = tk.LabelFrame(page0, text="Waypoints")
-        blk_wp_buttons.grid(row=1, column=0, padx=10, pady=5, columnspan=2, sticky=(N, S, E, W))
-        blk_wp_buttons.columnconfigure([0, 1], weight=1, minsize=100, uniform="group1")
-
-        self.wp_filelabel = StringVar()
-        self.wp_filelabel.set("<no list loaded>")
-        btn_wp_file = Button(blk_wp_buttons, textvariable=self.wp_filelabel, command=self.open_wp_file)
-        btn_wp_file.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-        Hovertip(btn_wp_file, self.tooltips["Waypoint List Button"], hover_delay=1000)
-
-        btn_reset = Button(blk_wp_buttons, text="Reset List", command=self.reset_wp_file)
-        btn_reset.grid(row=1, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-        Hovertip(btn_reset, self.tooltips["Reset Waypoint List"], hover_delay=1000)
-
-        # log window
-        log = LabelFrame(page0, text="LOG")
-        log.grid(row=3, column=0, padx=12, pady=5, sticky=(N, S, E, W))
-        scrollbar = Scrollbar(log)
-        scrollbar.grid(row=0, column=1, sticky=(N, S))
-        mylist = Listbox(log, width=72, height=10, yscrollcommand=scrollbar.set)
-        mylist.grid(row=0, column=0)
-        scrollbar.config(command=mylist.yview)
-
-        # settings block
-        blk_settings = tk.Frame(page1)
-        blk_settings.grid(row=0, column=0, padx=10, pady=5, sticky=(E, W))
-        blk_main.columnconfigure([0, 1], weight=1, minsize=100, uniform="group1")
-
-        # autopilot settings block
-        blk_ap = LabelFrame(blk_settings, text="AUTOPILOT")
-        blk_ap.grid(row=0, column=0, padx=2, pady=2, sticky=(N, S, E, W))
-        self.entries["autopilot"] = self.makeform(blk_ap, FORM_TYPE_SPINBOX, autopilot_entry_fields)
-        self.checkboxvar["Enable Randomness"] = BooleanVar()
-        cb_random = Checkbutton(
-            blk_ap,
-            text="Enable Randomness",
-            anchor="w",
-            pady=3,
-            justify=LEFT,
-            onvalue=1,
-            offvalue=0,
-            variable=self.checkboxvar["Enable Randomness"],
-            command=(lambda field="Enable Randomness": self.check_cb(field)),
-        )
-        cb_random.grid(row=5, column=0, columnspan=2, sticky=(W))
-        self.checkboxvar["Activate Elite for each key"] = BooleanVar()
-        cb_activate_elite = Checkbutton(
-            blk_ap,
-            text="Activate Elite for each key",
-            anchor="w",
-            pady=3,
-            justify=LEFT,
-            onvalue=1,
-            offvalue=0,
-            variable=self.checkboxvar["Activate Elite for each key"],
-            command=(lambda field="Activate Elite for each key": self.check_cb(field)),
-        )
-        cb_activate_elite.grid(row=6, column=0, columnspan=2, sticky=(W))
-        self.checkboxvar["Automatic logout"] = BooleanVar()
-        cb_logout = Checkbutton(
-            blk_ap,
-            text="Automatic logout",
-            anchor="w",
-            pady=3,
-            justify=LEFT,
-            onvalue=1,
-            offvalue=0,
-            variable=self.checkboxvar["Automatic logout"],
-            command=(lambda field="Automatic logout": self.check_cb(field)),
-        )
-        cb_logout.grid(row=7, column=0, columnspan=2, sticky=(W))
-
-        # buttons settings block
-        blk_buttons = LabelFrame(blk_settings, text="BUTTONS")
-        blk_buttons.grid(row=0, column=1, padx=2, pady=2, sticky=(N, S, E, W))
-        blk_dss = Frame(blk_buttons)
-        blk_dss.grid(row=0, column=0, columnspan=2, padx=0, pady=0, sticky=(N, S, E, W))
-        lb_dss = Label(blk_dss, width=18, anchor="w", pady=3, text="DSS Button: ")
-        lb_dss.grid(row=0, column=0, sticky=(W))
-        self.radiobuttonvar["dss_button"] = StringVar()
-        rb_dss_primary = Radiobutton(
-            blk_dss,
-            pady=3,
-            text="Primary",
-            variable=self.radiobuttonvar["dss_button"],
-            value="Primary",
-            command=(lambda field="dss_button": self.check_cb(field)),
-        )
-        rb_dss_primary.grid(row=0, column=1, sticky=(W))
-        rb_dss_secandary = Radiobutton(
-            blk_dss,
-            pady=3,
-            text="Secondary",
-            variable=self.radiobuttonvar["dss_button"],
-            value="Secondary",
-            command=(lambda field="dss_button": self.check_cb(field)),
-        )
-        rb_dss_secandary.grid(row=1, column=1, sticky=(W))
-        self.entries["buttons"] = self.makeform(blk_buttons, FORM_TYPE_ENTRY, buttons_entry_fields, 2)
-
-        # refuel settings block
-        blk_fuel = LabelFrame(blk_settings, text="FUEL")
-        blk_fuel.grid(row=1, column=0, padx=2, pady=2, sticky=(N, S, E, W))
-        self.entries["refuel"] = self.makeform(blk_fuel, FORM_TYPE_SPINBOX, refuel_entry_fields)
-
-        # overlay settings block
-        blk_overlay = LabelFrame(blk_settings, text="OVERLAY")
-        blk_overlay.grid(row=1, column=1, padx=2, pady=2, sticky=(N, S, E, W))
-        self.checkboxvar["Enable Overlay"] = BooleanVar()
-        cb_enable = Checkbutton(
-            blk_overlay,
-            text="Enable (requires restart)",
-            onvalue=1,
-            offvalue=0,
-            anchor="w",
-            pady=3,
-            justify=LEFT,
-            variable=self.checkboxvar["Enable Overlay"],
-            command=(lambda field="Enable Overlay": self.check_cb(field)),
-        )
-        cb_enable.grid(row=0, column=0, columnspan=2, sticky=(W))
-        self.entries["overlay"] = self.makeform(
-            blk_overlay, FORM_TYPE_SPINBOX, overlay_entry_fields, 1, 1.0, 0.0, 3000.0
-        )
-
-        # Voice settings block
-        blk_voice = LabelFrame(blk_settings, text="VOICE")
-        blk_voice.grid(row=2, column=0, columnspan=2, padx=2, pady=2, sticky=(N, S, E, W))
-        self.checkboxvar["Enable Voice"] = BooleanVar()
-        cb_enable = Checkbutton(
-            blk_voice,
-            text="Enable",
-            onvalue=1,
-            offvalue=0,
-            anchor="w",
-            pady=3,
-            justify=LEFT,
-            variable=self.checkboxvar["Enable Voice"],
-            command=(lambda field="Enable Voice": self.check_cb(field)),
-        )
-        cb_enable.grid(row=0, column=0, columnspan=2, sticky=(W))
-
-        # settings button block
-        blk_settings_buttons = tk.Frame(page1)
-        blk_settings_buttons.grid(row=3, column=0, padx=10, pady=5, sticky=(N, S, E, W))
-        blk_settings_buttons.columnconfigure([0, 1], weight=1, minsize=100)
-        btn_save = Button(blk_settings_buttons, text="Save All Settings", command=self.save_settings)
-        btn_save.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-
-        # debug block
-        blk_debug = tk.Frame(page2)
-        blk_debug.grid(row=0, column=0, padx=10, pady=5, sticky=(E, W))
-        blk_debug.columnconfigure([0, 1], weight=1, minsize=100, uniform="group2")
-
-        # debug settings block
-        blk_debug_settings = LabelFrame(blk_debug, text="DEBUG")
-        blk_debug_settings.grid(row=0, column=0, padx=2, pady=2, sticky=(N, S, E, W))
-        self.radiobuttonvar["debug_mode"] = StringVar()
-        rb_debug_debug = Radiobutton(
-            blk_debug_settings,
-            pady=3,
-            text="Debug + Info + Errors",
-            variable=self.radiobuttonvar["debug_mode"],
-            value="Debug",
-            command=(lambda field="debug_mode": self.check_cb(field)),
-        )
-        rb_debug_debug.grid(row=0, column=1, columnspan=2, sticky=(W))
-        rb_debug_info = Radiobutton(
-            blk_debug_settings,
-            pady=3,
-            text="Info + Errors",
-            variable=self.radiobuttonvar["debug_mode"],
-            value="Info",
-            command=(lambda field="debug_mode": self.check_cb(field)),
-        )
-        rb_debug_info.grid(row=1, column=1, columnspan=2, sticky=(W))
-        rb_debug_error = Radiobutton(
-            blk_debug_settings,
-            pady=3,
-            text="Errors only (default)",
-            variable=self.radiobuttonvar["debug_mode"],
-            value="Error",
-            command=(lambda field="debug_mode": self.check_cb(field)),
-        )
-        rb_debug_error.grid(row=2, column=1, columnspan=2, sticky=(W))
-        btn_open_logfile = Button(blk_debug_settings, text="Open Log File", command=self.open_logfile)
-        btn_open_logfile.grid(row=3, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-
-        # debug settings block
-        blk_single_waypoint_asst = LabelFrame(page2, text="Single Waypoint Assist")
-        blk_single_waypoint_asst.grid(row=1, column=0, padx=10, pady=5, columnspan=2, sticky=(N, S, E, W))
-        blk_single_waypoint_asst.columnconfigure(0, weight=1, minsize=10, uniform="group1")
-        blk_single_waypoint_asst.columnconfigure(1, weight=3, minsize=10, uniform="group1")
-
-        lbl_system = tk.Label(blk_single_waypoint_asst, text="System:")
-        lbl_system.grid(row=0, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-        txt_system = Entry(blk_single_waypoint_asst, textvariable=self.single_waypoint_system)
-        txt_system.grid(row=0, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-        lbl_station = tk.Label(blk_single_waypoint_asst, text="Station:")
-        lbl_station.grid(row=1, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-        txt_station = Entry(blk_single_waypoint_asst, textvariable=self.single_waypoint_station)
-        txt_station.grid(row=1, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-        self.checkboxvar["Single Waypoint Assist"] = BooleanVar()
-        cb_single_waypoint = Checkbutton(
-            blk_single_waypoint_asst,
-            text="Single Waypoint Assist",
-            onvalue=1,
-            offvalue=0,
-            anchor="w",
-            pady=3,
-            justify=LEFT,
-            variable=self.checkboxvar["Single Waypoint Assist"],
-            command=(lambda field="Single Waypoint Assist": self.check_cb(field)),
-        )
-        cb_single_waypoint.grid(row=2, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-
-        lbl_tce = tk.Label(blk_single_waypoint_asst, text="Trade Computer Extension (TCE)", fg="blue", cursor="hand2")
-        lbl_tce.bind(
-            "<Button-1>",
-            lambda e: hyperlink_callback(
-                "https://forums.frontier.co.uk/threads/trade-computer-extension-mk-ii.223056/"
-            ),
-        )
-        lbl_tce.grid(row=3, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-        lbl_tce_dest = tk.Label(blk_single_waypoint_asst, text="TCE Dest json:")
-        lbl_tce_dest.grid(row=4, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-        txt_tce_dest = Entry(blk_single_waypoint_asst, textvariable=self.TCE_Destination_Filepath)
-        txt_tce_dest.bind("<FocusOut>", self.entry_update)
-        txt_tce_dest.grid(row=4, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-
-        btn_load_tce = Button(blk_single_waypoint_asst, text="Load TCE Destination", command=self.load_tce_dest)
-        btn_load_tce.grid(row=5, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-
-        blk_debug_buttons = tk.Frame(page2)
-        blk_debug_buttons.grid(row=3, column=0, padx=10, pady=5, columnspan=2, sticky=(N, S, E, W))
-        blk_debug_buttons.columnconfigure([0, 1], weight=1, minsize=100)
-
-        self.checkboxvar["Debug Overlay"] = BooleanVar()
-        cb_debug_overlay = Checkbutton(
-            blk_debug_buttons,
-            text="Debug Overlay",
-            onvalue=1,
-            offvalue=0,
-            anchor="w",
-            pady=3,
-            justify=LEFT,
-            variable=self.checkboxvar["Debug Overlay"],
-            command=(lambda field="Debug Overlay": self.check_cb(field)),
-        )
-        cb_debug_overlay.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-
-        btn_save = Button(blk_debug_buttons, text="Save All Settings", command=self.save_settings)
-        btn_save.grid(row=7, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
-
-        # Statusbar
-        statusbar = Frame(win)
-        statusbar.grid(row=4, column=0)
-        self.status = tk.Label(win, text="Status: ", bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=29)
-        self.jumpcount = tk.Label(
-            statusbar, text="<info> ", bd=1, relief=tk.SUNKEN, anchor=tk.W, justify=LEFT, width=40
-        )
-        self.status.pack(in_=statusbar, side=LEFT, fill=BOTH, expand=True)
-        self.jumpcount.pack(in_=statusbar, side=RIGHT, fill=Y, expand=False)
-
-        return mylist
-
     def restart_program(self):
         logger.debug("Entered: restart_program")
 
+        self._save_window_state()
         self.stop_travel()
         self.ed_ap.quit()
         sleep(0.1)
@@ -1019,17 +775,13 @@ class APGui:
         logger.info(f"Restarting: {sys.executable} {sys.argv}")
         print("Restarting EDAPGui...")
 
-        import os
-
         os.execv(sys.executable, ["python"] + sys.argv)
 
 
 def main():
-    #   handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
-    #   if handle != None:
-    #       win32gui.SetForegroundWindow(handle)  # put the window in foreground
-
-    root = tk.Tk()
+    enable_dpi_awareness()
+    root = ttk.Window(themename="darkly")
+    root.configure(bg=BG)
     app = APGui(root)  # noqa: F841 - keep a reference for the lifetime of the main loop
 
     root.mainloop()
