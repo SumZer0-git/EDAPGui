@@ -6,7 +6,9 @@ from math import atan, degrees
 from time import sleep
 
 import cv2
+import numpy as np
 
+from core import paths
 from core.constants import (
     Flags2FsdHyperdriveCharging,
     FlagsBeingInterdicted,
@@ -21,11 +23,9 @@ from i18n.localization import normalize_text
 class DetectionMixin:
     def have_destination(self, scr_reg) -> bool:
         """Check to see if the compass is on the screen."""
-        icompass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region_x3(
-            "compass", "compass"
-        )
+        icompass_image, (minVal, maxVal, minLoc, maxLoc), template_scale = scr_reg.match_compass_multiscale()
 
-        logger.debug("has_destination:" + str(maxVal))
+        logger.debug(f"has_destination: score {maxVal:.3f}, compass scale {template_scale:.2f}")
 
         # need > x in the match to say we do have a destination
         if maxVal < scr_reg.compass_match_thresh:
@@ -81,6 +81,92 @@ class DetectionMixin:
         self.jn.ship_state()["interdicted"] = False  # reset flag
         return True
 
+    @staticmethod
+    def fit_compass_ring(image, approx_center, radius):
+        """Fit a circle to the bright outer ring of the compass sphere near approx_center.
+        Returns (x, y, radius) of the ring in image coordinates, or None if the ring is not found."""
+        value = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)[..., 2].astype(np.float32)
+        cx, cy = approx_center
+        for _ in range(4):
+            x_start, y_start = max(int(cx - 70), 0), max(int(cy - 70), 0)
+            sub = value[y_start : int(cy) + 71, x_start : int(cx) + 71]
+            if sub.size == 0:
+                return None
+            ys, xs = np.mgrid[0 : sub.shape[0], 0 : sub.shape[1]]
+            xs = xs + x_start
+            ys = ys + y_start
+            dist = np.hypot(xs - cx, ys - cy)
+            band = (dist > radius * 0.82) & (dist < radius * 1.1)
+            if band.sum() < 50:
+                return None
+            selected = band & (sub >= np.percentile(sub[band], 85))
+            px = xs[selected].astype(np.float64)
+            py = ys[selected].astype(np.float64)
+            if len(px) < 30:
+                return None
+            solution = np.linalg.lstsq(np.c_[2 * px, 2 * py, np.ones_like(px)], px**2 + py**2, rcond=None)[0]
+            cx, cy = float(solution[0]), float(solution[1])
+        return cx, cy, float(np.sqrt(solution[2] + cx**2 + cy**2))
+
+    @staticmethod
+    def find_white_navpoint(compass_image, center, radius):
+        """Find the hollow white 'target behind' marker inside the compass sphere without a template (it is not
+        matched when it sits on the bright sphere rim) or the filled white 'target ahead' dot.
+        Returns (x, y, hollow) in compass_image coordinates or None; a hollow ring is preferred over a filled dot."""
+        hsv = cv2.cvtColor(compass_image, cv2.COLOR_BGR2HSV)
+        yy, xx = np.mgrid[0 : hsv.shape[0], 0 : hsv.shape[1]]
+        inside = np.hypot(xx - center[0], yy - center[1]) <= radius * 1.2
+        mask = ((hsv[..., 1] < 70) & (hsv[..., 2] > 215) & inside).astype(np.uint8)
+        # A bright background (ship hull, planet edge) can touch the dot and merge with it into one big blob; the
+        # second pass opens the mask so thin bright lines drop away and only compact round dots remain.
+        size = max(3, round(radius * 0.12) // 2 * 2 + 1)
+        opened = cv2.morphologyEx(mask, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (size, size)))
+        candidates = [
+            DetectionMixin._best_white_blob(hsv, candidate_mask, center, radius, min_area)
+            for candidate_mask, min_area in ((mask, 25), (opened, 40))
+        ]
+        candidates = [c for c in candidates if c is not None]
+        if not candidates:
+            return None
+        best = max(candidates, key=lambda c: c[3])
+        return best[0], best[1], best[2]
+
+    @staticmethod
+    def _best_white_blob(hsv, mask, center, radius, min_area):
+        count, labels, stats, centroids = cv2.connectedComponentsWithStats(mask)
+        best = None
+        for i in range(1, count):
+            area = stats[i, cv2.CC_STAT_AREA]
+            width, height = stats[i, cv2.CC_STAT_WIDTH], stats[i, cv2.CC_STAT_HEIGHT]
+            cx, cy = centroids[i]
+            if not (
+                min_area <= area <= 400
+                and 0.6 <= width / height <= 1.6
+                and math.hypot(cx - center[0], cy - center[1]) <= radius * 1.05
+            ):
+                continue
+            # The background shows through the middle of a hollow ring, so its core is saturated
+            core = hsv[round(cy) - 1 : round(cy) + 2, round(cx) - 1 : round(cx) + 2, 1]
+            if not core.size:
+                continue
+            hollow = bool(core.mean() > 100) and area / (width * height) >= 0.35
+            # A thin sliver of a bright edge with a colored fringe can look hollow too, so a ring must be compact
+            rank = (hollow, area)
+            if best is None or rank > best[4]:
+                best = (area, float(cx), float(cy), hollow, rank)
+        return None if best is None else (best[1], best[2], best[3], best[4])
+
+    _compass_dumps = 0
+
+    @classmethod
+    def dump_compass_debug(cls, compass_image, note=""):
+        """Save the compass crop when the nav point match is weak, so the case can be analysed (max. 12 files)."""
+        if cls._compass_dumps >= 12:
+            return
+        cls._compass_dumps += 1
+        name = f"compass-weak-{time.strftime('%H%M%S')}-{note}.png"
+        cv2.imwrite(paths.debug_path("compass", name), compass_image)
+
     def get_nav_offset(self, scr_reg):
         """Determine the x,y offset from center of the compass of the nav point.
         Returns the x,y,z value as x,y in degrees (-90 to 90) and z as 1 or -1.
@@ -91,17 +177,28 @@ class DetectionMixin:
             180deg (6 o'clock clockwise)
         """
 
-        icompass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region_x3(
-            "compass", "compass"
-        )
+        icompass_image, (minVal, maxVal, minLoc, maxLoc), template_scale = scr_reg.match_compass_multiscale()
 
         pt = maxLoc
 
         # get wid/hgt of templates
-        c_wid = scr_reg.templates.template["compass"]["width"]
-        c_hgt = scr_reg.templates.template["compass"]["height"]
-        wid = scr_reg.templates.template["navpoint"]["width"]
-        hgt = scr_reg.templates.template["navpoint"]["height"]
+        c_wid = round(scr_reg.templates.template["compass"]["width"] * template_scale)
+        c_hgt = round(scr_reg.templates.template["compass"]["height"] * template_scale)
+        # The nav point markers are drawn in the same size relation as the compass sphere, so they use its scale
+        wid = round(scr_reg.templates.template["navpoint"]["width"] * template_scale)
+        hgt = round(scr_reg.templates.template["navpoint"]["height"] * template_scale)
+        logger.debug(f"Compass template scale {template_scale:.2f}, score {maxVal:.2f}")
+
+        # A weak match can still sit a few pixels off the real sphere, which shifts all angles; snap to the
+        # bright outer ring instead when the ring is found at about the matched size.
+        if maxVal < scr_reg.compass_refine_below:
+            ring = self.fit_compass_ring(icompass_image, (pt[0] + c_wid / 2, pt[1] + c_hgt / 2), c_wid / 2)
+            if ring is not None and ring[2] >= c_wid / 2 - 1:
+                # Use the real sphere size for the crop and the angle math
+                scale = ring[2] / (c_wid / 2)
+                c_wid, c_hgt = round(c_wid * scale), round(c_hgt * scale)
+                pt = (max(round(ring[0] - c_wid / 2), 0), max(round(ring[1] - c_hgt / 2), 0))
+                logger.debug(f"Compass sphere ring scale {scale:.2f}")
 
         # cut out the compass from the region
         pad = 5
@@ -112,7 +209,7 @@ class DetectionMixin:
 
         # find the nav point within the compass box
         navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = scr_reg.match_template_in_image_x3(
-            compass_image, "navpoint"
+            compass_image, "navpoint", template_scale
         )
         n_pt = n_maxLoc
 
@@ -124,17 +221,38 @@ class DetectionMixin:
         # Bright backgrounds (sun glare) lower the score of the filled nav point, so it also counts as ahead when
         # it clearly matches better than the hollow one.
         behind_image, (_, behind_val, _, behind_loc), _ = scr_reg.match_template_in_image_x3(
-            compass_image, "navpoint-behind"
+            compass_image, "navpoint-behind", template_scale
         )
         ahead = n_maxVal >= scr_reg.navpoint_match_thresh or (
             n_maxVal >= scr_reg.navpoint_glare_thresh and n_maxVal > behind_val + 0.1
         )
+
+        if ahead:
+            core_x = n_maxLoc[0] + wid // 2
+            core_y = n_maxLoc[1] + hgt // 2
+            core = cv2.cvtColor(
+                compass_image[max(core_y - 3, 0) : core_y + 4, max(core_x - 3, 0) : core_x + 4], cv2.COLOR_BGR2HSV
+            )
+            if core.size and core[..., 1].mean() > scr_reg.navpoint_max_core_saturation:
+                ahead = False
 
         if not ahead:
             final_z_pct = -1.0  # Behind
             n_pt = behind_loc
         else:
             final_z_pct = 1.0  # Ahead
+
+        logger.debug(f"Nav point scores: ahead {n_maxVal:.2f}, behind {behind_val:.2f}, ahead={ahead}")
+        if max(n_maxVal, behind_val) < scr_reg.navpoint_match_thresh:
+            white = self.find_white_navpoint(compass_image, (pad + c_wid / 2, pad + c_hgt / 2), c_wid / 2)
+            logger.debug(f"Weak nav point match at {n_pt}, white blob: {white}")
+            self.dump_compass_debug(compass_image, f"a{n_maxVal:.2f}-b{behind_val:.2f}")
+            if white is not None:
+                n_pt = (round(white[0] - wid / 2), round(white[1] - hgt / 2))
+                final_z_pct = -1.0 if white[2] else 1.0
+                logger.debug(f"Compass {'behind' if white[2] else 'ahead'} marker found without template at {n_pt}")
+            else:
+                logger.debug("Compass nav point not found, template position is unreliable")
 
         # Continue calc
         final_x_pct = 2 * (
@@ -349,6 +467,18 @@ class DetectionMixin:
 
         sim = self.message_similarity("LINE_OF_SIGHT_MSG", ocr_textlist)
         logger.debug(f"Line of sight similarity with {ocr_textlist} is {sim}")
+        return sim >= 0.5
+
+    def fsd_alignment_prompt(self, scr_reg) -> bool:
+        """Check whether the FSD asks for better target alignment."""
+        image = scr_reg.screen.get_screen_region(scr_reg.reg["fsd_align"]["rect"], rgb=False)[:, :, :3]
+        ocr_textlist = self.ocr.image_simple_ocr(image)
+        if not ocr_textlist:
+            logger.debug("FSD alignment prompt OCR returned no text.")
+            return False
+
+        sim = self.message_similarity("ALIGN_WITH_TARGET_MSG", ocr_textlist)
+        logger.debug(f"FSD alignment prompt OCR text={ocr_textlist}, similarity={sim:.3f}.")
         return sim >= 0.5
 
     def get_destination_offset(self, scr_reg):

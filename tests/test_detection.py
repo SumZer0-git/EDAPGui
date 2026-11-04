@@ -6,6 +6,7 @@ filters, templates, thresholds and offset calculations without the game or a mon
 """
 
 import unittest
+from unittest.mock import Mock
 
 import cv2
 import numpy as np
@@ -113,6 +114,20 @@ class CompassTestCase(MatchingTestCase):
         self.assertGreater(offset["roll"], 90)
         self.assertGreater(offset["yaw"], 150)
 
+    def test_white_nav_point_touching_a_bright_edge_is_found(self):
+        image = np.zeros((120, 120, 3), np.uint8)
+        cv2.circle(image, (60, 60), 55, (0, 80, 160), 2)
+        cv2.circle(image, (66, 28), 6, (255, 255, 255), -1)
+        # A bright hull edge touching the dot merges it into one large blob
+        cv2.line(image, (0, 10), (60, 34), (255, 255, 255), 4)
+
+        found = DetectionMixin.find_white_navpoint(image, (60, 60), 55)
+
+        self.assertIsNotNone(found)
+        self.assertAlmostEqual(found[0], 66, delta=4)
+        self.assertAlmostEqual(found[1], 28, delta=4)
+        self.assertFalse(found[2], "filled dot, not a ring")
+
     def test_offset_values_stay_within_range(self):
         for name in ("compass", "navpoint", "navpoint-behind", "target"):
             with self.subTest(image=name):
@@ -187,6 +202,29 @@ class DisengageTestCase(MatchingTestCase):
 
         self.assertTrue(regions.message_text_present())
         self.assertGreaterEqual(regions.last_message_fraction, 0.03)
+
+
+class FsdAlignmentPromptTestCase(MatchingTestCase):
+    def make_detector(self, recognized_text):
+        detector = Detector()
+        detector.ocr = Mock()
+        detector.ocr.image_simple_ocr.return_value = recognized_text
+        detector.ocr.string_similarity.side_effect = lambda expected, actual: float(expected == actual)
+        detector.locale = Mock()
+        detector.locale.all_values.return_value = ["ALIGN WITH TARGET DESTINATION", "AUF ZIEL AUSRICHTEN"]
+        return detector
+
+    def test_english_and_german_prompts_are_recognized(self):
+        for text in ("ALIGN WITH TARGET DESTINATION", "AUF ZIEL AUSRICHTEN"):
+            with self.subTest(text=text):
+                detector = self.make_detector([text])
+                self.assertTrue(detector.fsd_alignment_prompt(self.regions("empty")))
+
+    def test_unrelated_or_unreadable_text_is_not_a_prompt(self):
+        for text in (["PRESS TO DISENGAGE"], None, []):
+            with self.subTest(text=text):
+                detector = self.make_detector(text)
+                self.assertFalse(detector.fsd_alignment_prompt(self.regions("empty")))
 
 
 class NativeTemplateTestCase(unittest.TestCase):
