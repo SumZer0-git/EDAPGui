@@ -30,6 +30,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added a central log level record: `=== Log level changed/at startup: OLD -> NEW ===` is written to the log at startup and whenever the level is switched in the UI, so it is visible from which line on debug details are present.
 - Added a check for the supercruise disengage message while waiting after the target ring was lost and during the following alignment, which aborts as soon as the message appears (`wait_for_sc_disengage`, `nav_align(..., abort_on_disengage)`).
 - Added `no-msg` screenshot fixtures that must not pass the message gate, and more real screenshots (dark scenes, arc-shaped target ring close to the target) to the regression test.
+- Added an optional localized FSD alignment-prompt check during charging; while the prompt is shown, small proportional corrections are applied toward the compass nav point, and only when two compass readings agree. The journal remains authoritative for jump start.
 
 ### Changed
 
@@ -74,6 +75,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Fixed unhandled exceptions (main thread, worker threads, Tk callbacks, errors while closing) only appearing on the console: they are now also written to the log file.
+- Fixed Route Assist deciding at the end of the route by the compass alone whether to hand over to Supercruise Assist: it now uses the destination from the game's `Status.json`; the compass is only a fallback and must be seen in two readings. Before, a missed compass ended the route as "Destination Reached" instead of flying to the station.
+- Fixed FSD jump-start retries not correcting a slightly off-center target: a retry now cancels the running charge, waits for the FSD flags to clear and realigns with a tighter tolerance, even if the journal still reports `starting_hyperspace`.
+- Fixed the FSD target-ring alignment swinging back and forth on ships whose turn rates differ from the defaults (Type-9): key holds now scale with the configured yaw and pitch rates, and the alignment learns how many pixels the target moves per second of key hold.
+- Fixed the journal `Location` event handling failing with `'StationName'` when starting in open space; station name and type are now optional.
+- Fixed the compass detection on ships whose compass is larger than the template (Type-9, Corsair and others, up to about 20 %): the template matched with a score of only about 0.4 after the per-ship calibration was removed with the native templates. The compass and the nav point markers are now matched at several scales, the best scale is remembered per ship and also used for the angle calculation, and the same match is used for the "compass present" check, so Route Assist hands over to Supercruise Assist after the last jump on these ships.
+- Fixed the compass alignment on these ships: the pulsing cyan crosshair glow is no longer accepted as a centered nav point (a centered reading must be confirmed by two further readings, and a charge with the target behind is cancelled and realigned at once), and the compass sphere is refined with a ring fit when the template match is weak. A hollow "target behind" ring or a filled nav point that the template misses (glowing dot, bright hull or planet edge behind the compass) is found without a template, which stops the endless rolling back and forth.
 - Fixed application log file setup so its output is retained even when another library has already configured Python logging.
 - Fixed supercruise disengage checks being skipped when the target ring cannot be found, lowered the HUD prompt gate so smaller dropout messages trigger OCR, and log when OCR returns no text.
 - Fixed the discovery scan (honk) ending early during FSD route assist: the scan button is now held until the journal reports the finished scan (`FSSDiscoveryScan`) instead of a fixed 7 seconds, and the scan is retried up to three times (10 s each) if no confirmation arrives, while the scan keeps running in parallel to refueling and positioning. Keys that share a physical key or modifier with a currently held button (for example `S` for pitch up and the scanner button) now wait until it is released instead of cutting the scan off.

@@ -79,5 +79,41 @@ def set_log_level(level: int, reason: str = "changed") -> None:
     logger.setLevel(level)
 
 
+def _install_exception_hooks() -> None:
+    """Write otherwise console-only errors (also at shutdown, when the console closes at once) to the log file."""
+    import sys
+    import threading
+    import tkinter
+
+    def log_exception(exc_type, exc_value, exc_tb, where):
+        logger.critical(f"Unhandled exception ({where})", exc_info=(exc_type, exc_value, exc_tb))
+
+    previous_excepthook = sys.excepthook
+    previous_thread_hook = threading.excepthook
+    previous_unraisable = sys.unraisablehook
+
+    def excepthook(exc_type, exc_value, exc_tb):
+        log_exception(exc_type, exc_value, exc_tb, "main thread")
+        previous_excepthook(exc_type, exc_value, exc_tb)
+
+    def thread_hook(args):
+        log_exception(args.exc_type, args.exc_value, args.exc_traceback, f"thread {getattr(args.thread, 'name', '?')}")
+        previous_thread_hook(args)
+
+    def unraisable_hook(args):
+        log_exception(args.exc_type, args.exc_value, args.exc_traceback, f"unraisable, {args.err_msg}: {args.object!r}")
+        previous_unraisable(args)
+
+    def tk_callback_exception(self, exc_type, exc_value, exc_tb):
+        log_exception(exc_type, exc_value, exc_tb, "Tk callback")
+
+    sys.excepthook = excepthook
+    threading.excepthook = thread_hook
+    sys.unraisablehook = unraisable_hook
+    tkinter.Tk.report_callback_exception = tk_callback_exception
+
+
+_install_exception_hooks()
+
 # logger.disabled = True
 # logger.disabled = False

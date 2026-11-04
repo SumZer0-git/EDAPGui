@@ -22,8 +22,31 @@ from core.constants import (
 from core.logger import logger
 from core.types import ScTargetAlignReturn
 
+# FSD alignment correction while charging (compass degrees / seconds)
+FSD_ALIGN_TOLERANCE = 1.5
+FSD_ALIGN_MAX_ROLL = 60
+FSD_ALIGN_MAX_DIFF = 5
+FSD_ALIGN_GAIN = 0.8
+FSD_ALIGN_MIN_HOLD = 0.05
+FSD_ALIGN_MAX_HOLD = 0.5
+FSD_ALIGN_SAMPLES = 6
+FSD_ALIGN_SAMPLE_DELAY = 0.15
+
+# Target-ring alignment: pixels the target moves with one full-length hold (measured at 2160p), shortest hold
+FSD_TARGET_FULL_STEP_PX = 200
+FSD_REF_PITCH_RATE = 40.0
+FSD_REF_YAW_RATE = 24.0
+FSD_HOLD_SCALE_MAX = 3
+FSD_TARGET_MIN_HOLD = 0.06
+FSD_STEP_GAIN = 0.8
+FSD_STEP_MIN_MOVE_PX = 15
+FSD_RETRY_TARGET_CLOSE = 20
+
 
 class FlightMixin:
+    # Compass readings of the last FSD alignment measurement that reported the target behind the ship
+    fsd_behind_readings = 0
+
     def start_sco_monitoring(self):
         """Start Supercruise Overcharge Monitoring. This starts a parallel thread used to detect SCO
         until stop_sco_monitoring if called."""
@@ -219,8 +242,18 @@ class FlightMixin:
         while time.time() < end:
             if self.try_sc_disengage(scr_reg):
                 return True
-            sleep(0.1)
+            sleep(0.2)
         return False
+
+    def compass_confirmed(self, scr_reg, close) -> bool:
+        """Re-read the compass to confirm that the nav point is really ahead and centered."""
+        for _ in range(2):
+            sleep(0.2)
+            off = self.get_nav_offset(scr_reg)
+            if off["z"] <= 0 or abs(off["yaw"]) >= close or abs(off["pit"]) >= close:
+                logger.debug(f"Compass align: confirmation reading {off} is not centered.")
+                return False
+        return True
 
     def nav_align(self, scr_reg, abort_on_disengage=False) -> bool:
         """Use the compass to find the nav point position.  Will then perform rotation and pitching
@@ -241,10 +274,14 @@ class FlightMixin:
             if abort_on_disengage and self.try_sc_disengage(scr_reg):
                 return True
             off = self.get_nav_offset(scr_reg)
+            logger.debug(f"Compass align try {ii + 1}: {off}")
 
-            # Check if we are close enough already
+            # Check if we are close enough already; the nav point flickers, so the reading must be confirmed
             if abs(off["yaw"]) < close and abs(off["pit"]) < close:
-                break
+                if self.compass_confirmed(scr_reg, close):
+                    break
+                logger.debug("Compass align: centered reading not confirmed, aligning again.")
+                continue
 
             # Roll if the nav point is not directly behind us.
             if (-180 + close) < off["yaw"] < (180 - close) and (-180 + close) < off["pit"] < (180 - close):
@@ -268,6 +305,7 @@ class FlightMixin:
                         if abort_on_disengage and self.try_sc_disengage(scr_reg):
                             return True
                         off = self.get_nav_offset(scr_reg)
+                        logger.debug(f"Compass align roll step {i + 1}: {off}")
                     else:
                         break
 
@@ -303,18 +341,22 @@ class FlightMixin:
             logger.debug("final x:" + str(off["x"]) + " y:" + str(off["y"]))
         return False
 
-    def fsd_target_align(self, scr_reg):
-        """Coarse align to the target to support FSD jumping"""
+    def fsd_target_align(self, scr_reg, close=50, allow_starting_hyperspace=False, proportional=False):
+        """Coarse align to the target to support FSD jumping.
+
+        With proportional=True the inputs get shorter near the target (used for retries, where precision matters).
+        """
 
         self.vce.say("Target Align")
 
         logger.debug("align= fine align")
+        start_time = time.monotonic()
+        steps = 0
 
-        close = 50
-
-        # TODO: should use Pitch Rates to calculate, but this seems to work fine with all ships
-        hold_pitch = 0.150
-        hold_yaw = 0.300
+        # Base holds were tuned on a ship with yaw/pitch rates of FSD_REF_YAW_RATE/FSD_REF_PITCH_RATE deg/s;
+        # scale them so other ships turn by about the same angle per step.
+        hold_pitch = min(0.150 * FSD_REF_PITCH_RATE / self.pitchrate, 0.150 * FSD_HOLD_SCALE_MAX)
+        hold_yaw = min(0.300 * FSD_REF_YAW_RATE / self.yawrate, 0.300 * FSD_HOLD_SCALE_MAX)
         new = None  # Initialize to avoid unbound variable
         off = None  # Initialize to avoid unbound variable
 
@@ -340,18 +382,43 @@ class FlightMixin:
             logger.debug("  off is None, cannot continue alignment")
             return
 
+        logger.debug(
+            f"Fine align start: x={off['x']:.1f}, y={off['y']:.1f}, tolerance={close}px, proportional={proportional}."
+        )
+        step_gain = {"x": None, "y": None}  # measured px moved per second of hold, learned during this alignment
         while (off["x"] > close) or (off["x"] < -close) or (off["y"] > close) or (off["y"] < -close):
-            # print("off:"+str(new))
+            yaw_hold = hold_yaw
+            pitch_hold = hold_pitch
+            if proportional:
+                # A full hold moves the target by roughly FSD_TARGET_FULL_STEP_PX, so shorten it near the target.
+                # Otherwise a fixed hold overshoots a small tolerance and the ship oscillates.
+                yaw_hold = min(hold_yaw, max(FSD_TARGET_MIN_HOLD, hold_yaw * abs(off["x"]) / FSD_TARGET_FULL_STEP_PX))
+                pitch_hold = min(
+                    hold_pitch, max(FSD_TARGET_MIN_HOLD, hold_pitch * abs(off["y"]) / FSD_TARGET_FULL_STEP_PX)
+                )
+            # The configured rates can be far off for a ship, so shorten holds that would overshoot the target
+            # according to the px/s measured in the previous steps.
+            if step_gain["x"]:
+                yaw_hold = min(yaw_hold, max(FSD_TARGET_MIN_HOLD, FSD_STEP_GAIN * abs(off["x"]) / step_gain["x"]))
+            if step_gain["y"]:
+                pitch_hold = min(pitch_hold, max(FSD_TARGET_MIN_HOLD, FSD_STEP_GAIN * abs(off["y"]) / step_gain["y"]))
+            steps += 1
+            before = dict(off)
+            sent = {"x": 0.0, "y": 0.0}
             if off["x"] > close:
-                self.keys.send("YawRightButton", hold=hold_yaw)
+                self.keys.send("YawRightButton", hold=yaw_hold)
+                sent["x"] = yaw_hold
             if off["x"] < -close:
-                self.keys.send("YawLeftButton", hold=hold_yaw)
+                self.keys.send("YawLeftButton", hold=yaw_hold)
+                sent["x"] = yaw_hold
             if off["y"] > close:
-                self.keys.send("PitchUpButton", hold=hold_pitch)
+                self.keys.send("PitchUpButton", hold=pitch_hold)
+                sent["y"] = pitch_hold
             if off["y"] < -close:
-                self.keys.send("PitchDownButton", hold=hold_pitch)
+                self.keys.send("PitchDownButton", hold=pitch_hold)
+                sent["y"] = pitch_hold
 
-            if self.jn.ship_state()["status"] == "starting_hyperspace":
+            if self.jn.ship_state()["status"] == "starting_hyperspace" and not allow_starting_hyperspace:
                 return
 
             for i in range(5):
@@ -365,19 +432,41 @@ class FlightMixin:
             if not off:
                 return
 
+            for axis in ("x", "y"):
+                moved = abs(off[axis] - before[axis])
+                if sent[axis] > 0 and moved >= FSD_STEP_MIN_MOVE_PX:
+                    step_gain[axis] = moved / sent[axis]
+                    logger.debug(f"Fine align {axis}: moved {moved:.0f}px with {sent[axis]:.2f}s hold.")
+
+        logger.debug(
+            f"Fine align done in {time.monotonic() - start_time:.1f}s, {steps} steps, "
+            f"final x={off['x']:.1f}, y={off['y']:.1f}, tolerance={close}px, proportional={proportional}."
+        )
         logger.debug("align=complete")
 
-    def mnvr_to_target(self, scr_reg):
+    def mnvr_to_target(self, scr_reg, retry=False):
         logger.debug("align")
-        if not (self.jn.ship_state()["status"] == "in_supercruise" or self.jn.ship_state()["status"] == "in_space"):
+        ship_status = self.jn.ship_state()["status"]
+        if ship_status not in ("in_supercruise", "in_space") and not (retry and ship_status == "starting_hyperspace"):
             logger.error("align() not in sc or space")
             raise Exception("align() not in sc or space")
 
+        start_time = time.monotonic()
         self.sun_avoid(scr_reg)
         self.nav_align(scr_reg)
         self.keys.send("SetSpeed100")
+        coarse_time = time.monotonic() - start_time
 
-        self.fsd_target_align(scr_reg)
+        self.fsd_target_align(
+            scr_reg,
+            close=FSD_RETRY_TARGET_CLOSE if retry else 50,
+            allow_starting_hyperspace=retry,
+            proportional=retry,
+        )
+        logger.debug(
+            f"Alignment finished in {time.monotonic() - start_time:.1f}s "
+            f"(sun avoid + compass align {coarse_time:.1f}s), retry={retry}."
+        )
 
     def sc_target_align(self, scr_reg) -> ScTargetAlignReturn:
         """Stays tight on the target, monitors for disengage and obscured.
@@ -568,6 +657,131 @@ class FlightMixin:
         logger.debug("position=complete")
         return True
 
+    def read_compass_alignment(self, scr_reg):
+        """Read the compass nav point as (yaw, pitch) in degrees; None if the reading is implausible."""
+        nav_offset = self.get_nav_offset(scr_reg)
+        if nav_offset is None:
+            logger.debug("FSD alignment reading rejected: no compass nav point.")
+            return None
+        if nav_offset["z"] < 0:
+            self.fsd_behind_readings += 1
+        if nav_offset["z"] <= 0 or abs(nav_offset["roll"]) > FSD_ALIGN_MAX_ROLL:
+            logger.debug(f"FSD alignment reading rejected as implausible: {nav_offset}.")
+            return None
+        return nav_offset["yaw"], nav_offset["pit"]
+
+    def measure_fsd_alignment(self, scr_reg):
+        """Sample the compass several times; the nav point flickers while the prompt is shown, so implausible
+        readings are dropped and the rest must agree. Returns (yaw, pitch) or None."""
+        readings = []
+        self.fsd_behind_readings = 0
+        for i in range(FSD_ALIGN_SAMPLES):
+            reading = self.read_compass_alignment(scr_reg)
+            if reading is not None:
+                readings.append(reading)
+            if i < FSD_ALIGN_SAMPLES - 1:
+                sleep(FSD_ALIGN_SAMPLE_DELAY)
+        if len(readings) < 2:
+            logger.debug(f"FSD alignment: only {len(readings)} plausible compass readings; no correction.")
+            return None
+
+        yaw_values = sorted(reading[0] for reading in readings)
+        pit_values = sorted(reading[1] for reading in readings)
+        yaw_median = yaw_values[len(yaw_values) // 2]
+        pit_median = pit_values[len(pit_values) // 2]
+        agreeing = [
+            reading
+            for reading in readings
+            if abs(reading[0] - yaw_median) <= FSD_ALIGN_MAX_DIFF and abs(reading[1] - pit_median) <= FSD_ALIGN_MAX_DIFF
+        ]
+        if len(agreeing) < 2:
+            logger.debug(f"FSD alignment readings disagree: {readings}; no correction.")
+            return None
+        return (
+            sum(reading[0] for reading in agreeing) / len(agreeing),
+            sum(reading[1] for reading in agreeing) / len(agreeing),
+        )
+
+    def correct_fsd_alignment(self, scr_reg):
+        """Apply one small, proportional alignment input towards the compass nav point while the FSD charges.
+
+        Returns True if an input was sent.
+        """
+        if self.status.get_flag(FlagsFsdJump):
+            logger.debug("FSD alignment correction skipped: journal reports jump started.")
+            return False
+
+        measured = self.measure_fsd_alignment(scr_reg)
+        if measured is None:
+            return False
+        yaw_off, pit_off = measured
+
+        if max(abs(yaw_off), abs(pit_off)) <= FSD_ALIGN_TOLERANCE:
+            logger.debug(
+                f"FSD alignment correction skipped: compass yaw={yaw_off:.2f}, pit={pit_off:.2f} within tolerance."
+            )
+            return False
+
+        if self.status.get_flag(FlagsFsdJump):
+            logger.debug("FSD alignment correction skipped: journal reports jump started.")
+            return False
+
+        # Correct the larger axis first; the next cycle re-measures
+        if abs(yaw_off) >= abs(pit_off):
+            key = "YawRightButton" if yaw_off > 0 else "YawLeftButton"
+            hold = abs(yaw_off) * FSD_ALIGN_GAIN / self.yawrate
+        else:
+            key = "PitchUpButton" if pit_off > 0 else "PitchDownButton"
+            hold = abs(pit_off) * FSD_ALIGN_GAIN / self.pitchrate
+        hold = min(max(hold, FSD_ALIGN_MIN_HOLD), FSD_ALIGN_MAX_HOLD)
+
+        logger.debug(
+            f"FSD alignment correction: compass yaw={yaw_off:.2f}, pit={pit_off:.2f}, key={key}, hold={hold:.2f}s."
+        )
+        self.keys.send(key, hold=hold)
+        return True
+
+    def wait_for_fsd_jump_start(self, scr_reg, timeout=30):
+        """Wait for the journal status flag, using the HUD prompt only for small alignment corrections."""
+        start_time = time.monotonic()
+        next_prompt_check = start_time
+        correction_count = 0
+        elapsed = 0.0
+        logger.debug(f"Waiting up to {timeout}s for journal FSD-jump flag.")
+        while True:
+            if self.status.get_flag(FlagsFsdJump):
+                logger.debug(
+                    f"Journal reports FSD jump started after {elapsed:.1f}s; alignment corrections={correction_count}."
+                )
+                return True
+
+            now = time.monotonic()
+            elapsed = now - start_time
+            if elapsed >= timeout:
+                logger.warning(
+                    f"Journal did not report FSD jump start within {timeout}s; alignment corrections={correction_count}."
+                )
+                return False
+
+            if now >= next_prompt_check:
+                next_prompt_check = now + 1
+                charging = self.status.get_flag(FlagsFsdCharging)
+                if not charging:
+                    logger.debug("FSD alignment prompt check skipped: FSD charging flag is off.")
+                else:
+                    prompt_detected = self.fsd_alignment_prompt(scr_reg)
+                    if prompt_detected:
+                        logger.debug("FSD alignment prompt detected during charge.")
+                        if self.correct_fsd_alignment(scr_reg):
+                            correction_count += 1
+                        elif self.fsd_behind_readings > FSD_ALIGN_SAMPLES // 2:
+                            logger.warning("FSD alignment prompt shown and the compass reports the target behind.")
+                            return False
+                    else:
+                        logger.debug("FSD alignment prompt not detected during charge.")
+
+            sleep(0.1)
+
     # jump() happens after we are aligned to Target
     # TODO: nees to check for Thargoid interdiction and their wave that would shut us down,
     #       if thargoid, then we wait until reboot and continue on.. go back into FSD and align
@@ -578,12 +792,27 @@ class FlightMixin:
 
         jump_tries = self.config["JumpTries"]
         for i in range(jump_tries):
-            logger.debug("jump= try:" + str(i))
-            if not (self.jn.ship_state()["status"] == "in_supercruise" or self.jn.ship_state()["status"] == "in_space"):
+            logger.debug(f"FSD jump attempt {i + 1}/{jump_tries}.")
+            ship_status = self.jn.ship_state()["status"]
+            logger.debug(f"FSD jump attempt {i + 1}: journal ship status={ship_status}.")
+            if i == 0 and ship_status not in ("in_supercruise", "in_space"):
                 logger.error("Not ready to FSD jump. jump=err1")
                 raise Exception("not ready to jump")
+            if i > 0:
+                if self.status.get_flag(FlagsFsdCharging) and not self.status.get_flag(FlagsFsdJump):
+                    logger.info(f"FSD retry {i + 1}: cancelling the running charge.")
+                    self.keys.send("HyperSuperCombination", hold=1)
+                logger.debug(f"FSD retry {i + 1}: waiting for FSD jump and charge flags to clear.")
+                if not self.status.wait_for_flag_off(FlagsFsdJump, 5):
+                    logger.error("FSD jump is still active; cannot realign.")
+                    continue
+                if not self.status.wait_for_flag_off(FlagsFsdCharging, 5):
+                    logger.error("FSD is still charging after cancel; cannot realign.")
+                    continue
+                logger.info(f"FSD retry {i + 1}: realigning before the next charge.")
+                self.mnvr_to_target(scr_reg, retry=True)
             sleep(0.5)
-            logger.debug("jump= start fsd")
+            logger.debug(f"FSD jump attempt {i + 1}: sending HyperSuperCombination.")
 
             self.keys.send("HyperSuperCombination", hold=1)
 
@@ -594,25 +823,25 @@ class FlightMixin:
             if not res:
                 logger.error("FSD failed to charge.")
                 continue
+            logger.debug(f"FSD jump attempt {i + 1}: charge flag detected.")
 
-            res = self.status.wait_for_flag_on(FlagsFsdJump, 30)
+            res = self.wait_for_fsd_jump_start(scr_reg, 30)
             if not res:
-                logger.warning("FSD failure to start jump timeout.")
-                self.mnvr_to_target(scr_reg)  # attempt realign to target
+                logger.warning(f"FSD jump attempt {i + 1}: start timeout; moving to retry handling.")
                 continue
 
-            logger.debug("jump= in jump")
+            logger.debug(f"FSD jump attempt {i + 1}: jump flag detected; waiting for completion.")
             # Wait for jump to complete. Should never err
             res = self.status.wait_for_flag_off(FlagsFsdJump, 360)
             if not res:
-                logger.error("FSD failure to complete jump timeout.")
+                logger.error(f"FSD jump attempt {i + 1}: completion timed out.")
                 continue
 
-            logger.debug("jump= speed 0")
+            logger.debug(f"FSD jump attempt {i + 1}: jump completed.")
             self.jump_cnt = self.jump_cnt + 1
             self.keys.send("SetSpeedZero", repeat=3)  # Let's be triply sure that we set speed to 0% :)
             sleep(1)  # wait 1 sec after jump to allow graphics to stablize and accept inputs
-            logger.debug("jump=complete")
+            logger.debug("FSD jump handling complete.")
             return True
 
         logger.error(f"FSD Jump failed {jump_tries} times. jump=err2")

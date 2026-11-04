@@ -82,6 +82,16 @@ class ScreenRegions:
         self.compass_match_thresh = 0.35
         self.navpoint_match_thresh = 0.8
         self.navpoint_glare_thresh = 0.7
+        # Compass template matches below this score are refined with a fit of the sphere's outer ring
+        self.compass_refine_below = 0.8
+        # The filled nav point is white at its core; the cyan glow of the compass crosshair (pulsing while the
+        # FSD charges) can match the filled template but is clearly saturated.
+        self.navpoint_max_core_saturation = 110
+        self.compass_scale_step = 0.025
+        self.compass_scale_count = 11  # scales 1.0 to 1.25
+        self.compass_scale_margin = 0.03
+        self.compass_scale_good = 0.8
+        self.compass_scale_hint = None
         self.target_thresh = 0.54
         self.sun_threshold = 125
         # The templates are made from true BGR screenshots, so the regions are captured without a channel swap.
@@ -169,6 +179,13 @@ class ScreenRegions:
             "filterCB": None,
             "filter": None,
         }
+        self.reg["fsd_align"] = {
+            "rect": [0.40, 0.325, 0.60, 0.37],
+            "width": 1,
+            "height": 1,
+            "filterCB": None,
+            "filter": None,
+        }
         self.reg["nav_panel"] = {
             "rect": [0.25, 0.36, 0.60, 0.85],
             "width": 1,
@@ -214,6 +231,46 @@ class ScreenRegions:
         match = cv2.matchTemplate(img_region, self.templates.template[templ_name]["image"], cv2.TM_CCOEFF_NORMED)
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(match)
         return img_region, (minVal, maxVal, minLoc, maxLoc), match
+
+    def match_compass_multiscale(self):
+        """Match the compass template at several scales, because the compass sphere differs in size between ship
+        cockpits (the Type-9 sphere is about 17 % larger than the Mandalay one). The template's native scale wins
+        unless another scale is clearly better. The last good scale is remembered and tried first, so a full scan
+        is only needed after a ship change or a poor match. Returns the image, the match details at the best
+        scale and that scale."""
+        img_region = self.screen.get_screen_region(self.reg["compass"]["rect"], rgb=False)
+        channels = cv2.split(cv2.cvtColor(img_region, cv2.COLOR_BGR2HSV))
+        base = self.templates.template["compass"]["image"]
+
+        def match_at(scale):
+            templ = base
+            if scale != 1.0:
+                templ = cv2.resize(base, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+            return max(
+                (cv2.minMaxLoc(cv2.matchTemplate(channel, templ, cv2.TM_CCOEFF_NORMED)) for channel in channels),
+                key=lambda r: r[1],
+            )
+
+        step = self.compass_scale_step
+        known = self.compass_scale_hint
+        if known is not None:
+            local = [(match_at(s), s) for s in (known, round(known - step, 3), round(known + step, 3)) if s >= 1.0]
+            result, scale = max(local, key=lambda item: item[0][1])
+            if result[1] >= self.compass_scale_good:
+                self.compass_scale_hint = scale
+                return img_region, result, scale
+
+        best = None
+        for index in range(self.compass_scale_count):
+            scale = round(1.0 + index * step, 3)
+            result = match_at(scale)
+            # Prefer the native scale unless another one is clearly better
+            required = self.compass_scale_margin if best is not None and best[2] == 1.0 else 0.0
+            if best is None or result[1] > best[1][1] + required:
+                best = (img_region, result, scale)
+        if best[1][1] >= self.compass_scale_good:
+            self.compass_scale_hint = best[2]
+        return best
 
     def match_template_in_region_x3(self, region_name, templ_name, inv_col=True):
         """Attempt to match the given template in the given region which is unfiltered.
@@ -284,11 +341,13 @@ class ScreenRegions:
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(match)
         return image, (minVal, maxVal, minLoc, maxLoc), match
 
-    def match_template_in_image_x3(self, image, templ_name):
-        """Attempt to match the given template in the (unfiltered) image.
+    def match_template_in_image_x3(self, image, templ_name, scale=1.0):
+        """Attempt to match the given template (optionally resized by scale) in the (unfiltered) image.
         The image is split into separate HSV channels, each channel tested and the best result kept.
         Returns the original image, detail of match and the match mask."""
         templ = self.templates.template[templ_name]["image"]
+        if scale != 1.0:
+            templ = cv2.resize(templ, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
 
         # Convert to HSV and split.
         img_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)

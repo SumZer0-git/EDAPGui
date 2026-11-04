@@ -287,9 +287,10 @@ class EDJournal:
             elif log_event == "Location":
                 self.ship["location"] = log["StarSystem"]
                 self.ship["cur_star_system"] = log["StarSystem"]
-                self.ship["cur_station"] = log["StationName"]
-                self.ship["cur_station_type"] = log["StationType"]
-                if log["Docked"]:
+                # StationName/StationType are only written when the commander is at a station
+                self.ship["cur_station"] = log.get("StationName", "")
+                self.ship["cur_station_type"] = log.get("StationType", "")
+                if log.get("Docked"):
                     self.ship["status"] = "in_station"
 
             elif log_event == "Interdicted":
