@@ -25,6 +25,14 @@ class NormalizeTextTestCase(unittest.TestCase):
                 self.assertTrue(normalize_text(manager["PRESS_TO_DISENGAGE_MSG"]))
                 self.assertTrue(normalize_text(manager["LINE_OF_SIGHT_MSG"]))
 
+    def test_fsd_alignment_prompt_exists_in_both_languages(self):
+        manager = LocalizationManager(str(paths.LOCALES_DIR), "en")
+
+        values = manager.all_values("ALIGN_WITH_TARGET_MSG")
+        self.assertEqual(len(values), len(manager.available_languages))
+        self.assertIn("AUF ZIEL AUSRICHTEN", values)
+        self.assertIn("ALIGN WITH TARGET DESTINATION", values)
+
 
 class LocalizationTestCase(unittest.TestCase):
     def test_shipped_languages_have_the_same_keys(self):
