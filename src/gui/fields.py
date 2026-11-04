@@ -7,10 +7,13 @@ from dataclasses import dataclass
 
 TAB_SHIP = "Ship"
 TAB_SETTINGS = "Settings"
+TAB_OVERLAY = "Overlay"
 TAB_DEBUG = "Debug"
 
 LOG_LEVELS = ("Debug", "Info", "Error")
 DSS_BUTTONS = ("Primary", "Secondary")
+OVERLAY_ANCHORS = ("Top left", "Top right", "Bottom left", "Bottom right")
+OVERLAY_POSITION_UNITS = ("Pixels", "Percent")
 
 
 @dataclass(frozen=True)
@@ -25,6 +28,7 @@ class Field:
     step: float = 1
     tip: str = ""
     setter: str = ""  # method of the autopilot that applies a changed value
+    choices: tuple[str, ...] = ()
 
 
 FIELDS = (
@@ -154,28 +158,95 @@ FIELDS = (
     ),
     Field(
         "OverlayTextEnable",
-        TAB_SETTINGS,
+        TAB_OVERLAY,
         "bool",
-        "Enable (requires restart)",
+        "Enable overlay",
         setter="set_overlay",
     ),
     Field(
+        "OverlayPositionAnchor",
+        TAB_OVERLAY,
+        "choice",
+        "Anchor",
+        choices=OVERLAY_ANCHORS,
+        tip="Corner of the game window used as the overlay position anchor.",
+    ),
+    Field(
+        "OverlayPositionUnit",
+        TAB_OVERLAY,
+        "choice",
+        "Position units",
+        choices=OVERLAY_POSITION_UNITS,
+        tip="Use pixel distances or percentages of the game window.",
+    ),
+    Field(
         "OverlayTextXOffset",
-        TAB_SETTINGS,
+        TAB_OVERLAY,
         "int",
-        "X Offset",
-        hi=3000,
-        tip="Offset left the screen to start place overlay text.",
+        "Horizontal offset",
+        hi=10000,
+        tip="Distance from the selected left or right anchor edge.",
     ),
     Field(
         "OverlayTextYOffset",
-        TAB_SETTINGS,
+        TAB_OVERLAY,
         "int",
-        "Y Offset",
-        hi=3000,
-        tip="Offset down the screen to start place overlay text.",
+        "Vertical offset",
+        hi=10000,
+        tip="Distance from the selected top or bottom anchor edge.",
     ),
-    Field("OverlayTextFontSize", TAB_SETTINGS, "int", "Font Size", lo=1, hi=200, tip="Font size of the overlay."),
+    Field(
+        "OverlayTextFontSize",
+        TAB_OVERLAY,
+        "int",
+        "Font size (pt)",
+        lo=1,
+        hi=200,
+        tip="Font size in points. Follows the monitor's Windows display scaling, not the game resolution.",
+    ),
+    Field(
+        "OverlayPanelOpacity",
+        TAB_OVERLAY,
+        "int",
+        "Panel opacity (%)",
+        hi=100,
+        tip="Opacity of the background behind the status text.",
+    ),
+    Field(
+        "OverlayShowMode",
+        TAB_OVERLAY,
+        "bool",
+        "AP mode",
+        tip="Show the current assist mode.",
+    ),
+    Field(
+        "OverlayShowStatus",
+        TAB_OVERLAY,
+        "bool",
+        "AP status",
+        tip="Show the current autopilot status.",
+    ),
+    Field(
+        "OverlayShowShip",
+        TAB_OVERLAY,
+        "bool",
+        "Ship status",
+        tip="Show the current ship state.",
+    ),
+    Field(
+        "OverlayShowSystem",
+        TAB_OVERLAY,
+        "bool",
+        "Current system",
+        tip="Show the current system and star class.",
+    ),
+    Field(
+        "OverlayShowJumps",
+        TAB_OVERLAY,
+        "bool",
+        "Jump count",
+        tip="Show the current and total number of jumps.",
+    ),
     Field("VoiceEnable", TAB_SETTINGS, "bool", "Enable voice", setter="set_voice"),
     Field("log_level", TAB_DEBUG, "choice", "Log level", "log_level"),
     Field("DebugOverlay", TAB_DEBUG, "bool", "Debug Overlay"),
@@ -220,7 +291,7 @@ def parse(field, raw):
     if field.kind == "bool":
         return bool(raw)
     if field.kind == "choice":
-        choices = LOG_LEVELS if field.target == "log_level" else DSS_BUTTONS
+        choices = field.choices or (LOG_LEVELS if field.target == "log_level" else DSS_BUTTONS)
         if raw not in choices:
             raise ValueError(f"{field.label}: unknown choice {raw!r}")
         return raw
@@ -240,6 +311,40 @@ def parse(field, raw):
         except Exception as e:
             raise ValueError(f"{field.label}: {text!r} is not a valid hotkey") from e
     return text
+
+
+def validate_tab(tab, values):
+    """Validate constraints that depend on multiple settings in a tab."""
+    if tab == TAB_OVERLAY and values["OverlayPositionUnit"] == "Percent":
+        for key in ("OverlayTextXOffset", "OverlayTextYOffset"):
+            if values[key] > 100:
+                raise ValueError(f"{FIELDS_BY_KEY[key].label}: percent offsets must be between 0 and 100")
+
+
+def convert_overlay_offsets(values, previous, screen_width, screen_height):
+    """Convert unchanged offsets when switching units, keeping their screen distance stable."""
+    old_unit = previous.get("OverlayPositionUnit")
+    new_unit = values["OverlayPositionUnit"]
+    if old_unit not in OVERLAY_POSITION_UNITS or old_unit == new_unit:
+        return ()
+
+    dimensions = {
+        "OverlayTextXOffset": screen_width,
+        "OverlayTextYOffset": screen_height,
+    }
+    if any(extent <= 0 for extent in dimensions.values()):
+        raise ValueError("Cannot convert overlay offsets without valid screen dimensions")
+
+    converted_keys = []
+    for key, extent in dimensions.items():
+        if values[key] != previous.get(key):
+            continue
+        if old_unit == "Pixels":
+            values[key] = round(values[key] * 100 / extent)
+        else:
+            values[key] = round(values[key] * extent / 100)
+        converted_keys.append(key)
+    return tuple(converted_keys)
 
 
 def write(field, ap, value, window_pos=(0, 0)):

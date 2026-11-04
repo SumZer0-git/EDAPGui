@@ -69,7 +69,7 @@ EDAPGui/
 |   |   `-- __init__.py             # Package marker
 |   |-- gui/
 |   |   |-- main_window.py          # Main window: sidebar, modes, tabs, autosave, callbacks
-|   |   |-- pages.py                # Builders for the Ship (with the log), Waypoints, Settings, Debug, and Info tabs
+|   |   |-- pages.py                # Builders for the Ship (with the log), Waypoints, Overlay, Settings, Debug, and Info tabs
 |   |   |-- fields.py               # Settings model (labels, limits, storage); no Tk, unit tested
 |   |   |-- theme.py                # Dark palette, DPI scaling, and native title bar helpers
 |   |   |-- widgets.py              # Rounded buttons and tooltips
@@ -87,6 +87,7 @@ EDAPGui/
 |   |-- templates/                  # Images used for screen matching
 |   |-- locales/                    # English and German language files
 |   |-- icons/                      # Application icons
+|   |-- fonts/                      # Bundled fonts and their licenses
 |   `-- keybind_presets/            # Shipped game presets for generated defaults
 |-- data/
 |   |-- configs/                    # Reference configuration copied on first start
@@ -100,12 +101,14 @@ EDAPGui/
 |   |-- test_changelog.py           # Changelog format tests
 |   |-- test_detection.py           # Screen detection tests
 |   |-- test_flight.py              # Flight routine tests
+|   |-- test_gui_fields.py          # GUI settings model and window-state tests
 |   |-- test_journal.py             # Journal parsing tests
 |   |-- test_keybindings.py         # Game binding parser tests
 |   |-- test_keybind_fixer.py       # Binding fixer tests
 |   |-- test_logger.py              # Logging tests
 |   |-- test_market_cargo.py        # Market and cargo parser tests
 |   |-- test_ocr.py                 # OCR tests
+|   |-- test_overlay.py             # Overlay renderer and status-line tests
 |   |-- test_regions.py             # Screen-region tests
 |   |-- test_resources.py           # Localization and resource tests
 |   |-- test_screenshots.py         # Optional full-screen regression tests

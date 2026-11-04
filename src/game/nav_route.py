@@ -6,7 +6,6 @@ import json
 import os
 import time
 from sys import platform
-from time import sleep
 
 from core.logger import logger
 
@@ -29,9 +28,8 @@ class NavRouteParser:
                 )
             )
         self.last_mod_time = None
-
-        # Read json file data
-        self.current_data = self.get_nav_route_data()
+        self.current_data = {"event": "NavRouteClear", "Route": []}
+        self.get_nav_route_data()
 
         # self.watch_thread = threading.Thread(target=self._watch_file_thread, daemon=True)
         # self.watch_thread.start()
@@ -80,29 +78,40 @@ class NavRouteParser:
         {"timestamp": "2024-09-29T21:06:53Z", "event": "NavRouteClear", "Route": [
         ]}
         """
-        # Check if file changed
-        if self.get_file_modified_time() == self.last_mod_time:
-            # logger.debug(f'NavRoute.json mod timestamp {self.last_mod_time} unchanged.')
+        try:
+            modified_time = self.get_file_modified_time()
+        except FileNotFoundError:
+            self.current_data = {"event": "NavRouteClear", "Route": []}
+            self.last_mod_time = None
+            return self.current_data
+        except OSError as exc:
+            logger.warning(f"Could not check NavRoute.json: {exc}")
             return self.current_data
 
-        # Read file
-        backoff = 1
-        while True:
-            try:
-                with open(self.file_path, "r", encoding="utf-8") as file:
-                    data = json.load(file)
-                    break
-            except Exception:
-                logger.debug("An error occurred reading NavRoute.json file. File may be open.")
-                sleep(backoff)
-                logger.debug("Attempting to re-read NavRoute.json file after delay.")
-                backoff *= 2
+        if modified_time == self.last_mod_time:
+            return self.current_data
 
-        # Store data
+        try:
+            with open(self.file_path, "r", encoding="utf-8") as file:
+                data = json.load(file)
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning(f"Could not read NavRoute.json: {exc}")
+            self.last_mod_time = modified_time
+            return self.current_data
+
+        if not isinstance(data, dict) or data.get("event") not in {"NavRoute", "NavRouteClear"}:
+            logger.warning("NavRoute.json did not contain a valid route event.")
+            self.last_mod_time = modified_time
+            return self.current_data
+
+        route = data.get("Route")
+        if route is not None and not isinstance(route, list):
+            logger.warning("NavRoute.json route data was not a list.")
+            self.last_mod_time = modified_time
+            return self.current_data
+
         self.current_data = data
-        self.last_mod_time = self.get_file_modified_time()
-        # logger.debug(f'NavRoute.json mod timestamp {self.last_mod_time} updated.')
-        # print(json.dumps(data, indent=4))
+        self.last_mod_time = modified_time
         return data
 
     def get_last_system(self) -> str:
@@ -111,16 +120,17 @@ class NavRouteParser:
         self.get_nav_route_data()
 
         # Check if there is a route
-        if self.current_data["event"] == "NavRouteClear":
+        if self.current_data.get("event") == "NavRouteClear":
             return ""
 
-        if self.current_data["Route"] is None:
+        route = self.current_data.get("Route")
+        if not route:
             return ""
 
         # Find last system in route
-        last_system = self.current_data["Route"][-1]
+        last_system = route[-1]
         # print(json.dumps(last_system, indent=4))
-        return last_system["StarSystem"]
+        return last_system.get("StarSystem", "") if isinstance(last_system, dict) else ""
 
 
 # Usage Example

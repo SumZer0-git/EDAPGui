@@ -10,11 +10,14 @@ EDAPGui is a Windows autopilot for Elite Dangerous, offering optional assistance
 ## What it can do
 
 - **Travel Assist** follows the route selected in the Galaxy Map, including system scans and fuel management, then
-  continues to a selected local target and can request station docking.
+  continues to a local destination reported by the game's `Status.json` and can request station docking. It does not
+  infer a local target from the compass when the status has no destination.
 - **Waypoint Assist** follows a waypoint file, visits bookmarked destinations, and can dock, trade, or transfer cargo.
 - **Single Waypoint Assist** plots and travels to a system entered on the Debug tab.
 - **DSS Assist** runs a discovery scan when entering systems in supercruise.
 - **AFK Combat Assist** monitors shields and fighter status in a combat zone.
+- **Status overlay** shows the assist mode, status, ship, system, and route progress on top of the game. It stays with
+  Elite's window and is hidden behind other windows; position, font size, opacity, and lines are set on the Overlay tab.
 - Optional voice feedback, a debug overlay, and loading a TCE destination are also available.
 
 See the [waypoint guide](docs/Waypoint.md) for waypoint files and trade actions, and the
@@ -45,8 +48,8 @@ the currently focused window. A very wide field of view can also make target det
 
 The window is always dark and has a fixed size. The arrow at the bottom of the sidebar collapses it to a narrow icon
 strip, the pin keeps it on top of other windows, and the power button restarts or exits the program. Changes on the
-Ship, Settings, and Debug tabs are saved automatically; the lower right corner of the tab shows whether they are saved.
-The window position, collapsed state, and pin are remembered in `user_data/configs/gui.json`.
+Ship, Overlay, Settings, and Debug tabs are saved automatically; the lower right corner of the tab shows whether they
+are saved. The window position, collapsed state, and pin are remembered in `user_data/configs/gui.json`.
 
 The program stores its settings, ship profiles, waypoint files, logs, and debug output in `user_data/`. Example
 waypoint files from `data/waypoints/` are copied there on first start. If an existing installation reports an
@@ -85,6 +88,10 @@ The OCR test requires the full runtime dependencies; it is skipped in CI's slim 
 Ship tab:
 
 <img src="docs/screenshots/screen_cap_main.png" alt="Ship tab" width="700">
+
+Overlay tab:
+
+<img src="docs/screenshots/screen_cap_overlay.png" alt="Overlay tab" width="700">
 
 Settings tab:
 

@@ -42,6 +42,7 @@ def new_journal() -> EDJournal:
         "fuel_percent": None,
         "is_scooping": False,
         "cur_star_system": "",
+        "system_address": None,
         "cur_station": "",
         "cur_station_type": "",
         "cargo_capacity": None,
@@ -113,10 +114,13 @@ class ParseLineTestCase(unittest.TestCase):
 
     def test_location_in_open_space_has_no_station_and_does_not_log_an_error(self):
         with patch("game.journal.logger") as journal_logger:
-            self.journal.parse_line({"event": "Location", "StarSystem": "Ross 584", "Docked": False})
+            self.journal.parse_line(
+                {"event": "Location", "StarSystem": "Ross 584", "SystemAddress": 123, "Docked": False}
+            )
 
         journal_logger.error.assert_not_called()
         self.assertEqual(self.ship["cur_star_system"], "Ross 584")
+        self.assertEqual(self.ship["system_address"], 123)
         self.assertEqual(self.ship["cur_station"], "")
         self.assertEqual(self.ship["cur_station_type"], "")
         self.assertNotEqual(self.ship["status"], "in_station")
@@ -150,10 +154,13 @@ class ParseLineTestCase(unittest.TestCase):
         self.assertEqual(self.ship["status"], "starting_hyperspace")
         self.assertEqual(self.ship["star_class"], "K")
 
-        self.journal.parse_line({"event": "FSDJump", "StarSystem": "Alpha Centauri", "JumpDist": 4.38})
+        self.journal.parse_line(
+            {"event": "FSDJump", "StarSystem": "Alpha Centauri", "SystemAddress": 456, "JumpDist": 4.38}
+        )
         self.assertEqual(self.ship["status"], "in_supercruise")
         self.assertEqual(self.ship["location"], "Alpha Centauri")
         self.assertEqual(self.ship["dist_jumped"], 4.38)
+        self.assertEqual(self.ship["system_address"], 456)
         self.assertIsNone(self.ship["target"])  # arrived at the target
 
     def test_fsd_target_in_current_system_clears_target(self):

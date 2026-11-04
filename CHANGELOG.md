@@ -14,7 +14,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - Added a new dark user interface built with ttkbootstrap: sidebar with the assist modes (only one active at a time) and a Stop All button, tabs for Ship (with the log below the ship rates), Waypoints, Settings, Debug, and Info, a sidebar that collapses to an icon strip, an always-on-top pin, a power button with Restart and Exit, a native dark title bar, and per-monitor DPI scaling. The window has a fixed size and fits a portrait 1080p monitor.
-- Added automatic saving of the Ship, Settings, and Debug tabs with a saved, unsaved, or not-saved indicator in the lower right corner of the tab (the saved indicator disappears after 3 seconds); the window position, collapsed state, and always-on-top are remembered in `user_data/configs/gui.json`.
+- Added a dedicated Overlay tab with automatic saving, corner anchoring, pixel or percentage offsets, font-size and panel-opacity controls, and checkboxes for individual status lines. The overlay uses a bundled Rajdhani font.
+- Added semantic overlay colors for active, successful, caution, and idle states, plus route-aware jump progress that follows the current system during manual travel and while EDAPGui is idle. The jump line is hidden without a plotted route, shows a muted "Off route" state when needed, and marks route completion in green for up to 60 seconds.
+- Added automatic saving of the Ship, Overlay, Settings, and Debug tabs with a saved, unsaved, or not-saved indicator in the lower right corner of the tab (the saved indicator disappears after 3 seconds); the window position, collapsed state, and always-on-top are remembered in `user_data/configs/gui.json`.
 - Added offline unit tests for the settings model and the stored window state of the user interface.
 - Added `core/version.py` as the single place for the application version (still 1.7.0); the footer and log read it from there.
 - Added the update check (`core/updates.py`): at startup the program looks up the latest release of `DopeEx/EDAPGui` in the background and shows an orange notice in the footer (which opens the Info tab with the download button) if it is newer. Nothing happens at startup if there is no release yet or GitHub cannot be reached.
@@ -38,8 +40,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Changed the default overlay settings to match the maintainer's current setup: enabled, top-left anchor, percentage offsets of 1% and 15%, Rajdhani size 14, 50% panel opacity, and all information lines visible. Existing configurations without a position unit keep pixel-based offsets.
+- Changed the overlay to follow Elite's client window, stay below unrelated windows, and request Windows' capture-exclusion mode. Rendering now uses a thread-safe Pillow surface with per-monitor DPI handling, and the overlay can be enabled or disabled without restarting EDAPGui.
+- Styled the status overlay with the GUI palette: a dark panel and border, orange labels, light values, muted placeholders, and a subtle text shadow.
 - Replaced the separate FSD Route Assist and Supercruise Assist controls with one Travel Assist option. It selects the FSD route when a system target is set and automatically continues to a local target when one remains; the former FSD start hotkey is retained as the Travel Assist hotkey.
 - Reorganized the README and user guides, added a dedicated keybindings guide, and documented current assist behavior and follow-up items in place of the obsolete design notes.
+- Updated the README screenshots for the new tab bar and added one of the Overlay tab.
 - Expanded the project structure guide into a compact file-by-file tree with short responsibilities and placement boundaries.
 - Changed the target offset to be computed from the fitted center of the target circle instead of fixed correction values, so it is independent of the resolution.
 - Changed the supported languages to German and English; removed the French and Russian locales, the `sc-disengage` template and the deprecated `sc_disengage`.
@@ -81,6 +87,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Fixed the overlay's AP STATUS line keeping the last assist status, for example "Maneuvering", after an assist stopped. The GUI status line and the overlay now share one status source, which is set to Idle once any assist has actually finished, whether stopped by the user, at route end or after an error.
+- Fixed Travel Assist starting Supercruise Assist after a false-positive compass match when no local destination was set. Supercruise Assist now starts only when the game's `Status.json` reports a non-main-star destination.
+- Fixed overlay text and panel sizing being multiplied by both game resolution and Windows display scaling. Font size is now in points and follows monitor DPI only; changing monitors triggers a redraw. Saved font-size values are not reset.
 - Fixed global hotkeys for Start FSD, Start SC and Stop All triggering on matching numeric-keypad keys; numpad events are now ignored while regular navigation keys and configured hotkey sequences continue to work.
 - Fixed global hotkey actions updating Tkinter from the keyboard listener thread; actions are now dispatched through a queue for execution on the GUI thread.
 - Fixed unhandled exceptions (main thread, worker threads, Tk callbacks, errors while closing) only appearing on the console: they are now also written to the log file.

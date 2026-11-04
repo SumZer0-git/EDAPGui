@@ -5,7 +5,7 @@ import tkinter as tk
 import ttkbootstrap as ttk
 
 from core.version import EDAP_VERSION
-from gui.fields import DSS_BUTTONS, FIELDS_BY_KEY, LOG_LEVELS, fields_of
+from gui.fields import DSS_BUTTONS, FIELDS_BY_KEY, LOG_LEVELS, TAB_OVERLAY, fields_of
 from gui.theme import BLUE, ORANGE, PANEL, TEXT
 from gui.widgets import RoundButton, add_tooltip
 
@@ -47,6 +47,9 @@ def _field(app, card, key, row):
     label.grid(row=row, column=0, sticky="w", pady=pad)
     if field.kind in ("int", "float"):
         widget = ttk.Spinbox(card, from_=field.lo, to=field.hi, increment=field.step, textvariable=var, width=7)
+        widget.grid(row=row, column=1, sticky="e", pady=pad)
+    elif field.kind == "choice":
+        widget = ttk.Combobox(card, values=field.choices, state="readonly", textvariable=var, width=16)
         widget.grid(row=row, column=1, sticky="e", pady=pad)
     else:
         widget = ttk.Entry(card, textvariable=var, width=12 if field.kind == "hotkey" else 28)
@@ -128,13 +131,38 @@ def build_settings(app, page):
     row = _choice(app, buttons, "DSSButton", "DSS Button", DSS_BUTTONS, 0)
     _field(app, buttons, "HotKey_StartTravel", row)
     _field(app, buttons, "HotKey_StopAllAssists", row + 1)
-    overlay = _card(app, right, "Overlay")
-    for row, key in enumerate(("OverlayTextEnable", "OverlayTextXOffset", "OverlayTextYOffset", "OverlayTextFontSize")):
-        _field(app, overlay, key, row)
     voice = _card(app, right, "Voice")
     _field(app, voice, "VoiceEnable", 0)
     _page_layout(page)
     _save_label(app, page, "Settings")
+
+
+def build_overlay(app, page):
+    left, right = _columns(app, page)
+    position = _card(app, left, "Overlay position")
+    for row, key in enumerate(
+        (
+            "OverlayTextEnable",
+            "OverlayPositionAnchor",
+            "OverlayPositionUnit",
+            "OverlayTextXOffset",
+            "OverlayTextYOffset",
+        )
+    ):
+        _field(app, position, key, row)
+
+    appearance = _card(app, right, "Appearance")
+    _field(app, appearance, "OverlayTextFontSize", 0)
+    _field(app, appearance, "OverlayPanelOpacity", 1)
+
+    visible = _card(app, right, "Visible information")
+    for row, key in enumerate(
+        ("OverlayShowMode", "OverlayShowStatus", "OverlayShowShip", "OverlayShowSystem", "OverlayShowJumps")
+    ):
+        _field(app, visible, key, row)
+
+    _page_layout(page)
+    _save_label(app, page, TAB_OVERLAY)
 
 
 def _build_log(app, page):
@@ -206,6 +234,7 @@ def build_info(app, page):
 PAGES = (
     ("Ship", build_ship),
     ("Waypoints", build_waypoints),
+    ("Overlay", build_overlay),
     ("Settings", build_settings),
     ("Debug", build_debug),
     ("Info", build_info),

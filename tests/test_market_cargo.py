@@ -122,6 +122,11 @@ class CargoParserTestCase(TempFileTestCase):
 
 
 class NavRouteParserTestCase(TempFileTestCase):
+    def test_missing_route_file_returns_a_cleared_route(self):
+        parser = NavRouteParser(file_path=str(self.dir / "Missing.json"))
+
+        self.assertEqual(parser.get_nav_route_data(), {"event": "NavRouteClear", "Route": []})
+
     def test_last_system_of_route(self):
         route = {"event": "NavRoute", "Route": [{"StarSystem": "Leesti"}, {"StarSystem": "Devataru"}]}
         parser = NavRouteParser(file_path=str(write_json(self.dir / "NavRoute.json", route)))
@@ -143,6 +148,16 @@ class NavRouteParserTestCase(TempFileTestCase):
         write_json(path, {"event": "NavRoute", "Route": [{"StarSystem": "A"}, {"StarSystem": "B"}]})
 
         self.assertEqual(parser.get_last_system(), "B")
+
+    def test_invalid_route_update_keeps_the_last_valid_route(self):
+        path = write_json(
+            self.dir / "NavRoute.json",
+            {"event": "NavRoute", "Route": [{"StarSystem": "A"}, {"StarSystem": "B"}]},
+        )
+        parser = NavRouteParser(file_path=str(path))
+        path.write_text("{", encoding="utf-8")
+
+        self.assertEqual(parser.get_nav_route_data()["Route"][-1]["StarSystem"], "B")
 
 
 if __name__ == "__main__":

@@ -63,7 +63,7 @@ class AssistsMixin:
 
         # Successful targeting of Station, lets go to it
         sleep(3)  # Wait for compass to stop flashing blue!
-        if self.have_destination(scr_reg):
+        if self.has_in_system_target(self.status.get_cleaned_data()) and self.have_destination(scr_reg):
             self.ap_ckb("log", " - Station: " + station_name)
             self.update_ap_status(f"SC to Station: {station_name}")
             self.sc_assist(scr_reg)
@@ -81,6 +81,10 @@ class AssistsMixin:
 
         starttime = time.time()
         starttime -= 20  # to account for first instance not doing positioning
+
+        route_state = self.jn.ship_state()
+        if route_state["target"] and route_state["jumps_remains"] > 0:
+            self.total_jumps = self.jump_cnt + route_state["jumps_remains"]
 
         # TODO - can we enable this? Seems like a better way
         # if nav_route_parser.get_last_system() is not None:
@@ -153,7 +157,7 @@ class AssistsMixin:
         )
 
         # if there is no destination defined, we are done
-        if not self.has_in_system_target(scr_reg, status):
+        if not self.has_in_system_target(status):
             self.keys.send("SetSpeedZero")
             self.vce.say("Destination Reached, distance jumped:" + str(int(self.total_dist_jumped)) + " lightyears")
             if self.config["AutomaticLogout"]:
@@ -178,26 +182,24 @@ class AssistsMixin:
                 self.update_ap_status("SC to Target")
                 self.sc_assist(scr_reg)
         else:
-            self.update_ap_status("SC to Target")
-            self.sc_assist(scr_reg)
+            if self.has_in_system_target(self.status.get_cleaned_data()):
+                self.update_ap_status("SC to Target")
+                self.sc_assist(scr_reg)
+            else:
+                self.ap_ckb("log", "No local target found. Select a target and try again.")
 
-    def has_in_system_target(self, scr_reg, status) -> bool:
-        """True if there is a target in the current system (station, body...) to fly to with SC Assist.
-        The game's Status.json decides: a destination other than the main star (body 0) is such a target. The
-        compass on screen is only a fallback when the status has none, and then two readings in a row must agree,
-        because a single false compass match would start an SC Assist without a target."""
-        if status["Destination_Name"] != "" and status["Destination_Body"] != 0:
-            return True
-        if not self.have_destination(scr_reg):
-            return False
-        sleep(0.5)
-        found = self.have_destination(scr_reg)
-        logger.debug(f"No destination in the status, compass confirmed twice: {found}")
-        return found
+    def has_in_system_target(self, status) -> bool:
+        """Return whether Status.json reports a non-main-star destination for SC Assist."""
+        return status["Destination_Name"] != "" and status["Destination_Body"] != 0
 
     # Supercruise Assist loop to travel to target in system and perform autodock
     #
     def sc_assist(self, scr_reg):
+        if not self.has_in_system_target(self.status.get_cleaned_data()):
+            logger.debug("SC Assist skipped because Status.json has no in-system destination.")
+            self.ap_ckb("log", "No local target found. Select a target and try again.")
+            return
+
         logger.info("Entered sc_assist")
 
         # Goto cockpit view

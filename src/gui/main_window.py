@@ -26,7 +26,7 @@ from core.autopilot import EDAutopilot
 from core.logger import logger
 from core.version import EDAP_VERSION
 from gui import fields, window_state
-from gui.fields import FIELDS, fields_of
+from gui.fields import FIELDS, TAB_OVERLAY, fields_of
 from gui.pages import PAGES
 from gui.theme import (
     BG,
@@ -54,7 +54,7 @@ MODES = (
     ("dss", "DSS Assist"),
 )
 MODE_KEYS = {key for key, _ in MODES}
-SAVE_TABS = ("Ship", "Settings", "Debug")
+SAVE_TABS = ("Ship", "Settings", TAB_OVERLAY, "Debug")
 SAVE_TEXT = {
     "saved": ("\u2713 Saved", GREEN),
     "dirty": ("\u25cf Unsaved changes", YELLOW),
@@ -403,6 +403,9 @@ class APGui:
         tab_fields = fields_of(tab)
         try:
             parsed = {field.key: fields.parse(field, self.vars[field.key].get()) for field in tab_fields}
+            if tab == TAB_OVERLAY:
+                self._convert_overlay_offsets(parsed)
+            fields.validate_tab(tab, parsed)
         except (ValueError, tk.TclError) as e:
             logger.debug(f"Settings not saved: {e}")
             self._set_save(tab, "error")
@@ -416,6 +419,8 @@ class APGui:
                     self.applied[field.key] = parsed[field.key]
                     changed = True
             if changed:
+                if tab == TAB_OVERLAY:
+                    self.ed_ap.apply_overlay_config()
                 if tab == "Ship":
                     self.ed_ap.update_ship_configs()
                 else:
@@ -425,6 +430,20 @@ class APGui:
             self._set_save(tab, "error")
             return
         self._set_save(tab, "saved")
+
+    def _convert_overlay_offsets(self, values):
+        converted_keys = fields.convert_overlay_offsets(
+            values,
+            self.applied,
+            self.ed_ap.scr.screen_width,
+            self.ed_ap.scr.screen_height,
+        )
+        self._loading = True
+        try:
+            for key in converted_keys:
+                self.vars[key].set(str(values[key]))
+        finally:
+            self._loading = False
 
     def _set_save(self, tab, state):
         self.save_state[tab] = state
@@ -593,7 +612,6 @@ class APGui:
         self.TRAVEL_A_running = False
         self.log_msg("Travel Assist stop")
         self.ed_ap.vce.say("Travel Assist Off")
-        self.update_statusline("Idle")
 
     def start_waypoint(self):
         logger.debug("Entered: start_waypoint")
@@ -608,7 +626,6 @@ class APGui:
         self.WP_A_running = False
         self.log_msg("Waypoint Assist stop")
         self.ed_ap.vce.say("Waypoint Assist Off")
-        self.update_statusline("Idle")
 
     def start_dss(self):
         logger.debug("Entered: start_dss")
@@ -623,7 +640,6 @@ class APGui:
         self.DSS_A_running = False
         self.log_msg("DSS Assist stop")
         self.ed_ap.vce.say("DSS Assist Off")
-        self.update_statusline("Idle")
 
     def toggle_single_waypoint(self):
         if self.swp_var.get() and not self.SWP_A_running:
@@ -652,7 +668,6 @@ class APGui:
         self.SWP_A_running = False
         self.log_msg("Single Waypoint Assist stop")
         self.ed_ap.vce.say("Single Waypoint Assist Off")
-        self.update_statusline("Idle")
 
     # info and updates
 
