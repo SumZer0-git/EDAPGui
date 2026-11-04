@@ -3,6 +3,7 @@
 import contextlib
 import io
 import unittest
+from unittest.mock import patch
 
 from game.journal import (
     EDJournal,
@@ -109,6 +110,30 @@ class ParseLineTestCase(unittest.TestCase):
         self.assertEqual(self.ship["cur_star_system"], "Sol")
         self.assertEqual(self.ship["cur_station"], "Abraham Lincoln")
         self.assertEqual(self.ship["StationServices"], ["dock", "refuel"])
+
+    def test_location_in_open_space_has_no_station_and_does_not_log_an_error(self):
+        with patch("game.journal.logger") as journal_logger:
+            self.journal.parse_line({"event": "Location", "StarSystem": "Ross 584", "Docked": False})
+
+        journal_logger.error.assert_not_called()
+        self.assertEqual(self.ship["cur_star_system"], "Ross 584")
+        self.assertEqual(self.ship["cur_station"], "")
+        self.assertEqual(self.ship["cur_station_type"], "")
+        self.assertNotEqual(self.ship["status"], "in_station")
+
+    def test_location_docked_sets_station(self):
+        self.journal.parse_line(
+            {
+                "event": "Location",
+                "StarSystem": "Sol",
+                "StationName": "Abraham Lincoln",
+                "StationType": "Orbis",
+                "Docked": True,
+            }
+        )
+
+        self.assertEqual(self.ship["cur_station"], "Abraham Lincoln")
+        self.assertEqual(self.ship["status"], "in_station")
 
     def test_docking_denied(self):
         self.journal.parse_line({"event": "DockingDenied", "Reason": "NoSpace"})
