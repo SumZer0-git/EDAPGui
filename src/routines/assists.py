@@ -145,8 +145,15 @@ class AssistsMixin:
 
         sleep(2)  # wait until screen stabilizes from possible last positioning
 
+        status = self.status.get_cleaned_data()
+        logger.debug(
+            f"End of route: status Destination system={status['Destination_System']}, "
+            f"body={status['Destination_Body']}, name='{status['Destination_Name']}', "
+            f"location='{self.jn.ship_state()['location']}', journal target={self.jn.ship_state()['target']}"
+        )
+
         # if there is no destination defined, we are done
-        if not self.have_destination(scr_reg):
+        if not self.has_in_system_target(scr_reg, status):
             self.keys.send("SetSpeedZero")
             self.vce.say("Destination Reached, distance jumped:" + str(int(self.total_dist_jumped)) + " lightyears")
             if self.config["AutomaticLogout"]:
@@ -159,6 +166,20 @@ class AssistsMixin:
             self.vce.say("System Reached, preparing for supercruise")
             sleep(1)
             return False
+
+    def has_in_system_target(self, scr_reg, status) -> bool:
+        """True if there is a target in the current system (station, body...) to fly to with SC Assist.
+        The game's Status.json decides: a destination other than the main star (body 0) is such a target. The
+        compass on screen is only a fallback when the status has none, and then two readings in a row must agree,
+        because a single false compass match would start an SC Assist without a target."""
+        if status["Destination_Name"] != "" and status["Destination_Body"] != 0:
+            return True
+        if not self.have_destination(scr_reg):
+            return False
+        sleep(0.5)
+        found = self.have_destination(scr_reg)
+        logger.debug(f"No destination in the status, compass confirmed twice: {found}")
+        return found
 
     # Supercruise Assist loop to travel to target in system and perform autodock
     #
