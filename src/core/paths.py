@@ -24,6 +24,7 @@ CONFIG_DIR = USER_DATA / "configs"
 AP_CONFIG = CONFIG_DIR / "AP.json"
 SHIP_CONFIGS = CONFIG_DIR / "ship_configs.json"
 RESOLUTION_CONFIG = CONFIG_DIR / "resolution.json"
+GUI_STATE = CONFIG_DIR / "gui.json"
 WAYPOINTS_DIR = USER_DATA / "waypoints"
 # The tests set EDAP_LOG_DIR so that they do not rotate away the logs of real sessions
 LOG_DIR = Path(os.environ["EDAP_LOG_DIR"]) if os.environ.get("EDAP_LOG_DIR") else USER_DATA / "logs"

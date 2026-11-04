@@ -14,5 +14,6 @@ pyttsx3==2.90
 pywin32==312
 requests==2.34.2
 strsimpy~=0.3.0
+ttkbootstrap==2.2.6
 xmltodict~=1.0.4
 ruff==0.17.3

@@ -68,7 +68,12 @@ EDAPGui/
 |   |   |-- afk_combat.py           # AFK combat evasion and fighter actions
 |   |   `-- __init__.py             # Package marker
 |   |-- gui/
-|   |   |-- main_window.py          # Tkinter tabs, settings, and callbacks
+|   |   |-- main_window.py          # Main window: sidebar, modes, tabs, autosave, callbacks
+|   |   |-- pages.py                # Builders for the Ship (with the log), Waypoints, Settings, Debug, and Info tabs
+|   |   |-- fields.py               # Settings model (labels, limits, storage); no Tk, unit tested
+|   |   |-- theme.py                # Dark palette, DPI scaling, and native title bar helpers
+|   |   |-- widgets.py              # Rounded buttons and tooltips
+|   |   |-- window_state.py         # Remembers window position, collapsed state, and always-on-top
 |   |   |-- overlay.py              # Optional on-screen overlay
 |   |   `-- __init__.py             # Package marker
 |   |-- integrations/
