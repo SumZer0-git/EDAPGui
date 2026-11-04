@@ -131,6 +131,7 @@ class EDJournal:
             "body": None,
             "dist_jumped": 0,
             "jumps_remains": 0,
+            "system_address": None,
             "fuel_capacity": None,
             "fuel_level": None,
             "fuel_percent": None,
@@ -279,6 +280,7 @@ class EDJournal:
                 self.ship["status"] = "in_station"
                 self.ship["location"] = log["StarSystem"]
                 self.ship["cur_star_system"] = log["StarSystem"]
+                self.ship["system_address"] = log.get("SystemAddress")
                 self.ship["cur_station"] = log["StationName"]
                 self.ship["cur_station_type"] = log["StationType"]
                 self.ship["StationServices"] = log["StationServices"]
@@ -287,6 +289,7 @@ class EDJournal:
             elif log_event == "Location":
                 self.ship["location"] = log["StarSystem"]
                 self.ship["cur_star_system"] = log["StarSystem"]
+                self.ship["system_address"] = log.get("SystemAddress")
                 # StationName/StationType are only written when the commander is at a station
                 self.ship["cur_station"] = log.get("StationName", "")
                 self.ship["cur_station_type"] = log.get("StationType", "")
@@ -338,6 +341,7 @@ class EDJournal:
             if log_event == "FSDJump":
                 self.ship["location"] = log["StarSystem"]
                 self.ship["cur_star_system"] = log["StarSystem"]
+                self.ship["system_address"] = log.get("SystemAddress")
             # TODO                if 'StarClass' in log:
             # TODO                    self.ship['star_class'] = log['StarClass']
 
@@ -369,6 +373,7 @@ class EDJournal:
             elif log_event == "CarrierJump":
                 self.ship["location"] = log["StarSystem"]
                 self.ship["cur_star_system"] = log["StarSystem"]
+                self.ship["system_address"] = log.get("SystemAddress")
                 self.ship["cur_station"] = log["StationName"]
                 self.ship["cur_station_type"] = log["StationType"]
 
