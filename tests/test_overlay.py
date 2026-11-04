@@ -1,5 +1,6 @@
 """Tests for rendering overlay contents without creating a Win32 window."""
 
+import sys
 import unittest
 from threading import RLock
 from types import SimpleNamespace
@@ -7,10 +8,25 @@ from unittest.mock import Mock, call, patch
 
 from PIL import ImageColor
 
-from core.autopilot import EDAutopilot, _overlay_status_role, _set_overlay_config_defaults
 from core.types import EdapInterruptError
 from gui.overlay import _WM_DPICHANGED, Overlay, _load_font, _render_image
 from gui.theme import BLUE, MUTED, ORANGE, PANEL, TEXT
+
+# The slim CI has no PaddleOCR; these tests never run OCR, so a temporary stub lets core.autopilot import.
+try:
+    import paddleocr  # noqa: F401
+
+    _PADDLEOCR_STUBBED = False
+except ImportError:
+    sys.modules["paddleocr"] = SimpleNamespace(PaddleOCR=None)
+    _PADDLEOCR_STUBBED = True
+
+from core.autopilot import EDAutopilot, _overlay_status_role, _set_overlay_config_defaults  # noqa: E402
+
+if _PADDLEOCR_STUBBED:
+    # Other test modules must still see the missing PaddleOCR and skip their OCR tests.
+    del sys.modules["paddleocr"]
+    sys.modules.pop("vision.ocr", None)
 
 
 def _make_route_overlay(route_data, ship_state):
