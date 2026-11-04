@@ -1,10 +1,29 @@
 """Global hotkey listener that distinguishes the numeric keypad."""
 
+import queue
 from dataclasses import dataclass
 from time import monotonic
 from typing import Callable
 
 HotkeySteps = tuple[tuple[frozenset[int], ...], ...]
+
+
+class ActionQueue:
+    """Hands actions from the keyboard listener thread over to the thread that calls run_pending (the GUI thread)."""
+
+    def __init__(self):
+        self._actions = queue.Queue()
+
+    def put(self, action: Callable[[], None]):
+        self._actions.put(action)
+
+    def run_pending(self):
+        while True:
+            try:
+                action = self._actions.get_nowait()
+            except queue.Empty:
+                return
+            action()
 
 
 @dataclass

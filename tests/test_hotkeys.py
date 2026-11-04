@@ -1,6 +1,5 @@
 """Tests for global hotkey handling."""
 
-import queue
 import threading
 import unittest
 from types import SimpleNamespace
@@ -8,8 +7,7 @@ from unittest import mock
 
 import keyboard
 
-from controls.hotkeys import HotkeyListener
-from gui.main_window import APGui
+from controls.hotkeys import ActionQueue, HotkeyListener
 
 
 class FakeKeyboard:
@@ -74,18 +72,22 @@ class HotkeyListenerTestCase(unittest.TestCase):
         fake_keyboard.callback(SimpleNamespace(scan_code=home_scan_code, event_type=keyboard.KEY_DOWN, is_keypad=False))
         callback.assert_called_once_with()
 
-    def test_hotkey_action_runs_when_gui_processes_the_queue(self):
-        app = APGui.__new__(APGui)
-        app.hotkey_actions = queue.Queue()
-        app.root = mock.Mock()
-        app.root.after.return_value = "next-poll"
-        callback_thread = []
+    def test_action_queued_by_listener_thread_runs_on_the_processing_thread(self):
+        actions = ActionQueue()
+        run_on = []
 
-        app.hotkey_actions.put(lambda: callback_thread.append(threading.current_thread()))
-        app.process_hotkey_actions()
+        listener_thread = threading.Thread(
+            target=lambda: actions.put(lambda: run_on.append(threading.current_thread()))
+        )
+        listener_thread.start()
+        listener_thread.join()
+        self.assertEqual(run_on, [])
 
-        self.assertEqual(callback_thread, [threading.current_thread()])
-        app.root.after.assert_called_once_with(50, app.process_hotkey_actions)
+        actions.run_pending()
+        self.assertEqual(run_on, [threading.current_thread()])
+
+        actions.run_pending()
+        self.assertEqual(len(run_on), 1)
 
     def test_multi_step_hotkey_still_works(self):
         callback = mock.Mock()
