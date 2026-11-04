@@ -43,6 +43,7 @@ from tkinter import filedialog as fd
 
 import keyboard
 
+from controls.hotkeys import ActionQueue, HotkeyListener
 from controls.mouse_point import MousePoint
 from core import paths, updates
 from core.autopilot import EDAutopilot
@@ -190,9 +191,21 @@ class APGui:
         # global trap for these keys, the 'end' key will stop any current AP action
         # the 'home' key will start the FSD Assist.  May want another to start SC Assist
 
-        keyboard.add_hotkey(self.ed_ap.config["HotKey_StopAllAssists"], self.stop_all_assists)
-        keyboard.add_hotkey(self.ed_ap.config["HotKey_StartFSD"], self.callback, args=("fsd_start", None))
-        keyboard.add_hotkey(self.ed_ap.config["HotKey_StartSC"], self.callback, args=("sc_start", None))
+        self.hotkey_actions = ActionQueue()
+        self.hotkeys = HotkeyListener(keyboard)
+        self.hotkeys.add_hotkey(
+            self.ed_ap.config["HotKey_StopAllAssists"], lambda: self.hotkey_actions.put(self.stop_all_assists)
+        )
+        self.hotkeys.add_hotkey(
+            self.ed_ap.config["HotKey_StartFSD"],
+            lambda: self.hotkey_actions.put(lambda: self.callback("fsd_start", None)),
+        )
+        self.hotkeys.add_hotkey(
+            self.ed_ap.config["HotKey_StartSC"],
+            lambda: self.hotkey_actions.put(lambda: self.callback("sc_start", None)),
+        )
+        self.hotkeys.start()
+        self.hotkey_poll_id = self.root.after(50, self.process_hotkey_actions)
 
         # check for updates
         self.check_updates(manual=False)
@@ -292,6 +305,8 @@ class APGui:
 
     def close_window(self):
         logger.debug("Entered: close_window")
+        self.hotkeys.stop()
+        self.root.after_cancel(self.hotkey_poll_id)
         self.stop_fsd()
         self.stop_sc()
         self.ed_ap.quit()
@@ -302,6 +317,10 @@ class APGui:
     def stop_all_assists(self):
         logger.debug("Entered: stop_all_assists")
         self.callback("stop_all_assists")
+
+    def process_hotkey_actions(self):
+        self.hotkey_poll_id = self.root.after(50, self.process_hotkey_actions)
+        self.hotkey_actions.run_pending()
 
     def start_fsd(self):
         logger.debug("Entered: start_fsd")

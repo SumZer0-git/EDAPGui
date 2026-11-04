@@ -5,6 +5,7 @@
 __pycache__/
 venv*/
 .venv*/
+.vscode/
 
 # Build output (build is currently disabled)
 /build/
