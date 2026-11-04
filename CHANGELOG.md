@@ -75,6 +75,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Fixed global hotkeys for Start FSD, Start SC and Stop All triggering on matching numeric-keypad keys; numpad events are now ignored while regular navigation keys and configured hotkey sequences continue to work.
+- Fixed global hotkey actions updating Tkinter from the keyboard listener thread; actions are now dispatched through a queue for execution on the GUI thread.
 - Fixed unhandled exceptions (main thread, worker threads, Tk callbacks, errors while closing) only appearing on the console: they are now also written to the log file.
 - Fixed Route Assist deciding at the end of the route by the compass alone whether to hand over to Supercruise Assist: it now uses the destination from the game's `Status.json`; the compass is only a fallback and must be seen in two readings. Before, a missed compass ended the route as "Destination Reached" instead of flying to the station.
 - Fixed FSD jump-start retries not correcting a slightly off-center target: a retry now cancels the running charge, waits for the FSD flags to clear and realigns with a tighter tolerance, even if the journal still reports `starting_hyperspace`.
