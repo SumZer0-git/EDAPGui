@@ -167,6 +167,20 @@ class AssistsMixin:
             sleep(1)
             return False
 
+    def travel_assist(self, scr_reg):
+        """Choose the required travel phase from the currently targeted system."""
+        if self.jn.ship_state()["target"]:
+            self.jump_cnt = 0
+            self.refuel_cnt = 0
+            self.total_dist_jumped = 0
+            self.total_jumps = 0
+            if self.fsd_assist(scr_reg) is False and self.travel_assist_enabled:
+                self.update_ap_status("SC to Target")
+                self.sc_assist(scr_reg)
+        else:
+            self.update_ap_status("SC to Target")
+            self.sc_assist(scr_reg)
+
     def has_in_system_target(self, scr_reg, status) -> bool:
         """True if there is a target in the current system (station, body...) to fly to with SC Assist.
         The game's Status.json decides: a destination other than the main star (body 0) is such a target. The
@@ -192,7 +206,7 @@ class AssistsMixin:
         align_failed = False
         # see if we have a compass up, if so then we have a target
         if not self.have_destination(scr_reg):
-            self.ap_ckb("log", "Quiting SC Assist - Compass not found. Rotate ship and try again.")
+            self.ap_ckb("log", "No local target found. Select a target and try again.")
             logger.debug("Quiting sc_assist - compass not found")
             return
 
@@ -302,7 +316,8 @@ class AssistsMixin:
             self.keys.send("SetSpeedZero")  # make sure we don't continue to land
             self.ap_ckb("log", "Supercruise dropped, terminating SC Assist")
 
-        self.ap_ckb("log+vce", "Supercruise Assist complete")
+        completion_message = "Travel Assist complete" if self.travel_assist_enabled else "Supercruise Assist complete"
+        self.ap_ckb("log+vce", completion_message)
 
     # Simply monitor for Shields down so we can boost away or our fighter got destroyed
     # and thus redeploy another one

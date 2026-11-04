@@ -34,6 +34,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Replaced the separate FSD Route Assist and Supercruise Assist controls with one Travel Assist option. It selects the FSD route when a system target is set and automatically continues to a local target when one remains; the former FSD start hotkey is retained as the Travel Assist hotkey.
 - Reorganized the README and user guides, added a dedicated keybindings guide, and documented current assist behavior and follow-up items in place of the obsolete design notes.
 - Expanded the project structure guide into a compact file-by-file tree with short responsibilities and placement boundaries.
 - Changed the target offset to be computed from the fitted center of the target circle instead of fixed correction values, so it is independent of the resolution.

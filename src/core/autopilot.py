@@ -57,8 +57,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             "SunBrightThreshold": 125,  # The low level for brightness detection, range 0-255, want to mask out darker items
             "FuelScoopTimeOut": 35,  # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
             "DockingRetries": 30,  # number of time to attempt docking
-            "HotKey_StartFSD": "home",  # if going to use other keys, need to look at the python keyboard package
-            "HotKey_StartSC": "ins",  # to determine other keynames, make sure these keys are not used in ED bindings
+            "HotKey_StartTravel": "home",  # if going to use other keys, need to look at the python keyboard package
             "HotKey_StopAllAssists": "end",
             "EnableRandomness": False,  # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
             "ActivateEliteEachKey": False,  # Activate Elite window before each key or group of keys
@@ -124,6 +123,10 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                 cnf["OCRLanguage"] = "en"
             if "DebugOverlay" not in cnf:
                 cnf["DebugOverlay"] = False
+            if "HotKey_StartTravel" not in cnf:
+                cnf["HotKey_StartTravel"] = cnf.get("HotKey_StartFSD", self.config["HotKey_StartTravel"])
+            cnf.pop("HotKey_StartFSD", None)
+            cnf.pop("HotKey_StartSC", None)
             cnf.pop("HotKey_StartRobigo", None)
             cnf.pop("Robigo_Single_Loop", None)
             cnf.pop("ElwScannerEnable", None)
@@ -170,8 +173,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         set_log_level(level, "at startup")
 
         # initialize all to false
-        self.fsd_assist_enabled = False
-        self.sc_assist_enabled = False
+        self.travel_assist_enabled = False
         self.afk_combat_assist_enabled = False
         self.waypoint_assist_enabled = False
         self.dss_assist_enabled = False
@@ -256,10 +258,8 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
     def update_overlay(self):
         if self.config["OverlayTextEnable"]:
             ap_mode = "Offline"
-            if self.fsd_assist_enabled:
-                ap_mode = "FSD Route Assist"
-            elif self.sc_assist_enabled:
-                ap_mode = "SC Assist"
+            if self.travel_assist_enabled:
+                ap_mode = "Travel Assist"
             elif self.waypoint_assist_enabled:
                 ap_mode = "Waypoint Assist"
             elif self.afk_combat_assist_enabled:
@@ -330,15 +330,10 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
     #
     # Setter routines for state variables
     #
-    def set_fsd_assist(self, enable=True):
-        if not enable and self.fsd_assist_enabled:
+    def set_travel_assist(self, enable=True):
+        if not enable and self.travel_assist_enabled:
             self.ctype_async_raise(self.ap_thread, EdapInterruptError)
-        self.fsd_assist_enabled = enable
-
-    def set_sc_assist(self, enable=True):
-        if not enable and self.sc_assist_enabled:
-            self.ctype_async_raise(self.ap_thread, EdapInterruptError)
-        self.sc_assist_enabled = enable
+        self.travel_assist_enabled = enable
 
     def set_waypoint_assist(self, enable=True):
         if not enable and self.waypoint_assist_enabled:
@@ -433,53 +428,20 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                     self._sc_sco_active_loop_thread = threading.Thread(target=self._sc_sco_active_loop, daemon=True)
                     self._sc_sco_active_loop_thread.start()
 
-            if self.fsd_assist_enabled:
-                logger.debug("Running fsd_assist")
-                set_focus_elite_window()
-                self.update_overlay()
-                self.jump_cnt = 0
-                self.refuel_cnt = 0
-                self.total_dist_jumped = 0
-                self.total_jumps = 0
-                fin = True
-                # could be deep in call tree when user disables FSD, so need to trap that exception
-                try:
-                    fin = self.fsd_assist(self.scrReg)
-                except EdapInterruptError:
-                    logger.debug("Caught stop exception")
-                except Exception as e:
-                    logger.exception(f"Unexpected error in FSD assist: {e}")
-
-                self.fsd_assist_enabled = False
-                self.ap_ckb("fsd_stop")
-                self.update_overlay()
-
-                # if fsd_assist returned false then we are not finished, meaning we have an in system target
-                # defined.  So lets enable Supercruise assist to get us there
-                # Note: this is tricky, in normal FSD jumps the target is pretty much on the other side of Sun
-                #  when we arrive, but not so when we are in the final system
-                if fin is False:
-                    self.ap_ckb("sc_start")
-
-                # drop all out debug windows
-                # cv2.destroyAllWindows()
-                # cv2.waitKey(10)
-
-            elif self.sc_assist_enabled:
-                logger.debug("Running sc_assist")
+            if self.travel_assist_enabled:
+                logger.debug("Running travel_assist")
                 set_focus_elite_window()
                 self.update_overlay()
                 try:
-                    self.update_ap_status("SC to Target")
-                    self.sc_assist(self.scrReg)
+                    self.travel_assist(self.scrReg)
                 except EdapInterruptError:
                     logger.debug("Caught stop exception")
                 except Exception as e:
-                    logger.exception(f"Unexpected error in SC assist: {e}")
+                    logger.exception(f"Unexpected error in Travel Assist: {e}")
 
-                logger.debug("Completed sc_assist")
-                self.sc_assist_enabled = False
-                self.ap_ckb("sc_stop")
+                logger.debug("Completed travel_assist")
+                self.travel_assist_enabled = False
+                self.ap_ckb("travel_stop")
                 self.update_overlay()
 
             elif self.waypoint_assist_enabled:

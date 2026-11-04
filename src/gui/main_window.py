@@ -70,8 +70,7 @@ class APGui:
         root.resizable(False, False)
 
         self.tooltips = {
-            "FSD Route Assist": "Will execute your route. \nAt each jump the sequence will perform some fuel scooping.",
-            "Supercruise Assist": "Will keep your ship pointed to target, \nyou target can only be a station for the autodocking to work.",
+            "Travel Assist": "Follows your plotted system route and, if selected, continues to a local target.",
             "Waypoint Assist": "When selected, will prompt for the waypoint file. \nThe waypoint file contains System names that \nwill be entered into Galaxy Map and route plotted.",
             "DSS Assist": "When selected, will perform DSS scans while you are traveling between stars.",
             "Single Waypoint Assist": "",
@@ -85,8 +84,7 @@ class APGui:
             "Jump Tries": "How many attempts the ap should make to jump.",
             "Docking Retries": "How many attempts to make to dock.",
             "Wait For Autodock": "After docking granted, \nwait this amount of time for us to get docked with autodocking",
-            "Start FSD": "Button to start FSD route assist.",
-            "Start SC": "Button to start Supercruise assist.",
+            "Start Travel Assist": "Button to start Travel Assist.",
             "Stop All": "Button to stop all assists.",
             "Refuel Threshold": "If fuel level get below this level, \nit will attempt refuel.",
             "Scoop Timeout": "Number of second to wait for full tank, \nmight mean we are not scooping well or got a small scooper",
@@ -115,8 +113,7 @@ class APGui:
         self.single_waypoint_station = StringVar()
         self.TCE_Destination_Filepath = StringVar()
 
-        self.FSD_A_running = False
-        self.SC_A_running = False
+        self.TRAVEL_A_running = False
         self.WP_A_running = False
         self.DSS_A_running = False
         self.SWP_A_running = False
@@ -154,8 +151,7 @@ class APGui:
         self.entries["overlay"]["Y Offset"].delete(0, END)
         self.entries["overlay"]["Font Size"].delete(0, END)
 
-        self.entries["buttons"]["Start FSD"].delete(0, END)
-        self.entries["buttons"]["Start SC"].delete(0, END)
+        self.entries["buttons"]["Start Travel Assist"].delete(0, END)
         self.entries["buttons"]["Stop All"].delete(0, END)
 
         self.entries["ship"]["PitchRate"].insert(0, float(self.ed_ap.pitchrate))
@@ -175,8 +171,7 @@ class APGui:
         self.entries["overlay"]["Y Offset"].insert(0, int(self.ed_ap.config["OverlayTextYOffset"]))
         self.entries["overlay"]["Font Size"].insert(0, int(self.ed_ap.config["OverlayTextFontSize"]))
 
-        self.entries["buttons"]["Start FSD"].insert(0, str(self.ed_ap.config["HotKey_StartFSD"]))
-        self.entries["buttons"]["Start SC"].insert(0, str(self.ed_ap.config["HotKey_StartSC"]))
+        self.entries["buttons"]["Start Travel Assist"].insert(0, str(self.ed_ap.config["HotKey_StartTravel"]))
         self.entries["buttons"]["Stop All"].insert(0, str(self.ed_ap.config["HotKey_StopAllAssists"]))
 
         if self.ed_ap.config["LogDEBUG"]:
@@ -188,21 +183,14 @@ class APGui:
 
         self.checkboxvar["Debug Overlay"].set(self.ed_ap.config["DebugOverlay"])
 
-        # global trap for these keys, the 'end' key will stop any current AP action
-        # the 'home' key will start the FSD Assist.  May want another to start SC Assist
-
         self.hotkey_actions = ActionQueue()
         self.hotkeys = HotkeyListener(keyboard)
         self.hotkeys.add_hotkey(
             self.ed_ap.config["HotKey_StopAllAssists"], lambda: self.hotkey_actions.put(self.stop_all_assists)
         )
         self.hotkeys.add_hotkey(
-            self.ed_ap.config["HotKey_StartFSD"],
-            lambda: self.hotkey_actions.put(lambda: self.callback("fsd_start", None)),
-        )
-        self.hotkeys.add_hotkey(
-            self.ed_ap.config["HotKey_StartSC"],
-            lambda: self.hotkey_actions.put(lambda: self.callback("sc_start", None)),
+            self.ed_ap.config["HotKey_StartTravel"],
+            lambda: self.hotkey_actions.put(lambda: self.callback("travel_start", None)),
         )
         self.hotkeys.start()
         self.hotkey_poll_id = self.root.after(50, self.process_hotkey_actions)
@@ -223,20 +211,13 @@ class APGui:
             self.ed_ap.vce.say(body)
         elif msg == "statusline":
             self.update_statusline(body)
-        elif msg == "fsd_stop":
-            logger.debug("Detected 'fsd_stop' callback msg")
-            self.checkboxvar["FSD Route Assist"].set(0)
-            self.check_cb("FSD Route Assist")
-        elif msg == "fsd_start":
-            self.checkboxvar["FSD Route Assist"].set(1)
-            self.check_cb("FSD Route Assist")
-        elif msg == "sc_stop":
-            logger.debug("Detected 'sc_stop' callback msg")
-            self.checkboxvar["Supercruise Assist"].set(0)
-            self.check_cb("Supercruise Assist")
-        elif msg == "sc_start":
-            self.checkboxvar["Supercruise Assist"].set(1)
-            self.check_cb("Supercruise Assist")
+        elif msg == "travel_stop":
+            logger.debug("Detected 'travel_stop' callback msg")
+            self.checkboxvar["Travel Assist"].set(0)
+            self.check_cb("Travel Assist")
+        elif msg == "travel_start":
+            self.checkboxvar["Travel Assist"].set(1)
+            self.check_cb("Travel Assist")
         elif msg == "waypoint_stop":
             logger.debug("Detected 'waypoint_stop' callback msg")
             self.checkboxvar["Waypoint Assist"].set(0)
@@ -264,11 +245,8 @@ class APGui:
         elif msg == "stop_all_assists":
             logger.debug("Detected 'stop_all_assists' callback msg")
 
-            self.checkboxvar["FSD Route Assist"].set(0)
-            self.check_cb("FSD Route Assist")
-
-            self.checkboxvar["Supercruise Assist"].set(0)
-            self.check_cb("Supercruise Assist")
+            self.checkboxvar["Travel Assist"].set(0)
+            self.check_cb("Travel Assist")
 
             self.checkboxvar["Waypoint Assist"].set(0)
             self.check_cb("Waypoint Assist")
@@ -307,8 +285,7 @@ class APGui:
         logger.debug("Entered: close_window")
         self.hotkeys.stop()
         self.root.after_cancel(self.hotkey_poll_id)
-        self.stop_fsd()
-        self.stop_sc()
+        self.stop_travel()
         self.ed_ap.quit()
         sleep(0.1)
         self.root.destroy()
@@ -322,34 +299,19 @@ class APGui:
         self.hotkey_poll_id = self.root.after(50, self.process_hotkey_actions)
         self.hotkey_actions.run_pending()
 
-    def start_fsd(self):
-        logger.debug("Entered: start_fsd")
-        self.ed_ap.set_fsd_assist(True)
-        self.FSD_A_running = True
-        self.log_msg("FSD Route Assist start")
-        self.ed_ap.vce.say("FSD Route Assist On")
+    def start_travel(self):
+        logger.debug("Entered: start_travel")
+        self.ed_ap.set_travel_assist(True)
+        self.TRAVEL_A_running = True
+        self.log_msg("Travel Assist start")
+        self.ed_ap.vce.say("Travel Assist On")
 
-    def stop_fsd(self):
-        logger.debug("Entered: stop_fsd")
-        self.ed_ap.set_fsd_assist(False)
-        self.FSD_A_running = False
-        self.log_msg("FSD Route Assist stop")
-        self.ed_ap.vce.say("FSD Route Assist Off")
-        self.update_statusline("Idle")
-
-    def start_sc(self):
-        logger.debug("Entered: start_sc")
-        self.ed_ap.set_sc_assist(True)
-        self.SC_A_running = True
-        self.log_msg("SC Assist start")
-        self.ed_ap.vce.say("Supercruise Assist On")
-
-    def stop_sc(self):
-        logger.debug("Entered: stop_sc")
-        self.ed_ap.set_sc_assist(False)
-        self.SC_A_running = False
-        self.log_msg("SC Assist stop")
-        self.ed_ap.vce.say("Supercruise Assist Off")
+    def stop_travel(self):
+        logger.debug("Entered: stop_travel")
+        self.ed_ap.set_travel_assist(False)
+        self.TRAVEL_A_running = False
+        self.log_msg("Travel Assist stop")
+        self.ed_ap.vce.say("Travel Assist Off")
         self.update_statusline("Idle")
 
     def start_waypoint(self):
@@ -529,8 +491,7 @@ class APGui:
             self.ed_ap.config["OverlayTextXOffset"] = int(self.entries["overlay"]["X Offset"].get())
             self.ed_ap.config["OverlayTextYOffset"] = int(self.entries["overlay"]["Y Offset"].get())
             self.ed_ap.config["OverlayTextFontSize"] = int(self.entries["overlay"]["Font Size"].get())
-            self.ed_ap.config["HotKey_StartFSD"] = str(self.entries["buttons"]["Start FSD"].get())
-            self.ed_ap.config["HotKey_StartSC"] = str(self.entries["buttons"]["Start SC"].get())
+            self.ed_ap.config["HotKey_StartTravel"] = str(self.entries["buttons"]["Start Travel Assist"].get())
             self.ed_ap.config["HotKey_StopAllAssists"] = str(self.entries["buttons"]["Stop All"].get())
             self.ed_ap.config["VoiceEnable"] = self.checkboxvar["Enable Voice"].get()
             self.ed_ap.config["TCEDestinationFilepath"] = str(self.TCE_Destination_Filepath.get())
@@ -540,51 +501,30 @@ class APGui:
 
     # ckbox.state:(ACTIVE | DISABLED)
 
-    # ('FSD Route Assist', 'Supercruise Assist', 'Enable Voice', 'Enable CV View')
     def check_cb(self, field):
-        # print("got event:",  checkboxvar['FSD Route Assist'].get(), " ", str(FSD_A_running))
-        if field == "FSD Route Assist":
-            if self.checkboxvar["FSD Route Assist"].get() == 1 and not self.FSD_A_running:
-                self.lab_ck["AFK Combat Assist"].config(state="disabled")
-                self.lab_ck["Supercruise Assist"].config(state="disabled")
-                self.lab_ck["Waypoint Assist"].config(state="disabled")
-                self.lab_ck["DSS Assist"].config(state="disabled")
-                self.start_fsd()
-
-            elif self.checkboxvar["FSD Route Assist"].get() == 0 and self.FSD_A_running:
-                self.stop_fsd()
-                self.lab_ck["Supercruise Assist"].config(state="active")
-                self.lab_ck["AFK Combat Assist"].config(state="active")
-                self.lab_ck["Waypoint Assist"].config(state="active")
-                self.lab_ck["DSS Assist"].config(state="active")
-
-        if field == "Supercruise Assist":
-            if self.checkboxvar["Supercruise Assist"].get() == 1 and not self.SC_A_running:
-                self.lab_ck["FSD Route Assist"].config(state="disabled")
+        if field == "Travel Assist":
+            if self.checkboxvar["Travel Assist"].get() == 1 and not self.TRAVEL_A_running:
                 self.lab_ck["AFK Combat Assist"].config(state="disabled")
                 self.lab_ck["Waypoint Assist"].config(state="disabled")
                 self.lab_ck["DSS Assist"].config(state="disabled")
-                self.start_sc()
+                self.start_travel()
 
-            elif self.checkboxvar["Supercruise Assist"].get() == 0 and self.SC_A_running:
-                self.stop_sc()
-                self.lab_ck["FSD Route Assist"].config(state="active")
+            elif self.checkboxvar["Travel Assist"].get() == 0 and self.TRAVEL_A_running:
+                self.stop_travel()
                 self.lab_ck["AFK Combat Assist"].config(state="active")
                 self.lab_ck["Waypoint Assist"].config(state="active")
                 self.lab_ck["DSS Assist"].config(state="active")
 
         if field == "Waypoint Assist":
             if self.checkboxvar["Waypoint Assist"].get() == 1 and not self.WP_A_running:
-                self.lab_ck["FSD Route Assist"].config(state="disabled")
-                self.lab_ck["Supercruise Assist"].config(state="disabled")
+                self.lab_ck["Travel Assist"].config(state="disabled")
                 self.lab_ck["AFK Combat Assist"].config(state="disabled")
                 self.lab_ck["DSS Assist"].config(state="disabled")
                 self.start_waypoint()
 
             elif self.checkboxvar["Waypoint Assist"].get() == 0 and self.WP_A_running:
                 self.stop_waypoint()
-                self.lab_ck["FSD Route Assist"].config(state="active")
-                self.lab_ck["Supercruise Assist"].config(state="active")
+                self.lab_ck["Travel Assist"].config(state="active")
                 self.lab_ck["AFK Combat Assist"].config(state="active")
                 self.lab_ck["DSS Assist"].config(state="active")
 
@@ -592,31 +532,27 @@ class APGui:
             if self.checkboxvar["AFK Combat Assist"].get() == 1:
                 self.ed_ap.set_afk_combat_assist(True)
                 self.log_msg("AFK Combat Assist start")
-                self.lab_ck["FSD Route Assist"].config(state="disabled")
-                self.lab_ck["Supercruise Assist"].config(state="disabled")
+                self.lab_ck["Travel Assist"].config(state="disabled")
                 self.lab_ck["Waypoint Assist"].config(state="disabled")
                 self.lab_ck["DSS Assist"].config(state="disabled")
 
             elif self.checkboxvar["AFK Combat Assist"].get() == 0:
                 self.ed_ap.set_afk_combat_assist(False)
                 self.log_msg("AFK Combat Assist stop")
-                self.lab_ck["FSD Route Assist"].config(state="active")
-                self.lab_ck["Supercruise Assist"].config(state="active")
+                self.lab_ck["Travel Assist"].config(state="active")
                 self.lab_ck["Waypoint Assist"].config(state="active")
                 self.lab_ck["DSS Assist"].config(state="active")
 
         if field == "DSS Assist":
             if self.checkboxvar["DSS Assist"].get() == 1:
-                self.lab_ck["FSD Route Assist"].config(state="disabled")
+                self.lab_ck["Travel Assist"].config(state="disabled")
                 self.lab_ck["AFK Combat Assist"].config(state="disabled")
-                self.lab_ck["Supercruise Assist"].config(state="disabled")
                 self.lab_ck["Waypoint Assist"].config(state="disabled")
                 self.start_dss()
 
             elif self.checkboxvar["DSS Assist"].get() == 0:
                 self.stop_dss()
-                self.lab_ck["FSD Route Assist"].config(state="active")
-                self.lab_ck["Supercruise Assist"].config(state="active")
+                self.lab_ck["Travel Assist"].config(state="active")
                 self.lab_ck["AFK Combat Assist"].config(state="active")
                 self.lab_ck["Waypoint Assist"].config(state="active")
 
@@ -718,8 +654,7 @@ class APGui:
     def gui_gen(self, win):
 
         modes_check_fields = (
-            "FSD Route Assist",
-            "Supercruise Assist",
+            "Travel Assist",
             "Waypoint Assist",
             "AFK Combat Assist",
             "DSS Assist",
@@ -732,7 +667,7 @@ class APGui:
             "Docking Retries",
             "Wait For Autodock",
         )
-        buttons_entry_fields = ("Start FSD", "Start SC", "Stop All")
+        buttons_entry_fields = ("Start Travel Assist", "Stop All")
         refuel_entry_fields = ("Refuel Threshold", "Scoop Timeout", "Fuel Threshold Abort")
         overlay_entry_fields = ("X Offset", "Y Offset", "Font Size")
 
@@ -1077,8 +1012,7 @@ class APGui:
     def restart_program(self):
         logger.debug("Entered: restart_program")
 
-        self.stop_fsd()
-        self.stop_sc()
+        self.stop_travel()
         self.ed_ap.quit()
         sleep(0.1)
 

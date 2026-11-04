@@ -42,9 +42,9 @@ in **Options > Controls**. The action names in the first column are the names ED
 | `GalaxyMapOpen` | Open Galaxy Map | Ship Controls > Mode Switches |
 | `SystemMapOpen` | Open System Map | Ship Controls > Mode Switches |
 
-EDAPGui's own global hotkeys are separate from these game bindings. Their defaults are **Home** (start FSD Route
-Assist), **Insert** (start Supercruise Assist), and **End** (stop assists). Configure them in the EDAPGui Settings
-tab and avoid assigning those same keys to Elite Dangerous actions.
+EDAPGui's own global hotkeys are separate from these game bindings. Their defaults are **Home** (start Travel
+Assist) and **End** (stop assists). Configure them in the EDAPGui Settings tab and avoid assigning those same keys
+to Elite Dangerous actions.
 
 ## Fill missing bindings
 
