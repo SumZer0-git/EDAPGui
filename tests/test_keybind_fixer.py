@@ -102,6 +102,14 @@ class PlanTestCase(unittest.TestCase):
         self.assertEqual(changes["SetSpeed100"].new, "Key_Numpad_Add")
         self.assertTrue(all(not change.combo[1] for change in plan.changes))
 
+    def test_supercruise_cruise_speed_gets_its_own_key(self):
+        plan = plan_for(make_file({"SetSpeed50": (FREE_PRIMARY, FREE), "SetSpeed75": (FREE_PRIMARY, FREE)}))
+
+        changes = changes_by_action(plan)
+        self.assertIn("SetSpeed75", changes)
+        self.assertNotEqual(changes["SetSpeed75"].new, changes["SetSpeed50"].new)
+        self.assertFalse(changes["SetSpeed75"].combo[1])
+
     def test_taken_keys_are_skipped(self):
         file = make_file({"SetSpeedZero": (FREE_PRIMARY, FREE), "SomethingElse": (key("Key_X"), FREE)})
 

@@ -15,6 +15,7 @@ REQUIRED_ACTIONS: dict[str, str] = {
     "UpThrustButton": SHIP,
     "SetSpeedZero": SHIP,
     "SetSpeed50": SHIP,
+    "SetSpeed75": SHIP,
     "SetSpeed100": SHIP,
     "HyperSuperCombination": SHIP,
     "Supercruise": SHIP,
