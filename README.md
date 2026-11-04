@@ -9,8 +9,8 @@ EDAPGui is a Windows autopilot for Elite Dangerous, offering optional assistance
 
 ## What it can do
 
-- **FSD Route Assist** follows the route selected in the Galaxy Map, including system scans and fuel management.
-- **Supercruise Assist** aligns with a local target, handles supercruise disengagement and can request station docking.
+- **Travel Assist** follows the route selected in the Galaxy Map, including system scans and fuel management, then
+  continues to a selected local target and can request station docking.
 - **Waypoint Assist** follows a waypoint file, visits bookmarked destinations, and can dock, trade, or transfer cargo.
 - **Single Waypoint Assist** plots and travels to a system entered on the Debug tab.
 - **DSS Assist** runs a discovery scan when entering systems in supercruise.
@@ -40,8 +40,8 @@ the currently focused window. A very wide field of view can also make target det
    [keybindings guide](docs/Keybindings.md); `fix_keybinds.bat` can fill missing bindings in a custom preset.
 4. In EDAPGui, set the roll, pitch, and yaw rates for the active ship. See the
    [ship tuning guide](docs/RollPitchYaw.md).
-5. Select an assist in the main window. The default global hotkeys are **Home** (FSD), **Insert** (Supercruise), and
-   **End** (stop); change them in Settings if needed.
+5. Select an assist in the main window. The default global hotkeys are **Home** (Travel Assist) and **End** (stop);
+   change them in Settings if needed.
 
 The program stores its settings, ship profiles, waypoint files, logs, and debug output in `user_data/`. Example
 waypoint files from `data/waypoints/` are copied there on first start. If an existing installation reports an
