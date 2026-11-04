@@ -72,6 +72,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Changed the runtime `print()` output to the central logger (`core/logger.py`): status details, keybinding and graphics settings lines are debug messages, problems are warnings or errors, and unexpected exceptions are logged with their stack trace. Info shows only status messages. The UI status window is unchanged.
 - Changed the startup console to hide the harmless PaddlePaddle noise (ccache warning, oneDNN and glog info lines); the model loading lines and all warnings and errors stay visible. Restarting the program prints `Restarting EDAPGui...` to the console.
 - Changed the disengage message gate to a dedicated cyan filter that also matches dark scenes and requires the long frame lines of the message, and the message OCR to also try a faster unscaled variant.
+- Changed Supercruise Assist to cruise at 75% throttle instead of 50% once the target is aligned and ahead, which gives the best handling in supercruise and gets through the system faster. The throttle is still 50% while aligning, after a lost target and after an interdiction. This requires the Elite Dangerous binding "Set Speed to 75%" (`SetSpeed75`); `fix_keybinds.bat` fills it like the other missing bindings.
 
 ### Fixed
 

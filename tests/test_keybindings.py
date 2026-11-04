@@ -83,7 +83,7 @@ class RealBindingsTestCase(BindingsDirectoryMixin, unittest.TestCase):
 
     def test_only_requested_keys_are_returned(self):
         self.assertTrue(set(self.kb.keys) <= set(self.kb.keys_to_obtain))
-        self.assertEqual(len(self.kb.keys), 32)
+        self.assertEqual(len(self.kb.keys), 33)
         self.assertNotIn("ExplorationFSSEnter", self.kb.keys_to_obtain)
         self.assertNotIn("ExplorationFSSQuit", self.kb.keys_to_obtain)
 

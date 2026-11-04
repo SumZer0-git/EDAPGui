@@ -209,7 +209,8 @@ class AssistsMixin:
         # Align Nav to target
         self.keys.send("SetSpeed50")
         self.nav_align(scr_reg)  # Compass Align
-        self.keys.send("SetSpeed50")
+        # The target is ahead now, so cruise at 75%, where ships handle best in supercruise.
+        self.keys.send("SetSpeed75")
 
         self.jn.ship_state()["interdicted"] = False
 
