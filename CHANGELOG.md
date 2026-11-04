@@ -87,6 +87,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Fixed Travel Assist starting Supercruise Assist after a false-positive compass match when no local destination was set. Supercruise Assist now starts only when the game's `Status.json` reports a non-main-star destination.
 - Fixed overlay text and panel sizing being multiplied by both game resolution and Windows display scaling. Font size is now in points and follows monitor DPI only; changing monitors triggers a redraw. Saved font-size values are not reset.
 - Fixed global hotkeys for Start FSD, Start SC and Stop All triggering on matching numeric-keypad keys; numpad events are now ignored while regular navigation keys and configured hotkey sequences continue to work.
 - Fixed global hotkey actions updating Tkinter from the keyboard listener thread; actions are now dispatched through a queue for execution on the GUI thread.
