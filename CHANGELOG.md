@@ -9,11 +9,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Important notice
 
 - Runtime files moved to the new `user_data/` folder. Existing users must manually copy `configs/AP.json`, `configs/ship_configs.json` and their own waypoint files from `waypoints/` into `user_data/configs/` and `user_data/waypoints/`.
+- The user interface now needs the new package `ttkbootstrap`. Starting the program does not install packages automatically: existing users must run `install_requirements.bat` (or install `requirements.txt` in their active environment) before the next start.
 
 ### Added
 
-- Added `core/version.py` as the single place for the application version (still 1.7.0); the window title and log read it from there.
-- Added the update check (`core/updates.py`): at startup, and via Help > Check for Updates, the program looks up the latest release of `DopeEx/EDAPGui` in the background and offers to open the download page if it is newer. Nothing happens at startup if there is no release yet or GitHub cannot be reached.
+- Added a new dark user interface built with ttkbootstrap: sidebar with the assist modes (only one active at a time) and a Stop All button, tabs for Ship (with the log below the ship rates), Waypoints, Settings, Debug, and Info, a sidebar that collapses to an icon strip, an always-on-top pin, a power button with Restart and Exit, a native dark title bar, and per-monitor DPI scaling. The window has a fixed size and fits a portrait 1080p monitor.
+- Added automatic saving of the Ship, Settings, and Debug tabs with a saved, unsaved, or not-saved indicator in the lower right corner of the tab (the saved indicator disappears after 3 seconds); the window position, collapsed state, and always-on-top are remembered in `user_data/configs/gui.json`.
+- Added offline unit tests for the settings model and the stored window state of the user interface.
+- Added `core/version.py` as the single place for the application version (still 1.7.0); the footer and log read it from there.
+- Added the update check (`core/updates.py`): at startup the program looks up the latest release of `DopeEx/EDAPGui` in the background and shows an orange notice in the footer (which opens the Info tab with the download button) if it is newer. Nothing happens at startup if there is no release yet or GitHub cannot be reached.
 - Added status badges to the README (CI, Ruff, license, and the tested Python versions, which are read from the CI test matrix).
 - Added the Ruff linter (`pyproject.toml`, `requirements-dev.txt`) with the rule groups `F` (pyflakes), `I` (import sorting), `N` (pep8-naming, except `N806`), `W` (whitespace) and the checks `E711`, `E712`, `E713`, `E714`, `E722` and `F841`; run `ruff check .`. The code is formatted with `ruff format .` (check with `ruff format --check .`).
 - Added offline unit tests (no game needed) for the status, cargo, market and navigation route parsers, journal event handling, waypoint files and routing, localization, shared paths, reference data and screen region scaling.
@@ -100,6 +104,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 
+- Removed the menu bar of the main window (Restart and Exit moved to the power button, the update check to the Info tab) and the language switch of the window.
 - Removed the unused EDMesg integration, its bundled library, configuration settings and dependencies.
 - Removed the obsolete ELW scanner, its FSS automation, GUI option, configuration, vision templates, and documentation.
 - Removed the obsolete Robigo passenger-mission assist, its GUI controls and configuration, dedicated vision templates, and documentation.

@@ -40,8 +40,13 @@ the currently focused window. A very wide field of view can also make target det
    [keybindings guide](docs/Keybindings.md); `fix_keybinds.bat` can fill missing bindings in a custom preset.
 4. In EDAPGui, set the roll, pitch, and yaw rates for the active ship. See the
    [ship tuning guide](docs/RollPitchYaw.md).
-5. Select an assist in the main window. The default global hotkeys are **Home** (Travel Assist) and **End** (stop);
-   change them in Settings if needed.
+5. Select an assist in the sidebar of the main window (only one assist runs at a time; **Stop All** stops it). The
+   default global hotkeys are **Home** (Travel Assist) and **End** (stop); change them in Settings if needed.
+
+The window is always dark and has a fixed size. The arrow at the bottom of the sidebar collapses it to a narrow icon
+strip, the pin keeps it on top of other windows, and the power button restarts or exits the program. Changes on the
+Ship, Settings, and Debug tabs are saved automatically; the lower right corner of the tab shows whether they are saved.
+The window position, collapsed state, and pin are remembered in `user_data/configs/gui.json`.
 
 The program stores its settings, ship profiles, waypoint files, logs, and debug output in `user_data/`. Example
 waypoint files from `data/waypoints/` are copied there on first start. If an existing installation reports an
@@ -77,9 +82,21 @@ The OCR test requires the full runtime dependencies; it is skipped in CI's slim 
 
 ## Screenshots
 
-| Main | Settings | Debug |
-|---|---|---|
-| ![Main tab](docs/screenshots/screen_cap_main.png) | ![Settings tab](docs/screenshots/screen_cap_settings.png) | ![Debug tab](docs/screenshots/screen_cap_debug.png) |
+Ship tab:
+
+<img src="docs/screenshots/screen_cap_main.png" alt="Ship tab" width="700">
+
+Settings tab:
+
+<img src="docs/screenshots/screen_cap_settings.png" alt="Settings tab" width="700">
+
+Info tab:
+
+<img src="docs/screenshots/screen_cap_info.png" alt="Info tab" width="700">
+
+Collapsed to the mode buttons:
+
+<img src="docs/screenshots/screen_cap_collapsed.png" alt="Collapsed sidebar" height="360">
 
 ## Disclaimer
 
