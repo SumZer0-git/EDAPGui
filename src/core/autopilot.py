@@ -5,7 +5,7 @@ Ideas taken from: https://github.com/skai2/EDAutopilot"""
 import ctypes
 import logging
 import threading
-from time import sleep
+from time import monotonic, sleep
 
 import cv2
 import kthread
@@ -42,6 +42,48 @@ from vision.ocr import OCR
 from vision.screen import set_focus_elite_window
 
 
+def _overlay_status_role(status: str) -> str:
+    if status in {"Docking Complete", "Undock Complete, accelerating", "Takeoff Complete, accelerating"}:
+        return "success"
+    if status == "Avoiding star":
+        return "warning"
+    if status == "Idle":
+        return "muted"
+    if status in {
+        "Align",
+        "DSS Scan",
+        "Executing Undocking/Launch",
+        "Jump",
+        "Logout",
+        "Maneuvering",
+        "Refueling",
+        "SC to Target",
+    } or status.startswith(("SC to Station:", "Targeting Station:")):
+        return "active"
+    return "value"
+
+
+def _set_overlay_config_defaults(config: dict) -> None:
+    uses_legacy_positions = "OverlayPositionUnit" not in config
+    defaults = (
+        ("OverlayTextEnable", True),
+        ("OverlayTextXOffset", 50 if uses_legacy_positions else 1),
+        ("OverlayTextYOffset", 400 if uses_legacy_positions else 15),
+        ("OverlayTextFont", "Rajdhani"),
+        ("OverlayTextFontSize", 14),
+        ("OverlayPositionAnchor", "Top left"),
+        ("OverlayPositionUnit", "Pixels" if uses_legacy_positions else "Percent"),
+        ("OverlayPanelOpacity", 50),
+        ("OverlayShowMode", True),
+        ("OverlayShowStatus", True),
+        ("OverlayShowShip", True),
+        ("OverlayShowSystem", True),
+        ("OverlayShowJumps", True),
+    )
+    for key, default in defaults:
+        config.setdefault(key, default)
+
+
 class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
     def __init__(self, cb, do_thread=True):
 
@@ -61,12 +103,19 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             "HotKey_StopAllAssists": "end",
             "EnableRandomness": False,  # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
             "ActivateEliteEachKey": False,  # Activate Elite window before each key or group of keys
-            "OverlayTextEnable": False,  # Experimental at this stage
-            "OverlayTextYOffset": 400,  # offset down the screen to start place overlay text
-            "OverlayTextXOffset": 50,  # offset left the screen to start place overlay text
-            "OverlayTextFont": "Eurostyle",
+            "OverlayTextEnable": True,
+            "OverlayTextYOffset": 15,
+            "OverlayTextXOffset": 1,
+            "OverlayTextFont": "Rajdhani",
             "OverlayTextFontSize": 14,
-            "OverlayGraphicEnable": False,  # not implemented yet
+            "OverlayPositionAnchor": "Top left",
+            "OverlayPositionUnit": "Percent",
+            "OverlayPanelOpacity": 50,
+            "OverlayShowMode": True,
+            "OverlayShowStatus": True,
+            "OverlayShowShip": True,
+            "OverlayShowSystem": True,
+            "OverlayShowJumps": True,
             "DiscordWebhook": False,  # discord not implemented yet
             "DiscordWebhookURL": "",
             "DiscordUserID": "",
@@ -123,6 +172,10 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                 cnf["OCRLanguage"] = "en"
             if "DebugOverlay" not in cnf:
                 cnf["DebugOverlay"] = False
+            _set_overlay_config_defaults(cnf)
+            if str(cnf.get("OverlayTextFont", "")).casefold() == "eurostyle":
+                cnf["OverlayTextFont"] = "Rajdhani"
+            cnf.pop("OverlayGraphicEnable", None)
             if "HotKey_StartTravel" not in cnf:
                 cnf["HotKey_StartTravel"] = cnf.get("HotKey_StartFSD", self.config["HotKey_StartTravel"])
             cnf.pop("HotKey_StartFSD", None)
@@ -217,6 +270,10 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         self.jump_cnt = 0
         self.total_dist_jumped = 0
         self.total_jumps = 0
+        self._overlay_route_active = False
+        self._overlay_route_signature = ()
+        self._overlay_route_systems = []
+        self._overlay_route_completed_at = None
         self.refuel_cnt = 0
         self.current_ship_type = None
         self.gui_loaded = False
@@ -228,10 +285,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
 
         # Initialize the Overlay class
         self.overlay = Overlay("", elite=1)
-        self.overlay.overlay_setfont(self.config["OverlayTextFont"], self.config["OverlayTextFontSize"])
-        self.overlay.overlay_set_pos(self.config["OverlayTextXOffset"], self.config["OverlayTextYOffset"])
-        # must be called after we initialized the objects above
-        self.update_overlay()
+        self.apply_overlay_config()
 
         self.debug_overlay = self.config["DebugOverlay"]
 
@@ -255,8 +309,101 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
 
     # draw the overlay data on the ED Window
     #
+    def _get_overlay_route_progress(self, ship_state):
+        route_data = self.nav_route.get_nav_route_data()
+        route = route_data.get("Route") or []
+        if not isinstance(route, list):
+            route = []
+        current_address = ship_state.get("system_address")
+        current_name = ship_state.get("location")
+
+        if route_data.get("event") == "NavRoute" and len(route) < 2:
+            self._overlay_route_active = False
+            self._overlay_route_signature = ()
+            self._overlay_route_systems = []
+            self._overlay_route_completed_at = None
+            return None
+
+        if route_data.get("event") == "NavRoute":
+            signature = tuple(
+                (system.get("SystemAddress"), system.get("StarSystem")) if isinstance(system, dict) else (None, None)
+                for system in route
+            )
+            if not self._overlay_route_active or signature != self._overlay_route_signature:
+                self._overlay_route_completed_at = None
+                self._overlay_route_signature = signature
+            self._overlay_route_active = True
+            self._overlay_route_systems = route
+
+            if current_address is None and not current_name:
+                return None
+
+            index = None
+            if current_address is not None:
+                for route_index, system in enumerate(route):
+                    if isinstance(system, dict) and system.get("SystemAddress") == current_address:
+                        index = route_index
+                        break
+            if index is None and current_name:
+                for route_index, system in enumerate(route):
+                    if not isinstance(system, dict):
+                        continue
+                    if system.get("StarSystem") == current_name and (
+                        current_address is None or system.get("SystemAddress") is None
+                    ):
+                        index = route_index
+                        break
+
+            total = len(route) - 1
+            if index is None:
+                self._overlay_route_completed_at = None
+                return ("off_route", None, total)
+            if index == total:
+                now = monotonic()
+                if self._overlay_route_completed_at is None:
+                    self._overlay_route_completed_at = now
+                if now - self._overlay_route_completed_at < 60:
+                    return ("complete", total, total)
+                return None
+
+            self._overlay_route_completed_at = None
+            return ("on_route", index, total)
+
+        self._overlay_route_active = False
+        route = self._overlay_route_systems
+        if len(route) < 2:
+            return None
+        destination = route[-1]
+        if not isinstance(destination, dict):
+            return None
+        destination_address = destination.get("SystemAddress")
+        destination_name = destination.get("StarSystem")
+        at_destination = (
+            current_address == destination_address
+            if current_address is not None and destination_address is not None
+            else bool(current_name and current_name == destination_name)
+        )
+        if not at_destination:
+            self._overlay_route_systems = []
+            self._overlay_route_signature = ()
+            self._overlay_route_completed_at = None
+            return None
+
+        now = monotonic()
+        if self._overlay_route_completed_at is None:
+            self._overlay_route_completed_at = now
+        if now - self._overlay_route_completed_at < 60:
+            total = len(route) - 1
+            return ("complete", total, total)
+
+        self._overlay_route_systems = []
+        self._overlay_route_signature = ()
+        self._overlay_route_completed_at = None
+        return None
+
     def update_overlay(self):
         if self.config["OverlayTextEnable"]:
+            ship_state = self.jn.ship_state()
             ap_mode = "Offline"
             if self.travel_assist_enabled:
                 ap_mode = "Travel Assist"
@@ -267,24 +414,81 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             elif self.dss_assist_enabled:
                 ap_mode = "DSS Assist"
 
-            ship_state = self.jn.ship_state()["status"]
-            if ship_state is None:
-                ship_state = "<init>"
+            ap_mode_color = "muted" if ap_mode == "Offline" else "active"
+            ship_status = ship_state["status"]
+            if ship_status is None:
+                ship_status = "<init>"
+                ship_color = "muted"
+            else:
+                ship_color = "value"
 
-            sclass = self.jn.ship_state()["star_class"]
+            sclass = ship_state["star_class"]
             if sclass is None:
                 sclass = "<init>"
+                sclass_color = "muted"
+            else:
+                sclass_color = "value"
 
-            location = self.jn.ship_state()["location"]
+            location = ship_state["location"]
             if location is None:
                 location = "<init>"
-            self.overlay.overlay_text("1", "AP MODE: " + ap_mode, 1, 1, (136, 53, 0))
-            self.overlay.overlay_text("2", "AP STATUS: " + self.ap_state, 2, 1, (136, 53, 0))
-            self.overlay.overlay_text("3", "SHIP STATUS: " + ship_state, 3, 1, (136, 53, 0))
-            self.overlay.overlay_text("4", "CURRENT SYSTEM: " + location + ", " + sclass, 4, 1, (136, 53, 0))
-            self.overlay.overlay_text(
-                "5", "JUMPS: {} of {}".format(self.jump_cnt, self.total_jumps), 5, 1, (136, 53, 0)
+                location_color = "muted"
+            else:
+                location_color = "value"
+            status_lines = (
+                ("OverlayShowMode", "mode", [("AP MODE: ", "label"), (ap_mode, ap_mode_color)]),
+                (
+                    "OverlayShowStatus",
+                    "status",
+                    [("AP STATUS: ", "label"), (self.ap_state, _overlay_status_role(self.ap_state))],
+                ),
+                ("OverlayShowShip", "ship", [("SHIP STATUS: ", "label"), (ship_status, ship_color)]),
+                (
+                    "OverlayShowSystem",
+                    "system",
+                    [
+                        ("CURRENT SYSTEM: ", "label"),
+                        (location, location_color),
+                        (", ", "value"),
+                        (sclass, sclass_color),
+                    ],
+                ),
             )
+            route_progress = self._get_overlay_route_progress(ship_state) if self.config["OverlayShowJumps"] else None
+            row = 0
+            for setting, key, segments in status_lines:
+                if self.config[setting]:
+                    self.overlay.overlay_text_segments(key, segments, row, 0)
+                    row += 1
+                else:
+                    self.overlay.overlay_remove_text(key)
+            if route_progress is None:
+                self.overlay.overlay_remove_text("jumps")
+                self.overlay.overlay_set_progress(None)
+            elif route_progress[0] == "off_route":
+                self.overlay.overlay_text_segments("jumps", [("JUMPS: ", "label"), ("Off route", "muted")], row, 0)
+                self.overlay.overlay_set_progress(None)
+            else:
+                state, completed, total = route_progress
+                role = "success" if state == "complete" else "value"
+                self.overlay.overlay_text_segments(
+                    "jumps", [("JUMPS: ", "label"), (f"{completed} of {total}", role)], row, 0
+                )
+                self.overlay.overlay_set_progress(completed / total)
+            self.overlay.overlay_paint()
+
+    def apply_overlay_config(self):
+        self.overlay.overlay_setfont(self.config["OverlayTextFont"], self.config["OverlayTextFontSize"])
+        self.overlay.overlay_set_layout(
+            self.config["OverlayPositionAnchor"],
+            self.config["OverlayPositionUnit"],
+            self.config["OverlayTextXOffset"],
+            self.config["OverlayTextYOffset"],
+            self.config["OverlayPanelOpacity"],
+        )
+        if self.config["OverlayTextEnable"]:
+            self.update_overlay()
+        else:
             self.overlay.overlay_paint()
 
     def update_ap_status(self, txt):
@@ -378,12 +582,12 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         self.config["AutomaticLogout"] = enable
 
     def set_overlay(self, enable=False):
-        # TODO: apply the change without restarting the program
         self.config["OverlayTextEnable"] = enable
         if not enable:
             self.overlay.overlay_clear()
-
-        self.overlay.overlay_paint()
+            self.overlay.overlay_paint()
+        else:
+            self.update_overlay()
 
     def set_voice(self, enable=False):
         if enable:

@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from gui import fields, window_state
+from gui.fields import TAB_OVERLAY
 
 
 def make_ap():
@@ -22,9 +23,32 @@ class FieldsTestCase(unittest.TestCase):
         self.assertEqual(len(fields.FIELDS), len(fields.FIELDS_BY_KEY))
 
     def test_every_field_belongs_to_a_known_tab(self):
-        tabs = {fields.TAB_SHIP, fields.TAB_SETTINGS, fields.TAB_DEBUG}
+        tabs = {fields.TAB_SHIP, fields.TAB_SETTINGS, TAB_OVERLAY, fields.TAB_DEBUG}
         self.assertTrue(all(f.tab in tabs for f in fields.FIELDS))
         self.assertTrue(fields.fields_of(fields.TAB_SHIP))
+
+    def test_overlay_choices_and_percent_offsets(self):
+        unit = fields.FIELDS_BY_KEY["OverlayPositionUnit"]
+        self.assertEqual(fields.parse(unit, "Percent"), "Percent")
+
+        values = {
+            "OverlayPositionUnit": "Percent",
+            "OverlayTextXOffset": 50,
+            "OverlayTextYOffset": 400,
+        }
+        previous = {
+            "OverlayPositionUnit": "Pixels",
+            "OverlayTextXOffset": 50,
+            "OverlayTextYOffset": 400,
+        }
+        converted = fields.convert_overlay_offsets(values, previous, 1920, 1080)
+        self.assertEqual(converted, ("OverlayTextXOffset", "OverlayTextYOffset"))
+        self.assertEqual((values["OverlayTextXOffset"], values["OverlayTextYOffset"]), (3, 37))
+        fields.validate_tab(TAB_OVERLAY, values)
+
+        values["OverlayTextYOffset"] = 101
+        with self.assertRaises(ValueError):
+            fields.validate_tab(TAB_OVERLAY, values)
 
     def test_parse_number_in_range(self):
         field = fields.FIELDS_BY_KEY["RollRate"]

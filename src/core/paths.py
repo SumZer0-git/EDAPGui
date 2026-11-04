@@ -15,8 +15,10 @@ DATA_CONFIGS = DATA / "configs"
 WAYPOINT_EXAMPLES_DIR = DATA / "waypoints"
 
 # Read-only resources
-LOCALES_DIR = ROOT / "assets" / "locales"
-TEMPLATES_DIR = ROOT / "assets" / "templates"
+ASSETS_DIR = ROOT / "assets"
+LOCALES_DIR = ASSETS_DIR / "locales"
+TEMPLATES_DIR = ASSETS_DIR / "templates"
+FONTS_DIR = ASSETS_DIR / "fonts"
 
 # Runtime files, not versioned
 USER_DATA = ROOT / "user_data"

@@ -82,6 +82,10 @@ class AssistsMixin:
         starttime = time.time()
         starttime -= 20  # to account for first instance not doing positioning
 
+        route_state = self.jn.ship_state()
+        if route_state["target"] and route_state["jumps_remains"] > 0:
+            self.total_jumps = self.jump_cnt + route_state["jumps_remains"]
+
         # TODO - can we enable this? Seems like a better way
         # if nav_route_parser.get_last_system() is not None:
         if self.jn.ship_state()["target"]:

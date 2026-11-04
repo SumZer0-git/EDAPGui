@@ -22,9 +22,8 @@ _DPI_PER_MONITOR_AWARE_V2 = ctypes.c_void_p(-4)
 @contextlib.contextmanager
 def dpi_aware():
     """Make the current thread per-monitor DPI aware for the duration of the block.
-    The GUI process is not DPI aware (so the UI and the overlay keep their size). With monitors of different
-    scaling Windows would then report virtualized monitor and window coordinates, so the screen detection and
-    capture run in this context to get real pixels."""
+    The GUI remains unaware so its UI keeps its current size. Screen detection and capture use this context to
+    get real pixels; the overlay thread uses the same per-monitor DPI awareness for matching window geometry."""
     user32 = ctypes.windll.user32
     try:
         previous = user32.SetThreadDpiAwarenessContext(_DPI_PER_MONITOR_AWARE_V2)
