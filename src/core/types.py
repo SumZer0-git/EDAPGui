@@ -13,3 +13,9 @@ class ScTargetAlignReturn(Enum):
     Lost = 1
     Found = 2
     Disengage = 3
+
+
+class FsdAssistResult(Enum):
+    RouteComplete = 1
+    InSystemTarget = 2
+    Failed = 3

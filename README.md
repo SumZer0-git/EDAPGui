@@ -12,7 +12,17 @@ EDAPGui is a Windows autopilot for Elite Dangerous, offering optional assistance
 - **Travel Assist** follows the route selected in the Galaxy Map, including system scans and fuel management, then
   continues to a local destination reported by the game's `Status.json` and can request station docking. It does not
   infer a local target from the compass when the status has no destination.
-- **Waypoint Assist** follows a waypoint file, visits bookmarked destinations, and can dock, trade, or transfer cargo.
+- **Waypoint Assist** follows saved routes to systems and stations, with docking, trading, cargo transfers and
+  separate progress tracking. It plots Galaxy Map bookmarks first, confirms the system route and falls back to system
+  name search if needed. After entering supercruise, it selects and confirms each next jump target before alignment;
+  it verifies the selected commodity dialog before submitting a market trade and makes one
+  state-checked recovery attempt if the dialog cannot be read.
+  The **Waypoints** tab offers an integrated route editor, a DE/EN commodity catalogue and copied-text trade-route
+  import (including Legacy JSON inside the import view), route-level repetition, themed activation checkboxes and
+  target-only plot buttons. Station-name navigation
+  uses name-column OCR when bookmarks are unavailable (no editor warning), selects the first exact name match without a full-list
+  rescan, and confirms the selected tab for the standard orange and white/blue
+  HUD schemes. See the [waypoint guide](docs/Waypoint.md) for setup, usage and limitations.
 - **Single Waypoint Assist** plots and travels to a system entered on the Debug tab.
 - **DSS Assist** runs a discovery scan when entering systems in supercruise.
 - **AFK Combat Assist** monitors shields and fighter status in a combat zone.
@@ -24,6 +34,7 @@ EDAPGui is a Windows autopilot for Elite Dangerous, offering optional assistance
 
 See the [waypoint guide](docs/Waypoint.md) for waypoint files and trade actions, and the
 [ship tuning guide](docs/RollPitchYaw.md) for roll, pitch, and yaw rates.
+The waypoint guide also explains [first checks and reporting problems](docs/Waypoint.md#manual-validation-and-diagnostics).
 
 ## Requirements
 
@@ -53,9 +64,11 @@ strip, the pin keeps it on top of other windows, and the power button restarts o
 Ship, Overlay, Settings, and Debug tabs are saved automatically; the lower right corner of the tab shows whether they
 are saved. The window position, collapsed state, and pin are remembered in `user_data/configs/gui.json`.
 
-The program stores its settings, ship profiles, waypoint files, logs, and debug output in `user_data/`. Example
-waypoint files from `data/waypoints/` are copied there on first start. If an existing installation reports an
-incompatible virtual environment, remove its `venv` folder and run `install_requirements.bat`.
+The program stores its settings, ship profiles, waypoint files, route progress, logs, and debug output in `user_data/`.
+Example waypoint files from `data/waypoints/` are copied there on first start. Only the current v2 schema is executable;
+use **Legacy JSON** to import old v1/earlier-v2 destinations and trade lists into a new draft, then review and save it.
+If an existing installation reports an incompatible virtual environment, remove its `venv` folder
+and run `install_requirements.bat`.
 
 ## Documentation
 
@@ -90,6 +103,12 @@ The OCR test requires the full runtime dependencies; it is skipped in CI's slim 
 Ship tab:
 
 <img src="docs/screenshots/screen_cap_main.png" alt="Ship tab" width="700">
+
+Waypoints tab:
+
+<img src="docs/screenshots/screen_cap_waypoints.png" alt="Waypoints tab with route repetition, active checkboxes and trade progress" width="700">
+
+See the [waypoint guide](docs/Waypoint.md#editor-screenshots) for editing and import screenshots.
 
 Overlay tab:
 

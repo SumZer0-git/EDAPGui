@@ -33,6 +33,14 @@ ICONS = {
     "pin": "\ue718",
     "left": "\ue76b",
     "right": "\ue76c",
+    "add": "\ue710",
+    "edit": "\ue70f",
+    "delete": "\ue74d",
+    "up": "\ue74a",
+    "down": "\ue74b",
+    "duplicate": "\ue8c8",
+    "before": "\ue898",
+    "after": "\ue896",
 }
 
 SM_CXMINTRACK = 34
@@ -161,9 +169,9 @@ class Theme:
 _shapes = {}
 
 
-def rounded_image(width, height, radius, fill, outline):
+def rounded_image(width, height, radius, fill, outline, master=None):
     """Anti-aliased rounded rectangle (drawn 4x and scaled down), cached per size and colors."""
-    key = (width, height, radius, fill, outline)
+    key = (master.tk if master is not None else None, width, height, radius, fill, outline)
     if key not in _shapes:
         k = 4
         img = Image.new("RGBA", (width * k, height * k), (0, 0, 0, 0))
@@ -174,5 +182,5 @@ def rounded_image(width, height, radius, fill, outline):
             outline=outline,
             width=k if outline else 0,
         )
-        _shapes[key] = ImageTk.PhotoImage(img.resize((width, height), Image.LANCZOS))
+        _shapes[key] = ImageTk.PhotoImage(img.resize((width, height), Image.LANCZOS), master=master)
     return _shapes[key]

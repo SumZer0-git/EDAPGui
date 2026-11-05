@@ -101,7 +101,12 @@ class APGui:
         self.single_waypoint_system = tk.StringVar()
         self.single_waypoint_station = tk.StringVar()
         self.swp_var = tk.BooleanVar()
-        self.wp_filelabel = tk.StringVar(value="<no list loaded>")
+        waypoint = getattr(self.ed_ap, "waypoint", None)
+        if waypoint is not None and getattr(waypoint, "route_loaded", False):
+            waypoint_label = "loaded: " + Path(waypoint.filename).name
+        else:
+            waypoint_label = "<no list loaded>"
+        self.wp_filelabel = tk.StringVar(value=waypoint_label)
         self.update_text = tk.StringVar(value="Not checked yet.")
         self.update_tag = None
         self.download_button = None
@@ -173,6 +178,8 @@ class APGui:
     def _build_all(self):
         """Create all widgets. State lives in the Tk variables and attributes of this class, so it survives a rebuild."""
         u = self.metrics.u
+        if hasattr(self, "waypoint_editor"):
+            self.waypoint_form_state = self.waypoint_editor.form_state()
         for child in self.root.winfo_children():
             child.destroy()
         self.save_labels = {}
@@ -527,9 +534,13 @@ class APGui:
 
     def set_mode(self, key, on):
         if on:
+            if self.SWP_A_running or self.ed_ap.single_waypoint_enabled:
+                self.notify_user("Stop the running target selection or Single Waypoint Assist first.")
+                return
             if self.active_mode is not None:
                 return
-            self._start_mode(key)
+            if self._start_mode(key) is False:
+                return
             self.active_mode = key
         elif self.active_mode == key:
             self._stop_mode(key)
@@ -544,7 +555,7 @@ class APGui:
         if key == "travel":
             self.start_travel()
         elif key == "waypoint":
-            self.start_waypoint()
+            return self.start_waypoint()
         elif key == "dss":
             self.start_dss()
         else:
@@ -569,6 +580,8 @@ class APGui:
             button.set_disabled(blocked)
             self.mode_tips[key].configure(text="Stop the running assist first." if blocked else self._tip(key))
         self.stop_tip.configure(text=self._tip("stop", "Stop All"))
+        if hasattr(self, "waypoint_editor"):
+            self.waypoint_editor.set_running()
 
     def _tip(self, key, label=None):
         label = label or self.mode_labels[key]
@@ -586,6 +599,8 @@ class APGui:
 
     def close_window(self):
         logger.debug("Entered: close_window")
+        if hasattr(self, "waypoint_editor") and not self.waypoint_editor.discard():
+            return
         self._save_window_state()
         if self.hotkeys is not None:
             self.hotkeys.stop()
@@ -617,10 +632,13 @@ class APGui:
 
     def start_waypoint(self):
         logger.debug("Entered: start_waypoint")
+        if hasattr(self, "waypoint_editor") and not self.waypoint_editor.prepare_start():
+            return False
         self.ed_ap.set_waypoint_assist(True)
         self.WP_A_running = True
         self.notify_user("Waypoint Assist start")
         self.ed_ap.vce.say("Waypoint Assist On")
+        return True
 
     def stop_waypoint(self):
         logger.debug("Entered: stop_waypoint")
@@ -654,6 +672,9 @@ class APGui:
     def start_single_waypoint_assist(self):
         """The debug command to go to a system or station or both."""
         logger.debug("Entered: start_single_waypoint_assist")
+        if self.active_mode is not None:
+            self.notify_user("Stop the running assist first.")
+            return
         system = self.single_waypoint_system.get()
         station = self.single_waypoint_station.get()
 
@@ -761,23 +782,32 @@ class APGui:
         self.ed_ap.ship_tst_yaw()
 
     def open_wp_file(self):
+        if hasattr(self, "waypoint_editor"):
+            self.waypoint_editor.open()
+            return
+        if self.WP_A_running:
+            messagebox.showerror(
+                "Waypoint List Error", "Waypoint Assist must be disabled before loading another route."
+            )
+            return
         filetypes = (("json files", "*.json"), ("All files", "*.*"))
         filename = fd.askopenfilename(title="Waypoint File", initialdir=paths.WAYPOINTS_DIR, filetypes=filetypes)
         if filename != "":
             res = self.ed_ap.waypoint.load_waypoint_file(filename)
             if res:
                 self.wp_filelabel.set("loaded: " + Path(filename).name)
-            else:
-                self.wp_filelabel.set("<no list loaded>")
 
     def reset_wp_file(self):
         if not self.WP_A_running:
             mb = messagebox.askokcancel(
                 "Waypoint List Reset",
-                "After resetting the Waypoint List, the Waypoint Assist will start again from the first point in the list at the next start.",
+                "Reset route progress and remaining commodity quantities? Waypoint Assist will start again from the first point.",
             )
             if mb:
-                self.ed_ap.waypoint.mark_all_waypoints_not_complete()
+                if not self.ed_ap.waypoint.mark_all_waypoints_not_complete():
+                    messagebox.showerror(
+                        "Waypoint List Error", "Waypoint progress could not be saved. Check the log file."
+                    )
         else:
             messagebox.showerror(
                 "Waypoint List Error", "Waypoint Assist must be disabled before you can reset the list."
@@ -794,6 +824,8 @@ class APGui:
 
     def restart_program(self):
         logger.debug("Entered: restart_program")
+        if hasattr(self, "waypoint_editor") and not self.waypoint_editor.discard():
+            return
 
         self._save_window_state()
         self.stop_travel()

@@ -3,6 +3,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from game.cargo import CargoParser
 from game.market import MarketParser
@@ -120,8 +121,60 @@ class CargoParserTestCase(TempFileTestCase):
 
         self.assertEqual(self.parser.get_cargo_data()["Inventory"], [])
 
+    def test_forced_read_does_not_use_cached_inventory(self):
+        write_json(self.dir / "Cargo.json", {"Inventory": []})
+        with mock.patch.object(self.parser, "get_file_modified_time", return_value=self.parser.last_mod_time):
+            self.assertEqual(self.parser.get_cargo_data(force=True)["Inventory"], [])
+
+    def test_invalid_or_unreadable_cargo_fails_after_bounded_retries(self):
+        for payload in (
+            "{",
+            '{"Inventory": null}',
+            '{"Inventory": [{"Name": "Gold", "Count": true}]}',
+            '{"Vessel": "SRV", "Inventory": []}',
+        ):
+            with self.subTest(payload=payload):
+                (self.dir / "Cargo.json").write_text(payload)
+                with mock.patch("game.cargo.sleep") as sleep:
+                    with self.assertRaises(ValueError):
+                        self.parser.get_cargo_data(force=True)
+                    self.assertEqual(sleep.call_count, 2)
+        (self.dir / "Cargo.json").unlink()
+        with mock.patch("game.cargo.sleep") as sleep:
+            with self.assertRaises(OSError):
+                self.parser.get_cargo_data(force=True)
+            self.assertEqual(sleep.call_count, 2)
+
 
 class NavRouteParserTestCase(TempFileTestCase):
+    def test_next_system_follows_current_location_not_route_start(self):
+        route = {
+            "event": "NavRoute",
+            "Route": [
+                {"StarSystem": "LHS 20", "SystemAddress": 1},
+                {"StarSystem": "Intermediate", "SystemAddress": 2},
+                {"StarSystem": "Arima", "SystemAddress": 3},
+            ],
+        }
+        parser = NavRouteParser(file_path=str(write_json(self.dir / "NavRoute.json", route)))
+
+        self.assertEqual(parser.get_next_system("lhs 20", 1), ("Intermediate", 2))
+        self.assertEqual(parser.get_next_system("Intermediate", 2), ("Arima", 3))
+        self.assertEqual(parser.get_next_system("LHS 20"), ("Intermediate", 2))
+        self.assertIsNone(parser.get_next_system("Arima", 3))
+        self.assertIsNone(parser.get_next_system("Off route", 4))
+        self.assertIsNone(parser.get_next_system("LHS 20", 4))
+
+    def test_next_system_requires_valid_name_and_address(self):
+        for next_system in (None, {}, {"StarSystem": "Arima"}, {"StarSystem": "Arima", "SystemAddress": True}):
+            with self.subTest(next_system=next_system):
+                route = {
+                    "event": "NavRoute",
+                    "Route": [{"StarSystem": "LHS 20", "SystemAddress": 1}, next_system],
+                }
+                parser = NavRouteParser(file_path=str(write_json(self.dir / "NavRoute.json", route)))
+                self.assertIsNone(parser.get_next_system("LHS 20", 1))
+
     def test_missing_route_file_returns_a_cleared_route(self):
         parser = NavRouteParser(file_path=str(self.dir / "Missing.json"))
 

@@ -6,11 +6,12 @@ filters, templates, thresholds and offset calculations without the game or a mon
 """
 
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import cv2
 import numpy as np
 
+from routines.flight import FlightMixin
 from tests.helpers import FakeScreen, load_fixture_image, pad_to_region
 from vision.detection import DetectionMixin
 from vision.regions import ScreenRegions
@@ -27,7 +28,7 @@ class MatchingTestCase(unittest.TestCase):
         cls.templates = ImageTemplates(2160)
         cls.images = {
             name: pad_to_region(load_fixture_image(name))
-            for name in ("compass", "navpoint", "navpoint-behind", "target", "disengage")
+            for name in ("compass", "navpoint", "navpoint-behind", "navpoint-rim", "target", "disengage")
         }
         cls.images["message"] = load_fixture_image("disengage")
         cls.images["empty"] = np.zeros((700, 700, 3), np.uint8)
@@ -114,6 +115,16 @@ class CompassTestCase(MatchingTestCase):
         self.assertGreater(offset["roll"], 90)
         self.assertGreater(offset["yaw"], 150)
 
+    def test_nav_point_ahead_at_the_side_rim_needs_a_roll(self):
+        # Compass crop from a log where the alignment pitched back and forth instead of rolling
+        with patch.object(DetectionMixin, "dump_compass_debug"):
+            offset = self.detect("get_nav_offset", "navpoint-rim")
+
+        self.assertEqual(offset["z"], 1.0)
+        self.assertLess(offset["x"], -0.8)
+        self.assertLess(offset["yaw"], -60)
+        self.assertTrue(FlightMixin.nav_needs_reroll(offset, 10))
+
     def test_white_nav_point_touching_a_bright_edge_is_found(self):
         image = np.zeros((120, 120, 3), np.uint8)
         cv2.circle(image, (60, 60), 55, (0, 80, 160), 2)
@@ -129,12 +140,19 @@ class CompassTestCase(MatchingTestCase):
         self.assertFalse(found[2], "filled dot, not a ring")
 
     def test_offset_values_stay_within_range(self):
-        for name in ("compass", "navpoint", "navpoint-behind", "target"):
+        for name in ("compass", "navpoint", "navpoint-behind"):
             with self.subTest(image=name):
                 offset = self.detect("get_nav_offset", name)
                 self.assertTrue(-1.0 <= offset["x"] <= 1.0)
                 self.assertTrue(-1.0 <= offset["y"] <= 1.0)
                 self.assertTrue(-180 <= offset["roll"] <= 180)
+
+    def test_no_offset_without_a_visible_compass(self):
+        # A guessed position would make the compass alignment steer away from the target
+        for name in ("target", "empty"):
+            with self.subTest(image=name), patch.object(DetectionMixin, "dump_compass_debug") as dump:
+                self.assertIsNone(self.detect("get_nav_offset", name))
+                self.assertEqual(dump.call_args.kwargs["kind"], "missing")
 
 
 class TargetTestCase(MatchingTestCase):

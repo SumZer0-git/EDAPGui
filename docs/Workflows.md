@@ -25,31 +25,40 @@ This document summarizes the behavior currently implemented and lists a small nu
 
 ### Waypoint Assist
 
-1. Loads the selected JSON file and processes its entries in file order, skipping entries marked `Skip` or
-   `Completed`.
-2. Travels to a different `SystemName` by selecting it in the Galaxy Map and running the system route. A blank
-   system name means the current system.
-3. In the system, it can select the destination with a Galaxy Map or System Map bookmark. A station name by itself
-   is not currently enough to select a target.
-4. It runs the local-target flight and docking sequence for the selected destination. If already docked at the
+1. Loads the route selected in the Waypoints tab and visits its stops in order, skipping inactive and completed stops.
+   Older route files must first be imported through **Import... > Legacy JSON...** and saved.
+2. For another system, it first tries the configured Galaxy Map bookmark. If there is none or it does not produce
+   the expected route, it searches by system name. A blank system name means the current system.
+3. After entering supercruise, it selects and confirms the next route system before each jump alignment.
+   If the active target cannot be confirmed, it sets throttle to zero and stops with a message.
+   Zero throttle in supercruise does not bring the ship to a standstill.
+4. If the requested station is already selected after arrival, it reuses that target. Otherwise, it tries configured
+   local bookmarks, then reads station names from the Navigation panel and scrolls to the first exact match.
+   The station must be visible under the game's current filters. An unconfirmed target stops the assist before local travel.
+5. It runs the local-target flight and docking sequence for the selected destination. If already docked at the
    destination, it can perform configured trades or cargo transfers, then marks the waypoint complete and saves the
-   file.
-5. A `REPEAT` entry resets completion flags and starts the list again unless that entry is skipped. Waypoint Assist
-   does not explicitly undock after every completed stop: it remains docked at the end of a non-repeating list and
+   progress separately from the route. Ordinary market trades require confirmation from the game before remaining
+   quantities are reduced.
+6. **Repeat route** restores the original quantities and makes all stops pending after the last active stop.
+   The route then starts again until stopped; a fixed repetition count is not available. Waypoint Assist
+   remains docked at the end of a non-repeating route and
    undocks when the next travel operation requires it.
+
+For route editing, imports, trade options and troubleshooting, see the [Waypoint guide](Waypoint.md).
+The editor's **Plot to System/Station** buttons only select targets; they do not start travel or trading.
 
 ### Other assists
 
 - **DSS Assist** monitors the current system while in supercruise and attempts a discovery scan after entering a
   different system.
 - **Single Waypoint Assist** selects a system entered on the Debug tab and travels there; it can also be given a
-  local station target.
+  local station target. It uses the same next-jump target checks as Waypoint Assist.
 - **AFK Combat Assist** monitors shield and fighter status, evades when shields are down, and redeploys a fighter
   when one is destroyed.
 
 ## Follow-up items
 
-- Revisit targeting local destinations by name as part of a future Waypoint Assist overhaul. Name-based selection has
-  previously been unreliable and error-prone; bookmark selection remains the supported approach for now.
+- Refine station-name screen reading for additional destination icons and HUD layouts as examples become available.
+  Bookmarks remain an alternative when a destination cannot be read reliably.
 - Avoid changing hyperspace-interdiction recovery until there is a reliable way to validate it. Interdiction attempts
   are too unpredictable for routine testing: they may not occur for days, then happen several times within an hour.

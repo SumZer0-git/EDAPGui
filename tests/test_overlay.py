@@ -917,7 +917,14 @@ class OverlayRenderingTests(unittest.TestCase):
         )
         endings = (("interrupted", EdapInterruptError()), ("finished", None))
         for flag, routine, stop_msg in assists:
-            for ending, error in endings:
+            cases = endings
+            if flag == "single_waypoint_enabled":
+                cases += (
+                    ("target-confirmed", None),
+                    ("target-failed", None),
+                    ("target-interrupted", EdapInterruptError()),
+                )
+            for ending, error in cases:
                 with self.subTest(assist=flag, ending=ending):
                     autopilot = EDAutopilot.__new__(EDAutopilot)
                     autopilot.terminate = False
@@ -928,13 +935,19 @@ class OverlayRenderingTests(unittest.TestCase):
                     autopilot.keys = autopilot.scrReg = None
                     autopilot.update_overlay = Mock()
                     autopilot.ap_ckb = Mock()
+                    autopilot.notify_user = Mock()
+                    autopilot._waypoint_plot = ({"SystemName": "Sol"}, True) if ending.startswith("target-") else None
 
                     def run_assist(*args, error=error):
                         autopilot.set_ap_status("Maneuvering")
                         if error is not None:
                             raise error
+                        return ending == "target-confirmed"
 
                     setattr(autopilot, routine, run_assist)
+                    if autopilot._waypoint_plot is not None:
+                        autopilot.waypoint = SimpleNamespace(plot_destination=Mock(side_effect=run_assist))
+                        autopilot.single_waypoint_assist = Mock()
 
                     def stop_loop(_seconds, autopilot=autopilot):
                         autopilot.terminate = True
@@ -952,6 +965,18 @@ class OverlayRenderingTests(unittest.TestCase):
                         autopilot.ap_ckb.call_args_list[-2:],
                         [call(stop_msg), call("ap_status", "Idle")],
                     )
+                    if ending.startswith("target-"):
+                        self.assertIsNone(autopilot._waypoint_plot)
+                        autopilot.waypoint.plot_destination.assert_called_once_with({"SystemName": "Sol"}, True)
+                        autopilot.single_waypoint_assist.assert_not_called()
+                        if ending == "target-interrupted":
+                            autopilot.notify_user.assert_not_called()
+                        else:
+                            autopilot.notify_user.assert_called_once_with(
+                                "Waypoint target confirmed."
+                                if ending == "target-confirmed"
+                                else "Waypoint target could not be confirmed. No flight was started."
+                            )
 
     def _route_info_autopilot(self, location, address, travel=True):
         autopilot = EDAutopilot.__new__(EDAutopilot)

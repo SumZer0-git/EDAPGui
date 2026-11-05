@@ -17,7 +17,9 @@ from gui.fields import (
     normalize_overlay_line_order,
 )
 from gui.theme import BLUE, DISABLED, MUTED, ORANGE, PANEL, TEXT
+from gui.waypoint_editor import WaypointEditor
 from gui.widgets import RoundButton, add_tooltip
+from gui.widgets import section_card as _card
 
 TOOLTIPS = {
     "Waypoint List Button": "Read in a file with with your Waypoints.",
@@ -33,14 +35,6 @@ def _columns(app, page):
         column.grid(row=0, column=c, sticky="new", padx=(0, app.metrics.u(5)) if c == 0 else (app.metrics.u(5), 0))
         columns.append(column)
     return columns
-
-
-def _card(app, parent, title):
-    label = tk.Label(parent, text=title, fg=BLUE, bg=app.theme.surface, font=("TkDefaultFont", 10, "bold"))
-    card = ttk.LabelFrame(parent, labelwidget=label, padding=app.metrics.u(12))
-    card.pack(fill="x", pady=(0, app.metrics.u(10)))
-    card.columnconfigure(0, weight=1)
-    return card
 
 
 def _field(app, card, key, row):
@@ -114,14 +108,7 @@ def build_ship(app, page):
 
 
 def build_waypoints(app, page):
-    left, _right = _columns(app, page)
-    card = _card(app, left, "Waypoint list")
-    ttk.Label(card, textvariable=app.wp_filelabel).grid(
-        row=0, column=0, columnspan=2, sticky="w", pady=app.metrics.u(4)
-    )
-    _button(app, card, "Load Waypoint File", app.open_wp_file, 1, TOOLTIPS["Waypoint List Button"])
-    _button(app, card, "Reset List", app.reset_wp_file, 2, TOOLTIPS["Reset Waypoint List"])
-    _page_layout(page)
+    app.waypoint_editor = WaypointEditor(app, page)
 
 
 def build_settings(app, page):

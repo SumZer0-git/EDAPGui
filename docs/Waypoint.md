@@ -1,83 +1,336 @@
 # Waypoint Assist
 
-Waypoint Assist follows a JSON file in order. It travels to each `SystemName`, optionally visits a bookmarked
-destination in that system, and can trade or transfer cargo after docking. Load a waypoint file from the Waypoints
-section of the main tab, then enable Waypoint Assist.
+Waypoint Assist visits the systems and stations in a saved route, in order. It can dock and buy, sell or transfer
+cargo at each stop. You create and edit routes in the **Waypoints** tab; you do not need to edit files or know JSON.
+The last selected route is loaded again when EDAPGui starts.
 
-Example waypoint files are in `data/waypoints/` and are copied to `user_data/waypoints/` on first start. Use valid
-JSON: double quotes around strings and property names, no comments, and no trailing commas.
+## Before you start
 
-## File format
+- Complete the [installation](../README.md#install-and-start) and check your
+  [keybindings](Keybindings.md).
+- Fit an automatic docking computer for automatic docking.
+- Check the ship's [roll, pitch and yaw settings](RollPitchYaw.md), especially when changing ships.
+- Make sure you have enough fuel, credits and free cargo space for the route.
+- Use commodity names in the same language as your game.
+- Keep Elite Dangerous focused while the assist runs. Do not navigate menus or trade manually at the same time.
+- Keep **Stop All** ready. Its default global hotkey is **End**, unless you changed it in Settings.
 
-Every file must contain `GlobalShoppingList`. Each numbered or named waypoint must include the fields shown below;
-the keys are case-sensitive.
+**Stay at the controls.** A route does not guarantee that a station sells or accepts the requested goods, has a
+suitable landing pad, or is safe to visit. Start with a short route and small quantities.
 
-```json
-{
-  "GlobalShoppingList": {
-    "BuyCommodities": {},
-    "UpdateCommodityCount": false,
-    "Skip": true
-  },
-  "1": {
-    "SystemName": "Sol",
-    "StationName": "",
-    "GalaxyBookmarkType": "",
-    "GalaxyBookmarkNumber": 0,
-    "SystemBookmarkType": "",
-    "SystemBookmarkNumber": 0,
-    "SellCommodities": {},
-    "BuyCommodities": {},
-    "UpdateCommodityCount": false,
-    "FleetCarrierTransfer": false,
-    "Skip": false,
-    "Completed": false
-  }
-}
-```
+## Create your first route
 
-`GlobalShoppingList` is a special entry, not a destination. Its `BuyCommodities` are attempted at each supported
-market after that waypoint's own buy list. `UpdateCommodityCount` updates requested buy quantities as items are
-purchased; `Skip` is required by the file reader and is normally `true` for this entry.
+For a simple first trip, choose a station in your current system and leave trading empty.
 
-### Waypoint fields
+1. Open **Waypoints** and choose **New**.
+2. Click the **+** button to add a waypoint. Hover over an icon to see its action.
+3. On **General**, enter the **System** and **Station** exactly as shown in the game.
+   Leave Station empty if you only want to reach a system. Leave System empty to use your current system.
+4. For an ordinary station, you can leave both bookmark types empty and both positions at `0`.
+   The assist will look for the station in the game's left-hand Navigation panel.
+   Check that the panel's filters show the station.
+5. Leave **Buy** and **Sell / transfer** empty for this first trip.
+6. Choose **Apply** to return to the route list, then **Save** and choose a filename.
+7. Leave **Repeat route** off. Start **Waypoint Assist** from the sidebar and return focus to the game.
 
-| Field | Description |
+The assist selects the destination, travels there and docks when a station was requested.
+The list shows the waypoint as **Done** when its visit and requested actions are complete.
+Without repetition, the assist finishes after the last active waypoint and returns to **Idle**.
+
+## Load and save routes
+
+Use the **Route** dropdown to select a saved route. **Browse...** opens a route stored elsewhere.
+Example routes are provided in `data/waypoints/` and copied to `user_data/waypoints/` when missing.
+Treat examples as starting points: check their destinations, bookmarks and trades before using them.
+
+| Action | What it does |
 |---|---|
-| `SystemName` | Target system name. Leave blank to use the current system. |
-| `StationName` | Destination name used to confirm the station or carrier after docking. A station name alone cannot be targeted: provide a Galaxy or System Map bookmark as well. |
-| `GalaxyBookmarkType`, `GalaxyBookmarkNumber` | Optional Galaxy Map bookmark category and its 1-based position. Supported categories are Favorites (`Fav`), Systems (`Sys`), Bodies (`Bod`), Stations (`Sta`), and Settlements (`Set`). Use number `0` when unused. |
-| `SystemBookmarkType`, `SystemBookmarkNumber` | Optional System Map bookmark category and its 1-based position. Supported categories are Favorites (`Fav`), Bodies (`Bod`), Stations (`Sta`), Settlements (`Set`), and Navigation (`Nav`). `Nav` selects a target from the left Navigation panel. Use number `0` when unused. |
-| `SellCommodities` | Commodity names and quantities to sell. |
-| `BuyCommodities` | Commodity names and quantities to buy. |
-| `UpdateCommodityCount` | If `true`, reduce buy quantities in the file as goods are purchased. Sell quantities are not updated. |
-| `FleetCarrierTransfer` | If `true` at a Fleet Carrier, transfer cargo instead of buying and selling. |
-| `Skip` | If `true`, ignore this waypoint. |
-| `Completed` | Progress flag. EDAPGui sets it after the waypoint is finished and saves the file. |
+| **New** | Starts an empty route. |
+| **Save** | Saves changes to the current route. A new route needs a filename first. |
+| **Save as** | Saves a separate copy under another filename. |
+| **Apply** | Accepts changes in the open form, but does **not** save the route to disk. |
+| **Cancel** | Leaves the form without applying its changes. |
 
-Bookmark numbers start at `1` for the first bookmark in the selected category. Galaxy Map bookmarks take precedence
-if both bookmark types are set. System Colonisation Ships must be selected through a Galaxy Map bookmark.
+An asterisk (`*`) in the route dropdown means there are unsaved changes.
+If you switch routes or close the program, EDAPGui asks whether to save or discard them.
+Starting an unsaved route also requires saving it first.
 
-## Routes and progress
+**Saving changes to an existing route resets its progress after confirmation.** All stops become pending again,
+and requested trade quantities return to the edited values. Saving an unchanged route does not reset progress.
 
-Waypoints are processed in the order they appear in the JSON file. EDAPGui plots a system route, completes its FSD
-jumps, and then visits the local bookmarked destination if one is configured. Without a local destination, reaching
-the system completes that waypoint. When docked at the configured destination, EDAPGui can perform its trade or cargo
-transfer before marking the waypoint complete.
+## Edit waypoints
 
-To repeat a route, add a final waypoint whose `SystemName` is `REPEAT` and whose `Skip` is `false`. Reaching it resets
-the other waypoints' `Completed` flags and starts the list again. Set its `Skip` to `true` to let the route finish.
-Use **Reset List** on the main tab to reset progress manually.
+Select a row, then use an icon below the list. Double-clicking a row also opens its editor.
 
-Progress is written to `user_data/waypoints/<loaded filename>`. Keep the working waypoint file in that folder if you
-want progress saved alongside it.
+| Action | What it does |
+|---|---|
+| **Add (+)** | Adds a stop at the end. |
+| **Duplicate** | Opens a copy of the selected stop, inserted after it when you choose Apply. |
+| **Before / After** | Adds a new stop before or after the selected one. |
+| **Edit (pencil)** | Changes the selected stop. |
+| **Delete (bin)** | Removes the selected stop after confirmation. |
+| **Up / Down** | Changes the order of stops. |
 
-## Trading and transfers
+Duplicates copy the destination, options and trade lists, not the original stop's completed progress.
 
-- At stations and Fleet Carriers in buy/sell mode, EDAPGui processes the waypoint's sell list and buy list.
-- The global shopping list is bought after the waypoint's local buy list.
-- For a Fleet Carrier, set `FleetCarrierTransfer` to `true` to transfer goods instead of trading them. Use `All` with
-  quantity `0` to request a full cargo transfer.
-- At a System Colonisation Ship or Orbital Construction Site, use `All` with quantity `0` in `SellCommodities` to
-  sell all cargo.
-- Trading requires a commodities service at the docked location. Only list goods that can be handled there.
+### Active and Repeat route
+
+- **Active:** Click the checkbox in a row to include or exclude that stop. You can also select the row and press
+  **Space**. An inactive stop is shown as **Disabled** and skipped. Save the route after changing this setting.
+- **Repeat route:** After the last active stop, start again at the first one with the original trade quantities.
+  Repetition continues until you stop the assist; a fixed number of repetitions is not currently available.
+  Keep an eye on cargo space, credits and stock.
+
+An empty route or a route with no active stops cannot start.
+Editing, loading, saving and resetting are locked while Waypoint Assist is running or still stopping.
+
+### Errors and warnings
+
+Red marks indicate an error that must be corrected before saving or starting.
+Open the waypoint's **Checks** tab for an explanation. The route heading shows the total number of issues;
+click it for details across the route.
+
+Orange marks are warnings. You can save after acknowledging them, but should review the affected settings first.
+No bookmark is required for an ordinary station visible in the Navigation panel.
+
+If **Apply** is unavailable, check for errors and unfinished commodity edits: after entering a commodity or quantity,
+press **Set** to add it to the list.
+
+These checks do not check live market stock, docking access or the positions of your in-game bookmarks.
+
+## Choosing destinations
+
+### Without bookmarks
+
+For another system, the assist plots a Galaxy Map route using the system name.
+After arrival, it looks for the station name in the left-hand **Navigation** panel unless the correct target is
+already selected.
+
+The panel search reads the highlighted name from the screen, scrolls through the list and selects the first exact
+match. This screen-reading process is called OCR; you do not need to configure it separately for each station.
+Long lists can take longer. The search makes at most two attempts within a two-minute search window;
+closing the panel and checking the selected target can take additional time.
+If the destination cannot be found or confirmed, the assist stops with a message.
+
+**Check your Navigation filters:** the destination must be visible in the list. As an optional optimization, show
+only categories that could be stops on your route, such as stations, settlements or Fleet Carriers.
+EDAPGui does not change these filters for you. Do not hide a category needed later in the route.
+
+Screen reading depends on resolution, HUD colors and the visible layout. Some icons or destination types may not
+be recognized reliably. If a valid destination is repeatedly missed, try a bookmark or report the problem.
+
+### With bookmarks
+
+Bookmarks are optional shortcuts to destinations you have already saved in the game.
+
+1. In the game's Galaxy Map or System Map, find the bookmark and its category.
+2. In the waypoint's **General** tab, choose the corresponding bookmark category.
+3. Enter its position in that category: `1` for the first bookmark, `2` for the second, and so on.
+4. If you do not use a bookmark, leave its type empty and position at `0`.
+
+A **Galaxy bookmark** is tried first when travelling to another system.
+If it does not produce the expected route, the assist tries a system-name search.
+A **System bookmark** can select a local destination after arrival.
+If the correct station is already selected, it is reused.
+
+Bookmark positions depend on your own in-game lists. Check them again if you add, remove or reorder bookmarks.
+**Colonisation Ships require a Galaxy Map bookmark.**
+
+### Plot buttons: select a target without flying
+
+In the waypoint editor:
+
+- **Plot to System** selects the system route.
+- **Plot to Station** selects the station target.
+
+These buttons use the destination currently entered in the form. They do not save the form, start a flight,
+trade or change progress. **Stop All** cancels target selection.
+
+For station-name search or a System Map bookmark, you must already be in the destination system.
+To plot a station in another system without travelling there, you need a Galaxy Map station bookmark.
+
+### Target checks during flight
+
+Before each jump, the assist selects and checks the next system on the route, including intermediate systems.
+A saved route alone is not enough: the active target must match.
+If the target or supercruise state cannot be confirmed, the assist sets throttle to zero and stops with a message
+before jump alignment. **Zero throttle in supercruise still means the ship is moving.**
+
+Galaxy Map route selection also has a limited number of retries. If it cannot confirm the requested route,
+the assist stops rather than continuing to an unknown destination.
+
+## Buy and sell goods
+
+Open a waypoint and choose **Buy** or **Sell / transfer**.
+
+1. Set **Game commodity language** to `de` for a German game or `en` for an English game.
+2. Type part of a commodity name, then open the dropdown to choose a suggestion.
+   You can search using either language, but the selected name is entered in the chosen game language.
+3. Enter a whole-number quantity, or choose **All**.
+4. Press **Set**. Repeat for other goods.
+5. Choose **Apply**, then save the route.
+
+Select an existing commodity row to change its quantity with **Set**.
+The bin button removes it. **Up / Down** changes its priority.
+Changing the language does not translate commodities already in the list.
+
+The catalogue offers suggestions, not prices or stock information. `[unchecked]` means the suggested name has
+not yet been verified against game market data; it does not mean the commodity is unavailable.
+You can enter a name manually if it is missing, but it must match the name used by your game.
+
+### Trade order and quantities
+
+At each stop, the assist processes:
+
+1. The waypoint's **Sell / transfer** list, from top to bottom.
+2. Its **Buy** list, from top to bottom.
+3. The enabled **Global shopping list**, from top to bottom.
+
+**All** requests as much of that commodity as possible within the applicable cargo and market limits.
+It does not bypass credit, stock or demand restrictions.
+
+With **Reduce remaining quantities after trades** enabled, successful trades reduce the amount still requested.
+For example, buying 2 of a requested 5 leaves 3.
+This also applies to All: it is stored as a large request of 9999 units, not an unlimited amount.
+Repeating or resetting the route restores the original request.
+
+With that option off, each new visit requests the configured amount again.
+
+If a requested sale is not in your hold, it is skipped for that visit. If you have less than requested, only the
+available amount is sold. A skipped sale does not reduce its remaining request, but the stop can still finish
+after its other actions. The sale is tried again only on another visit, such as a repeat or deliberate reset.
+
+### Global shopping list
+
+Choose **Global shopping list** below the waypoint list and select **Enable this shopping list** to use it.
+These purchases are attempted at each supported market after the local Buy list.
+Leave it disabled if you only want the trades listed at individual stops.
+
+### Trade safety and interruptions
+
+The assist checks the commodity name and whether the game dialog is buying or selling before submitting a trade.
+It then waits for the game's transaction confirmation before reducing the remaining quantity.
+If a dialog cannot be read, it may close and reopen station services and retry once.
+If the checks still fail, trading stops with a message.
+
+Requested trading also stops if market services or cargo information cannot be read.
+The route does not guarantee that a market exists or that the station trades your chosen goods.
+
+**After a trade error or interruption, inspect your cargo and remaining requests before restarting.**
+A trade may have happened just before Stop All, a crash or a failed confirmation.
+Restarting or resetting without checking could repeat a purchase or sale.
+
+### Fleet Carrier transfers and construction deliveries
+
+- At a Fleet Carrier, enable **Fleet Carrier transfer (instead of trading)** to transfer cargo rather than buy or sell.
+- For a full carrier cargo transfer, use the special commodity name `All` with quantity `0`.
+- At a System Colonisation Ship or Orbital Construction Site, `All` with quantity `0` in **Sell / transfer**
+  requests delivery of all cargo.
+
+The special name `All` is different from selecting **All** as the quantity for one named commodity.
+Transfers and construction deliveries do not use the same transaction confirmation as ordinary market trades.
+Check the result in the game.
+
+## Import a copied trade route
+
+You can paste **one complete Inara trade result**, in German or English.
+EDAPGui reads the pasted text; it does not access the website or refresh market information.
+
+1. Choose **Import...** in the Route section.
+2. Choose **New route** or **Append to current**, and the game's commodity language.
+3. On **Paste**, insert the complete result, including both stations, systems, trade directions and both
+   station-distance sections. Choose **Preview**.
+4. Review the destinations and Buy/Sell actions. Select each commodity, enter a quantity from **1 to 9998**
+   and press **Set**. Ctrl/Shift lets you select several commodities to give them the same quantity.
+5. If wanted, enable **Repeat route**. A round-trip result does not enable repetition automatically.
+6. Choose **Import draft**, review the waypoints and save.
+
+The quantity you enter applies to both ends of that commodity's trade.
+Prices, stock, demand and profit are not used as purchase quantities.
+**All** is not offered in the import preview; you can edit the trade lists afterwards.
+
+If Preview rejects the result, check that you copied the whole result and that commodity names are recognizable.
+If you change the pasted text or game language, choose Preview again.
+Spansh CSV files and several results pasted together are not supported.
+
+Importing does not start the assist. Imported destinations have no bookmarks and use station-name search unless
+you add bookmarks yourself. When appending with repetition enabled, **the entire combined route repeats**,
+not just the newly imported stops.
+
+## Import an older route file
+
+1. Choose **Import... > Legacy JSON...** and select the older route file.
+2. Review the imported destinations and trade quantities.
+3. Set bookmarks and other options again where needed, then save under a new filename.
+
+Only destination names, stop order and Buy/Sell lists are retained.
+Bookmarks, activation settings, transfer options, the global shopping list and completed progress are not copied.
+The original file is not changed.
+
+If the old route ends with an active REPEAT entry, **Repeat route** is enabled.
+Old REPEAT entries are removed from the stop list.
+Review the whole imported route, especially if REPEAT was previously in the middle.
+
+## Progress, resume and reset
+
+The list shows **Pending**, **Done** or **Disabled**, along with remaining trade quantities.
+For an unsaved route, quantities shown are the planned values, not the active run's remaining requests.
+
+Completed stops and remaining quantities are saved separately from the route.
+After restarting EDAPGui, the assist can continue unfinished stops without deliberately repeating completed ones.
+Check cargo first if the previous run ended during a trade.
+
+**Reset progress** makes all stops pending again and restores the route's saved trade quantities.
+Use it only when you want those actions to run again. Save any route edits before resetting.
+
+With **Repeat route** enabled, this reset happens automatically after the last active stop.
+Without it, a completed route has nothing left to do until you reset or edit it.
+
+## Editor screenshots
+
+The following examples show the views inside the Waypoints tab, not separate windows.
+
+**General:** destination, optional bookmarks, trade options and plot buttons.
+
+<img src="screenshots/screen_cap_waypoint_edit.png" alt="Waypoint editor General tab with optional bookmarks and plot buttons" width="700">
+
+**Buy:** commodities, quantities, order and game language. Sell / transfer uses the same list controls.
+
+<img src="screenshots/screen_cap_waypoint_buy.png" alt="Waypoint Buy tab with commodity quantity, ordering and game-language controls" width="700">
+
+**Import:** destination preview, quantities and the Legacy JSON button.
+
+<img src="screenshots/screen_cap_waypoint_import.png" alt="Trade-route import preview with quantities and the Legacy JSON button" width="700">
+
+## Troubleshooting
+
+| Problem | What to check |
+|---|---|
+| Apply or Save is unavailable | Open Checks, correct red errors and press Set for unfinished commodity inputs. |
+| The route does not start | Close or apply the open form, save the route and check that at least one stop is active and pending. |
+| A station is not found | Check its exact name, current system and Navigation filters. Try a bookmark if screen reading keeps failing. |
+| A bookmark selects the wrong place | Check its category and position in your own game lists. |
+| Galaxy Map opens but does not search | A matching route may already exist and can be reused. The next jump target is checked separately before alignment. |
+| A sale is skipped | Check whether the named commodity is in your cargo hold. |
+| Trading stops or quantities look wrong | Inspect the actual cargo and market result before restarting; do not immediately reset progress. |
+| A stop is visited again | Check Repeat route, whether progress was reset, or whether edited route changes were saved. |
+| Editing controls are locked | Stop the assist and wait until it has finished stopping. |
+
+## Manual validation and diagnostics
+
+For a first check, use one nearby station, no repetition and no trades.
+Once travel works, try a small purchase while already docked before relying on a longer trade route.
+
+If you need to report a problem:
+
+1. Stop the assist. Note the approximate time, what you expected and what happened.
+2. For a reproducible problem, select **Debug > Log level > Debug** before the next attempt.
+3. Keep the technical log in `user_data/logs/autopilot.log`. After restarting, the previous log is one of the
+   dated files in the same folder.
+4. Include the affected route file from `user_data/waypoints/` and, if requested, its progress file from the
+   `progress` subfolder. You do not need to interpret these files yourself.
+5. For a trading problem, report the requested quantity and cargo before/after if known.
+   A screenshot of an unexpected dialog can help; remove player or personal information before sharing.
+
+Do not delete progress or alter game files to reproduce an error.
+Keep the game focused during a retry and use small quantities if trading is involved.

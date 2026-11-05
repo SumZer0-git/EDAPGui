@@ -8,12 +8,26 @@ none. The file names tell what is expected:
  - jump-align-msg: OCR recognizes the localized FSD alignment prompt in the HUD
  - disengage-msg: the message gate (message-colored area) lets the message region pass; the OCR is not run
  - no-msg: the message gate must not pass (guards against false alarms that trigger slow OCR runs)
+ - station-services: OCR recognizes the localized header in each provided color scheme
+ - galaxy-map: OCR recognizes the map header in each provided color scheme
+ - trade-buy / trade-sell: the modal commodity and transaction direction match; background goods do not
+ - nav-panel: the selected system/navigation/transactions/contacts tab is identified in both color schemes
 Screenshots whose names contain "crop" or "head-turned" are ignored.
 """
 
 import unittest
 from unittest import skipUnless
+from unittest.mock import Mock, patch
 
+import cv2
+import numpy as np
+
+from core import paths
+from core.constants import GuiFocusGalaxyMap
+from i18n.localization import LocalizationManager
+from panels.galaxy_map import EDGalaxyMap
+from panels.navigation import EDNavigationPanel
+from panels.station_services import EDStationServicesInShip
 from tests.helpers import FIXTURES, ScreenshotScreen, load_screenshot
 from vision.detection import DetectionMixin
 from vision.regions import ScreenRegions
@@ -27,6 +41,39 @@ except ImportError:
 SCREENSHOTS = FIXTURES / "screenshots"
 IGNORED = ("crop", "head-turned")
 ALIGNMENT_SCREENSHOTS = tuple(sorted(SCREENSHOTS.glob("*p/*jump-align-msg*.png")))
+STATION_SCREENSHOTS = tuple(sorted(SCREENSHOTS.glob("*p/*station-services*.png")))
+TRADE_SCREENSHOTS = tuple(sorted(SCREENSHOTS.glob("*p/*trade-*.png")))
+GALAXY_MAP_SCREENSHOTS = tuple(sorted(SCREENSHOTS.glob("*p/*galaxy-map*.png")))
+NAV_PANEL_SCREENSHOTS = tuple(sorted(SCREENSHOTS.glob("*p/*nav-panel*.png")))
+
+
+@skipUnless(OCR is not None and NAV_PANEL_SCREENSHOTS, "PaddleOCR or local navigation-panel screenshots unavailable")
+class NavigationPanelScreenshotTestCase(unittest.TestCase):
+    def test_selected_tab_and_station_in_both_color_schemes(self):
+        ocr = OCR(screen=None)
+        locale = LocalizationManager(str(paths.LOCALES_DIR), "en")
+        for path in NAV_PANEL_SCREENSHOTS:
+            with self.subTest(screenshot=path.name):
+                screen = ScreenshotScreen(load_screenshot(path))
+                ocr.screen = screen
+                panel = EDNavigationPanel(Mock(ocr=ocr, locale=locale), screen, Mock(), Mock())
+                expected = path.stem.split("_")[2]
+                self.assertEqual(panel._selected_tab(), expected)
+                if expected == "navigation":
+                    self.assertEqual(panel._selected_destination(), "OHM CITY")
+
+    def test_long_name_and_numeric_suffix_survive_icons_and_noisy_distance_column(self):
+        ocr = OCR(screen=None)
+        name = "ORBITAL CONSTRUCTION SITE WINGROVES INHERITANCE ABC123"
+        for background in ((255, 255, 255), (0, 255, 255)):
+            with self.subTest(background=background):
+                row = np.full((80, 1600, 3), background, dtype=np.uint8)
+                cv2.putText(row, name, (90, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 2)
+                cv2.rectangle(row, (10, 5), (45, 70), (0, 0, 0), 3)
+                cv2.rectangle(row, (1100, 5), (1125, 70), (0, 0, 0), 3)
+                cv2.putText(row, "1187LS 0", (1400, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
+                image = EDNavigationPanel._destination_name_image(row)
+                self.assertEqual(" ".join(ocr.image_simple_ocr(image) or []), name)
 
 
 class NoOcr:
@@ -110,6 +157,97 @@ class FsdAlignmentPromptScreenshotTestCase(unittest.TestCase):
                 image = load_screenshot(path)
                 regions = ScreenRegions(ScreenshotScreen(image), templates)
                 self.assertTrue(detector.fsd_alignment_prompt(regions))
+
+
+@skipUnless(OCR is not None and STATION_SCREENSHOTS, "PaddleOCR or local station-services screenshots unavailable")
+class StationServicesScreenshotTestCase(unittest.TestCase):
+    def test_station_header_is_recognized_in_all_color_schemes(self):
+        ocr = OCR(screen=None)
+        locale = LocalizationManager(str(paths.LOCALES_DIR), "en")
+        for path in STATION_SCREENSHOTS:
+            with self.subTest(screenshot=path.name):
+                screen = ScreenshotScreen(load_screenshot(path))
+                ocr.screen = screen
+                services = EDStationServicesInShip.__new__(EDStationServicesInShip)
+                services.ap = Mock(debug_overlay=False)
+                services.keys = Mock()
+                services.ap_ckb = Mock()
+                services.screen = screen
+                services.ocr = ocr
+                services.locale = locale
+                services.reg = {"connected_to": {"rect": [0.0, 0.0, 0.25, 0.25]}}
+                # One real OCR poll is sufficient for a fully rendered static screenshot.
+                wait = ocr.wait_for_text
+                with patch.object(
+                    ocr, "wait_for_text", side_effect=lambda ap, texts, region: wait(ap, texts, region, timeout=0.01)
+                ):
+                    self.assertTrue(services.goto_station_services())
+                    services.ap_ckb.assert_not_called()
+
+
+@skipUnless(OCR is not None and GALAXY_MAP_SCREENSHOTS, "PaddleOCR or local galaxy-map screenshots unavailable")
+class GalaxyMapScreenshotTestCase(unittest.TestCase):
+    def test_map_opening_header_is_recognized_on_first_poll_in_both_colors(self):
+        ocr = OCR(screen=None)
+        for path in GALAXY_MAP_SCREENSHOTS:
+            with self.subTest(screenshot=path.name):
+                screen = ScreenshotScreen(load_screenshot(path))
+                ocr.screen = screen
+                galaxy = EDGalaxyMap.__new__(EDGalaxyMap)
+                galaxy.ap = Mock(debug_overlay=False)
+                galaxy.ap.ship_control = Mock()
+                galaxy.keys = Mock()
+                galaxy.screen = screen
+                galaxy.ocr = ocr
+                galaxy.status_parser = Mock()
+                galaxy.status_parser.get_gui_focus.return_value = GuiFocusGalaxyMap - 1
+                galaxy.reg = {"cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]}}
+                wait = ocr.wait_for_text
+
+                def recognize_once(ap, texts, region):
+                    result = wait(ap, texts, region, timeout=0.01)
+                    self.assertTrue(result, "map header must be recognized, not just time out")
+                    return result
+
+                with (
+                    patch.object(
+                        ocr,
+                        "wait_for_text",
+                        side_effect=recognize_once,
+                    ) as recognition,
+                    patch.object(ocr, "is_text_in_region", wraps=ocr.is_text_in_region) as poll,
+                ):
+                    galaxy.goto_galaxy_map()
+                recognition.assert_called_once()
+                poll.assert_called_once()
+                self.assertIn("UI_Up", [call.args[0] for call in galaxy.keys.send.call_args_list])
+
+
+@skipUnless(OCR is not None and TRADE_SCREENSHOTS, "PaddleOCR or local trade-dialog screenshots unavailable")
+class TradeDialogScreenshotTestCase(unittest.TestCase):
+    def test_selected_commodity_and_direction_in_both_color_schemes(self):
+        ocr = OCR(screen=None)
+        for path in TRADE_SCREENSHOTS:
+            with self.subTest(screenshot=path.name):
+                services = EDStationServicesInShip.__new__(EDStationServicesInShip)
+                services.locale = LocalizationManager(str(paths.LOCALES_DIR), "en")
+                services.screen = ScreenshotScreen(load_screenshot(path))
+                services.ocr = ocr
+                ocr.screen = services.screen
+                selling = "trade-sell" in path.name
+                name = "Halbleiter" if "halbleiter" in path.name else "Polymere"
+                self.assertTrue(services.trade_dialog_matches(name, selling))
+                self.assertFalse(
+                    services.trade_dialog_matches("Polymere" if name == "Halbleiter" else "Halbleiter", selling)
+                )
+                self.assertFalse(services.trade_dialog_matches(name, not selling))
+
+        for path in STATION_SCREENSHOTS:
+            with self.subTest(no_trade_dialog=path.name):
+                services.screen = ScreenshotScreen(load_screenshot(path))
+                ocr.screen = services.screen
+                self.assertFalse(services.trade_dialog_matches("Polymere", False))
+                self.assertFalse(services.trade_dialog_matches("Polymere", True))
 
 
 if __name__ == "__main__":

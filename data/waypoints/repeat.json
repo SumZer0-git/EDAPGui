@@ -1,70 +1,60 @@
 {
-  "GlobalShoppingList": {
-    "SystemName": "",
-    "StationName": "",
-    "GalaxyBookmarkType": "",
-    "GalaxyBookmarkNumber": 0,
-    "SystemBookmarkType": "",
-    "SystemBookmarkNumber": 0,
-    "SellCommodities": {},
-    "BuyCommodities": {},
-    "Comment": null,
-    "UpdateCommodityCount": false,
-    "FleetCarrierTransfer": false,
-    "Skip": true,
-    "Completed": false
-  },
-  "1": {
-    "SystemName": "HIP 1937",
-    "StationName": "Gunter Port",
-    "GalaxyBookmarkType": "",
-    "GalaxyBookmarkNumber": 0,
-    "SystemBookmarkType": "Station",
-    "SystemBookmarkNumber": 1,
-    "SellCommodities": {
-      "Lepidolite": 9999
+    "version": 2,
+    "name": "repeat",
+    "GlobalShoppingList": {
+        "SystemName": "",
+        "StationName": "",
+        "GalaxyBookmarkType": "",
+        "GalaxyBookmarkNumber": 0,
+        "SystemBookmarkType": "",
+        "SystemBookmarkNumber": 0,
+        "SellCommodities": {},
+        "BuyCommodities": {},
+        "Comment": null,
+        "UpdateCommodityCount": false,
+        "FleetCarrierTransfer": false,
+        "Enabled": false
     },
-    "BuyCommodities": {
-      "Bauxite": 9999
-    },
-    "Comment": null,
-    "UpdateCommodityCount": false,
-    "FleetCarrierTransfer": false,
-    "Skip": false,
-    "Completed": false
-  },
-  "2": {
-    "SystemName": "Theta Octantis",
-    "StationName": "Nouvel Platform",
-    "GalaxyBookmarkType": "",
-    "GalaxyBookmarkNumber": 0,
-    "SystemBookmarkType": "Station",
-    "SystemBookmarkNumber": 2,
-    "SellCommodities": {
-      "Bauxite": 9999
-    },
-    "BuyCommodities": {
-      "Lepidolite": 9999
-    },
-    "Comment": null,
-    "UpdateCommodityCount": false,
-    "FleetCarrierTransfer": false,
-    "Skip": false,
-    "Completed": false
-  },
-  "3": {
-    "SystemName": "REPEAT",
-    "StationName": "",
-    "GalaxyBookmarkType": "",
-    "GalaxyBookmarkNumber": 0,
-    "SystemBookmarkType": "",
-    "SystemBookmarkNumber": 0,
-    "SellCommodities": {},
-    "BuyCommodities": {},
-    "Comment": null,
-    "UpdateCommodityCount": false,
-    "FleetCarrierTransfer": false,
-    "Skip": false,
-    "Completed": false
-  }
+    "waypoints": [
+        {
+            "Id": "1",
+            "SystemName": "HIP 1937",
+            "StationName": "Gunter Port",
+            "GalaxyBookmarkType": "",
+            "GalaxyBookmarkNumber": 0,
+            "SystemBookmarkType": "Station",
+            "SystemBookmarkNumber": 1,
+            "SellCommodities": {
+                "Lepidolite": 9999
+            },
+            "BuyCommodities": {
+                "Bauxite": 9999
+            },
+            "Comment": null,
+            "UpdateCommodityCount": false,
+            "FleetCarrierTransfer": false,
+            "Enabled": true
+        },
+        {
+            "Id": "2",
+            "SystemName": "Theta Octantis",
+            "StationName": "Nouvel Platform",
+            "GalaxyBookmarkType": "",
+            "GalaxyBookmarkNumber": 0,
+            "SystemBookmarkType": "Station",
+            "SystemBookmarkNumber": 2,
+            "SellCommodities": {
+                "Bauxite": 9999
+            },
+            "BuyCommodities": {
+                "Lepidolite": 9999
+            },
+            "Comment": null,
+            "UpdateCommodityCount": false,
+            "FleetCarrierTransfer": false,
+            "Enabled": true
+        }
+    ],
+    "Repeat": true,
+    "RepeatLimit": null
 }

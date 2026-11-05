@@ -5,6 +5,7 @@ import io
 import threading
 import time
 import unittest
+from collections import deque
 from unittest.mock import patch
 
 from game.journal import (
@@ -21,6 +22,9 @@ from game.journal import (
 def new_journal() -> EDJournal:
     """A journal object with the initial ship state, without opening a journal file."""
     journal = EDJournal.__new__(EDJournal)
+    journal._read_lock = threading.RLock()
+    journal._market_sequence = 0
+    journal._market_transactions = deque(maxlen=128)
     journal.ship = {
         "time": 0,
         "odyssey": True,
@@ -67,6 +71,36 @@ MODULES = [
 
 
 class ModuleChecksTestCase(unittest.TestCase):
+    def test_journal_rollover_updates_filename_and_does_not_replay_old_events(self):
+        journal = new_journal()
+        journal.current_log = "old.log"
+        journal.last_mod_time = None
+        journal.log_file = io.StringIO()
+        contents = '{"event":"MarketBuy","MarketID":42,"Type":"polymers","Count":2}\n'
+        with (
+            patch.object(journal, "get_latest_log", return_value="new.log"),
+            patch.object(journal, "get_file_modified_time", return_value=1),
+            patch("builtins.open", return_value=io.StringIO(contents)) as open_file,
+        ):
+            cursor = journal.market_transaction_cursor()
+            self.assertEqual(cursor, 1)
+            self.assertEqual(journal.market_transactions_since(cursor), [])
+            open_file.assert_called_once_with("new.log", encoding="utf-8")
+
+    def test_journal_keeps_pre_read_timestamp_so_late_appends_are_not_skipped(self):
+        journal = new_journal()
+        journal.current_log = "test.log"
+        journal.last_mod_time = None
+        journal.log_file = io.StringIO()
+        with (
+            patch.object(journal, "get_latest_log", return_value="test.log"),
+            patch.object(journal, "get_file_modified_time", side_effect=[1, 2]),
+        ):
+            journal.market_transaction_cursor()
+            self.assertEqual(journal.last_mod_time, 1)
+            journal.market_transaction_cursor()
+            self.assertEqual(journal.last_mod_time, 2)
+
     def test_concurrent_ship_state_reads_are_serialized(self):
         journal = EDJournal.__new__(EDJournal)
         journal._read_lock = threading.RLock()
@@ -122,6 +156,27 @@ class ParseLineTestCase(unittest.TestCase):
         self.journal = new_journal()
         self.ship = self.journal.ship
 
+    def test_market_transactions_preserve_order_and_are_not_consumed(self):
+        buy = {"event": "MarketBuy", "MarketID": 42, "Type": "polymers", "Count": 2}
+        sell = {**buy, "event": "MarketSell", "Count": 1}
+        with patch.object(self.journal, "_read_new_lines"):
+            self.journal.parse_line(buy)
+            cursor = self.journal.market_transaction_cursor()
+            self.journal.parse_line(sell)
+            self.assertEqual(self.journal.market_transactions_since(cursor), [sell])
+            self.assertEqual(self.journal.market_transactions_since(cursor), [sell])
+            self.assertEqual(self.journal.market_transactions_since(0), [buy, sell])
+
+    def test_market_transactions_are_bounded_and_survive_journal_rollover(self):
+        for count in range(140):
+            self.journal.parse_line({"event": "MarketBuy", "Count": count})
+        self.journal.parse_line({"event": "Fileheader"})
+        with patch.object(self.journal, "_read_new_lines"):
+            self.assertEqual(self.journal.market_transaction_cursor(), 140)
+            events = self.journal.market_transactions_since(0)
+        self.assertEqual(len(events), 128)
+        self.assertEqual(events[-1]["Count"], 139)
+
     def test_docked(self):
         self.journal.parse_line(
             {
@@ -164,6 +219,24 @@ class ParseLineTestCase(unittest.TestCase):
 
         self.assertEqual(self.ship["cur_station"], "Abraham Lincoln")
         self.assertEqual(self.ship["status"], "in_station")
+
+    def test_location_docked_restores_services_on_game_restart(self):
+        self.journal.parse_line(
+            {
+                "event": "Location",
+                "StarSystem": "LHS 20",
+                "StationName": "Ohm City",
+                "StationType": "Coriolis",
+                "Docked": True,
+                "StationServices": ["dock", "commodities"],
+            }
+        )
+        self.assertEqual(self.ship["StationServices"], ["dock", "commodities"])
+
+    def test_location_without_services_does_not_keep_previous_station_services(self):
+        self.ship["StationServices"] = ["commodities"]
+        self.journal.parse_line({"event": "Location", "StarSystem": "Sol", "Docked": False})
+        self.assertIsNone(self.ship["StationServices"])
 
     def test_docking_denied(self):
         self.journal.parse_line({"event": "DockingDenied", "Reason": "NoSpace"})

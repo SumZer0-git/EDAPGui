@@ -3,7 +3,8 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from core.types import ScTargetAlignReturn
+from core.constants import FlagsSupercruise
+from core.types import FsdAssistResult, ScTargetAlignReturn
 from routines.assists import AssistsMixin
 
 
@@ -14,7 +15,7 @@ class Assists(AssistsMixin):
 
 
 def status(name="", body=-1):
-    return {"Destination_Name": name, "Destination_Body": body}
+    return {"Destination_System": "", "Destination_Name": name, "Destination_Body": body}
 
 
 class InSystemTargetTestCase(unittest.TestCase):
@@ -31,6 +32,37 @@ class InSystemTargetTestCase(unittest.TestCase):
                 self.assertFalse(assists.has_in_system_target(current))
                 assists.have_destination.assert_not_called()
 
+    def test_expected_local_target_requires_a_name_match(self):
+        assists = Assists([])
+
+        self.assertTrue(assists.has_expected_in_system_target(status("Kent's Legacy", 20), "KENT'S LEGACY"))
+        self.assertFalse(assists.has_expected_in_system_target(status("Ohm City", 20), "Kent's Legacy"))
+        self.assertFalse(assists.has_expected_in_system_target(status("Kent's Legacy", 0), "Kent's Legacy"))
+        self.assertTrue(assists.has_expected_in_system_target(status("ABC-123", 20), "My Carrier ABC-123"))
+
+    def test_wait_for_expected_local_target_until_status_updates(self):
+        assists = Assists([])
+        assists.status = Mock()
+        assists.status.get_cleaned_data.side_effect = [
+            status("Wrong Station", 20),
+            status("Kent's Legacy", 20),
+        ]
+        with (
+            patch("routines.assists.monotonic", side_effect=[0, 0, 1]),
+            patch("routines.assists.sleep"),
+        ):
+            self.assertTrue(assists.wait_for_expected_in_system_target("Kent's Legacy", timeout=5))
+
+    def test_wait_for_expected_local_target_times_out_on_mismatch(self):
+        assists = Assists([])
+        assists.status = Mock()
+        assists.status.get_cleaned_data.return_value = status("Wrong Station", 20)
+        with (
+            patch("routines.assists.monotonic", side_effect=[0, 0, 5]),
+            patch("routines.assists.sleep"),
+        ):
+            self.assertFalse(assists.wait_for_expected_in_system_target("Kent's Legacy", timeout=5))
+
     def test_explicit_waypoint_does_not_start_sc_assist_without_a_status_destination(self):
         assists = Assists([])
         assists.ap_ckb = Mock()
@@ -42,10 +74,32 @@ class InSystemTargetTestCase(unittest.TestCase):
         assists.set_ap_status = Mock()
         assists.sc_assist = Mock()
 
-        with patch("routines.assists.sleep"):
+        with (
+            patch.object(assists, "wait_for_expected_in_system_target", return_value=False),
+            patch("routines.assists.sleep"),
+        ):
             self.assertFalse(assists.supercruise_to_station(None, "Some Station"))
 
         assists.have_destination.assert_not_called()
+        assists.sc_assist.assert_not_called()
+
+    def test_explicit_waypoint_does_not_fly_to_a_different_local_destination(self):
+        assists = Assists([])
+        assists.ap_ckb = Mock()
+        assists.jn = Mock()
+        assists.jn.ship_state.return_value = {"status": "in_supercruise"}
+        assists.status = Mock()
+        assists.status.get_cleaned_data.return_value = status("Other Station", 20)
+        assists.status.get_flag.return_value = False
+        assists.set_ap_status = Mock()
+        assists.sc_assist = Mock()
+        assists.wait_for_expected_in_system_target = Mock(return_value=False)
+        assists.sc_engage = Mock()
+
+        with patch("routines.assists.sleep"):
+            self.assertFalse(assists.supercruise_to_station(None, "Kent's Legacy"))
+
+        assists.sc_engage.assert_not_called()
         assists.sc_assist.assert_not_called()
 
     def test_sc_assist_checks_status_before_touching_the_game_window(self):
@@ -78,7 +132,7 @@ class ScAssistStatusTestCase(unittest.TestCase):
         assists.keys = Mock()
         assists.ship_control = Mock()
         assists.status = Mock()
-        assists.status.get_cleaned_data.return_value = status("Some Carrier", 20)
+        assists.status.get_cleaned_data.return_value = status("Jameson Memorial", 20)
         assists.status.get_flag.return_value = False
         assists.jn = Mock()
         assists.jn.ship_state.return_value = {
@@ -134,7 +188,7 @@ class TravelAssistTestCase(unittest.TestCase):
 
     def test_system_target_runs_fsd_route_without_local_target(self):
         self.assists.jn.ship_state.return_value = {"target": "Alpha Centauri"}
-        self.assists.fsd_assist.return_value = True
+        self.assists.fsd_assist.return_value = FsdAssistResult.RouteComplete
 
         self.assists.travel_assist(None)
 
@@ -143,7 +197,7 @@ class TravelAssistTestCase(unittest.TestCase):
 
     def test_system_route_hands_off_to_local_target(self):
         self.assists.jn.ship_state.return_value = {"target": "Alpha Centauri"}
-        self.assists.fsd_assist.return_value = False
+        self.assists.fsd_assist.return_value = FsdAssistResult.InSystemTarget
 
         self.assists.travel_assist(None)
 
@@ -171,12 +225,300 @@ class TravelAssistTestCase(unittest.TestCase):
 
     def test_stopped_travel_assist_does_not_start_local_phase(self):
         self.assists.jn.ship_state.return_value = {"target": "Alpha Centauri"}
-        self.assists.fsd_assist.return_value = False
+        self.assists.fsd_assist.return_value = FsdAssistResult.InSystemTarget
         self.assists.travel_assist_enabled = False
 
         self.assists.travel_assist(None)
 
         self.assists.sc_assist.assert_not_called()
+
+
+class FsdAssistResultTestCase(unittest.TestCase):
+    def make_assists(self):
+        assists = Assists([])
+        assists.ap_ckb = Mock()
+        assists.config = {"AutomaticLogout": False}
+        assists.jn = Mock()
+        assists.jn.ship_state.return_value = {
+            "target": False,
+            "status": "in_space",
+            "cur_star_system": "Arima",
+            "location": "Sol",
+            "dist_jumped": 0,
+            "jumps_remains": 0,
+            "fuel_percent": 100,
+        }
+        assists.keys = Mock()
+        assists.set_ap_status = Mock()
+        assists.status = Mock()
+        assists.status.get_cleaned_data.return_value = status()
+        assists.status.get_flag.return_value = False
+        assists.nav_route = Mock()
+        assists.nav_route.get_last_system.return_value = ""
+        assists.total_dist_jumped = 0
+        assists.update_overlay = Mock()
+        assists.vce = Mock()
+        return assists
+
+    def test_fsd_route_without_local_target_reports_route_complete(self):
+        assists = self.make_assists()
+
+        with patch("routines.assists.sleep"):
+            result = assists.fsd_assist(None)
+
+        self.assertIs(result, FsdAssistResult.RouteComplete)
+
+    def test_fsd_route_with_local_target_reports_target_ready(self):
+        assists = self.make_assists()
+        assists.status.get_cleaned_data.return_value = status("Kent's Legacy", 20)
+
+        with patch("routines.assists.sleep"):
+            result = assists.fsd_assist(None)
+
+        self.assertIs(result, FsdAssistResult.InSystemTarget)
+
+    def test_failed_fsd_jump_does_not_report_route_complete(self):
+        assists = self.make_assists()
+        assists.jn.ship_state.return_value["target"] = True
+        assists.jump = Mock(return_value=False)
+        assists.mnvr_to_target = Mock()
+
+        with patch("routines.assists.sleep"):
+            result = assists.fsd_assist(None)
+
+        self.assertIs(result, FsdAssistResult.Failed)
+
+    def test_jump_to_system_accepts_station_bookmark_with_expected_nav_route(self):
+        assists = self.make_assists()
+        assists.status.get_cleaned_data.return_value = status("Kent's Legacy", 20)
+        assists.nav_route = Mock()
+        assists.nav_route.get_last_system.return_value = "Arima"
+        assists.jn.ship_state.return_value["status"] = "in_supercruise"
+        assists.fsd_assist = Mock(return_value=FsdAssistResult.InSystemTarget)
+
+        result = assists.jump_to_system(None, expected_system="Arima")
+
+        self.assertIs(result, FsdAssistResult.InSystemTarget)
+
+    def test_jump_to_system_rejects_mismatched_nav_route_before_flying(self):
+        assists = self.make_assists()
+        assists.status.get_cleaned_data.return_value = status("Kent's Legacy", 20)
+        assists.nav_route = Mock()
+        assists.nav_route.get_last_system.return_value = "Wrong System"
+        assists.fsd_assist = Mock()
+
+        result = assists.jump_to_system(None, expected_system="Arima")
+
+        self.assertIs(result, FsdAssistResult.Failed)
+        assists.fsd_assist.assert_not_called()
+
+    def test_jump_to_system_rejects_route_that_did_not_reach_expected_system(self):
+        assists = self.make_assists()
+        assists.status.get_cleaned_data.return_value = status("Arima", 0)
+        assists.nav_route = Mock()
+        assists.nav_route.get_last_system.return_value = "Arima"
+        assists.jn.ship_state.return_value["cur_star_system"] = "LHS 20"
+        assists.jn.ship_state.return_value["status"] = "in_supercruise"
+        assists.fsd_assist = Mock(return_value=FsdAssistResult.RouteComplete)
+        with (
+            patch("routines.assists.monotonic", side_effect=[0, 0, 10]),
+            patch("routines.assists.sleep"),
+        ):
+            result = assists.jump_to_system(None, expected_system="Arima")
+
+        self.assertIs(result, FsdAssistResult.Failed)
+        assists.ap_ckb.assert_any_call("log", "Failed to reach Arima.")
+
+    def make_waypoint_jump(self, destination=None):
+        assists = self.make_assists()
+        assists.jn.ship_state.return_value.update(
+            target="Arima", cur_star_system="LHS 20", status="in_supercruise", system_address=1
+        )
+        assists.nav_route.get_last_system.return_value = "Arima"
+        assists.nav_route.get_next_system.return_value = ("Arima", 2)
+        assists.status.get_cleaned_data.return_value = destination or status("Ohm City", 20)
+        assists.status.wait_for_flag_on.return_value = True
+        assists.mnvr_to_target = Mock()
+        assists.jump = Mock(return_value=False)
+        return assists
+
+    def test_waypoint_stale_station_target_never_aligns_or_jumps(self):
+        assists = self.make_waypoint_jump()
+        with (
+            patch("routines.assists.monotonic", side_effect=[0, 0, 5]),
+            patch("routines.assists.sleep"),
+        ):
+            result = assists.jump_to_system(None, expected_system="Arima")
+
+        self.assertIs(result, FsdAssistResult.Failed)
+        assists.keys.send.assert_any_call("TargetNextRouteSystem")
+        assists.keys.send.assert_any_call("SetSpeedZero")
+        assists.mnvr_to_target.assert_not_called()
+        assists.jump.assert_not_called()
+        assists.ap_ckb.assert_called_once()
+
+    def test_waypoint_waits_for_status_before_alignment(self):
+        assists = self.make_waypoint_jump()
+        confirmed = dict(status("ARIMA", 0), Destination_System=2)
+        assists.status.get_cleaned_data.side_effect = [
+            status("Ohm City", 20),
+            status("Ohm City", 20),
+            confirmed,
+            confirmed,
+        ]
+        events = []
+        assists.keys.send.side_effect = lambda name: events.append(name)
+        assists.mnvr_to_target.side_effect = lambda _: events.append("align")
+        assists.jump.side_effect = lambda _: events.append("jump") or False
+        with (
+            patch("routines.assists.monotonic", side_effect=[0, 0, 1]),
+            patch("routines.assists.sleep") as sleep,
+        ):
+            result = assists.fsd_assist(None, expected_system="Arima")
+
+        self.assertIs(result, FsdAssistResult.Failed)  # Deliberately stop at the mocked jump.
+        self.assertEqual(events[:3], ["TargetNextRouteSystem", "align", "jump"])
+        sleep.assert_any_call(0.25)
+        assists.status.wait_for_flag_on.assert_called_once_with(FlagsSupercruise, 5.0)
+
+    def test_waypoint_checks_next_hop_not_final_destination(self):
+        assists = self.make_waypoint_jump()
+        assists.nav_route.get_next_system.return_value = ("Intermediate", 3)
+        assists.status.get_cleaned_data.return_value = dict(status("Intermediate", 0), Destination_System=3)
+        with patch("routines.assists.sleep"):
+            assists.fsd_assist(None, expected_system="Arima")
+
+        assists.mnvr_to_target.assert_called_once_with(None)
+        assists.jump.assert_called_once_with(None)
+
+    def test_waypoint_rejects_wrong_address_name_or_local_body(self):
+        for name, body, address in (("Arima", 0, 99), ("Wrong", 0, 2), ("Arima", 20, 2)):
+            with self.subTest(name=name, body=body, address=address):
+                assists = self.make_waypoint_jump(dict(status(name, body), Destination_System=address))
+                with (
+                    patch("routines.assists.monotonic", side_effect=[0, 0, 5]),
+                    patch("routines.assists.sleep"),
+                ):
+                    result = assists.fsd_assist(None, expected_system="Arima")
+                self.assertIs(result, FsdAssistResult.Failed)
+                assists.mnvr_to_target.assert_not_called()
+                assists.jump.assert_not_called()
+
+    def test_waypoint_rejects_failed_supercruise_or_missing_next_hop(self):
+        for failure in ("supercruise", "next_hop", "route_changed"):
+            with self.subTest(failure=failure):
+                assists = self.make_waypoint_jump()
+                if failure == "supercruise":
+                    assists.status.wait_for_flag_on.return_value = False
+                elif failure == "next_hop":
+                    assists.nav_route.get_next_system.return_value = None
+                else:
+                    assists.nav_route.get_last_system.return_value = "Wrong"
+                with patch("routines.assists.sleep"):
+                    result = assists.fsd_assist(None, expected_system="Arima")
+                self.assertIs(result, FsdAssistResult.Failed)
+                assists.keys.send.assert_any_call("SetSpeedZero")
+                assists.mnvr_to_target.assert_not_called()
+                assists.jump.assert_not_called()
+
+    def test_waypoint_confirms_target_even_without_journal_target(self):
+        assists = self.make_waypoint_jump()
+        assists.jn.ship_state.return_value["target"] = None
+        with (
+            patch("routines.assists.monotonic", side_effect=[0, 0, 5]),
+            patch("routines.assists.sleep"),
+        ):
+            result = assists.fsd_assist(None, expected_system="Arima")
+        self.assertIs(result, FsdAssistResult.Failed)
+        assists.keys.send.assert_any_call("TargetNextRouteSystem")
+        assists.mnvr_to_target.assert_not_called()
+
+    def test_waypoint_selects_only_after_undocking_and_supercruise(self):
+        assists = self.make_waypoint_jump()
+        assists.jn.ship_state.return_value["status"] = "in_space"
+        assists.status.get_flag.return_value = True
+        events = []
+
+        def undock():
+            events.append("undock")
+            assists.status.get_flag.return_value = False
+
+        def enter_supercruise():
+            events.append("supercruise")
+            assists.jn.ship_state.return_value["status"] = "in_supercruise"
+
+        def send(key):
+            events.append(key)
+            if key == "TargetNextRouteSystem":
+                assists.status.get_cleaned_data.return_value = dict(status("Arima", 0), Destination_System=2)
+
+        assists.waypoint_undock_seq = Mock(side_effect=undock)
+        assists.sc_engage = Mock(side_effect=enter_supercruise)
+        assists.keys.send.side_effect = send
+        assists.mnvr_to_target.side_effect = lambda _: events.append("align")
+        with patch("routines.assists.sleep"):
+            assists.jump_to_system(None, expected_system="Arima")
+
+        self.assertEqual(events[:4], ["undock", "supercruise", "TargetNextRouteSystem", "align"])
+
+    def test_waypoint_reconfirms_each_hop_and_finishes_at_final_system(self):
+        assists = self.make_waypoint_jump()
+        ship = assists.jn.ship_state.return_value
+        assists.config["FuelThreasholdAbortAP"] = 10
+        assists.refuel = Mock()
+        assists.position = Mock()
+        assists.honk = Mock()
+        assists.nav_route.get_next_system.side_effect = lambda name, address: (
+            ("Intermediate", 3) if name == "LHS 20" else ("Arima", 2)
+        )
+        selected = []
+
+        def send(key):
+            if key == "TargetNextRouteSystem":
+                name, address = assists.nav_route.get_next_system(ship["cur_star_system"], ship["system_address"])
+                selected.append(name)
+                assists.status.get_cleaned_data.return_value = dict(status(name, 0), Destination_System=address)
+
+        def jump(_):
+            current = assists.status.get_cleaned_data.return_value
+            ship.update(cur_star_system=current["Destination_Name"], system_address=current["Destination_System"])
+            if ship["cur_star_system"] == "Arima":
+                ship["target"] = None
+            return True
+
+        assists.keys.send.side_effect = send
+        assists.jump.side_effect = jump
+        with patch("routines.assists.sleep"), patch("routines.assists.threading.Thread"):
+            result = assists.jump_to_system(None, expected_system="Arima")
+
+        self.assertIs(result, FsdAssistResult.RouteComplete)
+        self.assertEqual(selected, ["Intermediate", "Arima"])
+        self.assertEqual(assists.mnvr_to_target.call_count, 2)
+        self.assertEqual(assists.jump.call_count, 2)
+
+    def test_waypoint_route_change_during_confirmation_stops_before_alignment(self):
+        assists = self.make_waypoint_jump()
+        assists.nav_route.get_last_system.side_effect = ["Arima", "Wrong"]
+        with patch("routines.assists.sleep"):
+            result = assists.fsd_assist(None, expected_system="Arima")
+        self.assertIs(result, FsdAssistResult.Failed)
+        assists.keys.send.assert_any_call("SetSpeedZero")
+        assists.mnvr_to_target.assert_not_called()
+        assists.jump.assert_not_called()
+
+    def test_travel_assist_only_hands_off_to_supercruise_for_local_target(self):
+        for result in FsdAssistResult:
+            with self.subTest(result=result):
+                assists = self.make_assists()
+                assists.jn.ship_state.return_value["target"] = True
+                assists.fsd_assist = Mock(return_value=result)
+                assists.sc_assist = Mock()
+                assists.travel_assist(None)
+
+                if result is FsdAssistResult.InSystemTarget:
+                    assists.sc_assist.assert_called_once_with(None)
+                else:
+                    assists.sc_assist.assert_not_called()
 
 
 if __name__ == "__main__":

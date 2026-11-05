@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from time import sleep
+from time import monotonic, sleep
 
 from pyautogui import typewrite
 
@@ -10,6 +10,10 @@ from core.constants import GuiFocusGalaxyMap
 from core.logger import logger
 from game.status import StatusParser
 from vision.regions import reg_scale_for_station
+
+MAX_NAV_ROUTE_PLOT_ATTEMPTS = 3
+NAV_ROUTE_UPDATE_POLL_INTERVAL = 0.25
+NAV_ROUTE_UPDATE_TIMEOUT = 15.0
 
 
 class EDGalaxyMap:
@@ -28,7 +32,13 @@ class EDGalaxyMap:
             "cartographics": {"rect": [0.0, 0.0, 0.25, 0.25]},
         }
 
-    def set_gal_map_dest_bookmark(self, ap, bookmark_type: str, bookmark_position: int) -> bool:
+    def set_gal_map_dest_bookmark(
+        self,
+        ap,
+        bookmark_type: str,
+        bookmark_position: int,
+        expected_system: str | None = None,
+    ) -> bool:
         """Set the gal map destination using a bookmark.
         @param ap: ED_AP reference.
         @param bookmark_type: The bookmark type (Favorite, System, Body, Station or Settlement), Favorite
@@ -66,8 +76,28 @@ class EDGalaxyMap:
             # Close Galaxy map
             ap.keys.send("GalaxyMapOpen")
             sleep(0.5)
-            return True
+            if expected_system is None:
+                return True
+            return self.wait_for_nav_route(ap, expected_system)
 
+        return False
+
+    @staticmethod
+    def wait_for_nav_route(ap, target_system: str, timeout: float = 15.0) -> bool:
+        """Wait until NavRoute.json reports the requested final system."""
+        if ap.nav_route is None:
+            return False
+
+        target_system_uc = target_system.upper()
+        deadline = monotonic() + timeout
+        while monotonic() < deadline:
+            current_system = ap.nav_route.get_last_system()
+            if current_system.upper() == target_system_uc:
+                logger.debug(f"Galaxy Map bookmark route confirmed: {target_system_uc}.")
+                return True
+            sleep(NAV_ROUTE_UPDATE_POLL_INTERVAL)
+
+        logger.debug(f"Galaxy Map bookmark did not plot the expected system: {target_system_uc}.")
         return False
 
     def set_gal_map_destination_text(self, ap, target_name, target_select_cb=None) -> bool:
@@ -111,7 +141,7 @@ class EDGalaxyMap:
         return True
 
     def set_gal_map_destination_text_odyssey(self, ap, target_name) -> bool:
-        """This sequence for the Odyssey."""
+        """Set an Odyssey destination, retrying when the plotted route is not confirmed."""
         self.goto_galaxy_map()
 
         target_name_uc = target_name.upper()
@@ -153,7 +183,7 @@ class EDGalaxyMap:
         sleep(0.05)
 
         correct_route = False
-        while not correct_route:
+        for attempt in range(1, MAX_NAV_ROUTE_PLOT_ATTEMPTS + 1):
             # Store the current nav route system
             last_nav_route_sys = ap.nav_route.get_last_system()
             last_nav_route_sys_uc = last_nav_route_sys.upper()
@@ -174,15 +204,20 @@ class EDGalaxyMap:
 
             sleep(0.05)
 
-            # if got passed through the ship() object, lets call it to see if a target has been
-            # selected yet... otherwise we wait.  If long route, it may take a few seconds
+            # Wait for the game to update NavRoute.json after plotting.
             if ap.nav_route is not None:
-                logger.debug("Waiting for Nav Route to update.")
-                while 1:
+                logger.debug(
+                    f"Waiting up to {NAV_ROUTE_UPDATE_TIMEOUT:g} seconds for Nav Route to update "
+                    f"(attempt {attempt}/{MAX_NAV_ROUTE_PLOT_ATTEMPTS})."
+                )
+                deadline = monotonic() + NAV_ROUTE_UPDATE_TIMEOUT
+                route_changed = False
+                while monotonic() < deadline:
                     curr_nav_route_sys = ap.nav_route.get_last_system()
                     curr_nav_route_sys_uc = curr_nav_route_sys.upper()
                     # Check if the nav route has been changed (right or wrong)
                     if curr_nav_route_sys_uc != last_nav_route_sys_uc:
+                        route_changed = True
                         logger.debug(
                             f"Nav Route dest changed from: {last_nav_route_sys_uc} to: {curr_nav_route_sys_uc}."
                         )
@@ -195,19 +230,36 @@ class EDGalaxyMap:
                         else:
                             # Try the next system, go back to the search bar
                             logger.debug(
-                                f"Nav Route updated with wrong target: {curr_nav_route_sys_uc}. Select next target."
+                                f"Nav Route updated with wrong target: {curr_nav_route_sys_uc}. Retrying selection."
                             )
-                            ap.keys.send("UI_Up")
                             break
+                    sleep(NAV_ROUTE_UPDATE_POLL_INTERVAL)
             else:
                 # Cannot check route, so assume right
                 logger.debug("Unable to check Nav Route, so assuming it is correct.")
                 correct_route = True
 
+            if correct_route:
+                break
+
+            if not route_changed:
+                logger.debug(
+                    f"Nav Route did not update within {NAV_ROUTE_UPDATE_TIMEOUT:g} seconds "
+                    f"(attempt {attempt}/{MAX_NAV_ROUTE_PLOT_ATTEMPTS})."
+                )
+
+            if attempt < MAX_NAV_ROUTE_PLOT_ATTEMPTS:
+                ap.keys.send("UI_Up")
+                sleep(0.25)
+
         # Close Galaxy map
         ap.keys.send("GalaxyMapOpen")
         sleep(0.5)
-        return True
+        if not correct_route:
+            logger.warning(
+                f"Unable to confirm Galaxy Map route to {target_name} after {MAX_NAV_ROUTE_PLOT_ATTEMPTS} attempts."
+            )
+        return correct_route
 
     def set_next_system(self, ap, target_system) -> bool:
         """Sets the next system to jump to, or the final system to jump to.
