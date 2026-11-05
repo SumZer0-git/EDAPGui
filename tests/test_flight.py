@@ -338,3 +338,31 @@ class JumpRetryTestCase(unittest.TestCase):
 
         flight.measure_fsd_alignment.assert_not_called()
         flight.keys.send.assert_not_called()
+
+
+class DockStatusTestCase(unittest.TestCase):
+    def test_docking_reports_each_step_and_still_restocks(self):
+        ship = {"status": "in_space", "no_dock_reason": None}
+        statuses = []
+        dock = FlightMixin.__new__(FlightMixin)
+        dock.config = {"DockingRetries": 1, "WaitForAutoDockTimer": 3}
+        dock.jn = Mock(ship_state=Mock(return_value=ship))
+        dock.keys = Mock()
+        dock.vce = Mock()
+        dock.ap_ckb = Mock()
+        dock.set_ap_status = statuses.append
+
+        def request_docking():
+            ship["status"] = "dockinggranted"
+
+        def sleep(_seconds):
+            if statuses and statuses[-1] == "Docking":
+                ship["status"] = "in_station"
+
+        dock.request_docking = request_docking
+        with patch("routines.flight.sleep", side_effect=sleep):
+            dock.dock()
+
+        self.assertEqual(statuses, ["Requesting docking", "Docking", "Refueling and repairing"])
+        sent = [c.args[0] for c in dock.keys.send.call_args_list]
+        self.assertEqual(sent.count("UI_Select"), 3)

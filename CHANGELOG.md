@@ -40,6 +40,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Centralized AP status updates so the GUI footer and overlay show the same current status, while the GUI log keeps status history and additional user-facing messages.
+- Added more detailed AP status steps for in-system travel: "Entering supercruise", "Align", the supercruise target, "Approaching target", "Requesting docking", "Docking", "Refueling and repairing" after docking, and "Arrived at target" when docking is not possible. The status returns to Idle immediately when the assist ends.
 - Changed the default overlay settings to match the maintainer's current setup: enabled, top-left anchor, percentage offsets of 1% and 15%, Rajdhani size 14, 50% panel opacity, and all information lines visible. Existing configurations without a position unit keep pixel-based offsets.
 - Changed the overlay to follow Elite's client window, stay below unrelated windows, and request Windows' capture-exclusion mode. Rendering now uses a thread-safe Pillow surface with per-monitor DPI handling, and the overlay can be enabled or disabled without restarting EDAPGui.
 - Styled the status overlay with the GUI palette: a dark panel and border, orange labels, light values, muted placeholders, and a subtle text shadow.

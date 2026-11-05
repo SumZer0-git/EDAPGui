@@ -43,7 +43,12 @@ from vision.screen import set_focus_elite_window
 
 
 def _overlay_status_role(status: str) -> str:
-    if status in {"Docking Complete", "Undock Complete, accelerating", "Takeoff Complete, accelerating"}:
+    if status in {
+        "Arrived at target",
+        "Docking Complete",
+        "Undock Complete, accelerating",
+        "Takeoff Complete, accelerating",
+    }:
         return "success"
     if status == "Avoiding star":
         return "warning"
@@ -51,12 +56,17 @@ def _overlay_status_role(status: str) -> str:
         return "muted"
     if status in {
         "Align",
+        "Approaching target",
+        "Docking",
         "DSS Scan",
+        "Entering supercruise",
         "Executing Undocking/Launch",
         "Jump",
         "Logout",
         "Maneuvering",
         "Refueling",
+        "Refueling and repairing",
+        "Requesting docking",
         "SC to Target",
     } or status.startswith(("SC to Station:", "Targeting Station:")):
         return "active"
@@ -216,6 +226,8 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         self.vce.v_enabled = self.config["VoiceEnable"]
         self.vce.set_voice_id(self.config["VoiceID"])
         self.vce.say("Welcome to Autopilot")
+        self._ui_callback = cb
+        self.ap_ckb = self._dispatch_callback
 
         # set log level based on config input, defaulting to warning
         level = logging.WARNING
@@ -235,25 +247,25 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         # Create instance of each of the needed Classes
         self.gfx_settings = EDGraphicsSettings()
 
-        self.scr = vision.screen.Screen(cb)
+        self.scr = vision.screen.Screen(self.ap_ckb)
 
         self.ocr = OCR(self.scr, self.config["OCRLanguage"])
         self.templ = vision.templates.ImageTemplates(self.scr.screen_height)
         self.scrReg = vision.regions.ScreenRegions(self.scr, self.templ)
         logger.info(f"Screen {self.scr.screen_width}x{self.scr.screen_height}")
-        self.jn = EDJournal(cb)
-        self.keys = EDKeys(cb)
+        self.jn = EDJournal(self.ap_ckb)
+        self.keys = EDKeys(self.ap_ckb)
         self.keys.activate_window = self.config["ActivateEliteEachKey"]
         self.afk_combat = AfkCombat(self.keys, self.jn, self.vce)
         self.waypoint = EDWayPoint(self, self.jn.ship_state()["odyssey"])
         self.status = StatusParser()
         self.nav_route = NavRouteParser()
-        self.ship_control = EDShipControl(self, self.scr, self.keys, cb)
-        self.internal_panel = EDInternalStatusPanel(self, self.scr, self.keys, cb)
-        self.galaxy_map = EDGalaxyMap(self, self.scr, self.keys, cb, self.jn.ship_state()["odyssey"])
-        self.system_map = EDSystemMap(self, self.scr, self.keys, cb, self.jn.ship_state()["odyssey"])
-        self.stn_svcs_in_ship = EDStationServicesInShip(self, self.scr, self.keys, cb)
-        self.nav_panel = EDNavigationPanel(self, self.scr, self.keys, cb)
+        self.ship_control = EDShipControl(self, self.scr, self.keys, self.ap_ckb)
+        self.internal_panel = EDInternalStatusPanel(self, self.scr, self.keys, self.ap_ckb)
+        self.galaxy_map = EDGalaxyMap(self, self.scr, self.keys, self.ap_ckb, self.jn.ship_state()["odyssey"])
+        self.system_map = EDSystemMap(self, self.scr, self.keys, self.ap_ckb, self.jn.ship_state()["odyssey"])
+        self.stn_svcs_in_ship = EDStationServicesInShip(self, self.scr, self.keys, self.ap_ckb)
+        self.nav_panel = EDNavigationPanel(self, self.scr, self.keys, self.ap_ckb)
 
         # rate as ship dependent. Can be found on the outfitting page for the ship. However, it looks like supercruise
         # has worse performance for these rates
@@ -277,8 +289,6 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         self.refuel_cnt = 0
         self.current_ship_type = None
         self.gui_loaded = False
-
-        self.ap_ckb = cb
 
         # Overlay vars
         self.ap_state = "Idle"
@@ -491,16 +501,28 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         else:
             self.overlay.overlay_paint()
 
-    def update_ap_status(self, txt):
-        """Single source for the AP status shown in the GUI status line and the overlay."""
+    def set_ap_status(self, txt):
+        """Publish the current AP status to the overlay and GUI."""
         self.ap_state = txt
         self.update_overlay()
-        self.ap_ckb("statusline", txt)
+        self.ap_ckb("ap_status", txt)
+
+    def notify_user(self, message, speak=False):
+        """Publish an intentional user-facing message to the GUI log only."""
+        self.ap_ckb("user_message", (message, speak))
+
+    def _dispatch_callback(self, msg, body=None):
+        if msg == "log":
+            self.notify_user(body)
+        elif msg == "log+vce":
+            self.notify_user(body, speak=True)
+        else:
+            self._ui_callback(msg, body)
 
     def _finish_assist(self, stop_msg):
         """Reports the end of an assist after its thread work is done, so no late status can override Idle."""
         self.ap_ckb(stop_msg)
-        self.update_ap_status("Idle")
+        self.set_ap_status("Idle")
 
         # Performs left menu ops to request docking
 

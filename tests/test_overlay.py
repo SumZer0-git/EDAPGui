@@ -529,7 +529,7 @@ class OverlayRenderingTests(unittest.TestCase):
                     autopilot.ap_ckb = Mock()
 
                     def run_assist(*args, error=error):
-                        autopilot.update_ap_status("Maneuvering")
+                        autopilot.set_ap_status("Maneuvering")
                         if error is not None:
                             raise error
 
@@ -549,7 +549,7 @@ class OverlayRenderingTests(unittest.TestCase):
                     self.assertEqual(autopilot.ap_state, "Idle")
                     self.assertEqual(
                         autopilot.ap_ckb.call_args_list[-2:],
-                        [call(stop_msg), call("statusline", "Idle")],
+                        [call(stop_msg), call("ap_status", "Idle")],
                     )
 
     def test_status_lines_can_be_hidden_and_compacted(self):

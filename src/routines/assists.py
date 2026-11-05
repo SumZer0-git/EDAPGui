@@ -48,7 +48,7 @@ class AssistsMixin:
         """Supercruise to the specified target, which may be a station, FC, body, signal source, etc.
         Returns True if we travel successfully travel there, else False."""
         # If waypoint file has a Station Name associated then attempt targeting it
-        self.update_ap_status(f"Targeting Station: {station_name}")
+        self.set_ap_status(f"Targeting Station: {station_name}")
         # res = self.nav_panel.lock_destination(station_name)
         # if not res:
         #    return False
@@ -65,7 +65,7 @@ class AssistsMixin:
         sleep(3)  # Wait for compass to stop flashing blue!
         if self.has_in_system_target(self.status.get_cleaned_data()) and self.have_destination(scr_reg):
             self.ap_ckb("log", " - Station: " + station_name)
-            self.update_ap_status(f"SC to Station: {station_name}")
+            self.set_ap_status(f"SC to Station: {station_name}")
             self.sc_assist(scr_reg)
         else:
             self.ap_ckb("log", f" - Could not target station: {station_name}")
@@ -101,11 +101,11 @@ class AssistsMixin:
             self.update_overlay()
 
             if self.jn.ship_state()["status"] == "in_space" or self.jn.ship_state()["status"] == "in_supercruise":
-                self.update_ap_status("Align")
+                self.set_ap_status("Align")
 
                 self.mnvr_to_target(scr_reg)
 
-                self.update_ap_status("Jump")
+                self.set_ap_status("Jump")
 
                 self.jump(scr_reg)
 
@@ -138,7 +138,7 @@ class AssistsMixin:
                 # Refuel
                 refueled = self.refuel(scr_reg)
 
-                self.update_ap_status("Maneuvering")
+                self.set_ap_status("Maneuvering")
 
                 self.position(scr_reg, refueled)
 
@@ -179,11 +179,11 @@ class AssistsMixin:
             self.total_dist_jumped = 0
             self.total_jumps = 0
             if self.fsd_assist(scr_reg) is False and self.travel_assist_enabled:
-                self.update_ap_status("SC to Target")
+                self.set_ap_status("SC to Target")
                 self.sc_assist(scr_reg)
         else:
             if self.has_in_system_target(self.status.get_cleaned_data()):
-                self.update_ap_status("SC to Target")
+                self.set_ap_status("SC to Target")
                 self.sc_assist(scr_reg)
             else:
                 self.ap_ckb("log", "No local target found. Select a target and try again.")
@@ -201,6 +201,8 @@ class AssistsMixin:
             return
 
         logger.info("Entered sc_assist")
+        # Waypoint Assist sets "SC to Station: <name>" before calling; keep that text for the cruise phase.
+        cruise_status = self.ap_state if self.ap_state.startswith("SC to") else "SC to Target"
 
         # Goto cockpit view
         self.ship_control.goto_cockpit_view()
@@ -223,10 +225,12 @@ class AssistsMixin:
 
         # Ensure we are 50%, don't want the loop of shame
         # Align Nav to target
+        self.set_ap_status("Align")
         self.keys.send("SetSpeed50")
         self.nav_align(scr_reg)  # Compass Align
         # The target is ahead now, so cruise at 75%, where ships handle best in supercruise.
         self.keys.send("SetSpeed75")
+        self.set_ap_status(cruise_status)
 
         self.jn.ship_state()["interdicted"] = False
 
@@ -283,6 +287,7 @@ class AssistsMixin:
 
         # if no error, we must have gotten disengage
         if not align_failed:
+            self.set_ap_status("Approaching target")
             sleep(4)  # wait for the journal to catch up
 
             # Check if this is a target we cannot dock at
@@ -310,9 +315,10 @@ class AssistsMixin:
                 # go into docking sequence
                 self.dock()
                 self.ap_ckb("log+vce", "Docking complete, refueled, repaired and re-armed")
-                self.update_ap_status("Docking Complete")
+                self.set_ap_status("Docking Complete")
             else:
                 self.keys.send("SetSpeedZero")
+                self.set_ap_status("Arrived at target")
         else:
             self.vce.say("Exiting Supercruise, setting throttle to zero")
             self.keys.send("SetSpeedZero")  # make sure we don't continue to land
@@ -346,12 +352,12 @@ class AssistsMixin:
             if self.jn.ship_state()["status"] == "in_supercruise":
                 cur_star_system = self.jn.ship_state()["cur_star_system"]
                 if cur_star_system != self._prev_star_system:
-                    self.update_ap_status("DSS Scan")
+                    self.set_ap_status("DSS Scan")
                     self.ap_ckb("log", "DSS Scan: " + cur_star_system)
                     set_focus_elite_window()
                     self.honk()
                     self._prev_star_system = cur_star_system
-                    self.update_ap_status("Idle")
+                    self.set_ap_status("Idle")
 
     def single_waypoint_assist(self):
         """Travel to a system or station or both."""
