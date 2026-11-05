@@ -57,6 +57,36 @@ class PaddleOCRV3TestCase(unittest.TestCase):
         ocr.paddleocr.predict.return_value = results
         return ocr
 
+    def test_region_matches_phrase_split_into_separate_ocr_words(self):
+        ocr = self.make_ocr([Mock(json={"res": {"rec_texts": ["VERBUNDEN", "MIT", "OHM", "CITY"]}})])
+        ocr.capture_region_pct = Mock(return_value=np.zeros((10, 10, 3), dtype=np.uint8))
+
+        found, text = ocr.is_text_in_region("VERBUNDEN MIT", {"rect": [0, 0, 1, 1]})
+
+        self.assertTrue(found)
+        self.assertIn("VERBUNDEN", text)
+
+    def test_region_matches_whole_lines_and_normalizes_case_and_whitespace(self):
+        for words in (["CONNECTED TO Ohm City"], ["connected", "  to", "Ohm City"], ["VERBUNDEN MIT OHM CITY"]):
+            with self.subTest(words=words):
+                ocr = self.make_ocr([Mock(json={"res": {"rec_texts": words}})])
+                ocr.capture_region_pct = Mock(return_value=np.zeros((10, 10, 3), dtype=np.uint8))
+                expected = "VERBUNDEN MIT" if words[0].startswith("VERBUNDEN") else "connected to"
+                self.assertTrue(ocr.is_text_in_region(expected, {"rect": [0, 0, 1, 1]})[0])
+
+    def test_region_rejects_empty_or_incomplete_header(self):
+        for words in ([], ["VERBUNDEN"], ["MIT"], ["VERBUNDEN", "ALS"], ["CONNECTED", "AS"]):
+            with self.subTest(words=words):
+                ocr = self.make_ocr([Mock(json={"res": {"rec_texts": words}})])
+                ocr.capture_region_pct = Mock(return_value=np.zeros((10, 10, 3), dtype=np.uint8))
+                self.assertFalse(ocr.is_text_in_region("VERBUNDEN MIT", {"rect": [0, 0, 1, 1]})[0])
+                self.assertFalse(ocr.is_text_in_region("", {"rect": [0, 0, 1, 1]})[0])
+
+    def test_region_rejects_missing_ocr_result(self):
+        ocr = self.make_ocr(None)
+        ocr.capture_region_pct = Mock(return_value=np.zeros((10, 10, 3), dtype=np.uint8))
+        self.assertFalse(ocr.is_text_in_region("VERBUNDEN MIT", {"rect": [0, 0, 1, 1]})[0])
+
     def test_constructor_uses_paddleocr_v3_cpu_options(self):
         with patch("vision.ocr.PaddleOCR") as paddleocr:
             OCR(screen=None, language="de")
@@ -106,6 +136,29 @@ class PaddleOCRV3TestCase(unittest.TestCase):
         ocr.image_simple_ocr = Mock(return_value=None)
 
         self.assertEqual(ocr.get_highlighted_item_data(image, 10, 10), (None, None))
+
+    def test_solid_highlight_rectifies_white_and_orange_without_mutating_image(self):
+        ocr = self.make_ocr([])
+        for color in ((255, 255, 255), (0, 255, 255)):
+            with self.subTest(color=color):
+                image = np.zeros((200, 400, 4), dtype=np.uint8)
+                polygon = np.array([[40, 70], [330, 40], [330, 85], [40, 115]], np.int32)
+                cv2.fillConvexPoly(image, polygon, (*color, 255))
+                cv2.putText(image, "TEST", (80, 85), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0, 255), 2)
+                before = image.copy()
+                items = ocr.solid_highlighted_items(image, 200, 30)
+                self.assertEqual(len(items), 1)
+                self.assertEqual(items[0][0].shape[2], 3)
+                self.assertGreater(items[0][0].shape[1], 280)
+                self.assertLess(items[0][0].shape[0], 60)
+                np.testing.assert_array_equal(image, before)
+
+    def test_solid_highlight_rejects_thin_lines_and_hollow_borders(self):
+        ocr = self.make_ocr([])
+        image = np.zeros((200, 400, 3), dtype=np.uint8)
+        cv2.line(image, (10, 20), (390, 40), (255, 255, 255), 3)
+        cv2.rectangle(image, (30, 80), (370, 160), (255, 255, 255), 3)
+        self.assertEqual(ocr.solid_highlighted_items(image, 200, 30), [])
 
 
 if __name__ == "__main__":

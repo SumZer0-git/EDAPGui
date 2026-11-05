@@ -254,6 +254,7 @@ class JumpRetryTestCase(unittest.TestCase):
         for readings, expected in (
             ([centered, centered], True),
             ([centered, {"z": -1, "yaw": -176.0, "pit": -107.0, "roll": -177}], False),
+            ([centered, None], False),
             ([{"z": 1, "yaw": -0.35, "pit": -25.0, "roll": -106}, centered], False),
         ):
             with self.subTest(readings=readings):
@@ -335,6 +336,92 @@ class JumpRetryTestCase(unittest.TestCase):
 
         flight.measure_fsd_alignment.assert_not_called()
         flight.keys.send.assert_not_called()
+
+
+class CompassAlignTestCase(unittest.TestCase):
+    def flight(self, readings, tries=1):
+        flight = Mock()
+        flight.config = {"NavAlignTries": tries}
+        flight.jn.ship_state.return_value = {"status": "in_supercruise"}
+        flight.read_nav_offset.side_effect = readings
+        flight.nav_needs_reroll = FlightMixin.nav_needs_reroll
+        return flight
+
+    def test_no_steering_while_the_compass_is_not_visible(self):
+        flight = self.flight([None], tries=3)
+
+        with patch("routines.flight.sleep"), self.assertLogs("ed_log", level="WARNING"):
+            self.assertFalse(FlightMixin.nav_align(flight, None))
+
+        for maneuver in ("pitch_up", "pitch_down", "yaw_left", "yaw_right", "rotate_left", "rotate_right"):
+            getattr(flight, maneuver).assert_not_called()
+
+    def test_lost_nav_point_stops_the_maneuver_instead_of_guessing(self):
+        flight = self.flight(
+            [
+                {"z": 1, "x": 0.0, "y": 0.5, "roll": 0.0, "pit": 30.0, "yaw": 0.0},
+                None,
+                None,
+            ],
+            tries=2,
+        )
+
+        with patch("routines.flight.sleep"), self.assertLogs("ed_log", level="WARNING"):
+            FlightMixin.nav_align(flight, None)
+
+        flight.pitch_up.assert_called_once_with(30.0)
+        flight.yaw_left.assert_not_called()
+        flight.yaw_right.assert_not_called()
+
+    def test_nav_point_far_to_the_side_is_rolled_up_instead_of_pitched(self):
+        # Readings from a log: after the first pitch the nav point sat at the left sphere rim, and the old
+        # alignment pitched up and down six times while the point stayed there.
+        flight = self.flight(
+            [
+                {"z": 1, "x": 0.04, "y": -0.37, "roll": 173.31, "pit": -21.79, "yaw": 2.68},
+                {"z": 1, "x": -0.9, "y": 0.19, "roll": -78.0, "pit": 26.0, "yaw": -66.5},
+                {"z": 1, "x": 0.0, "y": 0.9, "roll": 0.0, "pit": 64.0, "yaw": 0.0},
+                {"z": 1, "x": 0.0, "y": 0.02, "roll": 0.0, "pit": 2.0, "yaw": 1.0},
+            ]
+        )
+
+        with patch("routines.flight.sleep"):
+            FlightMixin.nav_align(flight, None)
+
+        flight.pitch_down.assert_called_once_with(21.79)
+        flight.rotate_left.assert_called_once_with(78.0)
+        flight.pitch_up.assert_called_once_with(64.0)
+        flight.yaw_left.assert_not_called()
+        flight.yaw_right.assert_not_called()
+
+    def test_reroll_only_for_a_nav_point_ahead_far_off_the_vertical_axis(self):
+        for off, expected in (
+            ({"z": 1, "roll": -78.0, "yaw": -66.5}, True),
+            ({"z": 1, "roll": -78.0, "yaw": -20.0}, False),  # close enough for the yaw step
+            ({"z": 1, "roll": 175.0, "yaw": 40.0}, False),  # already on the vertical axis
+            ({"z": -1, "roll": 60.0, "yaw": 160.0}, False),  # behind: the pitch over the top handles it
+        ):
+            with self.subTest(off=off):
+                self.assertEqual(FlightMixin.nav_needs_reroll(off, 10), expected)
+
+    def test_reading_waits_for_the_compass_to_reappear(self):
+        reading = {"z": 1, "x": 0.0, "y": 0.0, "roll": 0.0, "pit": 0.0, "yaw": 0.0}
+        flight = Mock()
+        flight.get_nav_offset.side_effect = [None, None, reading]
+
+        with patch("routines.flight.sleep") as sleep:
+            self.assertEqual(FlightMixin.read_nav_offset(flight, None), reading)
+
+        self.assertEqual(sleep.call_count, 2)
+
+    def test_reading_gives_up_when_the_compass_stays_invisible(self):
+        flight = Mock()
+        flight.get_nav_offset.return_value = None
+
+        with patch("routines.flight.sleep"):
+            self.assertIsNone(FlightMixin.read_nav_offset(flight, None))
+
+        self.assertEqual(flight.get_nav_offset.call_count, 4)
 
 
 class DockStatusTestCase(unittest.TestCase):

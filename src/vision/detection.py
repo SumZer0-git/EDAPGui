@@ -156,15 +156,16 @@ class DetectionMixin:
                 best = (area, float(cx), float(cy), hollow, rank)
         return None if best is None else (best[1], best[2], best[3], best[4])
 
-    _compass_dumps = 0
+    _compass_dumps = {}
 
     @classmethod
-    def dump_compass_debug(cls, compass_image, note=""):
-        """Save the compass crop when the nav point match is weak, so the case can be analysed (max. 12 files)."""
-        if cls._compass_dumps >= 12:
+    def dump_compass_debug(cls, compass_image, note="", kind="weak"):
+        """Save the compass crop when the nav point match is weak, or the whole compass region when the compass is
+        not found, so the case can be analysed (max. 12 files per kind)."""
+        if cls._compass_dumps.get(kind, 0) >= 12:
             return
-        cls._compass_dumps += 1
-        name = f"compass-weak-{time.strftime('%H%M%S')}-{note}.png"
+        cls._compass_dumps[kind] = cls._compass_dumps.get(kind, 0) + 1
+        name = f"compass-{kind}-{time.strftime('%H%M%S')}-{note}.png"
         cv2.imwrite(paths.debug_path("compass", name), compass_image)
 
     def get_nav_offset(self, scr_reg):
@@ -175,9 +176,15 @@ class DetectionMixin:
            -180deg (6 o'clock anticlockwise) to
             0deg (12 o'clock) to
             180deg (6 o'clock clockwise)
+        Returns None when the compass or the nav point is not visible, because any position would be a guess.
         """
 
         icompass_image, (minVal, maxVal, minLoc, maxLoc), template_scale = scr_reg.match_compass_multiscale()
+
+        if maxVal < scr_reg.compass_match_thresh:
+            logger.debug(f"Compass not found: score {maxVal:.2f}, scale {template_scale:.2f}")
+            self.dump_compass_debug(icompass_image, f"s{maxVal:.2f}", kind="missing")
+            return None
 
         pt = maxLoc
 
@@ -253,6 +260,7 @@ class DetectionMixin:
                 logger.debug(f"Compass {'behind' if white[2] else 'ahead'} marker found without template at {n_pt}")
             else:
                 logger.debug("Compass nav point not found, template position is unreliable")
+                return None
 
         # Continue calc
         final_x_pct = 2 * (
@@ -438,7 +446,10 @@ class DetectionMixin:
         if target_val >= scr_reg.target_thresh:
             return False  # target circle is visible
 
-        if not self.have_destination(scr_reg) or self.get_nav_offset(scr_reg)["z"] < 0:
+        if not self.have_destination(scr_reg):
+            return False  # no nav point
+        nav_offset = self.get_nav_offset(scr_reg)
+        if nav_offset is None or nav_offset["z"] < 0:
             return False  # no nav point, or it is behind us
 
         if scr_reg.scene_is_bright():

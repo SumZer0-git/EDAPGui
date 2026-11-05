@@ -43,6 +43,13 @@ FSD_STEP_GAIN = 0.8
 FSD_STEP_MIN_MOVE_PX = 15
 FSD_RETRY_TARGET_CLOSE = 20
 
+# Compass alignment: re-reads while the compass/nav point is not visible, and re-rolls when the nav point ahead is
+# more than NAV_ALIGN_REROLL_YAW degrees off to the side after a pitch step
+NAV_ALIGN_LOST_READS = 4
+NAV_ALIGN_LOST_DELAY = 0.5
+NAV_ALIGN_MAX_REROLLS = 2
+NAV_ALIGN_REROLL_YAW = 30
+
 
 class FlightMixin:
     # Compass readings of the last FSD alignment measurement that reported the target behind the ship
@@ -254,10 +261,28 @@ class FlightMixin:
         for _ in range(2):
             sleep(0.2)
             off = self.get_nav_offset(scr_reg)
-            if off["z"] <= 0 or abs(off["yaw"]) >= close or abs(off["pit"]) >= close:
+            if off is None or off["z"] <= 0 or abs(off["yaw"]) >= close or abs(off["pit"]) >= close:
                 logger.debug(f"Compass align: confirmation reading {off} is not centered.")
                 return False
         return True
+
+    def read_nav_offset(self, scr_reg):
+        """Read the compass nav point. When the compass or the nav point is not visible, wait and read again instead
+        of steering on a guessed position. Returns None if it stays invisible."""
+        for attempt in range(NAV_ALIGN_LOST_READS):
+            off = self.get_nav_offset(scr_reg)
+            if off is not None:
+                return off
+            if attempt < NAV_ALIGN_LOST_READS - 1:
+                sleep(NAV_ALIGN_LOST_DELAY)
+        return None
+
+    @staticmethod
+    def nav_needs_reroll(off, close) -> bool:
+        """True when the nav point ahead is far off to the side and away from the vertical axis. Pitching cannot
+        center it there: near the sphere rim small vertical offsets mean large pitch angles, so the ship overshoots
+        back and forth. Rolling it to the vertical axis first lets the pitch bring it to the center."""
+        return off["z"] > 0 and abs(off["yaw"]) > NAV_ALIGN_REROLL_YAW and close < abs(off["roll"]) < 180 - close
 
     def nav_align(self, scr_reg, abort_on_disengage=False) -> bool:
         """Use the compass to find the nav point position.  Will then perform rotation and pitching
@@ -277,7 +302,11 @@ class FlightMixin:
         for ii in range(self.config["NavAlignTries"]):
             if abort_on_disengage and self.try_sc_disengage(scr_reg):
                 return True
-            off = self.get_nav_offset(scr_reg)
+            off = self.read_nav_offset(scr_reg)
+            if off is None:
+                # Never steer without a reading: a guessed position turns the ship away from the target
+                logger.warning("Compass Align: compass or nav point not visible, alignment stopped.")
+                return False
             logger.debug(f"Compass align try {ii + 1}: {off}")
 
             # Check if we are close enough already; the nav point flickers, so the reading must be confirmed
@@ -287,48 +316,61 @@ class FlightMixin:
                 logger.debug("Compass align: centered reading not confirmed, aligning again.")
                 continue
 
-            # Roll if the nav point is not directly behind us.
-            if (-180 + close) < off["yaw"] < (180 - close) and (-180 + close) < off["pit"] < (180 - close):
-                for i in range(20):
-                    # Calc roll time based on nav point location
-                    if abs(off["roll"]) > close and (180 - abs(off["roll"]) > close):
-                        # first roll to get the nav point at the vertical position
-                        if off["yaw"] > 0 and off["pit"] > 0:
-                            # top right quad, then roll right to get to 90 up
-                            self.rotate_right(off["roll"])
-                        elif off["yaw"] > 0 > off["pit"]:
-                            # bottom right quad, then roll left
-                            self.rotate_left(180 - off["roll"])
-                        elif off["yaw"] < 0 < off["pit"]:
-                            # top left quad, then roll left
-                            self.rotate_left(-off["roll"])
+            for reroll in range(NAV_ALIGN_MAX_REROLLS + 1):
+                # Roll if the nav point is not directly behind us.
+                if (-180 + close) < off["yaw"] < (180 - close) and (-180 + close) < off["pit"] < (180 - close):
+                    for i in range(20):
+                        # Calc roll time based on nav point location
+                        if abs(off["roll"]) > close and (180 - abs(off["roll"]) > close):
+                            # first roll to get the nav point at the vertical position
+                            if off["yaw"] > 0 and off["pit"] > 0:
+                                # top right quad, then roll right to get to 90 up
+                                self.rotate_right(off["roll"])
+                            elif off["yaw"] > 0 > off["pit"]:
+                                # bottom right quad, then roll left
+                                self.rotate_left(180 - off["roll"])
+                            elif off["yaw"] < 0 < off["pit"]:
+                                # top left quad, then roll left
+                                self.rotate_left(-off["roll"])
+                            else:
+                                # bottom left quad, then roll right
+                                self.rotate_right(180 + off["roll"])
+                            sleep(1)
+                            if abort_on_disengage and self.try_sc_disengage(scr_reg):
+                                return True
+                            off = self.read_nav_offset(scr_reg)
+                            logger.debug(f"Compass align roll step {i + 1}: {off}")
+                            if off is None:
+                                break
                         else:
-                            # bottom left quad, then roll right
-                            self.rotate_right(180 + off["roll"])
-                        sleep(1)
+                            break
+                if off is None:
+                    break
+
+                for i in range(20):
+                    # Calc pitch time based on nav point location
+                    if abs(off["pit"]) > close:
+                        if off["pit"] < 0:
+                            self.pitch_down(abs(off["pit"]))
+                        else:
+                            self.pitch_up(abs(off["pit"]))
+                        sleep(0.5)
                         if abort_on_disengage and self.try_sc_disengage(scr_reg):
                             return True
-                        off = self.get_nav_offset(scr_reg)
-                        logger.debug(f"Compass align roll step {i + 1}: {off}")
+                        off = self.read_nav_offset(scr_reg)
+                        if off is None or (reroll < NAV_ALIGN_MAX_REROLLS and self.nav_needs_reroll(off, close)):
+                            break
                     else:
                         break
 
-            for i in range(20):
-                # Calc pitch time based on nav point location
-                if abs(off["pit"]) > close:
-                    if off["pit"] < 0:
-                        self.pitch_down(abs(off["pit"]))
-                    else:
-                        self.pitch_up(abs(off["pit"]))
-                    sleep(0.5)
-                    if abort_on_disengage and self.try_sc_disengage(scr_reg):
-                        return True
-                    off = self.get_nav_offset(scr_reg)
-                else:
+                if off is None or reroll >= NAV_ALIGN_MAX_REROLLS or not self.nav_needs_reroll(off, close):
                     break
+                logger.debug(f"Compass align: nav point far off to the side, rolling again: {off}")
 
             for i in range(20):
                 # Calc yaw time based on nav point location
+                if off is None:
+                    break
                 if abs(off["yaw"]) > close:
                     if off["yaw"] < 0:
                         self.yaw_left(abs(off["yaw"]))
@@ -337,10 +379,13 @@ class FlightMixin:
                     sleep(0.5)
                     if abort_on_disengage and self.try_sc_disengage(scr_reg):
                         return True
-                    off = self.get_nav_offset(scr_reg)
+                    off = self.read_nav_offset(scr_reg)
                 else:
                     break
 
+            if off is None:
+                logger.debug("Compass align: nav point lost while aligning, reading again.")
+                continue
             sleep(0.1)
             logger.debug("final x:" + str(off["x"]) + " y:" + str(off["y"]))
         return False

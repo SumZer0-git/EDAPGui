@@ -140,6 +140,49 @@ class OCR:
         # No good matches, then return None
         return None, 0, 0
 
+    def solid_highlighted_items(self, image, min_w, min_h):
+        """Extract bright filled quadrilaterals without including neighboring slanted rows."""
+        image = image[:, :, :3]
+        mask = cv2.inRange(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 210, 255)
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        items = []
+        for contour in contours:
+            rectangle = cv2.minAreaRect(contour)
+            long_side, short_side = sorted(rectangle[1], reverse=True)
+            if long_side < min_w * 0.9 or short_side < min_h * 0.9:
+                continue
+            if cv2.contourArea(contour) < long_side * short_side * 0.65:
+                continue
+            polygon = cv2.approxPolyDP(contour, 0.015 * cv2.arcLength(contour, True), True)
+            if len(polygon) != 4 or not cv2.isContourConvex(polygon):
+                continue
+            points = polygon.reshape(4, 2).astype(np.float32)
+            sums = points.sum(axis=1)
+            differences = np.diff(points, axis=1).ravel()
+            corners = np.array(
+                [
+                    points[sums.argmin()],
+                    points[differences.argmin()],
+                    points[sums.argmax()],
+                    points[differences.argmax()],
+                ]
+            )
+            if len(np.unique(corners, axis=0)) != 4:
+                continue
+            width = int(max(np.linalg.norm(corners[1] - corners[0]), np.linalg.norm(corners[2] - corners[3])))
+            height = int(max(np.linalg.norm(corners[3] - corners[0]), np.linalg.norm(corners[2] - corners[1])))
+            if width < min_w * 0.9 or height < min_h * 0.9:
+                continue
+            destination = np.array([[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]], np.float32)
+            transform = cv2.getPerspectiveTransform(corners, destination)
+            cropped = cv2.warpPerspective(image, transform, (width, height))
+            filled = cv2.inRange(cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY), 210, 255)
+            if cv2.countNonZero(filled) < width * height * 0.65:
+                continue
+            x, y, w, h = cv2.boundingRect(contour)
+            items.append((cropped, x, y, w, h))
+        return sorted(items, key=lambda item: (item[2], item[1]))
+
     def capture_region_pct(self, region):
         """Grab the image based on the region name/rect.
         Returns an unfiltered image, either from screenshot or provided image.
@@ -185,9 +228,10 @@ class OCR:
         img = self.capture_region_pct(region)
 
         ocr_textlist = self.image_simple_ocr(img)
-        # print(str(ocr_textlist))
 
-        if text.upper() in str(ocr_textlist):
+        recognized = " ".join(" ".join(ocr_textlist or []).upper().split())
+        expected = " ".join(text.upper().split())
+        if expected and expected in recognized:
             logger.debug(f"Found '{text}' text in item text '{str(ocr_textlist)}'.")
             return True, str(ocr_textlist)
         else:
