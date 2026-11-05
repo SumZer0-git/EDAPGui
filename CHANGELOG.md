@@ -8,127 +8,66 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Important notice
 
+- Import existing waypoint routes through **Import... > Legacy JSON...** and save them in the new format before running them. The import retains destinations and trade lists, not bookmarks, other options or progress; review the draft before saving.
 - Runtime files moved to the new `user_data/` folder. Existing users must manually copy `configs/AP.json`, `configs/ship_configs.json` and their own waypoint files from `waypoints/` into `user_data/configs/` and `user_data/waypoints/`.
-- The user interface now needs the new package `ttkbootstrap`. Starting the program does not install packages automatically: existing users must run `install_requirements.bat` (or install `requirements.txt` in their active environment) before the next start.
+- Dependencies and the OCR engine have been updated. Existing installations must remove the old `venv` folder and run `install_requirements.bat` to avoid incompatible leftover packages. Starting the program does not update packages automatically; manually managed environments must install `requirements.txt`.
+- Python 3.12 and 3.13 are supported, with 3.13 recommended. Python 3.14 and newer are not supported because PaddlePaddle does not provide compatible Windows wheels.
 
 ### Added
 
-- Added a new dark user interface built with ttkbootstrap: sidebar with the assist modes (only one active at a time) and a Stop All button, tabs for Ship (with the log below the ship rates), Waypoints, Settings, Debug, and Info, a sidebar that collapses to an icon strip, an always-on-top pin, a power button with Restart and Exit, a native dark title bar, and per-monitor DPI scaling. The window has a fixed size and fits a portrait 1080p monitor.
-- Added a dedicated Overlay tab with automatic saving, corner anchoring, pixel or percentage offsets, font-size, font-weight and panel-opacity controls, and checkboxes for individual status lines. The overlay includes bundled Rajdhani Light, Regular, Medium, SemiBold and Bold fonts.
-- Added semantic overlay colors for active, successful, caution, and idle states, plus route-aware jump progress and a separately configurable planned-route distance display. Both follow the current system during manual travel and while EDAPGui is idle; jump progress marks route completion in green for up to 60 seconds.
-- Added optional overlay lines for the main fuel tank level (live from `Status.json`, colored against the refuel and abort thresholds, with a scooping hint), the route destination, and the next route star class with whether it can be fuel scooped.
-- Added a user-defined overlay line order on the Overlay tab (up/down arrows per line and a Reset order button) and separately toggleable progress bars for jumps and route distance. Each bar is its own line and sits below its text by default; it shows full progress on route completion and disappears with the jump count.
-- Added automatic saving of the Ship, Overlay, Settings, and Debug tabs with a saved, unsaved, or not-saved indicator in the lower right corner of the tab (the saved indicator disappears after 3 seconds); the window position, collapsed state, and always-on-top are remembered in `user_data/configs/gui.json`.
-- Added offline unit tests for the settings model and the stored window state of the user interface.
-- Added `core/version.py` as the single place for the application version (still 1.7.0); the footer and log read it from there.
-- Added the update check (`core/updates.py`): at startup the program looks up the latest release of `DopeEx/EDAPGui` in the background and shows an orange notice in the footer (which opens the Info tab with the download button) if it is newer. Nothing happens at startup if there is no release yet or GitHub cannot be reached.
-- Added status badges to the README (CI, Ruff, license, and the tested Python versions, which are read from the CI test matrix).
-- Added the Ruff linter (`pyproject.toml`, `requirements-dev.txt`) with the rule groups `F` (pyflakes), `I` (import sorting), `N` (pep8-naming, except `N806`), `W` (whitespace) and the checks `E711`, `E712`, `E713`, `E714`, `E722` and `F841`; run `ruff check .`. The code is formatted with `ruff format .` (check with `ruff format --check .`).
-- Added offline unit tests (no game needed) for the status, cargo, market and navigation route parsers, journal event handling, waypoint files and routing, localization, shared paths, reference data and screen region scaling.
-- Added offline unit tests for reading the Elite Dangerous keybindings (`game/keybindings.py`), using an anonymized sample bindings file in `tests/fixtures/bindings/`.
-- Added offline tests for template matching and screen detection (compass, nav point, target, occlusion, supercruise disengage message, region filters) using the screenshot crops in `tests/fixtures/` and a fake screen instead of the game.
-- Added a regression test with real game screenshots (`tests/test_screenshots.py`, 3840x2160 and 1920x1080, HDR and SDR) that is skipped when the git-excluded screenshots in `tests/fixtures/screenshots/` are missing.
-- Added `docs/Structure.md` describing the folder structure and rules for where new files belong.
-- Added native templates for 3840x2160 (`assets/templates/2160p/`), used unscaled at that resolution; for every other screen height the nearest larger set is scaled down (for example for 1920x1080), or the largest set is scaled up. `tools/make_templates.py` creates them from full screenshots (the raw screenshots in `tests/fixtures/screenshots/` are git-excluded and never committed).
-- Added language-independent detection of the supercruise disengage message (blue text gate plus OCR compared with the localized text) instead of the English-only `sc-disengage` template, which works for German and English.
-- Added detection of a target hidden behind a planet or moon with a white-filter ring template (`target_occluded`) that is also matched in a beige filter (the ring is white with HDR and beige without), plus fallbacks for very bright scenes (stars) and the localized "line of sight" message of Supercruise Assist.
-- Added debug logging of the target-ring match score and its screen offset during alignment.
-- Added GitHub workflows: `ci.yml` runs Ruff and the unit tests (without the OCR test, using the slim `requirements-ci.txt`) on pushes and pull requests to `main`; `release.yml` runs the full checks including OCR when a `vX.Y.Z` tag is pushed, verifies that the tag is on `main` and matches `core/version.py`, and creates a GitHub release with the changelog notes and a source ZIP.
-- Added `fix_keybinds.bat` (`src/fix_keybinds.py`), a console tool that works with the game closed: it fills the gaps in the active General and Ship controls bindings that EDAP needs and reports conflicts, in German or English. Existing bindings are only changed after you confirm each conflict; gaps are filled from the shipped default presets first, then with single keys without modifiers. A timestamped backup of the `.binds` file is created before writing; `--dry-run` only previews.
-- Added a central log level record: `=== Log level changed/at startup: OLD -> NEW ===` is written to the log at startup and whenever the level is switched in the UI, so it is visible from which line on debug details are present.
-- Added a check for the supercruise disengage message while waiting after the target ring was lost and during the following alignment, which aborts as soon as the message appears (`wait_for_sc_disengage`, `nav_align(..., abort_on_disengage)`).
-- Added `no-msg` screenshot fixtures that must not pass the message gate, and more real screenshots (dark scenes, arc-shaped target ring close to the target) to the regression test.
-- Added an optional localized FSD alignment-prompt check during charging; while the prompt is shown, small proportional corrections are applied toward the compass nav point, and only when two compass readings agree. The journal remains authoritative for jump start.
+- Integrated Waypoints editor for creating, loading, saving, editing, duplicating, reordering and enabling destinations, with validation, unsaved-change protection and editing locks during execution.
+- Trade-list editing with configurable commodity priority and an All quantity choice, plus a searchable German/English catalogue of 411 commodities. Names not yet verified against game exports are marked; custom names remain possible.
+- Trade-route import from copied German/English text, with destination preview, explicit quantities and a choice to create a route or append to one. Legacy JSON import creates a new draft without modifying the original.
+- Plot to System and Plot to Station buttons for selecting targets without flying, trading or changing route progress.
+- Station-name navigation through the Navigation panel when bookmarks are unavailable. The search scrolls to the first exact match and confirms the selected target before flight; in-game filters must include the destination.
+- Active jump-target confirmation for Waypoint and Single Waypoint travel before each jump alignment, including intermediate systems. Unconfirmed targets stop the assist rather than relying on the saved route alone.
+- Optional recognition of the game's FSD alignment prompt, allowing small confirmed course corrections while charging.
+- Redesigned dark interface with a collapsible assist sidebar, Stop All, an always-on-top option and per-monitor scaling. Settings and window layout are saved automatically.
+- Customizable status overlay with colors, fonts, opacity, positioning, optional fuel and route information, configurable line order and jump/distance progress bars.
+- Background update notification and a manual Check for Updates button on the Info tab.
+- Keybinding repair tool (`fix_keybinds.bat`) with German/English messages, conflict confirmation, backups and a preview-only mode.
+- Automated tests, screenshot regressions, Ruff checks and CI/release workflows for contributors.
 
 ### Changed
 
-- Centralized AP status updates so the GUI footer and overlay show the same current status, while the GUI log keeps status history and additional user-facing messages.
-- Changed the route line in the middle of the GUI footer to `Jumps: 12 of 40 · 3,412.8 of 7,320.6 ly`, taken from the same route data as the overlay, as an alternative to the overlay. It is shown only while Travel, Waypoint or Single Waypoint Assist follows a route and is cleared at route end or stop. The old line with average seconds per jump and refuel count was removed.
-- Changed the overlay ship status to readable text (for example "Supercruise" instead of `in_supercruise`, "Unknown" before the first journal state, as for the current system and star class), with success color when docked and warning color when docking is denied. The current system line now separates system name and star class with an orange " | " instead of a comma.
-- Added more detailed AP status steps for in-system travel: "Entering supercruise", "Align", the supercruise target, "Approaching target", "Requesting docking", "Docking", "Refueling and repairing" after docking, and "Arrived at target" when docking is not possible. The status returns to Idle immediately when the assist ends.
-- Changed the default overlay settings to match the maintainer's current setup: enabled, top-left anchor, percentage offsets of 1% and 15%, Rajdhani size 14, 50% panel opacity, and all information lines visible. Existing configurations without a position unit keep pixel-based offsets.
-- Changed the overlay to follow Elite's client window, stay below unrelated windows, and request Windows' capture-exclusion mode. Rendering now uses a thread-safe Pillow surface with per-monitor DPI handling, and the overlay can be enabled or disabled without restarting EDAPGui.
-- Styled the status overlay with the GUI palette: a dark panel and border, orange labels, light values, muted placeholders, and a subtle text shadow.
-- Replaced the separate FSD Route Assist and Supercruise Assist controls with one Travel Assist option. It selects the FSD route when a system target is set and automatically continues to a local target when one remains; the former FSD start hotkey is retained as the Travel Assist hotkey.
-- Reorganized the README and user guides, added a dedicated keybindings guide, and documented current assist behavior and follow-up items in place of the obsolete design notes.
-- Updated the README screenshots for the new tab bar and added one of the Overlay tab and one of the status overlay.
-- Expanded the project structure guide into a compact file-by-file tree with short responsibilities and placement boundaries.
-- Changed the target offset to be computed from the fitted center of the target circle instead of fixed correction values, so it is independent of the resolution.
-- Changed the supported languages to German and English; removed the French and Russian locales, the `sc-disengage` template and the deprecated `sc_disengage`.
-- Changed the supported Python range to 3.12–3.13, with Python 3.13 recommended; CI and release checks cover both versions, and the installer prefers 3.13 while retaining 3.12 as a fallback. Python 3.14 and newer are not supported because PaddlePaddle does not provide compatible Windows wheels.
-- Changed the dependencies that are independent of PaddleOCR to `mss` 10.2.0, `Pillow` 11.3.0, `colorlog` 6.12.0, `kthread` 0.2.3, `PyAutoGUI` 0.9.54, `pynput` 1.8.2, `pywin32` 312, `strsimpy` 0.3 and `xmltodict` 1.0 (`requirements.txt` and `requirements-ci.txt`). Existing installations must run `install_requirements.bat` to install the updates; starting EDAPGui does not update packages in an existing virtual environment.
-- Updated OCR to PaddleOCR 3.6.0 and PaddlePaddle 3.2.2, migrated to the v3 prediction/result API, and aligned NumPy 2.2.6, OpenCV contrib 4.10.0.84 and Requests 2.34.2 with the OCR stack. Existing installations must remove the old `venv` folder and run `install_requirements.bat` to avoid leftover PaddleOCR 2 dependencies.
-- Changed class names to CapWords and exception names to end with `Error`: `Screen_Regions` to `ScreenRegions`, `Image_Templates` to `ImageTemplates`, `AFK_Combat` to `AfkCombat`, `EDAP_Interrupt` to `EdapInterruptError` and `PathNotFoundException` to `PathNotFoundError`.
-- Changed function and argument names to snake_case: `PressKey`/`ReleaseKey` to `press_key`/`release_key`, `rotateLeft`, `rotateRight`, `pitchUp`, `pitchDown`, `yawLeft` and `yawRight` to `rotate_left` etc., and arguments such as `scaleX`/`scaleY`, `fileName`, `doThread`, `fontSize`, `vSay` and `noOp` to `scale_x`/`scale_y`, `file_name`, `do_thread`, `font_size`, `text` and `no_op`. Names that follow the Windows API (`wndProc`, `hWnd`, `wParam`, `lParam`, `Input_I`) are kept.
-- Changed config, waypoint and log files to be stored in `user_data/` (configs, waypoints, logs, debug output). The folder is created on first start.
-- Changed reference files (`resolution.json` and the example waypoint files) to live in `data/` and be copied to `user_data/` when missing.
-- Changed paths to be resolved relative to the project folder instead of the working directory.
-- Changed `templates/`, `locales/` and `screen/edap.ico` to `assets/templates/`, `assets/locales/` and `assets/icons/edap.ico`; the documentation screenshots from `screen/` to `docs/screenshots/`. The disabled build workflow still references the old `screen\` paths and will be reworked separately.
-- Changed `readme.md` and `ChangeLog.md` to `README.md` and `CHANGELOG.md`.
-- Changed the in-app links (About, Changelog) and the clone URL in the README to point to this repository instead of the upstream repository.
-- Changed `controls/keys.py` (`EDKeys`) to be split: reading the Elite Dangerous keybindings now lives in `game/keybindings.py` (`KeyBindings`), while `controls/keys.py` only sends keys.
-- Changed `ED_AP.py` to `core/autopilot.py` and split `EDAutopilot` into mixin classes with identical behavior: `core/config.py` (`ConfigMixin`), `vision/calibration.py` (`CalibrationMixin`), `vision/detection.py` (`DetectionMixin`), `routines/flight.py` (`FlightMixin`) and `routines/assists.py` (`AssistsMixin`). `EDAP_Interrupt` and `ScTargetAlignReturn` moved to `core/types.py`.
-- Changed the GUI code of `EDAPGui.py` to `gui/main_window.py`; `EDAPGui.py` in the project root remains as the thin start script (`python EDAPGui.py`, `start_ed_ap.bat`).
-- Changed the file headers of all source files to a short module docstring; author lines and the copy of the hotkey list (see README) were removed. Credits to the original projects stay in the affected modules and the README.
-- Changed the start script `EDAPGui.py` in the project root to `main.py` (`python main.py`); `start_ed_ap.bat` is unchanged for users.
-- Changed all program packages (`controls/`, `core/`, `game/`, `gui/`, `i18n/`, `integrations/`, `panels/`, `routines/`, `vision/`) and `main.py` to live in the new `src/` folder; start the program with `python src/main.py` (`start_ed_ap.bat` is unchanged for users). The bundled `EDMesg/` library moved to `third_party/EDMesg/`.
-- Changed `EDWayPoint.py`, `Robigo.py` and `EDafk_combat.py` to live in the new `routines/` package as `routines/waypoints.py`, `routines/robigo.py` and `routines/afk_combat.py`.
-- Changed `TCE_Integration.py`, `Voice.py` and the `EDAP_EDMesg_*.py` modules to live in the new `integrations/` package as `integrations/tce.py`, `integrations/voice.py` and `integrations/edmesg/{interface,client,server}.py`.
-- Changed `Overlay.py` to `gui/overlay.py` and the `simple_localization/` package to `i18n/`.
-- Changed `EDNavigationPanel.py`, `EDInternalStatusPanel.py`, `EDGalaxyMap.py`, `EDSystemMap.py`, `EDStationServicesInShip.py` and `EDShipControl.py` to live in the new `panels/` package as `panels/navigation.py`, `panels/internal_status.py`, `panels/galaxy_map.py`, `panels/system_map.py`, `panels/station_services.py` and `panels/ship_control.py`.
-- Changed `EDJournal.py`, `StatusParser.py`, `CargoParser.py`, `MarketParser.py`, `NavRouteParser.py`, `EDGraphicsSettings.py` and `WindowsKnownPaths.py` to live in the new `game/` package as `game/journal.py`, `game/status.py`, `game/cargo.py`, `game/market.py`, `game/nav_route.py`, `game/graphics_settings.py` and `game/known_paths.py`.
-- Changed `EDKeys.py`, `directinput.py` and `MousePt.py` to live in the new `controls/` package as `controls/keys.py`, `controls/directinput.py` and `controls/mouse_point.py`.
-- Changed `Screen.py`, `Screen_Regions.py`, `OCR.py` and `Image_Templates.py` to live in the new `vision/` package as `vision/screen.py`, `vision/regions.py`, `vision/ocr.py` and `vision/templates.py`.
-- Changed `paths.py`, `EDlogger.py` and `EDAP_data.py` to live in the new `core/` package as `core/paths.py`, `core/logger.py` and `core/constants.py`.
-- Changed tests to live in `tests/` (`tests/test_*.py`), test images in `tests/fixtures/`, and the manual debug tool `Test_Routines.py` to `tests/manual/debug_routines.py` (run with `python -m tests.manual.debug_routines`). Run the unit tests with `python -m unittest discover -s tests -t .`. Tests that need the running game live in `tests/integration/` and are skipped unless `EDAP_INTEGRATION=1` is set.
-- Changed all `from x import *` to explicit imports, removed unused imports and sorted the imports in all modules. Comparisons with `None`, `True` and `False` were rewritten to `is None` or plain truth checks, bare `except:` became `except Exception:`, trailing whitespace was removed, and unused local variables were removed.
-- Changed log rotation to keep only the 10 newest rotated log files in `user_data/logs/`.
-- Cleaned up `.gitignore`.
-- Changed the key collision warning at startup to ignore sharing that the game's own default presets use (for example `A`/`D` for yaw and UI left/right) and to report each collision group once; it uses the same rule as `fix_keybinds.bat`.
-- Changed the keybinding reader to take the active presets from `StartPreset.4.start` (the newest `.binds` file is only a fallback) and to no longer require the five unused binds (`SelectTarget`, `DeployHeatSink`, `MouseReset`, `CamTranslateForward`, `CamTranslateRight`).
-- Changed the runtime `print()` output to the central logger (`core/logger.py`): status details, keybinding and graphics settings lines are debug messages, problems are warnings or errors, and unexpected exceptions are logged with their stack trace. Info shows only status messages. The UI status window is unchanged.
-- Changed the startup console to hide the harmless PaddlePaddle noise (ccache warning, oneDNN and glog info lines); the model loading lines and all warnings and errors stay visible. Restarting the program prints `Restarting EDAPGui...` to the console.
-- Changed the disengage message gate to a dedicated cyan filter that also matches dark scenes and requires the long frame lines of the message, and the message OCR to also try a faster unscaled variant.
-- Changed Supercruise Assist to cruise at 75% throttle instead of 50% once the target is aligned and ahead, which gives the best handling in supercruise and gets through the system faster. The throttle is still 50% while aligning, after a lost target and after an interdiction. This requires the Elite Dangerous binding "Set Speed to 75%" (`SetSpeed75`); `fix_keybinds.bat` fills it like the other missing bindings.
+- Waypoint routes now keep completion and remaining trade quantities separate from their definitions. Reset and route-level repetition restore the original quantities; the last selected route is remembered. The assist stops if progress cannot be saved.
+- Waypoint navigation tries configured Galaxy Map bookmarks first, falls back to system-name search and reuses a matching station target after arrival.
+- Combined FSD Route Assist and Supercruise Assist into Travel Assist, which follows the system route and continues to a selected local destination when one remains.
+- The footer and overlay show the same current assist status, with more detailed flight phases and route progress. The GUI log retains status history and additional user messages.
+- Updated screen recognition for German/English HUD text, HDR/SDR colors, bright scenes, different compass sizes and targets hidden behind planets. Native 2160p templates scale automatically to other resolutions, replacing manual calibration.
+- Supercruise travel uses 75% throttle once aligned; alignment and recovery use 50%. The **Set Speed to 75%** binding is required and can be added with `fix_keybinds.bat`.
+- Updated keybinding detection to follow the active game preset and reduce duplicate or harmless collision warnings.
+- Runtime files are stored in `user_data/`; launching through `start_ed_ap.bat` remains unchanged. Manual launches now use `python src/main.py`.
+- Normal logging focuses on user status, while detailed flight diagnostics are available in Debug mode. Rotated logs are limited to the ten newest files.
+- Updated setup, keybinding and waypoint guides with current workflows and screenshots.
+- Reorganized the source into packages and standardized naming and formatting; contributor details are documented in the project structure guide.
 
 ### Fixed
 
-- Fixed the overlay not refreshing while an assist was running, so the ship status showed "Supercruise" during a hyperspace jump and route progress lagged. A separate refresh thread now updates the overlay every second, redraws only when the shown content changed, and journal reads are serialized between threads.
-- Fixed the overlay jump counter and progress bar disappearing during the final jump, because the game clears the route before arrival. Progress now stays at the last-but-one system until the destination is reached and then shows as complete.
-- Fixed the overlay's AP STATUS line keeping the last assist status, for example "Maneuvering", after an assist stopped. The GUI status line and the overlay now share one status source, which is set to Idle once any assist has actually finished, whether stopped by the user, at route end or after an error.
-- Fixed Travel Assist starting Supercruise Assist after a false-positive compass match when no local destination was set. Supercruise Assist now starts only when the game's `Status.json` reports a non-main-star destination.
-- Fixed overlay text and panel sizing being multiplied by both game resolution and Windows display scaling. Font size is now in points and follows monitor DPI only; changing monitors triggers a redraw. Saved font-size values are not reset.
-- Fixed global hotkeys for Start FSD, Start SC and Stop All triggering on matching numeric-keypad keys; numpad events are now ignored while regular navigation keys and configured hotkey sequences continue to work.
-- Fixed global hotkey actions updating Tkinter from the keyboard listener thread; actions are now dispatched through a queue for execution on the GUI thread.
-- Fixed unhandled exceptions (main thread, worker threads, Tk callbacks, errors while closing) only appearing on the console: they are now also written to the log file.
-- Fixed Route Assist deciding at the end of the route by the compass alone whether to hand over to Supercruise Assist: it now uses the destination from the game's `Status.json`; the compass is only a fallback and must be seen in two readings. Before, a missed compass ended the route as "Destination Reached" instead of flying to the station.
-- Fixed FSD jump-start retries not correcting a slightly off-center target: a retry now cancels the running charge, waits for the FSD flags to clear and realigns with a tighter tolerance, even if the journal still reports `starting_hyperspace`.
-- Fixed the FSD target-ring alignment swinging back and forth on ships whose turn rates differ from the defaults (Type-9): key holds now scale with the configured yaw and pitch rates, and the alignment learns how many pixels the target moves per second of key hold.
-- Fixed the journal `Location` event handling failing with `'StationName'` when starting in open space; station name and type are now optional.
-- Fixed the compass detection on ships whose compass is larger than the template (Type-9, Corsair and others, up to about 20 %): the template matched with a score of only about 0.4 after the per-ship calibration was removed with the native templates. The compass and the nav point markers are now matched at several scales, the best scale is remembered per ship and also used for the angle calculation, and the same match is used for the "compass present" check, so Route Assist hands over to Supercruise Assist after the last jump on these ships.
-- Fixed the compass alignment on these ships: the pulsing cyan crosshair glow is no longer accepted as a centered nav point (a centered reading must be confirmed by two further readings, and a charge with the target behind is cancelled and realigned at once), and the compass sphere is refined with a ring fit when the template match is weak. A hollow "target behind" ring or a filled nav point that the template misses (glowing dot, bright hull or planet edge behind the compass) is found without a template, which stops the endless rolling back and forth.
-- Fixed application log file setup so its output is retained even when another library has already configured Python logging.
-- Fixed supercruise disengage checks being skipped when the target ring cannot be found, lowered the HUD prompt gate so smaller dropout messages trigger OCR, and log when OCR returns no text.
-- Fixed the discovery scan (honk) ending early during FSD route assist: the scan button is now held until the journal reports the finished scan (`FSSDiscoveryScan`) instead of a fixed 7 seconds, and the scan is retried up to three times (10 s each) if no confirmation arrives, while the scan keeps running in parallel to refueling and positioning. Keys that share a physical key or modifier with a currently held button (for example `S` for pitch up and the scanner button) now wait until it is released instead of cutting the scan off.
-- Fixed rotated log files (`autopilot <date>.log`) not being excluded by `.gitignore`.
-- Fixed the OCR unit test to check only the known text of its screenshot instead of the complete HUD text.
-- Fixed circular imports between `ED_AP.py` and the `routines/` and `panels/` modules; all modules can now be imported on their own.
-- Fixed a startup error when the previous log file could not be renamed because a rotated log with the same timestamp already existed.
-- Fixed the screen detection and capture on setups with monitors of different Windows scaling (for example a 100% monitor next to a 150% one), where the monitor size and the Elite window position were reported scaled and the compass was not found; the detection now runs in a per-monitor DPI aware context without changing the DPI behavior of the UI and the overlay.
-- Fixed the unit tests rotating away the log files of real sessions; the tests now log to a temporary folder (`EDAP_LOG_DIR`).
-- Fixed key names of German keyboard layouts (`de-DE`, `de-AT`): Y/Z are swapped and umlauts, ß, ´, + and < are now recognized, so the correct physical keys are sent (for example for `CamZoomIn`).
-- Fixed missing supercruise disengage at the destination when the target ring turns into an open arc shortly before arrival and the message was not read in time.
+- Galaxy Map targeting no longer waits indefinitely when a route cannot be confirmed; it retries a limited number of times and then stops.
+- Waypoint market trades no longer submit a neighbouring commodity or assume success from key presses alone. The trade dialog is checked before submission, and only game-confirmed transactions reduce remaining quantities; unreadable dialogs receive one checked recovery attempt.
+- Station-market sales are capped by available cargo. Missing goods are skipped without reducing the request, while unreadable cargo stops trading.
+- Waypoint trading no longer reports success without trading after restarting while docked. Missing market services stop the trade, and station-services detection supports both German and English headers.
+- The global waypoint shopping list now respects whether it is enabled.
+- Routes with no runnable waypoints no longer repeat indefinitely, and missing market-data updates no longer cause an endless wait.
+- Route travel no longer ends prematurely when a station destination remains after the final jump; the game's destination data determines whether local travel is needed.
+- FSD retries realign before charging again, and target alignment accounts for configured ship turn rates to reduce overshooting.
+- Compass alignment no longer steers blindly when its target is unreadable or repeatedly pitches past targets at the compass rim.
+- Supercruise disengage detection continues when the target ring is lost or becomes an open arc near arrival.
+- Discovery scans no longer end after a fixed delay or get cut short by another action sharing the same key.
+- Starting in open space no longer fails because station details are missing.
+- Screen capture and target detection now work correctly across monitors with different Windows scaling.
+- Global hotkeys no longer trigger from matching numeric-keypad keys.
+- German keyboard layouts now send the correct physical keys, including Y/Z and special characters.
+- Application errors are recorded in the log instead of appearing only on the console.
 
 ### Removed
 
-- Removed the menu bar of the main window (Restart and Exit moved to the power button, the update check to the Info tab) and the language switch of the window.
-- Removed the unused EDMesg integration, its bundled library, configuration settings and dependencies.
-- Removed the obsolete ELW scanner, its FSS automation, GUI option, configuration, vision templates, and documentation.
-- Removed the obsolete Robigo passenger-mission assist, its GUI controls and configuration, dedicated vision templates, and documentation.
-- Removed the unused legacy PaddleOCR result conversion; panel detection now consumes recognized text directly from PaddleOCR 3 results.
-- Removed the disabled `build-executable.yml` workflow; a build of the executable will be added later.
-- Removed the "Join Discord" menu entry, the Discord link and the email contact addresses.
-- Removed the manual template calibration (File > Calibrate Target/Compass, `vision/calibration.py`, `docs/Calibration.md`), the `TargetScale` setting and the per-ship `compass_scale`, as well as the legacy 3440x1440 templates: all templates are now derived from the native 2160p set.
+- Removed the old menu bar; Restart/Exit are available through the power button and Check for Updates through Info.
+- Removed the obsolete Robigo passenger-mission assist, ELW scanner and unused EDMesg integration.
+- Removed French and Russian locale support; supported game languages are German and English.
+- Removed manual template calibration in favor of automatic template scaling.
+- Removed outdated Discord and email contact links.
 
 # 8/19/2025 v1.7.0: General updates.
  - Changed all Parser files to UTF-8 format.
