@@ -57,6 +57,18 @@ class ScreenshotScreen:
             region = cv2.cvtColor(region, cv2.COLOR_RGB2BGR)
         return region
 
+    def screen_rect_to_abs(self, rect):
+        return [
+            int(rect[0] * self.screen_width),
+            int(rect[1] * self.screen_height),
+            int(rect[2] * self.screen_width),
+            int(rect[3] * self.screen_height),
+        ]
+
+    def get_screen_rect_pct(self, rect):
+        left, top, right, bottom = self.screen_rect_to_abs(rect)
+        return self.image[top:bottom, left:right]
+
 
 def write_json(path: Path, data) -> Path:
     """Write data as JSON, always giving the file a newer modification time than before."""

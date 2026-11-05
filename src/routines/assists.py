@@ -1,12 +1,17 @@
 """The assist routines: FSD, SC, waypoint, AFK combat, DSS."""
 
 import threading
-from time import sleep
+from time import monotonic, sleep
 
-from core.constants import Flags2GlideMode, FlagsDocked, FlagsLanded
+from core.constants import Flags2GlideMode, FlagsDocked, FlagsLanded, FlagsSupercruise
 from core.logger import logger
-from core.types import ScTargetAlignReturn
+from core.types import FsdAssistResult, ScTargetAlignReturn
 from vision.screen import set_focus_elite_window
+
+IN_SYSTEM_TARGET_TIMEOUT = 5.0
+IN_SYSTEM_TARGET_POLL_INTERVAL = 0.25
+SYSTEM_ARRIVAL_TIMEOUT = 10.0
+ROUTE_TARGET_TIMEOUT = 5.0
 
 
 class AssistsMixin:
@@ -15,18 +20,21 @@ class AssistsMixin:
         also can then perform trades if specific in the waypoints file."""
         self.waypoint.waypoint_assist(keys, scr_reg)
 
-    def jump_to_system(self, scr_reg) -> bool:
-        """Jumps to the currently targeted system. Returns True if we successfully travel there, else False."""
+    def jump_to_system(self, scr_reg, expected_system: str | None = None) -> FsdAssistResult:
+        """Jump to the targeted system and report whether a local destination is ready."""
         # Current in game destination
         status = self.status.get_cleaned_data()
         destination_body = status["Destination_Body"]  # The body number (0 for prim star)
         destination_name = status["Destination_Name"]  # The system/body/station/settlement name
+        route_destination = self.nav_route.get_last_system().upper()
 
-        # Check we have a route and that we have a destination to a star (body 0).
-        # We can have one without the other.
-        if destination_body != 0 or destination_name == "":
+        # A local bookmark target may be active while NavRoute carries the inter-system route.
+        if expected_system and route_destination != expected_system.upper():
+            self.ap_ckb("log", f"Nav route does not target {expected_system}.")
+            return FsdAssistResult.Failed
+        if expected_system is None and (not destination_name or (destination_body != 0 and not route_destination)):
             self.ap_ckb("log", "A valid destination system is not selected.")
-            return False
+            return FsdAssistResult.Failed
 
         # if we are starting the waypoint docked at a station, we need to undock first
         if self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
@@ -36,16 +44,33 @@ class AssistsMixin:
         if self.jn.ship_state()["status"] != "in_supercruise":
             self.sc_engage()
 
-        # Route sent...  FSD Assist to that destination
-        reached_dest = self.fsd_assist(scr_reg)
-        if not reached_dest:
-            return False
+        result = self.fsd_assist(scr_reg, expected_system=expected_system)
+        if result is FsdAssistResult.Failed or expected_system is None:
+            return result
 
-        return True
+        deadline = monotonic() + SYSTEM_ARRIVAL_TIMEOUT
+        while monotonic() < deadline:
+            current_system = self.jn.ship_state()["cur_star_system"].upper()
+            if current_system == expected_system.upper():
+                return result
+            sleep(IN_SYSTEM_TARGET_POLL_INTERVAL)
+
+        logger.warning(
+            "FSD route ended without reaching the waypoint system: expected=%s current=%s",
+            expected_system,
+            self.jn.ship_state()["cur_star_system"],
+        )
+        self.ap_ckb("log", f"Failed to reach {expected_system}.")
+        return FsdAssistResult.Failed
 
     def supercruise_to_station(self, scr_reg, station_name: str) -> bool:
         """Supercruise to the specified target, which may be a station, FC, body, signal source, etc.
         Returns True if we travel successfully travel there, else False."""
+        if not self.wait_for_expected_in_system_target(station_name):
+            logger.warning(f"Waypoint local target does not match requested station: {station_name}.")
+            self.ap_ckb("log", f" - Could not target station: {station_name}")
+            return False
+
         # If waypoint file has a Station Name associated then attempt targeting it
         self.set_ap_status(f"Targeting Station: {station_name}")
         # res = self.nav_panel.lock_destination(station_name)
@@ -62,7 +87,9 @@ class AssistsMixin:
 
         # Successful targeting of Station, lets go to it
         sleep(3)  # Wait for compass to stop flashing blue!
-        if self.has_in_system_target(self.status.get_cleaned_data()) and self.have_destination(scr_reg):
+        if self.has_expected_in_system_target(self.status.get_cleaned_data(), station_name) and self.have_destination(
+            scr_reg
+        ):
             self.ap_ckb("log", " - Station: " + station_name)
             self.set_ap_status(f"SC to Station: {station_name}")
             self.sc_assist(scr_reg)
@@ -72,7 +99,86 @@ class AssistsMixin:
 
         return True
 
-    def fsd_assist(self, scr_reg):
+    def _select_next_route_system(self, expected_system: str) -> bool:
+        """Select and confirm the active next hop, not just the route's final destination."""
+        if not self.status.wait_for_flag_on(FlagsSupercruise, ROUTE_TARGET_TIMEOUT):
+            logger.warning("Waypoint jump stopped: supercruise was not confirmed.")
+            self.ap_ckb("log", "Could not confirm supercruise. Waypoint flight stopped.")
+            return False
+
+        ship = self.jn.ship_state()
+        current_system = ship["cur_star_system"]
+        next_system = self.nav_route.get_next_system(current_system, ship.get("system_address"))
+        route_destination = self.nav_route.get_last_system()
+        if route_destination.casefold() != expected_system.casefold() or next_system is None:
+            logger.warning(
+                "Waypoint jump stopped: current=%r route_destination=%r expected=%r next_system=%r",
+                current_system,
+                route_destination,
+                expected_system,
+                next_system,
+            )
+            self.ap_ckb("log", "Could not confirm the next route system. Waypoint flight stopped.")
+            return False
+
+        next_name, next_address = next_system
+        status = self.status.get_cleaned_data()
+        logger.debug(
+            "Waypoint route target selection: current=%r final=%r next=%r/%s "
+            "previous_name=%r previous_system=%s previous_body=%s",
+            current_system,
+            expected_system,
+            next_name,
+            next_address,
+            status["Destination_Name"],
+            status["Destination_System"],
+            status["Destination_Body"],
+        )
+        self.keys.send("TargetNextRouteSystem")
+        deadline = monotonic() + ROUTE_TARGET_TIMEOUT
+        while monotonic() < deadline:
+            status = self.status.get_cleaned_data()
+            if (
+                self.nav_route.get_last_system().casefold() != expected_system.casefold()
+                or self.nav_route.get_next_system(current_system, ship.get("system_address")) != next_system
+            ):
+                logger.warning("Waypoint route changed while confirming the next jump target.")
+                self.ap_ckb("log", "Route changed during target confirmation. Waypoint flight stopped.")
+                return False
+            if (
+                status["Destination_Name"].casefold() == next_name.casefold()
+                and status["Destination_System"] == next_address
+                and status["Destination_Body"] == 0
+            ):
+                logger.debug(
+                    "Waypoint route target confirmed: current=%r next=%r/%s body=0",
+                    current_system,
+                    next_name,
+                    next_address,
+                )
+                return True
+            logger.debug(
+                "Waypoint route target pending: expected=%r/%s active_name=%r active_system=%s active_body=%s",
+                next_name,
+                next_address,
+                status["Destination_Name"],
+                status["Destination_System"],
+                status["Destination_Body"],
+            )
+            sleep(IN_SYSTEM_TARGET_POLL_INTERVAL)
+
+        logger.warning(
+            "Waypoint route target confirmation timed out: expected=%r/%s active_name=%r active_system=%s active_body=%s",
+            next_name,
+            next_address,
+            status["Destination_Name"],
+            status["Destination_System"],
+            status["Destination_Body"],
+        )
+        self.ap_ckb("log", f"Could not confirm jump target {next_name}. Waypoint flight stopped.")
+        return False
+
+    def fsd_assist(self, scr_reg, expected_system: str | None = None) -> FsdAssistResult:
         """FSD Route Assist."""
         # TODO - can we enable this? Seems like a better way
         # nav_route_parser = NavRouteParser()
@@ -80,6 +186,7 @@ class AssistsMixin:
 
         # TODO - can we enable this? Seems like a better way
         # if nav_route_parser.get_last_system() is not None:
+        aborted = False
         if self.jn.ship_state()["target"]:
             # if we are starting the waypoint docked at a station, we need to undock first
             if self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
@@ -89,17 +196,26 @@ class AssistsMixin:
         # Keep jumping as long as there is a system to jump to.
         # TODO - can we enable this? Seems like a better way
         # while nav_route_parser.get_last_system() is not None:
-        while self.jn.ship_state()["target"]:
+        while (
+            self.jn.ship_state()["cur_star_system"].casefold() != expected_system.casefold()
+            if expected_system
+            else self.jn.ship_state()["target"]
+        ):
             self.update_overlay()
 
             if self.jn.ship_state()["status"] == "in_space" or self.jn.ship_state()["status"] == "in_supercruise":
+                if expected_system and not self._select_next_route_system(expected_system):
+                    self.keys.send("SetSpeedZero")
+                    return FsdAssistResult.Failed
                 self.set_ap_status("Align")
 
                 self.mnvr_to_target(scr_reg)
 
                 self.set_ap_status("Jump")
 
-                self.jump(scr_reg)
+                if not self.jump(scr_reg):
+                    aborted = True
+                    break
 
                 # update the distance counter
                 self.total_dist_jumped += self.jn.ship_state()["dist_jumped"]
@@ -125,6 +241,7 @@ class AssistsMixin:
                 if self.jn.ship_state()["fuel_percent"] < self.config["FuelThreasholdAbortAP"]:
                     self.ap_ckb("log", "AP Aborting, low fuel")
                     self.vce.say("AP Aborting, low fuel")
+                    aborted = True
                     break
 
         sleep(2)  # wait until screen stabilizes from possible last positioning
@@ -136,6 +253,9 @@ class AssistsMixin:
             f"location='{self.jn.ship_state()['location']}', journal target={self.jn.ship_state()['target']}"
         )
 
+        if aborted:
+            return FsdAssistResult.Failed
+
         # if there is no destination defined, we are done
         if not self.has_in_system_target(status):
             self.keys.send("SetSpeedZero")
@@ -143,19 +263,20 @@ class AssistsMixin:
             if self.config["AutomaticLogout"]:
                 sleep(5)
                 self.logout()
-            return True
+            return FsdAssistResult.RouteComplete
         # else there is a destination in System, so let jump over to SC Assist
         else:
             self.keys.send("SetSpeed100")
             self.vce.say("System Reached, preparing for supercruise")
             sleep(1)
-            return False
+            return FsdAssistResult.InSystemTarget
 
     def travel_assist(self, scr_reg):
         """Choose the required travel phase from the currently targeted system."""
         if self.jn.ship_state()["target"]:
             self.total_dist_jumped = 0
-            if self.fsd_assist(scr_reg) is False and self.travel_assist_enabled:
+            result = self.fsd_assist(scr_reg)
+            if result is FsdAssistResult.InSystemTarget and self.travel_assist_enabled:
                 self.set_ap_status("SC to Target")
                 self.sc_assist(scr_reg)
         else:
@@ -168,6 +289,27 @@ class AssistsMixin:
     def has_in_system_target(self, status) -> bool:
         """Return whether Status.json reports a non-main-star destination for SC Assist."""
         return status["Destination_Name"] != "" and status["Destination_Body"] != 0
+
+    def has_expected_in_system_target(self, status, target_name: str) -> bool:
+        """Return whether Status.json reports the requested in-system destination."""
+        if not self.has_in_system_target(status):
+            return False
+        if not target_name.strip():
+            return True
+        destination_name = status["Destination_Name"].strip().casefold()
+        expected_name = target_name.strip().casefold()
+        return destination_name == expected_name or (
+            "-" in destination_name and expected_name.endswith(destination_name)
+        )
+
+    def wait_for_expected_in_system_target(self, target_name: str, timeout: float = IN_SYSTEM_TARGET_TIMEOUT) -> bool:
+        """Wait briefly for Status.json to report the requested local destination."""
+        deadline = monotonic() + timeout
+        while monotonic() < deadline:
+            if self.has_expected_in_system_target(self.status.get_cleaned_data(), target_name):
+                return True
+            sleep(IN_SYSTEM_TARGET_POLL_INTERVAL)
+        return False
 
     # Supercruise Assist loop to travel to target in system and perform autodock
     #
@@ -352,6 +494,6 @@ class AssistsMixin:
                 return False
 
             # Jump to destination
-            res = self.jump_to_system(self.scrReg)
-            if res is False:
+            res = self.jump_to_system(self.scrReg, expected_system=self._single_waypoint_system)
+            if res is FsdAssistResult.Failed:
                 return False

@@ -60,36 +60,55 @@ class CargoParser:
     def get_file_modified_time(self) -> float:
         return os.path.getmtime(self.file_path)
 
-    def get_cargo_data(self):
+    def get_cargo_data(self, force=False):
         """Loads data from the JSON file and returns the data.
         { "timestamp":"2025-04-20T23:23:25Z", "event":"Cargo", "Vessel":"Ship", "Count":0, "Inventory":[
 
          ] }
         """
         # Check if file changed
-        if self.get_file_modified_time() == self.last_mod_time:
+        if not force and self.get_file_modified_time() == self.last_mod_time:
             # logger.debug(f'Cargo.json mod timestamp {self.last_mod_time} unchanged.')
             return self.current_data
 
         # Read file
-        backoff = 1
-        while True:
+        for attempt in range(3):
             try:
+                modified = self.get_file_modified_time()
                 with open(self.file_path, "r", encoding="utf-8") as file:
                     data = json.load(file)
-                    break
-            except Exception:
-                logger.debug("An error occurred reading Cargo.json file. File may be open.")
-                sleep(backoff)
-                logger.debug("Attempting to re-read Cargo.json file after delay.")
-                backoff *= 2
+                self.validate_inventory(data)
+                break
+            except (OSError, ValueError):
+                if attempt == 2:
+                    logger.error("Could not read valid Cargo.json after 3 attempts: %s", self.file_path)
+                    raise
+                logger.debug("Cargo.json unavailable or invalid; retrying read (%s/3).", attempt + 1)
+                sleep(0.2)
 
         # Store data
         self.current_data = data
-        self.last_mod_time = self.get_file_modified_time()
+        self.last_mod_time = modified
         # logger.debug(f'Cargo.json mod timestamp {self.last_mod_time} updated.')
         # print(json.dumps(data, indent=4))
         return data
+
+    @staticmethod
+    def validate_inventory(data):
+        if not isinstance(data, dict) or not isinstance(data.get("Inventory"), list):
+            raise ValueError("Cargo data must contain an Inventory list.")
+        if data.get("Vessel", "Ship") != "Ship":
+            raise ValueError("Cargo data does not describe the ship's hold.")
+        for item in data["Inventory"]:
+            if (
+                not isinstance(item, dict)
+                or not isinstance(item.get("Name"), str)
+                or not item["Name"].strip()
+                or type(item.get("Count")) is not int
+                or item["Count"] < 0
+                or ("Name_Localised" in item and not isinstance(item["Name_Localised"], str))
+            ):
+                raise ValueError("Cargo inventory contains an invalid item or quantity.")
 
     def get_item(self, item_name: str) -> dict[any] | None:
         """Get details of one item. Returns the item detail as below, or None if item does not exist.

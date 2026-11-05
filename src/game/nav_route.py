@@ -132,6 +132,36 @@ class NavRouteParser:
         # print(json.dumps(last_system, indent=4))
         return last_system.get("StarSystem", "") if isinstance(last_system, dict) else ""
 
+    def get_next_system(self, current_system: str, current_address: int | None = None) -> tuple[str, int] | None:
+        """Return the next route system's name and address after the current location."""
+        data = self.get_nav_route_data()
+        if data.get("event") != "NavRoute":
+            return None
+        route = data.get("Route") or []
+        for index, system in enumerate(route):
+            if not isinstance(system, dict):
+                continue
+            address = system.get("SystemAddress")
+            name = system.get("StarSystem")
+            matches = (
+                address == current_address
+                if current_address is not None and address is not None
+                else isinstance(name, str) and name.casefold() == current_system.casefold()
+            )
+            if not matches:
+                continue
+            if index + 1 == len(route):
+                return None
+            next_system = route[index + 1]
+            if isinstance(next_system, dict):
+                name = next_system.get("StarSystem")
+                address = next_system.get("SystemAddress")
+                if isinstance(name, str) and name.strip() and type(address) is int and address > 0:
+                    return name, address
+            logger.warning("NavRoute.json next system has no valid name and system address.")
+            return None
+        return None
+
 
 # Usage Example
 if __name__ == "__main__":

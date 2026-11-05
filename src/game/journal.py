@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import threading
+from collections import deque
 from datetime import datetime
 from json import loads
 from os import listdir
@@ -109,6 +110,8 @@ class EDJournal:
     def __init__(self, cb):
         self.ap_ckb = cb
         self._read_lock = threading.RLock()
+        self._market_sequence = 0
+        self._market_transactions = deque(maxlen=128)
         self.last_mod_time = None
         self.log_file = None
         self.current_log = self.get_latest_log()
@@ -183,6 +186,7 @@ class EDJournal:
 
         # open the latest journal
         self.log_file = open(log_name, encoding="utf-8")
+        self.current_log = log_name
         self.last_mod_time = None
 
     def parse_line(self, log):
@@ -191,8 +195,11 @@ class EDJournal:
             # parse ship status
             log_event = log["event"]
 
-            # If fileheader, pull whether running Odyssey or Horizons
-            if log_event == "Fileheader":
+            if log_event in ("MarketBuy", "MarketSell"):
+                self._market_sequence += 1
+                self._market_transactions.append((self._market_sequence, dict(log)))
+
+            elif log_event == "Fileheader":
                 # self.ship['odyssey'] = log['Odyssey']
                 self.ship["odyssey"] = True  # hardset to true for ED 4.0 since menus now same for Horizon
 
@@ -295,6 +302,7 @@ class EDJournal:
                 # StationName/StationType are only written when the commander is at a station
                 self.ship["cur_station"] = log.get("StationName", "")
                 self.ship["cur_station_type"] = log.get("StationType", "")
+                self.ship["StationServices"] = log.get("StationServices") if log.get("Docked") else None
                 if log.get("Docked"):
                     self.ship["status"] = "in_station"
 
@@ -388,6 +396,18 @@ class EDJournal:
         with self._read_lock:
             return self._read_new_lines()
 
+    def market_transaction_cursor(self) -> int:
+        """Drain existing events before sending a trade input."""
+        with self._read_lock:
+            self._read_new_lines()
+            return self._market_sequence
+
+    def market_transactions_since(self, cursor: int) -> list[dict]:
+        """Return fresh market transactions without consuming other readers' events."""
+        with self._read_lock:
+            self._read_new_lines()
+            return [dict(event) for sequence, event in self._market_transactions if sequence > cursor]
+
     def _read_new_lines(self):
         latest_log = self.get_latest_log()
 
@@ -396,7 +416,8 @@ class EDJournal:
             self.open_journal(latest_log)
 
         # Check if file changed
-        if self.get_file_modified_time() == self.last_mod_time:
+        modified_time = self.get_file_modified_time()
+        if modified_time == self.last_mod_time:
             return self.ship
 
         cnt = 0
@@ -414,7 +435,8 @@ class EDJournal:
                 if self.ship != current_jrnl:
                     logger.debug("Journal*.log: read: " + str(cnt) + " ship: " + str(self.ship))
 
-        self.last_mod_time = self.get_file_modified_time()
+        # An append after EOF must still be detected on the next read.
+        self.last_mod_time = modified_time
         return self.ship
 
 

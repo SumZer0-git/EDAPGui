@@ -238,6 +238,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         self._sc_sco_active_on_ls = 0
         self._single_waypoint_station = None
         self._single_waypoint_system = None
+        self._waypoint_plot = None
         self._prev_star_system = None
         self.honk_thread = None
         self._tce_integration = None
@@ -829,7 +830,24 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             self.ctype_async_raise(self.ap_thread, EdapInterruptError)
         self._single_waypoint_system = system
         self._single_waypoint_station = station
+        self._waypoint_plot = None
         self.single_waypoint_enabled = enable
+
+    def set_waypoint_plot(self, entry, station: bool) -> bool:
+        if any(
+            (
+                self.travel_assist_enabled,
+                self.waypoint_assist_enabled,
+                self.afk_combat_assist_enabled,
+                self.dss_assist_enabled,
+                self.single_waypoint_enabled,
+            )
+        ):
+            self.notify_user("Stop the running assist before selecting a waypoint target.")
+            return False
+        self._waypoint_plot = (dict(entry), station)
+        self.single_waypoint_enabled = True
+        return True
 
     def set_cv_view(self, enable=True, x=0, y=0):
         self.cv_view = enable
@@ -959,9 +977,19 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             elif self.single_waypoint_enabled:
                 self.update_overlay()
                 try:
-                    self.single_waypoint_assist()
+                    plot = self._waypoint_plot
+                    if plot is None:
+                        self.single_waypoint_assist()
+                    else:
+                        set_focus_elite_window()
+                        entry, station = plot
+                        if self.waypoint.plot_destination(entry, station):
+                            self.notify_user("Waypoint target confirmed.")
+                        else:
+                            self.notify_user("Waypoint target could not be confirmed. No flight was started.")
                 except EdapInterruptError:
                     logger.debug("Stopping Single Waypoint Assist")
+                self._waypoint_plot = None
                 self.single_waypoint_enabled = False
                 self._finish_assist("single_waypoint_stop")
 

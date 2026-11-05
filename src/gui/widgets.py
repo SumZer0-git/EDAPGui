@@ -5,6 +5,7 @@ import tkinter as tk
 import ttkbootstrap as ttk
 
 from gui.theme import (
+    BLUE,
     CARD,
     DISABLED,
     FIELD,
@@ -18,6 +19,14 @@ from gui.theme import (
     icon_font,
     rounded_image,
 )
+
+
+def section_card(app, parent, title):
+    label = tk.Label(parent, text=title, fg=BLUE, bg=app.theme.surface, font=("TkDefaultFont", 10, "bold"))
+    card = ttk.LabelFrame(parent, labelwidget=label, padding=app.metrics.u(12))
+    card.pack(fill="x", pady=(0, app.metrics.u(10)))
+    card.columnconfigure(0, weight=1)
+    return card
 
 
 class DarkToolTip(ttk.ToolTip):
@@ -59,8 +68,11 @@ class RoundButton(tk.Canvas):
         self.bind("<Leave>", lambda e: self._set_hover(False))
 
     def _click(self, event):
+        self.invoke()
+
+    def invoke(self):
         if self.command and not self.disabled:
-            self.command()
+            return self.command()
 
     def _set_hover(self, value):
         self.hover = value
@@ -104,7 +116,9 @@ class RoundButton(tk.Canvas):
         if fill is None:
             self.itemconfigure(self.shape, image="")
         else:
-            self.itemconfigure(self.shape, image=rounded_image(width, height, self.metrics.px(6), fill, line))
+            self.itemconfigure(
+                self.shape, image=rounded_image(width, height, self.metrics.px(6), fill, line, master=self)
+            )
         color = DISABLED if self.disabled else TEXT
         self.itemconfigure(self.icon_item, fill=color)
         self.itemconfigure(self.text_item, fill=color)

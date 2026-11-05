@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
-from time import sleep
+from time import monotonic, sleep
 
 from core.logger import logger
 from game.market import MarketParser
 from game.status import StatusParser
+from i18n.localization import normalize_text
 from vision.regions import reg_scale_for_station
+
+TRADE_DIALOG_TIMEOUT = 15.0
+
+
+class TradeDialogUnconfirmedError(Exception):
+    """Raised when OCR cannot confirm the selected commodity before trade inputs."""
 
 
 class EDStationServicesInShip:
@@ -29,10 +36,15 @@ class EDStationServicesInShip:
             "commodities_market": {"rect": [0.0, 0.0, 0.25, 0.25]},
         }
 
-    def goto_station_services(self) -> bool:
+    def goto_station_services(self, cockpit_timeout: float | None = None) -> bool:
         """Goto Station Services."""
         # Go to cockpit view
-        self.ap.ship_control.goto_cockpit_view()
+        if cockpit_timeout is None:
+            cockpit_ready = self.ap.ship_control.goto_cockpit_view()
+        else:
+            cockpit_ready = self.ap.ship_control.goto_cockpit_view(timeout=cockpit_timeout)
+        if not cockpit_ready:
+            return False
 
         self.keys.send("UI_Up", repeat=3)  # go to very top (refuel line)
         self.keys.send("UI_Down")  # station services
@@ -42,13 +54,18 @@ class EDStationServicesInShip:
         scl_reg = reg_scale_for_station(self.reg["connected_to"], self.screen.screen_width, self.screen.screen_height)
 
         # Wait for screen to appear
-        self.ocr.wait_for_text(self.ap, [self.locale["STN_SVCS_CONNECTED_TO"]], scl_reg)
+        texts = list(dict.fromkeys(self.locale.all_values("STN_SVCS_CONNECTED_TO")))
+        texts = [text for text in texts if text and text != "?"]
+        logger.debug("Station services detection: language=%s texts=%s", self.locale.language, texts)
+        if not self.ocr.wait_for_text(self.ap, texts, scl_reg):
+            logger.warning("Station services header was not detected before the OCR timeout.")
+            self.ap_ckb("log", "Could not confirm station services. Waypoint Assist stopped.")
+            return False
 
         # Store image
         # image = self.screen.get_screen_rect_pct(scl_reg['rect'])
         # cv2.imwrite(paths.debug_path('station-services', 'station-services.png'), image)
 
-        # After the OCR timeout, station services will have appeared, to return true anyway.
         return True
 
     def goto_construction_services(self) -> bool:
@@ -92,6 +109,48 @@ class EDStationServicesInShip:
         keys.send("UI_Right")  # Go to top of commodities list
         return True
 
+    def trade_dialog_matches(self, name: str, selling: bool) -> bool:
+        """Check only the modal heading and commodity name, never the background market list."""
+        title_region = reg_scale_for_station(
+            {"rect": [0.265, 0.196, 0.522, 0.243]}, self.screen.screen_width, self.screen.screen_height
+        )
+        name_region = reg_scale_for_station(
+            {"rect": [0.30, 0.279 if selling else 0.29, 0.522, 0.312 if selling else 0.325]},
+            self.screen.screen_width,
+            self.screen.screen_height,
+        )
+        title_words = self.ocr.image_simple_ocr(self.ocr.capture_region_pct(title_region))
+        name_words = self.ocr.image_simple_ocr(self.ocr.capture_region_pct(name_region))
+        title = normalize_text(" ".join(title_words or []))
+        actual = normalize_text(" ".join(name_words or []))
+        expected = normalize_text(name)
+        title_key = "STN_SVCS_SELL_COMMODITY" if selling else "STN_SVCS_BUY_COMMODITY"
+        titles = [normalize_text(value) for value in self.locale.all_values(title_key) if value != "?"]
+        matched = bool(expected) and title in titles and actual == expected
+        logger.debug(
+            "Trade dialog check: selling=%s expected=%r recognized=%r title=%r matched=%s",
+            selling,
+            expected,
+            actual,
+            title,
+            matched,
+        )
+        return matched
+
+    def confirm_trade_dialog(self, name: str, selling: bool) -> bool:
+        deadline = monotonic() + TRADE_DIALOG_TIMEOUT
+        while monotonic() < deadline:
+            if self.trade_dialog_matches(name, selling):
+                return True
+            sleep(0.25)
+        logger.warning(
+            "Trade dialog did not confirm the requested commodity before timeout: commodity=%r selling=%s timeout=%ss",
+            name,
+            selling,
+            TRADE_DIALOG_TIMEOUT,
+        )
+        return False
+
     def buy_commodity(self, keys, name: str, qty: int, free_cargo: int) -> tuple[bool, int]:
         """Buy qty of commodity. If qty >= 9999 then buy as much as possible.
         Assumed to be in the commodities buy screen in the list."""
@@ -123,22 +182,26 @@ class EDStationServicesInShip:
         # Actual qty we can sell
         act_qty = min(qty, stock, free_cargo)
 
-        # See if we buy all and if so, remove the item to update the list, as the item will be removed
-        # from the commodities screen, but the market.json will not be updated.
-        buy_all = act_qty == stock
-        if buy_all:
-            for i, value in enumerate(self.market_parser.current_data["Items"]):
-                if value["Name_Localised"].upper() == name.upper():
-                    # Set the stock bracket to 0, so it does not get included in available commodities list.
-                    self.market_parser.current_data["Items"][i]["StockBracket"] = 0
+        if index < 0 or act_qty <= 0:
+            logger.warning(
+                "Cannot select requested buy commodity: commodity=%r index=%s quantity=%s", name, index, act_qty
+            )
+            self.ap_ckb("log", f"Cannot select '{name}' for purchase. Waypoint Assist stopped.")
+            return False, 0
 
         if index > -1:
             keys.send("UI_Up", hold=3.0)  # go up to top of list
-            keys.send("UI_Down", hold=0.05, repeat=index)  # go down # of times user specified
+            keys.send(
+                "UI_Down",
+                hold=0.05,
+                repeat=index,
+            )
             sleep(0.5)
             keys.send("UI_Select")  # Select that commodity
 
             sleep(0.5)  # give time to popup
+            if not self.confirm_trade_dialog(name, selling=False):
+                raise TradeDialogUnconfirmedError(name)
             keys.send("UI_Up", repeat=2)  # go up to quantity to buy (may not default to this)
             # Log the planned quantity
             self.ap_ckb("log+vce", f"Buying {act_qty} units of {name}.")
@@ -152,6 +215,11 @@ class EDStationServicesInShip:
             keys.send("UI_Select")  # Select Buy
             sleep(0.5)
             # keys.send('UI_Back')  # Back to commodities list
+
+        if act_qty == stock:
+            for value in self.market_parser.current_data["Items"]:
+                if value["Name_Localised"].upper() == name.upper():
+                    value["StockBracket"] = 0
 
         return True, act_qty
 
@@ -192,13 +260,24 @@ class EDStationServicesInShip:
         # But maybe not at all stations!
         act_qty = qty
 
+        if index < 0:
+            logger.warning("Cannot select requested sell commodity: commodity=%r", name)
+            self.ap_ckb("log", f"Cannot select '{name}' for sale. Waypoint Assist stopped.")
+            return False, 0
+
         if index > -1:
             keys.send("UI_Up", hold=3.0)  # go up to top of list
-            keys.send("UI_Down", hold=0.05, repeat=index)  # go down # of times user specified
+            keys.send(
+                "UI_Down",
+                hold=0.05,
+                repeat=index,
+            )
             sleep(0.5)
             keys.send("UI_Select")  # Select that commodity
 
             sleep(0.5)  # give time for popup
+            if not self.confirm_trade_dialog(name, selling=True):
+                raise TradeDialogUnconfirmedError(name)
             keys.send("UI_Up", repeat=2)  # make sure at top
 
             # Log the planned quantity
