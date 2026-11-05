@@ -87,6 +87,9 @@ GuiFocusFSS = 9
 GuiFocusSAA = 10
 GuiFocusCodex = 11
 
+# Main-sequence star classes a fuel scoop can scoop from (KGBFOAM)
+SCOOPABLE_STAR_CLASSES = frozenset({"K", "G", "B", "F", "O", "A", "M"})
+
 # Journal.log Ship Name constants
 ship_name_map = {
     "adder": "Adder",

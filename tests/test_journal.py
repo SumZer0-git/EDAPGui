@@ -2,6 +2,8 @@
 
 import contextlib
 import io
+import threading
+import time
 import unittest
 from unittest.mock import patch
 
@@ -65,6 +67,30 @@ MODULES = [
 
 
 class ModuleChecksTestCase(unittest.TestCase):
+    def test_concurrent_ship_state_reads_are_serialized(self):
+        journal = EDJournal.__new__(EDJournal)
+        journal._read_lock = threading.RLock()
+        journal.ship = {}
+        active = []
+        overlaps = []
+
+        def read_new_lines():
+            active.append(1)
+            if len(active) > 1:
+                overlaps.append(len(active))
+            time.sleep(0.02)
+            active.pop()
+            return journal.ship
+
+        journal._read_new_lines = read_new_lines
+        threads = [threading.Thread(target=journal.ship_state) for _ in range(4)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        self.assertEqual(overlaps, [])
+
     def test_unknown_modules_default_to_fitted(self):
         for check in (check_fuel_scoop, check_adv_docking_computer, check_std_docking_computer, check_sco_fsd):
             self.assertTrue(check(None), check.__name__)

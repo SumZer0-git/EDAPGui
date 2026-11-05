@@ -30,6 +30,11 @@ class FieldsTestCase(unittest.TestCase):
     def test_overlay_choices_and_percent_offsets(self):
         unit = fields.FIELDS_BY_KEY["OverlayPositionUnit"]
         self.assertEqual(fields.parse(unit, "Percent"), "Percent")
+        font_weight = fields.FIELDS_BY_KEY["OverlayTextFontWeight"]
+        self.assertEqual(font_weight.label, "Font weight")
+        self.assertEqual(fields.parse(font_weight, "SemiBold"), "SemiBold")
+        with self.assertRaises(ValueError):
+            fields.parse(font_weight, "ExtraBold")
 
         values = {
             "OverlayPositionUnit": "Percent",
@@ -49,6 +54,26 @@ class FieldsTestCase(unittest.TestCase):
         values["OverlayTextYOffset"] = 101
         with self.assertRaises(ValueError):
             fields.validate_tab(TAB_OVERLAY, values)
+
+    def test_overlay_line_order_is_normalized_and_movable(self):
+        order_field = fields.FIELDS_BY_KEY["OverlayLineOrder"]
+        default = list(fields.DEFAULT_OVERLAY_LINE_ORDER)
+        self.assertEqual(default.index("jumps_bar"), default.index("jumps") + 1)
+        self.assertEqual(default.index("distance_bar"), default.index("distance") + 1)
+        self.assertTrue(all(setting in fields.FIELDS_BY_KEY for _key, setting in fields.OVERLAY_LINES))
+
+        parsed = fields.parse(order_field, "distance, mode,unknown,mode")
+        self.assertEqual(parsed[:2], ["distance", "mode"])
+        self.assertEqual(sorted(parsed), sorted(default))
+
+        ap = make_ap()
+        ap.config["OverlayLineOrder"] = parsed
+        self.assertEqual(fields.read(order_field, ap), ",".join(parsed))
+        self.assertEqual(fields.read(order_field, make_ap()), ",".join(default))
+
+        self.assertEqual(fields.move_overlay_line(default, "status", -1)[:2], ["status", "mode"])
+        self.assertEqual(fields.move_overlay_line(default, "mode", -1), default)
+        self.assertEqual(fields.move_overlay_line(default, "distance_bar", 1), default)
 
     def test_parse_number_in_range(self):
         field = fields.FIELDS_BY_KEY["RollRate"]

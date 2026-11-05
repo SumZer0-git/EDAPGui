@@ -7,6 +7,7 @@ from time import sleep
 
 from controls.directinput import SCANCODE
 from core.constants import (
+    SCOOPABLE_STAR_CLASSES,
     Flags2FsdScoActive,
     FlagsAnalysisMode,
     FlagsDocked,
@@ -881,13 +882,12 @@ class FlightMixin:
         has_fuel_scoop = self.jn.ship_state()["has_fuel_scoop"]
 
         logger.debug("refuel")
-        scoopable_stars = ["F", "O", "G", "K", "B", "A", "M"]
 
         if self.jn.ship_state()["status"] != "in_supercruise":
             logger.error("refuel=err1")
             return False
 
-        is_star_scoopable = self.jn.ship_state()["star_class"] in scoopable_stars
+        is_star_scoopable = self.jn.ship_state()["star_class"] in SCOOPABLE_STAR_CLASSES
 
         # if the sun is not scoopable, then set a low low threshold so we can pick up the dull red
         # sun types.  Since we won't scoop it doesn't matter how much we pitch up

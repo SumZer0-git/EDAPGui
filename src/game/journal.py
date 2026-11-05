@@ -6,6 +6,7 @@ whenever the state is accessed. Leveraged from https://github.com/skai2/EDAutopi
 from __future__ import annotations
 
 import os
+import threading
 from datetime import datetime
 from json import loads
 from os import listdir
@@ -107,6 +108,7 @@ def check_sco_fsd(modules: list[dict[str, any]] | None) -> bool:
 class EDJournal:
     def __init__(self, cb):
         self.ap_ckb = cb
+        self._read_lock = threading.RLock()
         self.last_mod_time = None
         self.log_file = None
         self.current_log = self.get_latest_log()
@@ -382,6 +384,11 @@ class EDJournal:
             logger.error(f"Error while reading journal: {e}")
 
     def ship_state(self):
+        # The assist thread and the overlay refresh thread both read the journal through one file handle.
+        with self._read_lock:
+            return self._read_new_lines()
+
+    def _read_new_lines(self):
         latest_log = self.get_latest_log()
 
         # open journal file if not open yet or there is a more recent journal

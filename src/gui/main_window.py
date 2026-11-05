@@ -387,7 +387,7 @@ class APGui:
             return
         self._set_save(field.tab, "dirty")
         self._cancel_save_job(field.tab)
-        delay = 1 if field.kind in ("bool", "choice") else SAVE_DELAY_MS
+        delay = 1 if field.kind in ("bool", "choice", "order") else SAVE_DELAY_MS
         self._save_jobs[field.tab] = self.root.after(delay, lambda: self.commit(field.tab))
 
     def _cancel_save_job(self, tab):
