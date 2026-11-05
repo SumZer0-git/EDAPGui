@@ -43,6 +43,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - Centralized AP status updates so the GUI footer and overlay show the same current status, while the GUI log keeps status history and additional user-facing messages.
+- Changed the route line in the middle of the GUI footer to `Jumps: 12 of 40 · 3,412.8 of 7,320.6 ly`, taken from the same route data as the overlay, as an alternative to the overlay. It is shown only while Travel, Waypoint or Single Waypoint Assist follows a route and is cleared at route end or stop. The old line with average seconds per jump and refuel count was removed.
 - Changed the overlay ship status to readable text (for example "Supercruise" instead of `in_supercruise`, "Unknown" before the first journal state, as for the current system and star class), with success color when docked and warning color when docking is denied. The current system line now separates system name and star class with an orange " | " instead of a comma.
 - Added more detailed AP status steps for in-system travel: "Entering supercruise", "Align", the supercruise target, "Approaching target", "Requesting docking", "Docking", "Refueling and repairing" after docking, and "Arrived at target" when docking is not possible. The status returns to Idle immediately when the assist ends.
 - Changed the default overlay settings to match the maintainer's current setup: enabled, top-left anchor, percentage offsets of 1% and 15%, Rajdhani size 14, 50% panel opacity, and all information lines visible. Existing configurations without a position unit keep pixel-based offsets.
@@ -50,7 +51,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Styled the status overlay with the GUI palette: a dark panel and border, orange labels, light values, muted placeholders, and a subtle text shadow.
 - Replaced the separate FSD Route Assist and Supercruise Assist controls with one Travel Assist option. It selects the FSD route when a system target is set and automatically continues to a local target when one remains; the former FSD start hotkey is retained as the Travel Assist hotkey.
 - Reorganized the README and user guides, added a dedicated keybindings guide, and documented current assist behavior and follow-up items in place of the obsolete design notes.
-- Updated the README screenshots for the new tab bar and added one of the Overlay tab.
+- Updated the README screenshots for the new tab bar and added one of the Overlay tab and one of the status overlay.
 - Expanded the project structure guide into a compact file-by-file tree with short responsibilities and placement boundaries.
 - Changed the target offset to be computed from the fitted center of the target circle instead of fixed correction values, so it is independent of the resolution.
 - Changed the supported languages to German and English; removed the French and Russian locales, the `sc-disengage` template and the deprecated `sc_disengage`.

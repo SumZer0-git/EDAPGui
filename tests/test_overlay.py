@@ -953,6 +953,58 @@ class OverlayRenderingTests(unittest.TestCase):
                         [call(stop_msg), call("ap_status", "Idle")],
                     )
 
+    def _route_info_autopilot(self, location, address, travel=True):
+        autopilot = EDAutopilot.__new__(EDAutopilot)
+        autopilot.travel_assist_enabled = travel
+        autopilot.waypoint_assist_enabled = False
+        autopilot.single_waypoint_enabled = False
+        autopilot.jn = SimpleNamespace(ship_state=lambda: {"location": location, "system_address": address})
+        autopilot.nav_route = SimpleNamespace(
+            get_nav_route_data=lambda: {
+                "event": "NavRoute",
+                "Route": [
+                    {"StarSystem": "A", "SystemAddress": 1, "StarPos": [0.0, 0.0, 0.0]},
+                    {"StarSystem": "B", "SystemAddress": 2, "StarPos": [3.0, 4.0, 0.0]},
+                    {"StarSystem": "C", "SystemAddress": 3, "StarPos": [3.0, 4.0, 12.0]},
+                ],
+            }
+        )
+        autopilot._overlay_route_active = False
+        autopilot._overlay_route_signature = ()
+        autopilot._overlay_route_systems = []
+        autopilot._overlay_route_completed_at = None
+        autopilot.ap_ckb = Mock()
+        return autopilot
+
+    def test_route_info_shows_jumps_and_distance_while_a_route_assist_runs(self):
+        autopilot = self._route_info_autopilot("B", 2)
+
+        autopilot.update_route_info()
+        autopilot.update_route_info()
+
+        autopilot.ap_ckb.assert_called_once_with("route_info", "Jumps: 1 of 2 \u00b7 5.0 of 17.0 ly")
+
+    def test_route_info_is_cleared_at_route_end_and_on_stop(self):
+        autopilot = self._route_info_autopilot("B", 2)
+        autopilot.update_route_info()
+
+        autopilot.jn = SimpleNamespace(ship_state=lambda: {"location": "C", "system_address": 3})
+        autopilot.update_route_info()
+        self.assertEqual(autopilot.ap_ckb.call_args_list[-1], call("route_info", ""))
+
+        autopilot.jn = SimpleNamespace(ship_state=lambda: {"location": "B", "system_address": 2})
+        autopilot.update_route_info()
+        autopilot.travel_assist_enabled = False
+        autopilot.update_route_info()
+        self.assertEqual(autopilot.ap_ckb.call_args_list[-1], call("route_info", ""))
+
+    def test_route_info_stays_empty_without_a_route_assist(self):
+        autopilot = self._route_info_autopilot("B", 2, travel=False)
+
+        autopilot.update_route_info()
+
+        autopilot.ap_ckb.assert_not_called()
+
     def test_status_lines_can_be_hidden_and_compacted(self):
         autopilot = EDAutopilot.__new__(EDAutopilot)
         autopilot.config = {
@@ -970,8 +1022,6 @@ class OverlayRenderingTests(unittest.TestCase):
         autopilot.afk_combat_assist_enabled = False
         autopilot.dss_assist_enabled = False
         autopilot.ap_state = "Idle"
-        autopilot.jump_cnt = 1
-        autopilot.total_jumps = 2
         autopilot.jn = SimpleNamespace(ship_state=lambda: {"status": "Flying", "star_class": "G", "location": "Sol"})
         autopilot.nav_route = SimpleNamespace(
             get_nav_route_data=lambda: {
@@ -1022,8 +1072,6 @@ class OverlayRenderingTests(unittest.TestCase):
         autopilot.afk_combat_assist_enabled = False
         autopilot.dss_assist_enabled = False
         autopilot.ap_state = "Idle"
-        autopilot.jump_cnt = 0
-        autopilot.total_jumps = 0
         autopilot.jn = SimpleNamespace(ship_state=lambda: {"status": None, "star_class": None, "location": None})
         autopilot.overlay = Mock()
 

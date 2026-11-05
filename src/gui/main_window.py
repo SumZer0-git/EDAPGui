@@ -130,9 +130,9 @@ class APGui:
         self.collapsed = self.state["collapsed"]
         self.pinned = self.state["topmost"]
         self.status_text = "Idle"
-        self.jump_text = ""
+        self.route_text = ""
         self.status = None
-        self.jumpcount = None
+        self.route_info = None
         self.tab_index = 0
         root.attributes("-topmost", self.pinned)
 
@@ -186,8 +186,8 @@ class APGui:
         self.statusbar.columnconfigure((0, 2), weight=1, uniform="footer")
         self.status = ttk.Label(self.statusbar, text=self.status_text, padding=(u(4), u(2)), foreground=MUTED)
         self.status.grid(row=0, column=0, sticky="w")
-        self.jumpcount = ttk.Label(self.statusbar, text=self.jump_text, padding=(u(4), u(2)), foreground=MUTED)
-        self.jumpcount.grid(row=0, column=1)
+        self.route_info = ttk.Label(self.statusbar, text=self.route_text, padding=(u(4), u(2)), foreground=MUTED)
+        self.route_info.grid(row=0, column=1)
         right = ttk.Frame(self.statusbar)
         right.grid(row=0, column=2, sticky="e")
         self.update_label = ttk.Label(
@@ -493,8 +493,8 @@ class APGui:
             self.stop_active_mode()
             self.swp_var.set(False)
             self.toggle_single_waypoint()
-        elif msg == "jumpcount":
-            self.update_jumpcount(body)
+        elif msg == "route_info":
+            self.update_route_info(body)
         elif msg == "update_ship_cfg":
             self.update_ship_cfg()
         else:
@@ -740,9 +740,9 @@ class APGui:
             self.log_text.configure(state="disabled")
             self.log_text.see("end")
 
-    def update_jumpcount(self, txt):
-        self.jump_text = txt
-        self.jumpcount.configure(text=txt)
+    def update_route_info(self, txt):
+        self.route_text = txt
+        self.route_info.configure(text=txt)
 
     def update_statusline(self, txt):
         self.status_text = txt

@@ -168,6 +168,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
     _overlay_lock = threading.RLock()
     _overlay_last_frame = None
     _overlay_status = None
+    _route_info_text = ""
 
     def __init__(self, cb, do_thread=True):
 
@@ -363,14 +364,11 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         self.pitchrate = 33.0
         self.sunpitchuptime = 0.0
 
-        self.jump_cnt = 0
         self.total_dist_jumped = 0
-        self.total_jumps = 0
         self._overlay_route_active = False
         self._overlay_route_signature = ()
         self._overlay_route_systems = []
         self._overlay_route_completed_at = None
-        self.refuel_cnt = 0
         self.current_ship_type = None
         self.gui_loaded = False
 
@@ -699,6 +697,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         while not self.terminate:
             try:
                 self.update_overlay()
+                self.update_route_info()
                 last_error = None
             except Exception as e:
                 if str(e) != last_error:
@@ -725,6 +724,24 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         else:
             self.overlay.overlay_paint()
 
+    def update_route_info(self):
+        """Publish route progress to the GUI footer while a route assist runs; otherwise clear it."""
+        text = ""
+        if self.travel_assist_enabled or self.waypoint_assist_enabled or self.single_waypoint_enabled:
+            with self._overlay_lock:
+                route_progress = self._get_overlay_route_progress(self.jn.ship_state())
+                route = self._overlay_route_systems
+            if route_progress is not None and route_progress[0] == "on_route":
+                _state, completed, total = route_progress
+                text = f"Jumps: {completed} of {total}"
+                route_distance = self._get_overlay_route_distance(route, completed)
+                if route_distance is not None:
+                    remaining, total_distance = route_distance
+                    text += f" \u00b7 {total_distance - remaining:,.1f} of {total_distance:,.1f} ly"
+        if text != self._route_info_text:
+            self._route_info_text = text
+            self.ap_ckb("route_info", text)
+
     def set_ap_status(self, txt):
         """Publish the current AP status to the overlay and GUI."""
         self.ap_state = txt
@@ -747,6 +764,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         """Reports the end of an assist after its thread work is done, so no late status can override Idle."""
         self.ap_ckb(stop_msg)
         self.set_ap_status("Idle")
+        self.update_route_info()
 
         # Performs left menu ops to request docking
 
@@ -907,10 +925,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
 
                 set_focus_elite_window()
                 self.update_overlay()
-                self.jump_cnt = 0
-                self.refuel_cnt = 0
                 self.total_dist_jumped = 0
-                self.total_jumps = 0
                 try:
                     self.waypoint_assist(self.keys, self.scrReg)
                 except EdapInterruptError:

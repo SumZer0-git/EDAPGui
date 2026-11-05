@@ -842,7 +842,6 @@ class FlightMixin:
                 continue
 
             logger.debug(f"FSD jump attempt {i + 1}: jump completed.")
-            self.jump_cnt = self.jump_cnt + 1
             self.keys.send("SetSpeedZero", repeat=3)  # Let's be triply sure that we set speed to 0% :)
             sleep(1)  # wait 1 sec after jump to allow graphics to stablize and accept inputs
             logger.debug("FSD jump handling complete.")
@@ -918,8 +917,6 @@ class FlightMixin:
             self.keys.send("SetSpeed50")
             sleep(1.7)
             self.keys.send("SetSpeedZero", repeat=3)
-
-            self.refuel_cnt += 1
 
             # The log will not reflect a FuelScoop until first 5 tons filled, then every 5 tons until complete
             # if we don't scoop first 5 tons with 40 sec break, since not scooping or not fast enough or not at all, then abort

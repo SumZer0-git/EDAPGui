@@ -1,7 +1,6 @@
 """The assist routines: FSD, SC, waypoint, AFK combat, DSS."""
 
 import threading
-import time
 from time import sleep
 
 from core.constants import Flags2GlideMode, FlagsDocked, FlagsLanded
@@ -79,13 +78,6 @@ class AssistsMixin:
         # nav_route_parser = NavRouteParser()
         logger.debug("self.jn.ship_state=" + str(self.jn.ship_state()))
 
-        starttime = time.time()
-        starttime -= 20  # to account for first instance not doing positioning
-
-        route_state = self.jn.ship_state()
-        if route_state["target"] and route_state["jumps_remains"] > 0:
-            self.total_jumps = self.jump_cnt + route_state["jumps_remains"]
-
         # TODO - can we enable this? Seems like a better way
         # if nav_route_parser.get_last_system() is not None:
         if self.jn.ship_state()["target"]:
@@ -109,9 +101,8 @@ class AssistsMixin:
 
                 self.jump(scr_reg)
 
-                # update jump counters
+                # update the distance counter
                 self.total_dist_jumped += self.jn.ship_state()["dist_jumped"]
-                self.total_jumps = self.jump_cnt + self.jn.ship_state()["jumps_remains"]
 
                 # reset, upon next Jump the Journal will be updated again, unless last jump,
                 # so we need to clear this out
@@ -119,17 +110,6 @@ class AssistsMixin:
                 self.jn.ship_state()["jumps_remains"] = 0
 
                 self.update_overlay()
-
-                avg_time_jump = (time.time() - starttime) / self.jump_cnt
-                self.ap_ckb(
-                    "jumpcount",
-                    "Dist: {:,.1f}".format(self.total_dist_jumped)
-                    + "ly"
-                    + "  Jumps: {}of{}".format(self.jump_cnt, self.total_jumps)
-                    + "  @{}s/j".format(int(avg_time_jump))
-                    + "  Fu#: "
-                    + str(self.refuel_cnt),
-                )
 
                 # Do the Discovery Scan (Honk)
                 self.honk_thread = threading.Thread(target=self.honk, daemon=True)
@@ -174,10 +154,7 @@ class AssistsMixin:
     def travel_assist(self, scr_reg):
         """Choose the required travel phase from the currently targeted system."""
         if self.jn.ship_state()["target"]:
-            self.jump_cnt = 0
-            self.refuel_cnt = 0
             self.total_dist_jumped = 0
-            self.total_jumps = 0
             if self.fsd_assist(scr_reg) is False and self.travel_assist_enabled:
                 self.set_ap_status("SC to Target")
                 self.sc_assist(scr_reg)

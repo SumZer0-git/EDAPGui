@@ -153,7 +153,6 @@ class JumpRetryTestCase(unittest.TestCase):
         flight.status.wait_for_flag_on.side_effect = [True, True]
         flight.status.wait_for_flag_off.side_effect = [True, True, True]
         flight.wait_for_fsd_jump_start.side_effect = [False, True]
-        flight.jump_cnt = 0
 
         with patch("routines.flight.sleep"):
             self.assertTrue(FlightMixin.jump(flight, None))
@@ -162,7 +161,6 @@ class JumpRetryTestCase(unittest.TestCase):
         self.assertEqual(flight.wait_for_fsd_jump_start.call_count, 2)
         flight.status.wait_for_flag_off.assert_any_call(FlagsFsdJump, 5)
         flight.status.wait_for_flag_off.assert_any_call(FlagsFsdCharging, 5)
-        self.assertEqual(flight.jump_cnt, 1)
 
     def test_retry_alignment_allows_stale_hyperspace_journal_status(self):
         flight = Mock()
@@ -212,7 +210,6 @@ class JumpRetryTestCase(unittest.TestCase):
         flight.status.wait_for_flag_on.return_value = True
         flight.status.wait_for_flag_off.return_value = True
         flight.wait_for_fsd_jump_start.side_effect = [False, True]
-        flight.jump_cnt = 0
 
         with patch("routines.flight.sleep"):
             self.assertTrue(FlightMixin.jump(flight, None))
