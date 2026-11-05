@@ -90,7 +90,7 @@ class APGui:
         self.log_lines = deque(maxlen=2000)
         self.log_text = None
         self.ui_queue = queue.Queue()  # messages from other threads, handled by the GUI thread
-        self.callback("log", f"Starting ED Autopilot {EDAP_VERSION}.")
+        self.notify_user(f"Starting ED Autopilot {EDAP_VERSION}.")
 
         self.ed_ap = ed_ap if ed_ap is not None else EDAutopilot(cb=self.callback)
         self.mouse = MousePoint()
@@ -129,10 +129,10 @@ class APGui:
         self.state = window_state.load()
         self.collapsed = self.state["collapsed"]
         self.pinned = self.state["topmost"]
-        self.status_text = "Ready"
-        self.jump_text = ""
+        self.status_text = "Idle"
+        self.route_text = ""
         self.status = None
-        self.jumpcount = None
+        self.route_info = None
         self.tab_index = 0
         root.attributes("-topmost", self.pinned)
 
@@ -166,7 +166,7 @@ class APGui:
 
         self.gui_loaded = True
         self.ed_ap.gui_loaded = True
-        self.callback("log", "ED Autopilot loaded successfully.")
+        self.notify_user("ED Autopilot loaded successfully.")
 
     # window layout
 
@@ -186,8 +186,8 @@ class APGui:
         self.statusbar.columnconfigure((0, 2), weight=1, uniform="footer")
         self.status = ttk.Label(self.statusbar, text=self.status_text, padding=(u(4), u(2)), foreground=MUTED)
         self.status.grid(row=0, column=0, sticky="w")
-        self.jumpcount = ttk.Label(self.statusbar, text=self.jump_text, padding=(u(4), u(2)), foreground=MUTED)
-        self.jumpcount.grid(row=0, column=1)
+        self.route_info = ttk.Label(self.statusbar, text=self.route_text, padding=(u(4), u(2)), foreground=MUTED)
+        self.route_info.grid(row=0, column=1)
         right = ttk.Frame(self.statusbar)
         right.grid(row=0, column=2, sticky="e")
         self.update_label = ttk.Label(
@@ -387,7 +387,7 @@ class APGui:
             return
         self._set_save(field.tab, "dirty")
         self._cancel_save_job(field.tab)
-        delay = 1 if field.kind in ("bool", "choice") else SAVE_DELAY_MS
+        delay = 1 if field.kind in ("bool", "choice", "order") else SAVE_DELAY_MS
         self._save_jobs[field.tab] = self.root.after(delay, lambda: self.commit(field.tab))
 
     def _cancel_save_job(self, tab):
@@ -476,11 +476,13 @@ class APGui:
             self.ui_queue.put((msg, body))
             return
         if msg == "log":
-            self.log_msg(body)
+            self.notify_user(body)
         elif msg == "log+vce":
-            self.log_msg(body)
-            self.ed_ap.vce.say(body)
-        elif msg == "statusline":
+            self.notify_user(body, speak=True)
+        elif msg == "user_message":
+            message, speak = body
+            self.notify_user(message, speak=speak)
+        elif msg == "ap_status":
             self.update_statusline(body)
         elif msg == "single_waypoint_stop":
             logger.debug("Detected 'single_waypoint_stop' callback msg")
@@ -491,8 +493,8 @@ class APGui:
             self.stop_active_mode()
             self.swp_var.set(False)
             self.toggle_single_waypoint()
-        elif msg == "jumpcount":
-            self.update_jumpcount(body)
+        elif msg == "route_info":
+            self.update_route_info(body)
         elif msg == "update_ship_cfg":
             self.update_ship_cfg()
         else:
@@ -547,7 +549,7 @@ class APGui:
             self.start_dss()
         else:
             self.ed_ap.set_afk_combat_assist(True)
-            self.log_msg("AFK Combat Assist start")
+            self.notify_user("AFK Combat Assist start")
 
     def _stop_mode(self, key):
         if key == "travel":
@@ -558,7 +560,7 @@ class APGui:
             self.stop_dss()
         else:
             self.ed_ap.set_afk_combat_assist(False)
-            self.log_msg("AFK Combat Assist stop")
+            self.notify_user("AFK Combat Assist stop")
 
     def _refresh_modes(self):
         for key, button in self.items.items():
@@ -603,42 +605,42 @@ class APGui:
         logger.debug("Entered: start_travel")
         self.ed_ap.set_travel_assist(True)
         self.TRAVEL_A_running = True
-        self.log_msg("Travel Assist start")
+        self.notify_user("Travel Assist start")
         self.ed_ap.vce.say("Travel Assist On")
 
     def stop_travel(self):
         logger.debug("Entered: stop_travel")
         self.ed_ap.set_travel_assist(False)
         self.TRAVEL_A_running = False
-        self.log_msg("Travel Assist stop")
+        self.notify_user("Travel Assist stop")
         self.ed_ap.vce.say("Travel Assist Off")
 
     def start_waypoint(self):
         logger.debug("Entered: start_waypoint")
         self.ed_ap.set_waypoint_assist(True)
         self.WP_A_running = True
-        self.log_msg("Waypoint Assist start")
+        self.notify_user("Waypoint Assist start")
         self.ed_ap.vce.say("Waypoint Assist On")
 
     def stop_waypoint(self):
         logger.debug("Entered: stop_waypoint")
         self.ed_ap.set_waypoint_assist(False)
         self.WP_A_running = False
-        self.log_msg("Waypoint Assist stop")
+        self.notify_user("Waypoint Assist stop")
         self.ed_ap.vce.say("Waypoint Assist Off")
 
     def start_dss(self):
         logger.debug("Entered: start_dss")
         self.ed_ap.set_dss_assist(True)
         self.DSS_A_running = True
-        self.log_msg("DSS Assist start")
+        self.notify_user("DSS Assist start")
         self.ed_ap.vce.say("DSS Assist On")
 
     def stop_dss(self):
         logger.debug("Entered: stop_dss")
         self.ed_ap.set_dss_assist(False)
         self.DSS_A_running = False
-        self.log_msg("DSS Assist stop")
+        self.notify_user("DSS Assist stop")
         self.ed_ap.vce.say("DSS Assist Off")
 
     def toggle_single_waypoint(self):
@@ -658,7 +660,7 @@ class APGui:
         if system != "" or station != "":
             self.ed_ap.set_single_waypoint_assist(system, station, True)
             self.SWP_A_running = True
-            self.log_msg("Single Waypoint Assist start")
+            self.notify_user("Single Waypoint Assist start")
             self.ed_ap.vce.say("Single Waypoint Assist On")
 
     def stop_single_waypoint_assist(self):
@@ -666,7 +668,7 @@ class APGui:
         logger.debug("Entered: stop_single_waypoint_assist")
         self.ed_ap.set_single_waypoint_assist("", "", False)
         self.SWP_A_running = False
-        self.log_msg("Single Waypoint Assist stop")
+        self.notify_user("Single Waypoint Assist stop")
         self.ed_ap.vce.say("Single Waypoint Assist Off")
 
     # info and updates
@@ -696,7 +698,7 @@ class APGui:
         if tag is not None and updates.is_newer(tag):
             self.update_tag = tag
             self.update_text.set(f"A new release ({tag}) is available.")
-            self.log_msg(f"A new release version ({tag}) is available, see the Info tab.")
+            self.notify_user(f"A new release version ({tag}) is available, see the Info tab.")
         else:
             self.update_tag = None
             if tag is None:
@@ -717,6 +719,17 @@ class APGui:
 
     # log and status
 
+    def notify_user(self, msg, speak=False):
+        if threading.current_thread() is not threading.main_thread():
+            self.ui_queue.put(("user_message", (msg, speak)))
+            return
+        if speak and not hasattr(self, "ed_ap"):
+            self.ui_queue.put(("user_message", (msg, speak)))
+            return
+        self.log_msg(msg)
+        if speak:
+            self.ed_ap.vce.say(msg)
+
     def log_msg(self, msg):
         message = datetime.now().strftime("%H:%M:%S: ") + msg
         logger.info(msg)
@@ -727,9 +740,9 @@ class APGui:
             self.log_text.configure(state="disabled")
             self.log_text.see("end")
 
-    def update_jumpcount(self, txt):
-        self.jump_text = txt
-        self.jumpcount.configure(text=txt)
+    def update_route_info(self, txt):
+        self.route_text = txt
+        self.route_info.configure(text=txt)
 
     def update_statusline(self, txt):
         self.status_text = txt

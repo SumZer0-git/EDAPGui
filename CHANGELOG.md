@@ -14,8 +14,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - Added a new dark user interface built with ttkbootstrap: sidebar with the assist modes (only one active at a time) and a Stop All button, tabs for Ship (with the log below the ship rates), Waypoints, Settings, Debug, and Info, a sidebar that collapses to an icon strip, an always-on-top pin, a power button with Restart and Exit, a native dark title bar, and per-monitor DPI scaling. The window has a fixed size and fits a portrait 1080p monitor.
-- Added a dedicated Overlay tab with automatic saving, corner anchoring, pixel or percentage offsets, font-size and panel-opacity controls, and checkboxes for individual status lines. The overlay uses a bundled Rajdhani font.
-- Added semantic overlay colors for active, successful, caution, and idle states, plus route-aware jump progress that follows the current system during manual travel and while EDAPGui is idle. The jump line is hidden without a plotted route, shows a muted "Off route" state when needed, and marks route completion in green for up to 60 seconds.
+- Added a dedicated Overlay tab with automatic saving, corner anchoring, pixel or percentage offsets, font-size, font-weight and panel-opacity controls, and checkboxes for individual status lines. The overlay includes bundled Rajdhani Light, Regular, Medium, SemiBold and Bold fonts.
+- Added semantic overlay colors for active, successful, caution, and idle states, plus route-aware jump progress and a separately configurable planned-route distance display. Both follow the current system during manual travel and while EDAPGui is idle; jump progress marks route completion in green for up to 60 seconds.
+- Added optional overlay lines for the main fuel tank level (live from `Status.json`, colored against the refuel and abort thresholds, with a scooping hint), the route destination, and the next route star class with whether it can be fuel scooped.
+- Added a user-defined overlay line order on the Overlay tab (up/down arrows per line and a Reset order button) and separately toggleable progress bars for jumps and route distance. Each bar is its own line and sits below its text by default; it shows full progress on route completion and disappears with the jump count.
 - Added automatic saving of the Ship, Overlay, Settings, and Debug tabs with a saved, unsaved, or not-saved indicator in the lower right corner of the tab (the saved indicator disappears after 3 seconds); the window position, collapsed state, and always-on-top are remembered in `user_data/configs/gui.json`.
 - Added offline unit tests for the settings model and the stored window state of the user interface.
 - Added `core/version.py` as the single place for the application version (still 1.7.0); the footer and log read it from there.
@@ -40,12 +42,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Centralized AP status updates so the GUI footer and overlay show the same current status, while the GUI log keeps status history and additional user-facing messages.
+- Changed the route line in the middle of the GUI footer to `Jumps: 12 of 40 · 3,412.8 of 7,320.6 ly`, taken from the same route data as the overlay, as an alternative to the overlay. It is shown only while Travel, Waypoint or Single Waypoint Assist follows a route and is cleared at route end or stop. The old line with average seconds per jump and refuel count was removed.
+- Changed the overlay ship status to readable text (for example "Supercruise" instead of `in_supercruise`, "Unknown" before the first journal state, as for the current system and star class), with success color when docked and warning color when docking is denied. The current system line now separates system name and star class with an orange " | " instead of a comma.
+- Added more detailed AP status steps for in-system travel: "Entering supercruise", "Align", the supercruise target, "Approaching target", "Requesting docking", "Docking", "Refueling and repairing" after docking, and "Arrived at target" when docking is not possible. The status returns to Idle immediately when the assist ends.
 - Changed the default overlay settings to match the maintainer's current setup: enabled, top-left anchor, percentage offsets of 1% and 15%, Rajdhani size 14, 50% panel opacity, and all information lines visible. Existing configurations without a position unit keep pixel-based offsets.
 - Changed the overlay to follow Elite's client window, stay below unrelated windows, and request Windows' capture-exclusion mode. Rendering now uses a thread-safe Pillow surface with per-monitor DPI handling, and the overlay can be enabled or disabled without restarting EDAPGui.
 - Styled the status overlay with the GUI palette: a dark panel and border, orange labels, light values, muted placeholders, and a subtle text shadow.
 - Replaced the separate FSD Route Assist and Supercruise Assist controls with one Travel Assist option. It selects the FSD route when a system target is set and automatically continues to a local target when one remains; the former FSD start hotkey is retained as the Travel Assist hotkey.
 - Reorganized the README and user guides, added a dedicated keybindings guide, and documented current assist behavior and follow-up items in place of the obsolete design notes.
-- Updated the README screenshots for the new tab bar and added one of the Overlay tab.
+- Updated the README screenshots for the new tab bar and added one of the Overlay tab and one of the status overlay.
 - Expanded the project structure guide into a compact file-by-file tree with short responsibilities and placement boundaries.
 - Changed the target offset to be computed from the fitted center of the target circle instead of fixed correction values, so it is independent of the resolution.
 - Changed the supported languages to German and English; removed the French and Russian locales, the `sc-disengage` template and the deprecated `sc_disengage`.
@@ -87,6 +93,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Fixed the overlay not refreshing while an assist was running, so the ship status showed "Supercruise" during a hyperspace jump and route progress lagged. A separate refresh thread now updates the overlay every second, redraws only when the shown content changed, and journal reads are serialized between threads.
+- Fixed the overlay jump counter and progress bar disappearing during the final jump, because the game clears the route before arrival. Progress now stays at the last-but-one system until the destination is reached and then shows as complete.
 - Fixed the overlay's AP STATUS line keeping the last assist status, for example "Maneuvering", after an assist stopped. The GUI status line and the overlay now share one status source, which is set to Idle once any assist has actually finished, whether stopped by the user, at route end or after an error.
 - Fixed Travel Assist starting Supercruise Assist after a false-positive compass match when no local destination was set. Supercruise Assist now starts only when the game's `Status.json` reports a non-main-star destination.
 - Fixed overlay text and panel sizing being multiplied by both game resolution and Windows display scaling. Font size is now in points and follows monitor DPI only; changing monitors triggers a redraw. Saved font-size values are not reset.

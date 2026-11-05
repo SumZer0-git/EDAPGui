@@ -3,6 +3,7 @@
 import unittest
 from unittest.mock import Mock, patch
 
+from core.types import ScTargetAlignReturn
 from routines.assists import AssistsMixin
 
 
@@ -38,7 +39,7 @@ class InSystemTargetTestCase(unittest.TestCase):
         assists.status = Mock()
         assists.status.get_cleaned_data.return_value = status()
         assists.status.get_flag.return_value = False
-        assists.update_ap_status = Mock()
+        assists.set_ap_status = Mock()
         assists.sc_assist = Mock()
 
         with patch("routines.assists.sleep"):
@@ -61,13 +62,73 @@ class InSystemTargetTestCase(unittest.TestCase):
         assists.ap_ckb.assert_called_once_with("log", "No local target found. Select a target and try again.")
 
 
+class ScAssistStatusTestCase(unittest.TestCase):
+    def make_assists(self, ap_state, drop_type=None):
+        assists = Assists([True])
+        assists.ap_state = ap_state
+        statuses = []
+
+        def set_ap_status(text):
+            assists.ap_state = text
+            statuses.append(text)
+
+        assists.set_ap_status = set_ap_status
+        assists.ap_ckb = Mock()
+        assists.vce = Mock()
+        assists.keys = Mock()
+        assists.ship_control = Mock()
+        assists.status = Mock()
+        assists.status.get_cleaned_data.return_value = status("Some Carrier", 20)
+        assists.status.get_flag.return_value = False
+        assists.jn = Mock()
+        assists.jn.ship_state.return_value = {
+            "status": "in_supercruise",
+            "interdicted": False,
+            "has_adv_dock_comp": True,
+            "has_std_dock_comp": False,
+            "SupercruiseDestinationDrop_type": drop_type,
+        }
+        assists.nav_align = Mock()
+        assists.sc_target_align = Mock(return_value=ScTargetAlignReturn.Disengage)
+        assists.debug_overlay = False
+        assists.dock = Mock()
+        return assists, statuses
+
+    def run_sc_assist(self, assists):
+        with patch("routines.assists.sleep"):
+            assists.sc_assist(None)
+
+    def test_travel_assist_reports_each_phase_until_docked(self):
+        assists, statuses = self.make_assists("SC to Target")
+
+        self.run_sc_assist(assists)
+
+        self.assertEqual(statuses, ["Align", "SC to Target", "Approaching target", "Docking Complete"])
+        assists.dock.assert_called_once_with()
+
+    def test_waypoint_station_name_is_kept_for_the_cruise_phase(self):
+        assists, statuses = self.make_assists("SC to Station: Jameson Memorial")
+
+        self.run_sc_assist(assists)
+
+        self.assertEqual(statuses[:2], ["Align", "SC to Station: Jameson Memorial"])
+
+    def test_target_without_docking_reports_arrival(self):
+        assists, statuses = self.make_assists("SC to Target", drop_type="$USS_Type_Ceremonial;")
+
+        self.run_sc_assist(assists)
+
+        self.assertEqual(statuses[-1], "Arrived at target")
+        assists.dock.assert_not_called()
+
+
 class TravelAssistTestCase(unittest.TestCase):
     def setUp(self):
         self.assists = Assists([])
         self.assists.jn = Mock()
         self.assists.fsd_assist = Mock()
         self.assists.sc_assist = Mock()
-        self.assists.update_ap_status = Mock()
+        self.assists.set_ap_status = Mock()
         self.assists.status = Mock()
         self.assists.ap_ckb = Mock()
 

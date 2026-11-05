@@ -5,8 +5,18 @@ import tkinter as tk
 import ttkbootstrap as ttk
 
 from core.version import EDAP_VERSION
-from gui.fields import DSS_BUTTONS, FIELDS_BY_KEY, LOG_LEVELS, TAB_OVERLAY, fields_of
-from gui.theme import BLUE, ORANGE, PANEL, TEXT
+from gui.fields import (
+    DEFAULT_OVERLAY_LINE_ORDER,
+    DSS_BUTTONS,
+    FIELDS_BY_KEY,
+    LOG_LEVELS,
+    OVERLAY_LINES,
+    TAB_OVERLAY,
+    fields_of,
+    move_overlay_line,
+    normalize_overlay_line_order,
+)
+from gui.theme import BLUE, DISABLED, MUTED, ORANGE, PANEL, TEXT
 from gui.widgets import RoundButton, add_tooltip
 
 TOOLTIPS = {
@@ -153,16 +163,59 @@ def build_overlay(app, page):
 
     appearance = _card(app, right, "Appearance")
     _field(app, appearance, "OverlayTextFontSize", 0)
-    _field(app, appearance, "OverlayPanelOpacity", 1)
+    _field(app, appearance, "OverlayTextFontWeight", 1)
+    _field(app, appearance, "OverlayPanelOpacity", 2)
 
     visible = _card(app, right, "Visible information")
-    for row, key in enumerate(
-        ("OverlayShowMode", "OverlayShowStatus", "OverlayShowShip", "OverlayShowSystem", "OverlayShowJumps")
-    ):
-        _field(app, visible, key, row)
+    _overlay_lines(app, visible)
 
     _page_layout(page)
     _save_label(app, page, TAB_OVERLAY)
+
+
+def _overlay_lines(app, card):
+    """Checkbox per overlay line with arrows to change the line order."""
+    order_var = app.vars["OverlayLineOrder"]
+    pad = app.metrics.u(2)
+    rows = {}
+
+    def arrow(text, key, step):
+        label = tk.Label(card, text=text, bg=app.theme.surface, cursor="hand2", font=("TkDefaultFont", 9))
+        label.bind("<Button-1>", lambda e: move(key, step))
+        label.bind("<Enter>", lambda e: label.cget("fg") == MUTED and label.configure(fg=ORANGE))
+        label.bind("<Leave>", lambda e: label.cget("fg") == ORANGE and label.configure(fg=MUTED))
+        return label
+
+    for key, setting in OVERLAY_LINES:
+        field = FIELDS_BY_KEY[setting]
+        check = ttk.Checkbutton(card, text=field.label, variable=app.vars[setting])
+        add_tooltip(check, field.tip)
+        rows[key] = (check, arrow("▲", key, -1), arrow("▼", key, 1))
+
+    def layout():
+        order = normalize_overlay_line_order(order_var.get())
+        last = len(order) - 1
+        for index, key in enumerate(order):
+            check, up, down = rows[key]
+            check.grid(row=index, column=0, sticky="w", pady=pad)
+            up.grid(row=index, column=1, padx=(app.metrics.u(8), app.metrics.u(2)))
+            down.grid(row=index, column=2)
+            up.configure(fg=DISABLED if index == 0 else MUTED)
+            down.configure(fg=DISABLED if index == last else MUTED)
+
+    def move(key, step):
+        order = move_overlay_line(order_var.get(), key, step)
+        if order != normalize_overlay_line_order(order_var.get()):
+            order_var.set(",".join(order))
+            layout()
+
+    def reset():
+        order_var.set(",".join(DEFAULT_OVERLAY_LINE_ORDER))
+        layout()
+
+    layout()
+    reset_button = _button(app, card, "Reset order", reset, len(rows), "Restore the default line order.")
+    reset_button.grid_configure(columnspan=3, pady=(app.metrics.u(12), app.metrics.u(3)))
 
 
 def _build_log(app, page):

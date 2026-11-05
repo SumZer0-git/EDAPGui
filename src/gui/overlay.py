@@ -18,7 +18,7 @@ from PIL import Image, ImageChops, ImageColor, ImageDraw, ImageFont
 
 from core import paths
 from core.logger import logger
-from gui.theme import BG, BLUE, GREEN, LINE, MUTED, ORANGE, TEXT, YELLOW
+from gui.theme import BG, BLUE, GREEN, LINE, MUTED, ORANGE, RED, TEXT, YELLOW
 
 elite_dangerous_window = "Elite - Dangerous (CLIENT)"
 _PANEL_COLOR = ImageColor.getrgb(BG)
@@ -30,6 +30,7 @@ _STATUS_TEXT_COLORS = {
     "active": ImageColor.getrgb(BLUE),
     "success": ImageColor.getrgb(GREEN),
     "warning": ImageColor.getrgb(YELLOW),
+    "error": ImageColor.getrgb(RED),
 }
 
 _WM_REDRAW = win32con.WM_APP + 1
@@ -146,13 +147,26 @@ _gdi32.DeleteDC.argtypes = [wintypes.HDC]
 _gdi32.DeleteDC.restype = wintypes.BOOL
 
 
+_RAJDHANI_FONT_WEIGHTS = ("Light", "Regular", "Medium", "SemiBold", "Bold")
+
+
 @lru_cache(maxsize=32)
-def _load_font(font_name: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+def _load_font(font_name: str, size: int, weight: str = "Medium") -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     if font_name.casefold() == "rajdhani":
+        if weight not in _RAJDHANI_FONT_WEIGHTS:
+            weight = "Medium"
+        font_path = paths.FONTS_DIR / f"Rajdhani-{weight}.ttf"
         try:
-            return ImageFont.truetype(str(paths.FONTS_DIR / "Rajdhani-Medium.ttf"), size)
+            return ImageFont.truetype(str(font_path), size)
         except OSError:
-            logger.warning("Could not load the bundled Rajdhani overlay font.")
+            if weight != "Medium":
+                logger.warning(f"Could not load the bundled Rajdhani {weight} overlay font; falling back to Medium.")
+                try:
+                    return ImageFont.truetype(str(paths.FONTS_DIR / "Rajdhani-Medium.ttf"), size)
+                except OSError:
+                    logger.warning("Could not load the bundled Rajdhani Medium overlay font.")
+            else:
+                logger.warning("Could not load the bundled Rajdhani Medium overlay font.")
 
     candidates = []
     try:
@@ -247,18 +261,31 @@ def _render_image(
     anchor: str = "Top left",
     position_unit: str = "Pixels",
     panel_opacity: int = 78,
-    progress: float | None = None,
+    bars: dict | None = None,
+    font_weight: str = "Medium",
 ) -> tuple[Image.Image, tuple[int, int]]:
     dpi_scale = dpi / 96
     pixel_size = max(1, round(dpi * font_size / 72))
-    font = _load_font(font_name, pixel_size)
+    font = _load_font(font_name, pixel_size, font_weight)
     line_height = pixel_size
     column_step = max(1, round(font_size * dpi_scale))
     panel_padding = max(1, round(12 * dpi_scale))
     valid_anchors = ("Top left", "Top right", "Bottom left", "Bottom right")
     anchor = anchor if anchor in valid_anchors else "Top left"
     panel_alpha = round(max(0, min(panel_opacity, 100)) * 255 / 100)
-    progress_fraction = None if progress is None else max(0.0, min(progress, 1.0))
+
+    # Progress bars occupy their own, thinner rows between the text rows; the gap below matches the
+    # visible space between the text above (cap height) and the bar.
+    bar_offset = max(1, round(2 * dpi_scale))
+    bar_height = max(3, round(4 * dpi_scale))
+    bar_gap = max(4, round(8 * dpi_scale))
+    bar_row_height = bar_offset + bar_height + bar_gap
+    bar_rows = sorted(
+        (row, max(0.0, min(fraction, 1.0))) for fraction, row in (bars or {}).values() if fraction is not None
+    )
+
+    def row_top(row):
+        return row * line_height - sum(line_height - bar_row_height for bar_row, _ in bar_rows if bar_row < row)
 
     text_elements = []
     text_bounds = []
@@ -269,7 +296,7 @@ def _render_image(
         else:
             segments, row, col = entry
         x = col * column_step
-        y = row * line_height
+        y = row_top(row)
         for value, color in segments:
             if not value:
                 continue
@@ -282,19 +309,22 @@ def _render_image(
 
     bounds = []
     panel = None
-    progress_rect = None
-    if text_bounds:
-        min_x = min(bound[0] for bound in text_bounds)
-        min_y = min(bound[1] for bound in text_bounds)
-        max_x = max(bound[2] for bound in text_bounds)
-        max_y = max(bound[3] for bound in text_bounds)
-        text_height = max_y - min_y
+    bar_rects = []
+    if text_bounds or bar_rows:
+        if text_bounds:
+            min_x = min(bound[0] for bound in text_bounds)
+            max_x = max(bound[2] for bound in text_bounds)
+        else:
+            min_x, max_x = 0, 12 * column_step
+        content_bounds = list(text_bounds)
+        for row, fraction in bar_rows:
+            top_y = row_top(row) + bar_offset
+            bar_rects.append(((min_x, top_y, max_x, top_y + bar_height), fraction))
+            content_bounds.append((min_x, top_y, max_x, top_y + bar_height))
+        min_y = min(bound[1] for bound in content_bounds)
+        max_y = max(bound[3] for bound in content_bounds)
         panel_width = max_x - min_x + 2 * panel_padding
-        panel_height = text_height + 2 * panel_padding
-        if progress_fraction is not None:
-            progress_bar_height = max(3, round(4 * dpi_scale))
-            progress_bar_gap = max(2, round(4 * dpi_scale))
-            panel_height += progress_bar_gap + progress_bar_height
+        panel_height = max_y - min_y + 2 * panel_padding
         offset_x, offset_y = pos
         if position_unit == "Percent":
             offset_x = round(width * max(0, min(offset_x, 100)) / 100)
@@ -305,17 +335,13 @@ def _render_image(
         panel_y = max(0, min(panel_y, max(0, height - panel_height)))
         panel = (panel_x, panel_y, panel_x + panel_width, panel_y + panel_height)
         bounds.append(panel)
-        if progress_fraction is not None:
-            progress_rect = (
-                panel_x + panel_padding,
-                panel_y + panel_padding + text_height + progress_bar_gap,
-                panel_x + panel_width - panel_padding,
-                panel_y + panel_padding + text_height + progress_bar_gap + progress_bar_height,
-            )
-        text_elements = [
-            (value, panel_x + panel_padding + x - min_x, panel_y + panel_padding + y - min_y, color)
-            for value, x, y, color in text_elements
+        shift_x = panel_x + panel_padding - min_x
+        shift_y = panel_y + panel_padding - min_y
+        bar_rects = [
+            ((x0 + shift_x, y0 + shift_y, x1 + shift_x, y1 + shift_y), fraction)
+            for (x0, y0, x1, y1), fraction in bar_rects
         ]
+        text_elements = [(value, x + shift_x, y + shift_y, color) for value, x, y, color in text_elements]
 
     rect_elements = []
     for pt1, pt2, color, thickness in lines.values():
@@ -360,11 +386,11 @@ def _render_image(
             width=max(1, round(dpi_scale)),
         )
 
-    if progress_rect is not None and progress_fraction is not None:
-        progress_left = progress_rect[0] - left
-        progress_top = progress_rect[1] - top
-        progress_right = progress_rect[2] - left
-        progress_bottom = progress_rect[3] - top
+    for (bar_left, bar_top, bar_right, bar_bottom), fraction in bar_rects:
+        progress_left = bar_left - left
+        progress_top = bar_top - top
+        progress_right = bar_right - left
+        progress_bottom = bar_bottom - top
         progress_width = progress_right - progress_left
         progress_height = progress_bottom - progress_top
         progress_radius = progress_height // 2
@@ -373,7 +399,7 @@ def _render_image(
             radius=progress_radius,
             fill=(*_LINE_COLOR, 255),
         )
-        fill_width = round(progress_width * progress_fraction)
+        fill_width = round(progress_width * fraction)
         if fill_width:
             draw.rounded_rectangle(
                 (progress_left, progress_top, progress_left + fill_width, progress_bottom),
@@ -421,11 +447,12 @@ class Overlay:
         self._win_event_hooks = []
         self._font_name = "Rajdhani"
         self._font_size = 14
+        self._font_weight = "Medium"
         self._pos = (0, 0)
         self._anchor = "Top left"
         self._position_unit = "Pixels"
         self._panel_opacity = 78
-        self._progress = None
+        self._bars = {}
         self._lines = {}
         self._text = {}
         self._floating_text = {}
@@ -653,11 +680,12 @@ class Overlay:
             floating_text = dict(self._floating_text)
             font_name = self._font_name
             font_size = self._font_size
+            font_weight = self._font_weight
             pos = self._pos
             anchor = self._anchor
             position_unit = self._position_unit
             panel_opacity = self._panel_opacity
-            progress = self._progress
+            bars = dict(self._bars)
             target_position = self._target_position
             target_width, target_height = self._target_size
         if hwnd is None or target_width <= 0 or target_height <= 0:
@@ -679,7 +707,8 @@ class Overlay:
             anchor=anchor,
             position_unit=position_unit,
             panel_opacity=panel_opacity,
-            progress=progress,
+            bars=bars,
+            font_weight=font_weight,
         )
         self._surface_origin = origin
         self._size = image.size
@@ -784,10 +813,11 @@ class Overlay:
     def overlay_rect1(self, key, rect, color, thick):
         self.overlay_rect(key, (rect[0], rect[1]), (rect[2], rect[3]), color, thick)
 
-    def overlay_setfont(self, fontname, fsize):
+    def overlay_setfont(self, fontname, fsize, weight="Medium"):
         with self._lock:
             self._font_name = fontname
             self._font_size = fsize
+            self._font_weight = weight
 
     def overlay_set_pos(self, x, y):
         with self._lock:
@@ -810,9 +840,13 @@ class Overlay:
         with self._lock:
             self._text[key] = [segments, row, col]
 
-    def overlay_set_progress(self, progress: float | None):
+    def overlay_progress_bar(self, key, fraction: float, row):
         with self._lock:
-            self._progress = None if progress is None else max(0.0, min(progress, 1.0))
+            self._bars[key] = (max(0.0, min(fraction, 1.0)), row)
+
+    def overlay_remove_progress_bar(self, key):
+        with self._lock:
+            self._bars.pop(key, None)
 
     def overlay_floating_text(self, key, txt, x, y, color):
         with self._lock:
@@ -833,7 +867,7 @@ class Overlay:
             self._lines.clear()
             self._text.clear()
             self._floating_text.clear()
-            self._progress = None
+            self._bars.clear()
 
     def overlay_remove_rect(self, key):
         with self._lock:

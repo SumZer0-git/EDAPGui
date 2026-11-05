@@ -14,13 +14,54 @@ LOG_LEVELS = ("Debug", "Info", "Error")
 DSS_BUTTONS = ("Primary", "Secondary")
 OVERLAY_ANCHORS = ("Top left", "Top right", "Bottom left", "Bottom right")
 OVERLAY_POSITION_UNITS = ("Pixels", "Percent")
+OVERLAY_FONT_WEIGHTS = ("Light", "Regular", "Medium", "SemiBold", "Bold")
+
+# Overlay lines in their default order, each with the setting that shows or hides it.
+OVERLAY_LINES = (
+    ("mode", "OverlayShowMode"),
+    ("status", "OverlayShowStatus"),
+    ("ship", "OverlayShowShip"),
+    ("fuel", "OverlayShowFuel"),
+    ("system", "OverlayShowSystem"),
+    ("destination", "OverlayShowDestination"),
+    ("next_star", "OverlayShowNextStar"),
+    ("jumps", "OverlayShowJumps"),
+    ("jumps_bar", "OverlayShowJumpsBar"),
+    ("distance", "OverlayShowDistance"),
+    ("distance_bar", "OverlayShowDistanceBar"),
+)
+OVERLAY_LINE_SETTINGS = dict(OVERLAY_LINES)
+DEFAULT_OVERLAY_LINE_ORDER = tuple(key for key, _setting in OVERLAY_LINES)
+
+
+def normalize_overlay_line_order(order) -> list[str]:
+    """Known overlay lines in the given order; unknown entries are dropped and missing lines appended."""
+    if isinstance(order, str):
+        order = [key.strip() for key in order.split(",")]
+    elif not isinstance(order, (list, tuple)):
+        order = []
+    result = []
+    for key in order:
+        if key in OVERLAY_LINE_SETTINGS and key not in result:
+            result.append(key)
+    return result + [key for key in DEFAULT_OVERLAY_LINE_ORDER if key not in result]
+
+
+def move_overlay_line(order, key, step: int) -> list[str]:
+    """Move one overlay line up (step -1) or down (step 1) within the order."""
+    order = normalize_overlay_line_order(order)
+    index = order.index(key)
+    target = index + step
+    if 0 <= target < len(order):
+        order[index], order[target] = order[target], order[index]
+    return order
 
 
 @dataclass(frozen=True)
 class Field:
     key: str  # unique name, also the name of the config entry unless target says otherwise
     tab: str
-    kind: str  # int, float, text, hotkey, bool or choice
+    kind: str  # int, float, text, hotkey, bool, choice or order
     label: str
     target: str = ""  # "attr:<name>" for an attribute of the autopilot, "log_level" or empty for config[key]
     lo: float = 0
@@ -205,6 +246,14 @@ FIELDS = (
         tip="Font size in points. Follows the monitor's Windows display scaling, not the game resolution.",
     ),
     Field(
+        "OverlayTextFontWeight",
+        TAB_OVERLAY,
+        "choice",
+        "Font weight",
+        choices=OVERLAY_FONT_WEIGHTS,
+        tip="Select the bundled Rajdhani font weight used by the overlay.",
+    ),
+    Field(
         "OverlayPanelOpacity",
         TAB_OVERLAY,
         "int",
@@ -247,6 +296,55 @@ FIELDS = (
         "Jump count",
         tip="Show the current and total number of jumps.",
     ),
+    Field(
+        "OverlayShowJumpsBar",
+        TAB_OVERLAY,
+        "bool",
+        "Jump progress bar",
+        tip="Show a progress bar of the completed jumps on the route.",
+    ),
+    Field(
+        "OverlayShowDistance",
+        TAB_OVERLAY,
+        "bool",
+        "Route distance",
+        tip="Show the planned route distance remaining and total, when all route coordinates are available.",
+    ),
+    Field(
+        "OverlayShowDistanceBar",
+        TAB_OVERLAY,
+        "bool",
+        "Distance progress bar",
+        tip="Show a progress bar of the travelled route distance, when all route coordinates are available.",
+    ),
+    Field(
+        "OverlayShowFuel",
+        TAB_OVERLAY,
+        "bool",
+        "Fuel",
+        tip="Show the main fuel tank level, colored against the refuel and abort thresholds, and active fuel scooping.",
+    ),
+    Field(
+        "OverlayShowDestination",
+        TAB_OVERLAY,
+        "bool",
+        "Destination",
+        tip="Show the final system of the plotted route.",
+    ),
+    Field(
+        "OverlayShowNextStar",
+        TAB_OVERLAY,
+        "bool",
+        "Next star",
+        tip="Show the star class of the next route system and whether it can be fuel scooped.",
+    ),
+    Field(
+        "OverlayLineOrder",
+        TAB_OVERLAY,
+        "order",
+        "Line order",
+        tip="Order of the overlay lines; hidden lines are skipped.",
+    ),
     Field("VoiceEnable", TAB_SETTINGS, "bool", "Enable voice", setter="set_voice"),
     Field("log_level", TAB_DEBUG, "choice", "Log level", "log_level"),
     Field("DebugOverlay", TAB_DEBUG, "bool", "Debug Overlay"),
@@ -283,6 +381,8 @@ def read(field, ap):
         return str(int(value))
     if field.kind == "float":
         return str(float(value))
+    if field.kind == "order":
+        return ",".join(normalize_overlay_line_order(value))
     return str(value)
 
 
@@ -290,6 +390,8 @@ def parse(field, raw):
     """Convert and check the value typed into the window. Raises ValueError if it is not valid."""
     if field.kind == "bool":
         return bool(raw)
+    if field.kind == "order":
+        return normalize_overlay_line_order(raw)
     if field.kind == "choice":
         choices = field.choices or (LOG_LEVELS if field.target == "log_level" else DSS_BUTTONS)
         if raw not in choices:

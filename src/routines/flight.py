@@ -7,6 +7,7 @@ from time import sleep
 
 from controls.directinput import SCANCODE
 from core.constants import (
+    SCOOPABLE_STAR_CLASSES,
     Flags2FsdScoActive,
     FlagsAnalysisMode,
     FlagsDocked,
@@ -136,7 +137,8 @@ class FlightMixin:
         # if we get docking granted ED's docking computer will take over
         self.keys.send("SetSpeedZero", repeat=2)
         sleep(3)  # Wait for ship to come to stop
-        self.ap_ckb("log+vce", "Initiating Docking Procedure")
+        self.set_ap_status("Requesting docking")
+        self.vce.say("Initiating Docking Procedure")
         # Request docking through Nav panel.
         self.request_docking()
         sleep(1)
@@ -171,10 +173,12 @@ class FlightMixin:
             raise Exception("Docking failed (Did not get docking authorization)")
         else:
             self.ap_ckb("log+vce", "Docking request granted")
+            self.set_ap_status("Docking")
             # allow auto dock to take over
             for i in range(self.config["WaitForAutoDockTimer"]):
                 sleep(1)
                 if self.jn.ship_state()["status"] == "in_station":
+                    self.set_ap_status("Refueling and repairing")
                     # go to top item, select (which should be refuel)
                     self.keys.send("UI_Up", hold=3)
                     self.keys.send("UI_Select")  # Refuel
@@ -623,7 +627,7 @@ class FlightMixin:
 
     def logout(self):
         """Performs menu action to log out of game"""
-        self.update_ap_status("Logout")
+        self.set_ap_status("Logout")
         self.keys.send_key("Down", SCANCODE["Key_Escape"])
         sleep(0.5)
         self.keys.send_key("Up", SCANCODE["Key_Escape"])
@@ -634,7 +638,7 @@ class FlightMixin:
         sleep(0.5)
         self.keys.send("UI_Select")
         sleep(0.5)
-        self.update_ap_status("Idle")
+        self.set_ap_status("Idle")
 
     # position() happens after a refuel and accelerates past the sun before the discovery scan.
     def position(self, scr_reg, did_refuel=True):
@@ -838,7 +842,6 @@ class FlightMixin:
                 continue
 
             logger.debug(f"FSD jump attempt {i + 1}: jump completed.")
-            self.jump_cnt = self.jump_cnt + 1
             self.keys.send("SetSpeedZero", repeat=3)  # Let's be triply sure that we set speed to 0% :)
             sleep(1)  # wait 1 sec after jump to allow graphics to stablize and accept inputs
             logger.debug("FSD jump handling complete.")
@@ -878,13 +881,12 @@ class FlightMixin:
         has_fuel_scoop = self.jn.ship_state()["has_fuel_scoop"]
 
         logger.debug("refuel")
-        scoopable_stars = ["F", "O", "G", "K", "B", "A", "M"]
 
         if self.jn.ship_state()["status"] != "in_supercruise":
             logger.error("refuel=err1")
             return False
 
-        is_star_scoopable = self.jn.ship_state()["star_class"] in scoopable_stars
+        is_star_scoopable = self.jn.ship_state()["star_class"] in SCOOPABLE_STAR_CLASSES
 
         # if the sun is not scoopable, then set a low low threshold so we can pick up the dull red
         # sun types.  Since we won't scoop it doesn't matter how much we pitch up
@@ -897,8 +899,7 @@ class FlightMixin:
 
         # Lets avoid the sun, shall we
         self.vce.say("Avoiding star")
-        self.update_ap_status("Avoiding star")
-        self.ap_ckb("log", "Avoiding star")
+        self.set_ap_status("Avoiding star")
         self.sun_avoid(scr_reg)
 
         if (
@@ -908,8 +909,7 @@ class FlightMixin:
         ):
             logger.debug("refuel= start refuel")
             self.vce.say("Refueling")
-            self.ap_ckb("log", "Refueling")
-            self.update_ap_status("Refueling")
+            self.set_ap_status("Refueling")
 
             # mnvr into position
             self.keys.send("SetSpeed100")
@@ -917,8 +917,6 @@ class FlightMixin:
             self.keys.send("SetSpeed50")
             sleep(1.7)
             self.keys.send("SetSpeedZero", repeat=3)
-
-            self.refuel_cnt += 1
 
             # The log will not reflect a FuelScoop until first 5 tons filled, then every 5 tons until complete
             # if we don't scoop first 5 tons with 40 sec break, since not scooping or not fast enough or not at all, then abort
@@ -975,7 +973,7 @@ class FlightMixin:
             return False
 
     def waypoint_undock_seq(self):
-        self.update_ap_status("Executing Undocking/Launch")
+        self.set_ap_status("Executing Undocking/Launch")
 
         # Store current location (on planet or in space)
         on_planet = self.status.get_flag(FlagsHasLatLong)
@@ -1033,7 +1031,7 @@ class FlightMixin:
                 if not fleet_carrier:
                     # In space (launched from starport or outpost etc.)
                     sleep(1.5)
-                    self.update_ap_status("Undock Complete, accelerating")
+                    self.set_ap_status("Undock Complete, accelerating")
                     self.keys.send("SetSpeed100")
                     sleep(1)
                     self.keys.send("UseBoostJuice")
@@ -1056,14 +1054,14 @@ class FlightMixin:
                 # need to wait until undock complete, that is when we are back in_space
                 while self.jn.ship_state()["status"] != "in_space":
                     sleep(1)
-                self.update_ap_status("Undock Complete, accelerating")
+                self.set_ap_status("Undock Complete, accelerating")
 
             elif self.status.get_flag(FlagsLanded):
                 # We are on planet surface (not docked at planet landing pad)
                 # Hold UP for takeoff
                 self.keys.send("UpThrustButton", hold=6)
                 self.keys.send("LandingGearToggle")
-                self.update_ap_status("Takeoff Complete, accelerating")
+                self.set_ap_status("Takeoff Complete, accelerating")
 
             # Undocked or off the surface, so leave planet
             self.keys.send("SetSpeed50")
@@ -1097,6 +1095,7 @@ class FlightMixin:
 
     def sc_engage(self):
         """Engages supercruise, then returns us to 50% speed"""
+        self.set_ap_status("Entering supercruise")
         self.keys.send("SetSpeed100")
         self.keys.send("Supercruise", hold=0.001)
         # Start SCO monitoring
