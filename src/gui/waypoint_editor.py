@@ -400,11 +400,12 @@ class WaypointForm(ttk.Frame):
         self.cancel_button.pack(side="right", padx=8)
         self.plot_buttons = []
         if not global_list:
+            plot_row = ttk.Frame(general)
+            plot_row.grid(row=row, column=0, columnspan=2, sticky="w", pady=4)
             for label, station in (("Plot to System", False), ("Plot to Station", True)):
-                button = action_button(general, text=label, command=lambda station=station: self.plot(station))
-                button.grid(row=row, column=0, columnspan=2, sticky="w", pady=4)
+                button = action_button(plot_row, text=label, command=lambda station=station: self.plot(station))
+                button.pack(side="left", padx=(0, app.metrics.u(8)))
                 self.plot_buttons.append(button)
-                row += 1
         checks_page = ttk.Frame(notebook)
         self.checks_text = tk.Text(checks_page, wrap="word", height=5, width=35, bg=FIELD, fg=TEXT, borderwidth=0)
         self.checks_text.pack(fill="both", expand=True)

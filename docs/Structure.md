@@ -148,6 +148,9 @@ Generated files such as `src/game/keybind_defaults.py` should be regenerated wit
 - Lower-level packages must not import `gui/` or `routines/`.
 - Resolve application file paths through `core/paths.py`; keep runtime data in `user_data/`.
 - Keep shipped defaults in `data/` or `assets/`; do not store them with runtime output.
+- Unit tests must not depend on an installed game or live game files; mock game-data readers or use temporary fixtures.
+- Resolve temporary test paths before comparing them with application paths: Windows short and long names can refer to the same directory.
+- Check GUI layout at 100%, 125% and 150% scaling, not only the current monitor's scaling.
 - Use lowercase `snake_case` for new Python modules and folders; avoid wildcard imports.
 - Add user-visible changes to the `Unreleased` section of `CHANGELOG.md`.
 

@@ -74,7 +74,7 @@ class ReadWaypointsTestCase(unittest.TestCase):
     def setUp(self):
         self._dir = tempfile.TemporaryDirectory()
         self.addCleanup(self._dir.cleanup)
-        self.dir = Path(self._dir.name)
+        self.dir = Path(self._dir.name).resolve()
         self.wp = new_waypoints({})
 
     def write(self, data) -> Path:

@@ -38,7 +38,7 @@ class RouteDocumentTestCase(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
-        self.directory = Path(directory.name)
+        self.directory = Path(directory.name).resolve()
         self.filename = self.directory / "route.json"
         self.progress = self.directory / "progress.json"
         patcher = mock.patch.object(EDWayPoint, "_progress_path", return_value=self.progress)
@@ -487,24 +487,30 @@ class EditorWidgetsTestCase(unittest.TestCase):
         self.app.ed_ap.set_waypoint_plot.assert_called_once()
 
     def test_plot_controls_fit_the_scaled_waypoint_content_area(self):
-        self.root.geometry(f"{self.app.metrics.px(570)}x{self.app.metrics.px(500)}")
-        self.root.deiconify()
-        self.editor.pack(fill="both", expand=True)
-        self.editor.add()
-        self.root.update()
-        form = self.editor.form
-        for button in form.plot_buttons:
-            with self.subTest(button=button):
-                self.assertTrue(button.winfo_ismapped())
-                self.assertGreaterEqual(button.winfo_rooty(), form.notebook.winfo_rooty())
-                self.assertLessEqual(
-                    button.winfo_rooty() + button.winfo_height(),
-                    form.notebook.winfo_rooty() + form.notebook.winfo_height(),
-                )
-                self.assertLessEqual(
-                    button.winfo_rootx() + button.winfo_width(),
-                    form.winfo_rootx() + form.winfo_width(),
-                )
+        for dpi in (96, 120, 144):
+            with self.subTest(dpi=dpi):
+                self.editor.destroy()
+                self.app.metrics.set_dpi(dpi)
+                self.app.theme.apply()
+                self.editor = WaypointEditor(self.app, self.root)
+                self.root.geometry(f"{self.app.metrics.px(570)}x{self.app.metrics.px(500)}")
+                self.root.deiconify()
+                self.editor.pack(fill="both", expand=True)
+                self.editor.add()
+                self.root.update()
+                form = self.editor.form
+                for button in form.plot_buttons:
+                    with self.subTest(button=button):
+                        self.assertTrue(button.winfo_ismapped())
+                        self.assertGreaterEqual(button.winfo_rooty(), form.notebook.winfo_rooty())
+                        self.assertLessEqual(
+                            button.winfo_rooty() + button.winfo_height(),
+                            form.notebook.winfo_rooty() + form.notebook.winfo_height(),
+                        )
+                        self.assertLessEqual(
+                            button.winfo_rootx() + button.winfo_width(),
+                            form.winfo_rootx() + form.winfo_width(),
+                        )
 
     def test_loading_errors_opens_repair_draft_without_runtime_activation(self):
         document = RouteDocument()
@@ -838,8 +844,8 @@ class EditorWidgetsTestCase(unittest.TestCase):
 
     def test_save_and_start_activate_new_route_and_reload_separate_progress(self):
         with tempfile.TemporaryDirectory() as directory:
-            target = Path(directory) / "route.json"
-            progress = Path(directory) / "progress.json"
+            target = Path(directory).resolve() / "route.json"
+            progress = Path(directory).resolve() / "progress.json"
             self.editor.document.data["waypoints"] = [dict(new_waypoint(), SystemName="LHS 20")]
             self.runtime.load_waypoint_file = mock.Mock(return_value=True)
             with (
@@ -1119,7 +1125,7 @@ class EditorWidgetsTestCase(unittest.TestCase):
 
     def test_route_dropdown_loads_local_route_and_retains_external_route(self):
         with tempfile.TemporaryDirectory() as directory:
-            folder = Path(directory)
+            folder = Path(directory).resolve()
             target = folder / "Local.json"
             target.write_text("{}")
             external = folder / "elsewhere" / "External.json"
@@ -1240,11 +1246,12 @@ class EditorWidgetsTestCase(unittest.TestCase):
 
     def test_unsaved_marker_in_dropdown_does_not_break_route_switch(self):
         with tempfile.TemporaryDirectory() as directory:
-            target = Path(directory) / "Other.json"
+            folder = Path(directory).resolve()
+            target = folder / "Other.json"
             target.write_text("{}")
-            self.editor.document.filename = Path(directory) / "Current.json"
+            self.editor.document.filename = folder / "Current.json"
             self.editor.document.data["waypoints"].append(dict(new_waypoint(), SystemName="Sol"))
-            with mock.patch("gui.waypoint_editor.paths.WAYPOINTS_DIR", Path(directory)):
+            with mock.patch("gui.waypoint_editor.paths.WAYPOINTS_DIR", folder):
                 self.editor.refresh_routes()
             self.assertEqual(self.editor.route_choice.get(), "* Current.json")
             self.editor.route_choice.set("Other.json")

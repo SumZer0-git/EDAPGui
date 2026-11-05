@@ -7,7 +7,8 @@ from panels.galaxy_map import EDGalaxyMap
 class GalaxyMapTestCase(unittest.TestCase):
     def setUp(self):
         self.ap = Mock()
-        self.galaxy_map = EDGalaxyMap(self.ap, Mock(), self.ap.keys, Mock())
+        with patch("panels.galaxy_map.StatusParser"):
+            self.galaxy_map = EDGalaxyMap(self.ap, Mock(), self.ap.keys, Mock())
 
     def run_destination_search(self, nav_route_values):
         self.ap.nav_route.get_last_system.side_effect = nav_route_values
