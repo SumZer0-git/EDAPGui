@@ -94,6 +94,7 @@ EDAPGui/
 |   |-- configs/                    # Reference configuration copied on first start
 |   `-- waypoints/                  # Example waypoint files
 |-- user_data/                      # Runtime config, waypoints, logs, and debug output
+|   `-- cache/paddlex/              # Downloaded OCR models and PaddleX cache (not versioned)
 |-- tools/
 |   |-- make_keybind_defaults.py    # Generate game keybinding defaults
 |   `-- make_templates.py           # Generate templates from local screenshots

@@ -72,6 +72,9 @@ Ship, Overlay, Settings, and Debug tabs are saved automatically; the lower right
 are saved. The window position, collapsed state, and pin are remembered in `user_data/configs/gui.json`.
 
 The program stores its settings, ship profiles, waypoint files, route progress, logs, and debug output in `user_data/`.
+Downloaded OCR models and the PaddleX cache are stored in the unversioned `user_data/cache/paddlex/`, outside the
+virtual environment. The first OCR run needs internet access to download the required models, including after this
+cache-location change. Existing models in the user's `.paddlex` folder are not moved or deleted automatically.
 Example waypoint files from `data/waypoints/` are copied there on first start. Only the current v2 schema is executable;
 use **Legacy JSON** to import old v1/earlier-v2 destinations and trade lists into a new draft, then review and save it.
 If an existing installation reports an incompatible virtual environment, remove its `venv` folder

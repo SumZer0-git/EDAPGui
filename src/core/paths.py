@@ -22,6 +22,7 @@ FONTS_DIR = ASSETS_DIR / "fonts"
 
 # Runtime files, not versioned
 USER_DATA = ROOT / "user_data"
+PADDLEX_CACHE_DIR = USER_DATA / "cache" / "paddlex"
 CONFIG_DIR = USER_DATA / "configs"
 AP_CONFIG = CONFIG_DIR / "AP.json"
 SHIP_CONFIGS = CONFIG_DIR / "ship_configs.json"

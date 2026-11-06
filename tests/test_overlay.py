@@ -15,7 +15,7 @@ from gui.theme import BLUE, MUTED, ORANGE, PANEL, TEXT
 
 # The slim CI has no PaddleOCR; these tests never run OCR, so a temporary stub lets core.autopilot import.
 try:
-    import paddleocr  # noqa: F401
+    from vision.ocr import OCR  # noqa: F401
 
     _PADDLEOCR_STUBBED = False
 except ImportError:

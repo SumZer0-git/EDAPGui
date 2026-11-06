@@ -50,6 +50,11 @@ The folder name is the stored language code. `auto` is reserved. Use a unique di
 strings emitted by the game journal; aliases must not overlap another pack. The `ocr_language` must be supported
 by the project's pinned PaddleOCR version. It need not equal the folder name. A different OCR model may require
 a download on first use; ordinary text recognition runs locally.
+Models and PaddleX cache files live in `user_data/cache/paddlex/`, independent of the working directory and virtual
+environment. EDAPGui sets `PADDLE_PDX_CACHE_HOME` to this project-local directory before importing PaddleOCR,
+overriding an inherited value. Application runs and OCR tests use the same cache. Recreating the virtual environment
+does not remove it. Existing caches in the user's `.paddlex` folder remain untouched; models are downloaded again
+when missing from the project cache.
 
 ### `recognition.json`
 
