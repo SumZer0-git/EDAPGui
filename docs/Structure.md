@@ -214,9 +214,6 @@ tests, fixes and documentation.
 If work is linked to an issue, put its number immediately after the slash, for example `fix/42-docking-slow-ships`.
 Keep GitHub's default `Merge pull request #N from DopeEx/<branch>` subject for merge commits; merge PRs with a merge
 commit rather than squashing or rebasing.
-Release preparation may happen directly on `main`, with the subject
-`chore(release): prepare v<MAJOR>.<MINOR>.<PATCH>`.
-Do not add `Co-authored-by` trailers.
 
 For assistant-assisted changes, branch creation, commits, pushes, merges, tags and releases each require explicit
 maintainer approval; agreement on a name or permission to implement is not permission to perform those actions.
