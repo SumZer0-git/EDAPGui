@@ -48,6 +48,27 @@ class TargetAlignmentTestCase(unittest.TestCase):
         self.assertEqual(alignment.keys.sent, ["HyperSuperCombination"])
         self.assertTrue(alignment.stopped_monitoring)
 
+    def test_missing_target_saves_last_failed_capture_after_retries(self):
+        flight = Mock()
+        flight.get_destination_offset.return_value = None
+        flight.try_sc_disengage.return_value = False
+        flight.is_destination_occluded.return_value = False
+        with patch("routines.flight.sleep"):
+            result = FlightMixin.sc_target_align(flight, None)
+        self.assertEqual(result, ScTargetAlignReturn.Lost)
+        self.assertEqual(flight.get_destination_offset.call_count, 5)
+        flight.dump_target_debug.assert_called_once_with()
+
+    def test_target_lost_during_alignment_saves_failed_capture(self):
+        flight = Mock()
+        flight.get_destination_offset.side_effect = [{"x": 20, "y": 0}, None]
+        flight.is_destination_occluded.return_value = False
+        flight.try_sc_disengage.return_value = False
+        with patch("routines.flight.sleep"):
+            result = FlightMixin.sc_target_align(flight, None)
+        self.assertEqual(result, ScTargetAlignReturn.Lost)
+        flight.dump_target_debug.assert_called_once_with()
+
     def test_wait_for_disengage_returns_when_requested(self):
         alignment = TargetAlignment()
 

@@ -5,12 +5,16 @@ loaded unscaled. A fake screen returns the crop for every region, which exercise
 filters, templates, thresholds and offset calculations without the game or a monitor.
 """
 
+import logging
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import cv2
 import numpy as np
 
+from core import paths
 from routines.flight import FlightMixin
 from tests.helpers import FakeScreen, load_fixture_image, pad_to_region
 from vision.detection import DetectionMixin
@@ -181,6 +185,61 @@ class TargetTestCase(MatchingTestCase):
         self.assertIn("filter_pixels=0/490000 (0.00%)", target_log)
         self.assertIn("score=0.0000, threshold=0.54", target_log)
         self.assertIn("(below threshold)", target_log)
+
+    def test_target_debug_saves_the_original_failed_capture(self):
+        image = np.full((700, 700, 3), (40, 20, 10), dtype=np.uint8)
+        regions = ScreenRegions(FakeScreen(image), self.templates)
+        detector = Detector()
+        with tempfile.TemporaryDirectory() as folder, patch.object(paths, "DEBUG_DIR", Path(folder)):
+            with patch.object(DetectionMixin, "_target_dumps", 0), self.assertLogs("ed_log", level="DEBUG") as logs:
+                self.assertIsNone(detector.get_destination_offset(regions))
+                image[:] = 0
+                detector.dump_target_debug()
+                detector.dump_target_debug()
+
+            files = list((Path(folder) / "target").glob("*.png"))
+            self.assertEqual(len(files), 1)
+            self.assertRegex(files[0].name, r"^target-missing-\d{8}-\d{6}-\d{6}-s0\.0000\.png$")
+            saved = cv2.imread(str(files[0]))
+            self.assertTrue(np.all(saved == (40, 20, 10)))
+            self.assertTrue(any("Saved target debug image:" in line for line in logs.output))
+
+    def test_target_debug_is_disabled_outside_debug_and_clears_after_success(self):
+        detector = Detector()
+        with (
+            patch("vision.detection.logger.isEnabledFor", return_value=False),
+            patch("vision.detection.cv2.imwrite") as write,
+        ):
+            self.assertIsNone(detector.get_destination_offset(self.regions("empty")))
+            detector.dump_target_debug()
+            write.assert_not_called()
+        with self.assertLogs("ed_log", level="DEBUG"), patch("vision.detection.cv2.imwrite") as write:
+            self.assertIsNone(detector.get_destination_offset(self.regions("empty")))
+            self.assertIsNotNone(detector.get_destination_offset(self.regions("target")))
+            detector.dump_target_debug()
+            write.assert_not_called()
+
+    def test_target_debug_limit_and_write_failure(self):
+        detector = Detector()
+        with (
+            self.assertLogs("ed_log", level="DEBUG"),
+            patch.object(DetectionMixin, "_target_dumps", 12),
+            patch("vision.detection.cv2.imwrite") as write,
+        ):
+            detector.get_destination_offset(self.regions("empty"))
+            detector.dump_target_debug()
+            write.assert_not_called()
+        with (
+            patch.object(DetectionMixin, "_target_dumps", 0),
+            patch("vision.detection.paths.debug_path", return_value="target.png"),
+            patch("vision.detection.cv2.imwrite", return_value=False),
+            self.assertLogs("ed_log", level="WARNING") as logs,
+        ):
+            with patch("vision.detection.logger.isEnabledFor", side_effect=lambda level: level >= logging.DEBUG):
+                detector.get_destination_offset(self.regions("empty"))
+                detector.dump_target_debug()
+            self.assertIn("Could not save target debug image", logs.output[-1])
+            self.assertEqual(DetectionMixin._target_dumps, 0)
 
     def test_no_target_in_other_screens(self):
         for name in ("empty", "compass", "disengage"):

@@ -547,6 +547,7 @@ class FlightMixin:
         # Could not be found, return
         if off is None:
             logger.debug("sc_target_align not finding target")
+            self.dump_target_debug()
             self.ap_ckb("log", "Target not found, terminating SC Assist")
             return ScTargetAlignReturn.Lost
 
@@ -592,6 +593,7 @@ class FlightMixin:
             # Check if target is outside the target region (behind us) and break loop
             if new is None:
                 logger.debug("sc_target_align lost target")
+                self.dump_target_debug()
                 self.ap_ckb("log", "Target lost, attempting re-alignment.")
                 return ScTargetAlignReturn.Lost
 

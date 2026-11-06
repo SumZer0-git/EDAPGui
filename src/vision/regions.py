@@ -211,10 +211,12 @@ class ScreenRegions:
         Returns an unfiltered image."""
         return screen.get_screen_region(self.reg[region_name]["rect"])
 
-    def capture_region_filtered(self, screen, region_name, inv_col=True):
+    def capture_region_filtered(self, screen, region_name, inv_col=True, source_callback=None):
         """Grab screen region and call its filter routine.
         Returns the filtered image."""
         scr = screen.get_screen_region(self.reg[region_name]["rect"], inv_col)
+        if source_callback is not None:
+            source_callback(scr)
         if self.reg[region_name]["filterCB"] is None:
             # return the screen region untouched in BGRA format.
             return scr
@@ -222,11 +224,11 @@ class ScreenRegions:
             # return the screen region in the format returned by the filter.
             return self.reg[region_name]["filterCB"](scr, self.reg[region_name]["filter"])
 
-    def match_template_in_region(self, region_name, templ_name, inv_col=True):
+    def match_template_in_region(self, region_name, templ_name, inv_col=True, source_callback=None):
         """Attempt to match the given template in the given region which is filtered using the region filter.
         Returns the filtered image, detail of match and the match mask."""
         img_region = self.capture_region_filtered(
-            self.screen, region_name, inv_col
+            self.screen, region_name, inv_col, source_callback
         )  # which would call, reg.capture_region('compass') and apply defined filter
         match = cv2.matchTemplate(img_region, self.templates.template[templ_name]["image"], cv2.TM_CCOEFF_NORMED)
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(match)

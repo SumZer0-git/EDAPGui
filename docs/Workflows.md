@@ -49,6 +49,17 @@ This document summarizes the behavior currently implemented and lists a small nu
 For route editing, imports, trade options and troubleshooting, see the [Waypoint guide](Waypoint.md).
 The editor's **Plot to System/Station** buttons only select targets; they do not start travel or trading.
 
+### Target detection diagnostics
+
+Set **Debug > Log level > Debug** before reproducing a supercruise target loss. When target alignment reports that it
+cannot find or has lost the target, the last failed search is saved in `user_data/debug/target/`. Each PNG contains
+the original-color target search region from the same screen capture used for matching, not the entire screen.
+Its filename includes the capture time and target match score; the log records the detection threshold and image path.
+At most 12 images are saved per application run, and files from earlier runs remain until deleted manually.
+
+The target may be outside the search region, so the image alone cannot establish that it was absent from the whole
+screen. Images and logs may contain player information; review and remove sensitive details before sharing them.
+
 ### Other assists
 
 - **DSS Assist** monitors the current system while in supercruise and attempts a discovery scan after entering a

@@ -1,7 +1,9 @@
 """Detection of targets, the compass and supercruise state on screen."""
 
+import logging
 import math
 import time
+from datetime import datetime
 from math import atan, degrees
 from time import sleep
 
@@ -495,8 +497,15 @@ class DetectionMixin:
     def get_destination_offset(self, scr_reg):
         """Determine how far off we are from the target being in the middle of the screen
         (in this case the specified region)."""
+        captured = []
+        self._target_debug_capture = None
         dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region(
-            "target", "target", inv_col=False
+            "target",
+            "target",
+            inv_col=False,
+            source_callback=(lambda image: captured.append((datetime.now(), image)))
+            if logger.isEnabledFor(logging.DEBUG)
+            else None,
         )
         roi_height, roi_width = dst_image.shape[:2]
         filter_pixels = cv2.countNonZero(dst_image)
@@ -556,11 +565,34 @@ class DetectionMixin:
         if maxVal < scr_reg.target_thresh:
             result = None
             logger.debug(f"Target detection: {diagnostics} (below threshold)")
+            if captured:
+                self._target_debug_capture = (captured[0][0], captured[0][1].copy(), maxVal)
         else:
             result = {"x": final_x, "y": final_y}
             logger.debug(f"Target detection: {diagnostics}, offset x={final_x:.1f}, y={final_y:.1f}")
 
         return result
+
+    _target_dumps = 0
+
+    def dump_target_debug(self):
+        """Save the last failed target search when SC alignment reports a target loss."""
+        capture = getattr(self, "_target_debug_capture", None)
+        self._target_debug_capture = None
+        if not logger.isEnabledFor(logging.DEBUG) or capture is None or DetectionMixin._target_dumps >= 12:
+            return
+        timestamp, image, score = capture
+        name = f"target-missing-{timestamp:%Y%m%d-%H%M%S-%f}-s{score:.4f}.png"
+        try:
+            path = paths.debug_path("target", name)
+            if not cv2.imwrite(path, image):
+                logger.warning(f"Could not save target debug image: {path}")
+                return
+        except (OSError, cv2.error) as error:
+            logger.warning(f"Could not save target debug image {name}: {error}")
+            return
+        DetectionMixin._target_dumps += 1
+        logger.debug(f"Saved target debug image: {path}")
 
     def sc_disengage_label_up(self, scr_reg) -> bool:
         """look for messages like "PRESS [Y] TO DISENGAGE" or "SUPERCRUISE OVERCHARGE ACTIVE",
