@@ -102,6 +102,9 @@ class JournalLanguageTests(unittest.TestCase):
 
 
 class GameLanguageTests(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(patch("core.autopilot.OCR.supports_language", return_value=True))
+
     def make_ap(self):
         ap = EDAutopilot.__new__(EDAutopilot)
         ap.locale = LocalizationManager(str(paths.LOCALES_DIR))

@@ -47,7 +47,8 @@ The waypoint guide also explains [first checks and reporting problems](docs/Wayp
 
 - Windows
 - Elite Dangerous
-- Python 3.12 or 3.13 (Python 3.13 is preferred)
+- Python 3.12 or 3.13 (recommended download:
+  [Python 3.13.17 Windows installer (64-bit)](https://www.python.org/ftp/python/3.13.17/python-3.13.17-amd64.exe))
 - A borderless game window, default HUD colours, and UI brightness of at least 50%
 - A docking computer for automatic docking
 
