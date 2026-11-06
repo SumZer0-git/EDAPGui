@@ -4,6 +4,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
+from core.commodities import commodity_id_matches_name, get_localization
 from gui.waypoint_model import new_waypoint
 
 
@@ -92,18 +93,17 @@ def parse_trade_route(text):
     return TradeRoute(stations["origin"], stations["destination"], trades)
 
 
-def resolve_commodities(route, catalogue, language):
-    if language not in ("de", "en"):
-        raise ValueError("Select de or en as the game commodity language.")
+def resolve_commodities(route, catalogue, language, localization=None):
+    localization = localization or get_localization(language)
+    if language not in localization.available_languages:
+        raise ValueError("Select an installed game commodity language.")
     resolved = {}
     for _index, _direction, name in route.trades:
-        matches = [
-            row for row in catalogue if name.casefold() in (row["name_de"].casefold(), row["name_en"].casefold())
-        ]
-        if len(matches) != 1:
+        matches = commodity_id_matches_name(name, localization)
+        if len(matches) != 1 or not matches <= catalogue.keys():
             raise ValueError(f"Commodity '{name}' is unknown or ambiguous. Correct the text before previewing.")
-        row = matches[0]
-        resolved[name] = (row["id"], row[f"name_{language}"])
+        commodity_id = matches.pop()
+        resolved[name] = (commodity_id, localization.commodity_name(commodity_id, language))
     return resolved
 
 
@@ -113,11 +113,11 @@ def imported_waypoints(route, resolved, quantities):
         for station, system in (route.origin, route.destination)
     ]
     for index, direction, name in route.trades:
-        commodity_id, localized = resolved[name]
+        commodity_id, _localized = resolved[name]
         quantity = quantities.get(commodity_id)
         if type(quantity) is not int or not 1 <= quantity < 9999:
             raise ValueError("Set a quantity from 1 to 9998 for every commodity (9999 means sell all).")
-        if localized in entries[index][direction]:
+        if commodity_id in entries[index][direction]:
             raise ValueError("Several imported names resolve to the same trade. Check the text.")
-        entries[index][direction][localized] = quantity
+        entries[index][direction][commodity_id] = quantity
     return entries

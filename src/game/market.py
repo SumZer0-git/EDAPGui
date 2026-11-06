@@ -9,6 +9,7 @@ from operator import itemgetter
 from sys import platform
 from time import sleep
 
+from core.commodities import is_commodity_id
 from core.logger import logger
 
 
@@ -148,8 +149,14 @@ class MarketParser:
         sellable_items = [
             x
             for x in data["Items"]
-            if x["Consumer"]
-            or ((x["Demand"] > 1 or x["Demand"]) and cargo_parser.get_item(x["Name_Localised"]) is not None)
+            if self.can_sell_item(str(x.get("id", "")))
+            and (
+                x["Consumer"]
+                or (
+                    (x["Demand"] > 1 or x["Demand"])
+                    and (cargo_parser.get_item_by_commodity_id(str(x.get("id", ""))) or {}).get("Count", 0) > 0
+                )
+            )
         ]
         # DemandBracket: 0=Not listed, 1=Low Demand, 2=Medium Demand, 3=High Demand
         # sellable_items = [x for x in data['Items'] if x['DemandBracket'] > 0]
@@ -195,7 +202,7 @@ class MarketParser:
         # buyable_items = [x for x in data['Items'] if x['Producer'] and x['Stock'] > 0]
         # StockBracket: 0=Not listed, 1=Low Stock, 2=Medium Stock, 3=High Stock
         # buyable_items = [x for x in data['Items'] if x['StockBracket'] > 0]
-        buyable_items = [x for x in data["Items"] if self.can_buy_item(x["Name_Localised"])]
+        buyable_items = [x for x in data["Items"] if self.can_buy_item(str(x.get("id", "")))]
         # print(json.dumps(newlist, indent=4))
 
         # Sort by name, then category
@@ -218,8 +225,8 @@ class MarketParser:
 
         return self.current_data["StationName"]
 
-    def get_item(self, item_name) -> dict[any] | None:
-        """Get details of one item. Returns the item detail as below, or None if item does not exist.
+    def get_item(self, commodity_id) -> dict[any] | None:
+        """Get a market item by its known commodity ID, or None if it is unavailable.
         Will not trigger a read of the json file.
         {
             "id": 128049154,
@@ -242,18 +249,19 @@ class MarketParser:
         if self.current_data is None:
             return None
 
-        for good in self.current_data["Items"]:
-            if good["Name_Localised"].upper() == item_name.upper():
-                # print(json.dumps(good, indent=4))
-                return good
+        commodity_id = str(commodity_id)
+        if not is_commodity_id(commodity_id):
+            return None
+        matches = [good for good in self.current_data["Items"] if str(good.get("id", "")) == commodity_id]
+        if len(matches) > 1:
+            raise ValueError(f"Market contains duplicate entries for commodity ID {commodity_id}.")
+        return matches[0] if matches else None
 
-        return None
-
-    def can_buy_item(self, item_name: str) -> bool:
+    def can_buy_item(self, commodity_id: str) -> bool:
         """Can the item be bought from the market (is it sold and is there stock).
         Will not trigger a read of the json file.
         """
-        good = self.get_item(item_name)
+        good = self.get_item(commodity_id)
         if good is None:
             return False
 
@@ -261,11 +269,11 @@ class MarketParser:
             good["Stock"] > 0 and good["Rare"]
         )  # Need producer in for non-Rares?
 
-    def can_sell_item(self, item_name: str) -> bool:
+    def can_sell_item(self, commodity_id: str) -> bool:
         """Can the item be sold to the market (is it bought, regardless of demand).
         Will not trigger a read of the json file.
         """
-        good = self.get_item(item_name)
+        good = self.get_item(commodity_id)
         if good is None:
             return False
 

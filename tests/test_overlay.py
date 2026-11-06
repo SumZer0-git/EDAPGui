@@ -928,6 +928,7 @@ class OverlayRenderingTests(unittest.TestCase):
                 with self.subTest(assist=flag, ending=ending):
                     autopilot = EDAutopilot.__new__(EDAutopilot)
                     autopilot.terminate = False
+                    autopilot.refresh_game_language = Mock(return_value=True)
                     autopilot.gui_loaded = False
                     autopilot._sc_sco_active_loop_thread = Mock(is_alive=Mock(return_value=True))
                     for name, _, _ in assists:

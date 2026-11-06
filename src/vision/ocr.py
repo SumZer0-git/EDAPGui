@@ -22,8 +22,15 @@ from core.logger import logger
 
 
 class OCR:
+    @staticmethod
+    def supports_language(language: str) -> bool:
+        # PaddleOCR is pinned; query its model mapping without creating or downloading a pipeline.
+        detection, recognition = PaddleOCR._get_ocr_model_names(None, language, None)
+        return detection is not None and recognition is not None
+
     def __init__(self, screen, language: str = "en"):
         self.screen = screen
+        self.language = language
         self.paddleocr = PaddleOCR(
             lang=language,
             use_doc_orientation_classify=False,
@@ -140,10 +147,14 @@ class OCR:
         # No good matches, then return None
         return None, 0, 0
 
-    def solid_highlighted_items(self, image, min_w, min_h):
+    def solid_highlighted_items(self, image, min_w, min_h, *, remove_thin_lines=False):
         """Extract bright filled quadrilaterals without including neighboring slanted rows."""
         image = image[:, :, :3]
         mask = cv2.inRange(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 210, 255)
+        if remove_thin_lines:
+            # Holographic HUD lines can connect an otherwise solid highlight to its surroundings.
+            kernel_size = max(1, round(min_h * 0.08)) | 1
+            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((kernel_size, kernel_size), np.uint8))
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         items = []
         for contour in contours:
@@ -177,7 +188,8 @@ class OCR:
             transform = cv2.getPerspectiveTransform(corners, destination)
             cropped = cv2.warpPerspective(image, transform, (width, height))
             filled = cv2.inRange(cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY), 210, 255)
-            if cv2.countNonZero(filled) < width * height * 0.65:
+            # Dense dark tab lettering can occupy almost half of a filled highlight.
+            if cv2.countNonZero(filled) < width * height * 0.5:
                 continue
             x, y, w, h = cv2.boundingRect(contour)
             items.append((cropped, x, y, w, h))

@@ -52,6 +52,20 @@ def _field(app, card, key, row):
     if field.kind in ("int", "float"):
         widget = ttk.Spinbox(card, from_=field.lo, to=field.hi, increment=field.step, textvariable=var, width=7)
         widget.grid(row=row, column=1, sticky="e", pady=pad)
+    elif field.kind == "language":
+        locale = app.ed_ap.locale
+        names = {"auto": "Auto"} | {
+            code: f"{locale.language_names[code]} ({code})" for code in locale.available_languages
+        }
+        display = tk.StringVar(card, value=names.get(var.get(), var.get()))
+        widget = ttk.Combobox(card, values=tuple(names.values()), state="readonly", textvariable=display, width=20)
+        widget.grid(row=row, column=1, sticky="e", pady=pad)
+
+        def select_language(_event):
+            var.set(next(code for code, name in names.items() if name == display.get()))
+            app.commit(field.tab)
+
+        widget.bind("<<ComboboxSelected>>", select_language)
     elif field.kind == "choice":
         widget = ttk.Combobox(card, values=field.choices, state="readonly", textvariable=var, width=16)
         widget.grid(row=row, column=1, sticky="e", pady=pad)
@@ -115,7 +129,14 @@ def build_settings(app, page):
     left, right = _columns(app, page)
     autopilot = _card(app, left, "Autopilot")
     row = 0
-    for key in ("SunBrightThreshold", "NavAlignTries", "JumpTries", "DockingRetries", "WaitForAutoDockTimer"):
+    for key in (
+        "Language",
+        "SunBrightThreshold",
+        "NavAlignTries",
+        "JumpTries",
+        "DockingRetries",
+        "WaitForAutoDockTimer",
+    ):
         _field(app, autopilot, key, row)
         row += 1
     for key in ("EnableRandomness", "ActivateEliteEachKey", "AutomaticLogout"):

@@ -8,6 +8,7 @@ import time
 from sys import platform
 from time import sleep
 
+from core.commodities import commodity_symbol
 from core.logger import logger
 
 
@@ -131,6 +132,44 @@ class CargoParser:
                     # print(json.dumps(good, indent=4))
                     return good
         return None
+
+    def get_item_by_commodity_id(self, commodity_id: str) -> dict[any] | None:
+        """Resolve the game's cargo symbol through the central commodity catalogue."""
+        symbol = commodity_symbol(commodity_id)
+        if symbol is None:
+            return None
+        matches = [item for item in self.current_data["Inventory"] if item["Name"].casefold() == symbol.casefold()]
+        if len(matches) > 1:
+            raise ValueError(f"Cargo contains duplicate entries for commodity ID {commodity_id}.")
+        return matches[0] if matches else None
+
+    def wait_for_quantity(self, commodity_id: str, expected: int, timeout: float = 10.0) -> bool:
+        """Wait for Cargo.json to reflect a journal-confirmed sale before selecting another row."""
+        deadline = time.monotonic() + timeout
+        logger.debug("Cargo synchronization started: commodity_id=%s expected=%s", commodity_id, expected)
+        while True:
+            data = self.get_cargo_data(force=True)
+            item = self.get_item_by_commodity_id(commodity_id)
+            actual = item["Count"] if item is not None else 0
+            logger.debug(
+                "Cargo synchronization read: commodity_id=%s expected=%s actual=%s timestamp=%r",
+                commodity_id,
+                expected,
+                actual,
+                data.get("timestamp"),
+            )
+            if actual == expected:
+                return True
+            if time.monotonic() >= deadline:
+                logger.warning(
+                    "Cargo synchronization timed out: commodity_id=%s expected=%s actual=%s timeout=%ss",
+                    commodity_id,
+                    expected,
+                    actual,
+                    timeout,
+                )
+                return False
+            sleep(0.2)
 
 
 # Usage Example

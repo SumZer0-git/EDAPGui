@@ -394,7 +394,7 @@ class APGui:
             return
         self._set_save(field.tab, "dirty")
         self._cancel_save_job(field.tab)
-        delay = 1 if field.kind in ("bool", "choice", "order") else SAVE_DELAY_MS
+        delay = 1 if field.kind in ("bool", "choice", "order", "language") else SAVE_DELAY_MS
         self._save_jobs[field.tab] = self.root.after(delay, lambda: self.commit(field.tab))
 
     def _cancel_save_job(self, tab):
@@ -502,6 +502,10 @@ class APGui:
             self.toggle_single_waypoint()
         elif msg == "route_info":
             self.update_route_info(body)
+        elif msg == "game_language":
+            self.waypoint_commodity_language = body
+            if hasattr(self, "waypoint_editor"):
+                self.waypoint_editor.set_game_language(body)
         elif msg == "update_ship_cfg":
             self.update_ship_cfg()
         else:

@@ -17,7 +17,8 @@ EDAPGui is a Windows autopilot for Elite Dangerous, offering optional assistance
   name search if needed. After entering supercruise, it selects and confirms each next jump target before alignment;
   it verifies the selected commodity dialog before submitting a market trade and makes one
   state-checked recovery attempt if the dialog cannot be read.
-  The **Waypoints** tab offers an integrated route editor, a DE/EN commodity catalogue and copied-text trade-route
+  After a confirmed sale, it waits for updated cargo data before selecting another trade.
+  The **Waypoints** tab offers an integrated route editor, an ID-based commodity catalogue and copied-text trade-route
   import (including Legacy JSON inside the import view), route-level repetition, themed activation checkboxes and
   target-only plot buttons. Station-name navigation
   uses name-column OCR when bookmarks are unavailable (no editor warning), selects the first exact name match without a full-list
@@ -31,6 +32,12 @@ EDAPGui is a Windows autopilot for Elite Dangerous, offering optional assistance
   main window footer, whose middle shows jumps and route distance while a route assist runs. Position, appearance, and
   which lines are shown in which order are set on the Overlay tab.
 - Optional voice feedback, a debug overlay, and loading a TCE destination are also available.
+- **Game language** in Settings follows the game journal automatically or uses a selected language pack. English
+  and German are included; additional recognition and commodity translations can be contributed as data-only packs.
+  Auto briefly waits for a new journal header on game restart instead of immediately reporting English fallback.
+  The application interface remains English. See [game languages](docs/Localization.md).
+  Right-panel inventory confirmation reads the selected tab highlight before carrier-transfer inputs are sent,
+  with English/German screenshot coverage for both HUD color schemes.
 
 See the [waypoint guide](docs/Waypoint.md) for waypoint files and trade actions, and the
 [ship tuning guide](docs/RollPitchYaw.md) for roll, pitch, and yaw rates.
@@ -74,6 +81,7 @@ and run `install_requirements.bat`.
 
 - [Keybindings and automatic fixer](docs/Keybindings.md)
 - [Waypoint files, bookmarks, trading, and transfers](docs/Waypoint.md)
+- [Game languages and contributing language packs](docs/Localization.md)
 - [Assist workflows: current behavior and design direction](docs/Workflows.md)
 - [Ship roll, pitch, and yaw tuning](docs/RollPitchYaw.md)
 - [Project structure and development conventions](docs/Structure.md)

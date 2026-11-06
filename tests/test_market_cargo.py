@@ -5,14 +5,27 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from core.commodities import load_catalogue
 from game.cargo import CargoParser
 from game.market import MarketParser
 from game.nav_route import NavRouteParser
 from tests.helpers import write_json
 
+COMMODITY_IDS = {item["symbol"]: commodity_id for commodity_id, item in load_catalogue().items()}
+
 
 def market_item(name, category, **values):
     item = {
+        "id": COMMODITY_IDS.get(
+            {
+                "Gold": "Gold",
+                "Silver": "Silver",
+                "Water": "Water",
+                "Bertrandite": "Bertrandite",
+                "Eranin Pearl Whisky": "EraninPearlWhisky",
+            }.get(name, ""),
+            999999999,
+        ),
         "Name": f"${name.lower()}_name;",
         "Name_Localised": name,
         "Category_Localised": category,
@@ -35,7 +48,7 @@ MARKET = {
         market_item("Gold", "Metals", Stock=89, Producer=True),
         market_item("Silver", "Metals", Stock=0, Producer=True),
         market_item("Water", "Chemicals", Demand=50, Consumer=True),
-        market_item("Rare Thing", "Rare", Stock=3, Rare=True),
+        market_item("Eranin Pearl Whisky", "Rare", Stock=3, Rare=True),
         market_item("Bertrandite", "Minerals", Demand=1),
     ],
 }
@@ -73,26 +86,33 @@ class MarketParserTestCase(TempFileTestCase):
         self.assertIsNone(parser.get_buyable_items())
         self.assertFalse(parser.can_buy_item("Gold"))
 
-    def test_get_item_ignores_case(self):
-        self.assertEqual(self.parser.get_item("gOLD")["Stock"], 89)
-        self.assertIsNone(self.parser.get_item("Unobtainium"))
+    def test_get_item_uses_commodity_id(self):
+        self.assertEqual(self.parser.get_item("128049154")["Stock"], 89)
+        self.assertIsNone(self.parser.get_item("Gold"))
+
+    def test_duplicate_market_identity_is_not_selected_arbitrarily(self):
+        self.parser.current_data["Items"].append(dict(self.parser.current_data["Items"][0]))
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            self.parser.get_item("128049154")
 
     def test_can_buy_item(self):
-        self.assertTrue(self.parser.can_buy_item("Gold"))
-        self.assertFalse(self.parser.can_buy_item("Silver"))  # no stock
-        self.assertFalse(self.parser.can_buy_item("Water"))  # not a producer
-        self.assertTrue(self.parser.can_buy_item("Rare Thing"))
+        self.assertTrue(self.parser.can_buy_item("128049154"))
+        self.assertFalse(self.parser.can_buy_item("128049155"))  # no stock
+        self.assertFalse(self.parser.can_buy_item("128049166"))  # not a producer
+        self.assertTrue(self.parser.can_buy_item("128666746"))
+        self.assertFalse(self.parser.can_buy_item("999999999"))
 
     def test_can_sell_item(self):
-        self.assertTrue(self.parser.can_sell_item("Water"))
-        self.assertTrue(self.parser.can_sell_item("Rare Thing"))
-        self.assertTrue(self.parser.can_sell_item("Bertrandite"))  # demand only
-        self.assertFalse(self.parser.can_sell_item("Gold"))
+        self.assertTrue(self.parser.can_sell_item("128049166"))
+        self.assertTrue(self.parser.can_sell_item("128666746"))
+        self.assertTrue(self.parser.can_sell_item("128049156"))  # demand only
+        self.assertFalse(self.parser.can_sell_item("128049154"))
+        self.assertFalse(self.parser.can_sell_item("999999999"))
 
     def test_buyable_items_sorted_by_category_then_name(self):
         names = [item["Name_Localised"] for item in self.parser.get_buyable_items()]
 
-        self.assertEqual(names, ["Gold", "Rare Thing"])
+        self.assertEqual(names, ["Gold", "Eranin Pearl Whisky"])
 
     def test_sellable_items_use_cargo(self):
         cargo = CargoParser(file_path=str(write_json(self.dir / "Cargo.json", {"Inventory": []})))
@@ -101,6 +121,52 @@ class MarketParserTestCase(TempFileTestCase):
 
         # Only consumers qualify when nothing is in the hold
         self.assertEqual(names, ["Water"])
+
+    def test_empty_cargo_entry_does_not_shift_the_sell_list(self):
+        cargo = CargoParser(
+            file_path=str(
+                write_json(
+                    self.dir / "Cargo.json",
+                    {"Inventory": [{"Name": "bertrandite", "Count": 0}]},
+                )
+            )
+        )
+        names = [item["Name_Localised"] for item in self.parser.get_sellable_items(cargo)]
+        self.assertEqual(names, ["Water"])
+
+    def test_delayed_sale_snapshot_removes_row_before_selecting_next_commodity(self):
+        self.parser.current_data["Items"] = [
+            market_item("Polymers", "Industrial materials", id=128049197, Demand=1),
+            market_item("Semiconductors", "Industrial materials", id=128049199, Demand=1),
+            market_item("Superconductors", "Industrial materials", id=128049200, Consumer=True, Demand=100),
+        ]
+        filename = self.dir / "Cargo.json"
+        cargo = CargoParser(
+            file_path=str(
+                write_json(
+                    filename,
+                    {
+                        "Inventory": [
+                            {"Name": "polymers", "Count": 1},
+                            {"Name": "semiconductors", "Count": 1},
+                        ]
+                    },
+                )
+            )
+        )
+        self.assertEqual(
+            [row["Name_Localised"] for row in self.parser.get_sellable_items(cargo)],
+            ["Polymers", "Semiconductors", "Superconductors"],
+        )
+        with mock.patch(
+            "game.cargo.sleep",
+            side_effect=lambda _delay: write_json(filename, {"Inventory": [{"Name": "semiconductors", "Count": 1}]}),
+        ):
+            self.assertTrue(cargo.wait_for_quantity("128049197", 0))
+        self.assertEqual(
+            [row["Name_Localised"] for row in self.parser.get_sellable_items(cargo)],
+            ["Semiconductors", "Superconductors"],
+        )
 
 
 class CargoParserTestCase(TempFileTestCase):
@@ -116,6 +182,21 @@ class CargoParserTestCase(TempFileTestCase):
     def test_get_item_not_in_hold(self):
         self.assertIsNone(self.parser.get_item("gold"))
 
+    def test_get_item_by_commodity_id_uses_catalogue_symbol(self):
+        self.assertEqual(self.parser.get_item_by_commodity_id("128673856")["Count"], 1236)
+        self.assertIsNone(self.parser.get_item_by_commodity_id("999999999"))
+
+    def test_localized_name_cannot_impersonate_another_commodity_symbol(self):
+        self.parser.current_data["Inventory"].insert(
+            0, {"Name": "gold", "Name_Localised": "water", "Count": 20, "Stolen": 0}
+        )
+        self.assertEqual(self.parser.get_item_by_commodity_id("128049166")["Count"], 1)
+
+    def test_duplicate_cargo_identity_is_not_selected_arbitrarily(self):
+        self.parser.current_data["Inventory"].append(dict(self.parser.current_data["Inventory"][0]))
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            self.parser.get_item_by_commodity_id("128673856")
+
     def test_reads_changed_file(self):
         write_json(self.dir / "Cargo.json", {"Inventory": []})
 
@@ -125,6 +206,26 @@ class CargoParserTestCase(TempFileTestCase):
         write_json(self.dir / "Cargo.json", {"Inventory": []})
         with mock.patch.object(self.parser, "get_file_modified_time", return_value=self.parser.last_mod_time):
             self.assertEqual(self.parser.get_cargo_data(force=True)["Inventory"], [])
+
+    def test_wait_for_quantity_reloads_delayed_cargo_even_with_unchanged_mtime(self):
+        def update_inventory(_delay):
+            write_json(self.dir / "Cargo.json", {"Inventory": []})
+
+        with (
+            mock.patch.object(self.parser, "get_file_modified_time", return_value=self.parser.last_mod_time),
+            mock.patch("game.cargo.sleep", side_effect=update_inventory) as sleep,
+        ):
+            self.assertTrue(self.parser.wait_for_quantity("128049166", 0))
+        sleep.assert_called_once_with(0.2)
+        self.assertIsNone(self.parser.get_item_by_commodity_id("128049166"))
+
+    def test_wait_for_quantity_times_out_without_changing_cargo(self):
+        with self.assertLogs("ed_log", level="WARNING"):
+            self.assertFalse(self.parser.wait_for_quantity("128049166", 0, timeout=0))
+        self.assertEqual(self.parser.get_item_by_commodity_id("128049166")["Count"], 1)
+
+    def test_wait_for_quantity_accepts_confirmed_partial_sale(self):
+        self.assertTrue(self.parser.wait_for_quantity("128049166", 1, timeout=0))
 
     def test_invalid_or_unreadable_cargo_fails_after_bounded_retries(self):
         for payload in (

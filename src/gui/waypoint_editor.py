@@ -9,6 +9,7 @@ from tkinter import filedialog, messagebox
 import ttkbootstrap as ttk
 
 from core import paths
+from core.commodities import commodity_id_matches_name, get_localization, is_commodity_id
 from core.logger import logger
 from gui.commodity_catalogue import load_catalogue, suggestions
 from gui.route_import import imported_waypoints, parse_trade_route, resolve_commodities
@@ -29,12 +30,27 @@ def action_button(parent, text="", command=None, icon=None):
 
 
 def trade_quantity_summary(commodities):
+    if commodities == {"All": 0}:
+        return "All cargo"
     if any(type(quantity) is not int or quantity < 0 for quantity in commodities.values()):
         return "Invalid quantity"
     fixed = sum(quantity for quantity in commodities.values() if quantity != 9999)
     if 9999 in commodities.values():
         return f"All + {fixed}" if fixed else "All"
     return str(fixed)
+
+
+def _game_language(app):
+    locale = getattr(getattr(app, "ed_ap", None), "locale", None)
+    available = getattr(locale, "available_languages", None)
+    if not isinstance(available, (list, tuple)) or not available:
+        available = get_localization().available_languages
+    language = getattr(locale, "language", None) or getattr(app, "waypoint_commodity_language", None)
+    if not isinstance(language, str):
+        language = getattr(app, "waypoint_commodity_language", None)
+    if language in available:
+        return language
+    return "en" if "en" in available else available[0]
 
 
 def style_table(tree):
@@ -179,10 +195,13 @@ class ActiveWaypointTable(WaypointTable):
 
 
 class CommodityList(ttk.Frame):
-    def __init__(self, parent, values, language=None, catalogue=None):
+    def __init__(self, parent, values, language=None, catalogue=None, allow_all=False):
         super().__init__(parent)
         self.values = dict(values)
         self.on_change = None
+        self.allow_all = allow_all
+        self.selected_commodity_id = None
+        self._updating_name = False
         metrics = Metrics(self)
         self.columnconfigure(0, weight=1)
         self.tree = WaypointTable(self, columns=("quantity",), show="tree headings", height=5)
@@ -198,7 +217,7 @@ class CommodityList(ttk.Frame):
         self.tree.configure(yscrollcommand=scrollbar.set)
         self.name = tk.StringVar()
         self.quantity = tk.StringVar(value="1")
-        self.language = language if language is not None else tk.StringVar(self, value="de")
+        self.language = language if language is not None else tk.StringVar(self, value="en")
         self.catalogue = catalogue if catalogue is not None else load_catalogue()
         self.name_picker = ttk.Combobox(self, textvariable=self.name, postcommand=self.filter_names)
         self.name_picker.grid(row=1, column=0, sticky="nsew", pady=metrics.u(8))
@@ -222,13 +241,18 @@ class CommodityList(ttk.Frame):
         language_row = ttk.Frame(self)
         language_row.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(0, metrics.u(8)))
         ttk.Label(language_row, text="Game commodity language").pack(side="left")
+        self.localization = get_localization(self.language.get())
         self.language_picker = ttk.Combobox(
-            language_row, textvariable=self.language, values=("de", "en"), state="readonly", width=5
+            language_row,
+            textvariable=self.language,
+            values=self.localization.available_languages,
+            state="readonly",
+            width=8,
         )
         self.language_picker.pack(side="left", padx=metrics.u(8))
         ttk.Label(language_row, text="[unchecked] = name not game-verified").pack(side="left")
-        self.name_trace = self.name.trace_add("write", self.filter_names)
-        self.language_trace = self.language.trace_add("write", self.filter_names)
+        self.name_trace = self.name.trace_add("write", self.name_changed)
+        self.language_trace = self.language.trace_add("write", self.language_changed)
         self.quantity_trace = self.quantity.trace_add("write", self.changed)
         self.bind("<Destroy>", self.destroyed, add="+")
         self.tree.bind("<<TreeviewSelect>>", self.selected)
@@ -245,34 +269,78 @@ class CommodityList(ttk.Frame):
         if self.on_change is not None:
             self.on_change()
 
+    def name_changed(self, *_args):
+        if not self._updating_name:
+            self.selected_commodity_id = None
+        self.filter_names()
+
+    def language_changed(self, *_args):
+        self.localization = get_localization(self.language.get())
+        self.filter_names()
+        self.refresh_labels()
+        if self.selected_commodity_id is not None:
+            self.set_name(self.display_name(self.selected_commodity_id), self.selected_commodity_id)
+
+    def set_name(self, value, commodity_id=None):
+        self._updating_name = True
+        try:
+            self.name.set(value)
+        finally:
+            self._updating_name = False
+        self.selected_commodity_id = commodity_id
+
     def filter_names(self, *_args):
         rows, verified = self.catalogue
-        self.name_choices = suggestions(rows, verified, self.language.get(), "")
-        matches = suggestions(rows, verified, self.language.get(), self.name.get())
+        self.name_choices = suggestions(rows, verified, self.language.get(), "", self.localization)
+        matches = suggestions(rows, verified, self.language.get(), self.name.get(), self.localization)
         self.name_picker.configure(values=tuple(matches))
         self.changed()
+
+    def display_name(self, commodity_id):
+        if commodity_id == "All":
+            return "All cargo"
+        labels = self.name_choices
+        for label, item_id in labels.items():
+            if item_id == commodity_id:
+                return label.removesuffix(" [unchecked]")
+        item = self.catalogue[0].get(commodity_id)
+        return self.localization.commodity_name(commodity_id) if item else commodity_id
+
+    def refresh_labels(self):
+        for commodity_id in self.tree.get_children():
+            self.tree.item(commodity_id, text=self.display_name(commodity_id))
 
     def choose_name(self, _event=None):
         selected = self.name.get()
         if selected in self.name_choices:
-            self.name.set(self.name_choices[selected])
+            self.set_name(selected.removesuffix(" [unchecked]"), self.name_choices[selected])
 
     def refresh(self):
+        selection = self.tree.selection()
+        focus = self.tree.focus()
         self.tree.delete(*self.tree.get_children())
-        for index, (name, quantity) in enumerate(self.values.items()):
+        for index, (commodity_id, quantity) in enumerate(self.values.items()):
             self.tree.insert(
                 "",
                 "end",
-                text=name,
+                iid=commodity_id,
+                text=self.display_name(commodity_id),
                 values=("All" if quantity == 9999 else quantity,),
                 tags=("odd" if index % 2 else "even",),
             )
+        current_items = set(self.tree.get_children())
+        retained = [item for item in selection if item in current_items]
+        if retained:
+            self.tree.selection_set(retained)
+        if focus in current_items:
+            self.tree.focus(focus)
         self.changed()
 
     def selected(self, _event=None):
         selection = self.tree.selection()
         if selection:
-            self.name.set(self.tree.item(selection[0], "text"))
+            commodity_id = selection[0]
+            self.set_name(self.display_name(commodity_id), commodity_id)
             self.quantity.set(self.tree.item(selection[0], "values")[0])
 
     def set_item(self):
@@ -280,27 +348,44 @@ class CommodityList(ttk.Frame):
             self.choose_name()
             name = self.name.get().strip()
             quantity = self.quantity_value()
-            if not name or quantity < 0:
+            if self.selected_commodity_id is not None:
+                commodity_id = self.selected_commodity_id
+            elif name in self.name_choices:
+                commodity_id = self.name_choices[name]
+            elif is_commodity_id(name) and name in self.catalogue[0]:
+                commodity_id = name
+            elif self.allow_all and name.casefold() == "all" and quantity == 0:
+                commodity_id = "All"
+            else:
+                matches = commodity_id_matches_name(name, self.localization)
+                if len(matches) != 1 or not matches <= self.catalogue[0].keys():
+                    raise ValueError
+                commodity_id = matches.pop()
+            if commodity_id == "All" and (not self.allow_all or quantity != 0):
+                raise ValueError
+            if quantity < 0:
                 raise ValueError
         except ValueError:
             messagebox.showerror(
-                "Commodity", "Enter a commodity name and a non-negative whole quantity, or choose All.", parent=self
+                "Commodity",
+                "Choose one known commodity and enter a non-negative whole quantity, or choose All.",
+                parent=self,
             )
             return
-        self.values[name] = quantity
+        self.values[commodity_id] = quantity
         self.refresh()
-        self.name.set("")
+        self.set_name("")
         self.quantity.set("1")
 
     def remove(self):
         for item in self.tree.selection():
-            del self.values[self.tree.item(item, "text")]
+            del self.values[item]
         self.refresh()
-        self.name.set("")
+        self.set_name("")
         self.quantity.set("1")
 
     def move(self, offset):
-        selected = {self.tree.item(item, "text") for item in self.tree.selection()}
+        selected = set(self.tree.selection())
         if not selected:
             return
         names = list(self.values)
@@ -311,7 +396,7 @@ class CommodityList(ttk.Frame):
                 names[index], names[target] = names[target], names[index]
         self.values = {name: self.values[name] for name in names}
         self.refresh()
-        items = [item for item in self.tree.get_children() if self.tree.item(item, "text") in selected]
+        items = [item for item in self.tree.get_children() if item in selected]
         self.tree.selection_set(items)
         self.tree.see(items[0])
 
@@ -324,7 +409,8 @@ class CommodityList(ttk.Frame):
                 raise ValueError(
                     "A commodity entry is still pending. Press Set or clear its name before applying."
                 ) from None
-            if name not in self.values or quantity != self.values[name]:
+            commodity_id = self.selected_commodity_id or self.name_choices.get(name)
+            if commodity_id not in self.values or quantity != self.values[commodity_id]:
                 raise ValueError("A commodity entry is still pending. Press Set or clear its name before applying.")
         return dict(self.values)
 
@@ -378,19 +464,19 @@ class WaypointForm(ttk.Frame):
             var = self.variables[key] = tk.BooleanVar(value=entry[key])
             ttk.Checkbutton(general, text=label, variable=var).grid(row=row, column=0, columnspan=2, sticky="w", pady=4)
             row += 1
-        self.language = tk.StringVar(self, value=getattr(app, "waypoint_commodity_language", "de"))
+        self.language = tk.StringVar(self, value=_game_language(app))
         self.app = app
         try:
             catalogue = load_catalogue()
         except (OSError, ValueError, KeyError) as error:
             logger.error("Could not load commodity catalogue: %s", error)
             messagebox.showerror("Commodity catalogue", str(error), parent=self)
-            catalogue = ([], {"de": set(), "en": set()})
+            catalogue = ({}, {})
         self.buy = CommodityList(notebook, entry["BuyCommodities"], self.language, catalogue)
         notebook.add(self.buy, text="Buy")
         self.sell = None
         if not global_list:
-            self.sell = CommodityList(notebook, entry["SellCommodities"], self.language, catalogue)
+            self.sell = CommodityList(notebook, entry["SellCommodities"], self.language, catalogue, allow_all=True)
             notebook.add(self.sell, text="Sell / transfer")
         buttons = ttk.Frame(self.card)
         buttons.grid(row=1, column=0, sticky="ew", pady=(app.metrics.u(8), 0))
@@ -421,6 +507,10 @@ class WaypointForm(ttk.Frame):
             self.sell.on_change = self.validate_live
         self.bind("<Destroy>", self.validation_destroyed, add="+")
         self.validate_live()
+
+    def set_game_language(self, code):
+        if code in self.buy.localization.available_languages:
+            self.language.set(code)
 
     def plot(self, station):
         try:
@@ -487,10 +577,12 @@ class WaypointForm(ttk.Frame):
                 issues.append(RouteIssue("error", None if self.global_list else 0, field, str(error)))
             table.tree.tag_configure("invalid", foreground=RED)
             for item in table.tree.get_children():
-                name = table.tree.item(item, "text")
-                quantity = table.values[name]
+                commodity_id = item
+                quantity = table.values[commodity_id]
                 tags = tuple(tag for tag in table.tree.item(item, "tags") if tag != "invalid")
-                invalid = not name.strip() or name != name.strip() or type(quantity) is not int or quantity < 0
+                is_all_transfer = table.allow_all and commodity_id == "All" and type(quantity) is int and quantity == 0
+                invalid = not is_commodity_id(commodity_id) and not is_all_transfer
+                invalid = invalid or type(quantity) is not int or quantity < 0
                 table.tree.item(item, tags=(("invalid",) if invalid else ()) + tags)
             table.name_picker.configure(
                 bootstyle="danger" if any(i.field == field and i.severity == "error" for i in issues) else "default"
@@ -576,7 +668,7 @@ class RouteImportForm(ttk.Frame):
         super().__init__(parent)
         self.app = app
         self.on_apply = on_apply
-        self.language = tk.StringVar(self, value=getattr(app, "waypoint_commodity_language", "de"))
+        self.language = tk.StringVar(self, value=_game_language(app))
         self.target = tk.StringVar(self, value="New route")
         self.repeat = tk.BooleanVar(self)
         self.route = None
@@ -591,9 +683,13 @@ class RouteImportForm(ttk.Frame):
             options, textvariable=self.target, values=("New route", "Append to current"), state="readonly", width=18
         ).pack(side="left")
         ttk.Label(options, text="Game language").pack(side="left", padx=8)
-        ttk.Combobox(options, textvariable=self.language, values=("de", "en"), state="readonly", width=4).pack(
-            side="left"
+        language_choices = getattr(getattr(app.ed_ap, "locale", None), "available_languages", None)
+        if not language_choices:
+            language_choices = get_localization(self.language.get()).available_languages
+        self.language_picker = ttk.Combobox(
+            options, textvariable=self.language, values=language_choices, state="readonly", width=8
         )
+        self.language_picker.pack(side="left")
         ttk.Checkbutton(options, text="Repeat route", variable=self.repeat).pack(side="left", padx=8)
         self.notebook = ttk.Notebook(self.card)
         self.notebook.grid(row=1, column=0, sticky="nsew")
@@ -648,6 +744,10 @@ class RouteImportForm(ttk.Frame):
         self.text.bind("<<Modified>>", self.invalidate)
         self.language.trace_add("write", self.invalidate)
 
+    def set_game_language(self, code):
+        if code in self.language_picker["values"]:
+            self.language.set(code)
+
     def invalidate(self, *_args):
         if _args and isinstance(_args[0], tk.Event) and not self.text.edit_modified():
             return
@@ -671,10 +771,8 @@ class RouteImportForm(ttk.Frame):
         self.quantity.set("")
         self.goods.delete(*self.goods.get_children())
         for commodity_id, name in sorted(set(resolved.values()), key=lambda pair: pair[1].casefold()):
-            label = name + ("" if commodity_id in verified[self.language.get()] else " [unchecked]")
-            self.goods.insert(
-                "", "end", iid=str(commodity_id), text=label, values=(self.quantities.get(commodity_id, ""),)
-            )
+            label = name + ("" if int(commodity_id) in verified.get(self.language.get(), set()) else " [unchecked]")
+            self.goods.insert("", "end", iid=commodity_id, text=label, values=(self.quantities.get(commodity_id, ""),))
         descriptions = []
         for index, (station, system) in enumerate((route.origin, route.destination)):
             actions = [
@@ -690,7 +788,7 @@ class RouteImportForm(ttk.Frame):
         selection = self.goods.selection()
         if selection != self.selected_good:
             self.selected_good = selection
-            values = {self.quantities.get(int(item), "") for item in selection}
+            values = {self.quantities.get(item, "") for item in selection}
             self.quantity.set(str(values.pop()) if len(values) == 1 else "")
 
     def set_quantity(self):
@@ -705,7 +803,7 @@ class RouteImportForm(ttk.Frame):
             messagebox.showerror("Route import", str(error), parent=self)
             return
         for item in selection:
-            self.quantities[int(item)] = quantity
+            self.quantities[item] = quantity
             self.goods.item(item, values=(quantity,))
 
     def apply(self):
@@ -716,7 +814,7 @@ class RouteImportForm(ttk.Frame):
             if (
                 selection
                 and self.quantity.get()
-                and any(self.quantity.get() != str(self.quantities.get(int(item), "")) for item in selection)
+                and any(self.quantity.get() != str(self.quantities.get(item, "")) for item in selection)
             ):
                 raise ValueError("Press Set to apply the pending quantity.")
             entries = imported_waypoints(self.route, self.resolved, self.quantities)
@@ -910,6 +1008,11 @@ class WaypointEditor(ttk.Frame):
 
     def locked(self):
         return self.dialog_open or self.execution_locked()
+
+    def set_game_language(self, code):
+        if self.form is not None:
+            self.form.set_game_language(code)
+        self.app.waypoint_commodity_language = code
 
     def execution_locked(self):
         return (

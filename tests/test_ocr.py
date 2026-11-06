@@ -137,6 +137,18 @@ class PaddleOCRV3TestCase(unittest.TestCase):
 
         self.assertEqual(ocr.get_highlighted_item_data(image, 10, 10), (None, None))
 
+    def test_solid_highlight_accepts_dense_lettering_but_rejects_hollow_outline(self):
+        ocr = self.make_ocr([])
+        image = np.zeros((100, 400, 3), dtype=np.uint8)
+        cv2.rectangle(image, (20, 20), (380, 80), (0, 255, 255), -1)
+        for x in range(30, 365, 15):
+            cv2.rectangle(image, (x, 25), (x + 7, 75), (0, 0, 0), -1)
+        self.assertEqual(len(ocr.solid_highlighted_items(image, 200, 50)), 1)
+
+        image[:] = 0
+        cv2.rectangle(image, (20, 20), (380, 80), (0, 255, 255), 3)
+        self.assertEqual(ocr.solid_highlighted_items(image, 200, 50), [])
+
     def test_solid_highlight_rectifies_white_and_orange_without_mutating_image(self):
         ocr = self.make_ocr([])
         for color in ((255, 255, 255), (0, 255, 255)):

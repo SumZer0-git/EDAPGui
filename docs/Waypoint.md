@@ -11,7 +11,7 @@ The last selected route is loaded again when EDAPGui starts.
 - Fit an automatic docking computer for automatic docking.
 - Check the ship's [roll, pitch and yaw settings](RollPitchYaw.md), especially when changing ships.
 - Make sure you have enough fuel, credits and free cargo space for the route.
-- Use commodity names in the same language as your game.
+- Check **Settings > Game language** (Auto by default). Routes identify commodities by ID, not translated names.
 - Keep Elite Dangerous focused while the assist runs. Do not navigate menus or trade manually at the same time.
 - Keep **Stop All** ready. Its default global hotkey is **End**, unless you changed it in Settings.
 
@@ -163,20 +163,26 @@ the assist stops rather than continuing to an unknown destination.
 
 Open a waypoint and choose **Buy** or **Sell / transfer**.
 
-1. Set **Game commodity language** to `de` for a German game or `en` for an English game.
+1. Choose a **Game commodity language** for display and suggestions; the active game language is the default.
 2. Type part of a commodity name, then open the dropdown to choose a suggestion.
-   You can search using either language, but the selected name is entered in the chosen game language.
+   You can search installed commodity translations or the internal symbol; the selected commodity is stored by ID.
 3. Enter a whole-number quantity, or choose **All**.
 4. Press **Set**. Repeat for other goods.
 5. Choose **Apply**, then save the route.
 
 Select an existing commodity row to change its quantity with **Set**.
 The bin button removes it. **Up / Down** changes its priority.
-Changing the language does not translate commodities already in the list.
+Changing the display language updates the names of existing rows without changing their identities, quantities or order.
 
 The catalogue offers suggestions, not prices or stock information. `[unchecked]` means the suggested name has
 not yet been verified against game market data; it does not mean the commodity is unavailable.
-You can enter a name manually if it is missing, but it must match the name used by your game.
+Missing translations display in English. A typed name must resolve uniquely to a known commodity ID; unknown or
+ambiguous names cannot be stored as executable trade requests.
+
+The route file remains **v2**. `BuyCommodities` and `SellCommodities` are ordered objects whose keys are decimal
+commodity IDs, for example `"BuyCommodities": {"128049152": 20, "128049154": 10}`. The editor order is the trade
+order; do not alphabetically sort these keys when editing JSON. See [language packs](Localization.md) to contribute
+additional recognition texts and commodity names without changing Python code.
 
 ### Trade order and quantities
 
@@ -208,13 +214,19 @@ Leave it disabled if you only want the trades listed at individual stops.
 
 ### Trade safety and interruptions
 
-The assist checks the commodity name and whether the game dialog is buying or selling before submitting a trade.
+The assist matches the requested ID to the current market, then checks the game's actual localized commodity
+name and whether the dialog is buying or selling before submitting a trade. An English catalogue fallback is only
+a display fallback; it never replaces the current market's identity or name.
 It then waits for the game's transaction confirmation before reducing the remaining quantity.
 If a dialog cannot be read, it may close and reopen station services and retry once.
 If the checks still fail, trading stops with a message.
 
 Requested trading also stops if market services or cargo information cannot be read.
 The route does not guarantee that a market exists or that the station trades your chosen goods.
+Cargo-dependent sell-list rows require a positive held quantity; zero-count inventory entries do not occupy a row.
+After a journal-confirmed sale, the confirmed progress is saved before waiting up to 10 seconds for `Cargo.json`
+to show the expected remaining quantity. No further trade is selected while the cargo snapshot is stale. If the
+update cannot be verified, the assist stops without undoing the already confirmed progress.
 
 **After a trade error or interruption, inspect your cargo and remaining requests before restarting.**
 A trade may have happened just before Stop All, a crash or a failed confirmation.
@@ -226,6 +238,11 @@ Restarting or resetting without checking could repeat a purchase or sale.
 - For a full carrier cargo transfer, use the special commodity name `All` with quantity `0`.
 - At a System Colonisation Ship or Orbital Construction Site, `All` with quantity `0` in **Sell / transfer**
   requests delivery of all cargo.
+- ID-specific inventory deposits and withdrawals are not supported in Fleet Carrier transfer mode; only the full
+  cargo deposit is available. The old `Down` row-index input is not a commodity identity and is not accepted.
+  Leave Buy and the enabled global shopping list empty in transfer mode. Ordinary Fleet Carrier market trading
+  still supports ordered ID-based purchases and sales.
+- Construction services accept only the full-cargo delivery action, not ID-specific sales or purchases.
 
 The special name `All` is different from selecting **All** as the quantity for one named commodity.
 Transfers and construction deliveries do not use the same transaction confirmation as ordinary market trades.
@@ -267,6 +284,9 @@ Only destination names, stop order and Buy/Sell lists are retained.
 Bookmarks, activation settings, transfer options, the global shopping list and completed progress are not copied.
 The original file is not changed.
 
+The existing importer resolves old German/English commodity names to IDs. Unknown or ambiguous names must be
+corrected; it does not guess. Earlier local v2 test files with name-based trade lists also use this import path.
+
 If the old route ends with an active REPEAT entry, **Repeat route** is enabled.
 Old REPEAT entries are removed from the stop list.
 Review the whole imported route, especially if REPEAT was previously in the middle.
@@ -277,6 +297,8 @@ The list shows **Pending**, **Done** or **Disabled**, along with remaining trade
 For an unsaved route, quantities shown are the planned values, not the active run's remaining requests.
 
 Completed stops and remaining quantities are saved separately from the route.
+Remaining quantities use commodity IDs as well. Name-based progress from earlier local test files is not reused
+as if it belonged to the new ID-based route.
 After restarting EDAPGui, the assist can continue unfinished stops without deliberately repeating completed ones.
 Check cargo first if the previous run ended during a trade.
 

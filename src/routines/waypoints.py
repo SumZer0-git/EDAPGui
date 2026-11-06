@@ -15,6 +15,7 @@ from time import sleep
 from controls.keys import EDKeys
 from controls.mouse_point import MousePoint
 from core import paths
+from core.commodities import commodity_symbol, is_commodity_id
 from core.constants import FlagsDocked
 from core.logger import logger
 from core.types import FsdAssistResult
@@ -56,10 +57,16 @@ class EDWayPoint:
         return self._load_route(Path(filename), remember=True, notify=True)
 
     @staticmethod
-    def _valid_commodity_list(value) -> bool:
+    def _valid_commodity_list(value, allow_all=False) -> bool:
         return isinstance(value, dict) and all(
-            isinstance(name, str) and isinstance(quantity, int) and not isinstance(quantity, bool) and quantity >= 0
-            for name, quantity in value.items()
+            (
+                is_commodity_id(commodity_id)
+                and isinstance(quantity, int)
+                and not isinstance(quantity, bool)
+                and quantity >= 0
+            )
+            or (allow_all and commodity_id == "All" and type(quantity) is int and quantity == 0)
+            for commodity_id, quantity in value.items()
         )
 
     @staticmethod
@@ -93,9 +100,9 @@ class EDWayPoint:
             return False
         if "Skip" in value or value["SystemName"].strip().upper() == "REPEAT":
             return False
-        return EDWayPoint._valid_commodity_list(value["SellCommodities"]) and EDWayPoint._valid_commodity_list(
-            value["BuyCommodities"]
-        )
+        return EDWayPoint._valid_commodity_list(
+            value["SellCommodities"], allow_all=True
+        ) and EDWayPoint._valid_commodity_list(value["BuyCommodities"])
 
     @classmethod
     def _read_route(cls, filename: Path):
@@ -254,7 +261,7 @@ class EDWayPoint:
                 not isinstance(entry, dict)
                 or not isinstance(entry.get("completed"), bool)
                 or not self._valid_commodity_list(entry.get("buy_commodities"))
-                or not self._valid_commodity_list(entry.get("sell_commodities"))
+                or not self._valid_commodity_list(entry.get("sell_commodities"), allow_all=True)
             ):
                 return None
         logger.debug("Waypoint progress restored: progress_file=%s data=%s", filename, progress)
@@ -525,7 +532,7 @@ class EDWayPoint:
         self,
         ap,
         event_type,
-        name,
+        commodity_id,
         quantity,
         *args,
         recover_trade_dialog: Callable[[str, str], bool] | None = None,
@@ -537,38 +544,53 @@ class EDWayPoint:
             ap.stn_svcs_in_ship.buy_commodity if event_type == "MarketBuy" else ap.stn_svcs_in_ship.sell_commodity
         )
         for attempt in range(2):
-            market = self.market_parser.current_data
-            item = next(
-                (item for item in market["Items"] if item["Name_Localised"].casefold() == name.casefold()),
-                None,
-            )
-            if item is None:
-                logger.error("Cannot identify commodity %r in the current market.", name)
-                ap.ap_ckb("log", f"Cannot identify '{name}' in market data. Waypoint Assist stopped.")
+            if not is_commodity_id(commodity_id):
+                logger.error("Cannot trade unknown commodity ID %r.", commodity_id)
+                ap.ap_ckb(
+                    "log",
+                    f"Cannot identify commodity ID {commodity_id} in the catalogue. Waypoint Assist stopped.",
+                )
+                return False, 0
+            try:
+                market = self.market_parser.get_market_data()
+                item = self.market_parser.get_item(commodity_id)
+            except ValueError as error:
+                logger.warning("Cannot resolve market commodity ID %s: %s", commodity_id, error)
+                ap.ap_ckb("log", f"Cannot identify commodity ID {commodity_id} reliably. Waypoint Assist stopped.")
+                return False, 0
+            localized_name = item.get("Name_Localised") if item is not None else None
+            if market is None or item is None or not isinstance(localized_name, str) or not localized_name:
+                logger.error("Cannot identify commodity ID %s in the current market.", commodity_id)
+                ap.ap_ckb(
+                    "log", f"Cannot identify commodity ID {commodity_id} in market data. Waypoint Assist stopped."
+                )
                 return False, 0
 
-            commodity = item["Name"].lower().removeprefix("$").removesuffix("_name;")
+            commodity = commodity_symbol(commodity_id).casefold()
             market_id = market["MarketID"]
             cursor = ap.jn.market_transaction_cursor()
             try:
-                result, planned = operation(ap.keys, name, quantity, *args)
+                result, planned = operation(ap.keys, commodity_id, quantity, *args)
             except TradeDialogUnconfirmedError:
                 logger.warning(
                     "Trade dialog was not confirmed: event=%s commodity=%r attempt=%s",
                     event_type,
-                    name,
+                    localized_name,
                     attempt + 1,
                 )
                 if attempt == 0 and recover_trade_dialog and recover_trade_dialog(market["timestamp"], event_type):
                     continue
                 ap.ap_ckb(
                     "log",
-                    f"Could not verify the selected commodity '{name}'. No trade confirmed; Waypoint Assist stopped.",
+                    f"Could not verify the selected commodity '{localized_name}'. "
+                    "No trade confirmed; Waypoint Assist stopped.",
                 )
                 return False, 0
             if not result or planned <= 0:
-                logger.warning("Trade input failed: event=%s commodity=%r planned=%s", event_type, name, planned)
-                ap.ap_ckb("log", f"Could not trade '{name}'. Waypoint Assist stopped.")
+                logger.warning(
+                    "Trade input failed: event=%s commodity=%r planned=%s", event_type, localized_name, planned
+                )
+                ap.ap_ckb("log", f"Could not trade '{localized_name}'. Waypoint Assist stopped.")
                 return False, 0
 
             start = time.monotonic()
@@ -585,7 +607,7 @@ class EDWayPoint:
                     if (
                         event["event"] == event_type
                         and event.get("MarketID") == market_id
-                        and event.get("Type", "").casefold() == commodity
+                        and str(event.get("Type", "")).casefold() == commodity
                     ):
                         count = event.get("Count")
                         if type(count) is int and 0 < count <= planned:
@@ -599,7 +621,10 @@ class EDWayPoint:
                             )
                             return True, count
                         logger.error("Unexpected journal trade quantity: planned=%s event=%s", planned, event)
-                        ap.ap_ckb("log", f"Unexpected trade quantity for '{name}'. Check cargo before restarting.")
+                        ap.ap_ckb(
+                            "log",
+                            f"Unexpected trade quantity for '{localized_name}'. Check cargo before restarting.",
+                        )
                         return False, 0
                 sleep(0.1)
 
@@ -612,7 +637,8 @@ class EDWayPoint:
             )
             ap.ap_ckb(
                 "log",
-                f"No journal confirmation for '{name}'. Waypoint Assist stopped; check cargo before restarting.",
+                f"No journal confirmation for '{localized_name}'. "
+                "Waypoint Assist stopped; check cargo before restarting.",
             )
             return False, 0
         return False, 0
@@ -627,6 +653,20 @@ class EDWayPoint:
             if not self.waypoints["GlobalShoppingList"]["Enabled"]
             else self.waypoints["GlobalShoppingList"]["BuyCommodities"]
         )
+        if fleetcarrier_transfer and (buy_commodities or global_buy_commodities):
+            ap.ap_ckb(
+                "log",
+                "Fleet Carrier inventory transfers do not support ID-based commodity shopping lists. "
+                "Waypoint Assist stopped before transfer.",
+            )
+            logger.warning(
+                "Fleet Carrier transfer blocked because ordered commodity IDs cannot be mapped safely: "
+                "id=%s buy=%s global_buy=%s",
+                dest_key,
+                buy_commodities,
+                global_buy_commodities,
+            )
+            return False
         logger.debug(
             "Waypoint trade started: route=%s id=%s station=%r station_type=%r sell=%s buy=%s global_buy=%s transfer=%s",
             self.filename,
@@ -659,12 +699,41 @@ class EDWayPoint:
             return False
 
         # Determine type of station we are at
-        colonisation_ship = "ColonisationShip".upper() in ap.jn.ship_state()["cur_station"].upper()
+        station_name = "".join(
+            character for character in ap.jn.ship_state()["cur_station"] if character.isalnum()
+        ).upper()
+        colonisation_ship = "COLONISATIONSHIP" in station_name
         orbital_construction_site = ap.jn.ship_state()["cur_station_type"].upper() == "SpaceConstructionDepot".upper()
         fleet_carrier = ap.jn.ship_state()["cur_station_type"].upper() == "FleetCarrier".upper()
         outpost = ap.jn.ship_state()["cur_station_type"].upper() == "Outpost".upper()
 
         if colonisation_ship or orbital_construction_site:
+            if buy_commodities or global_buy_commodities:
+                self.ap.ap_ckb(
+                    "log",
+                    "ID-based commodity purchases are not supported at construction services. "
+                    "Waypoint Assist stopped before transfer.",
+                )
+                logger.warning(
+                    "Construction transfer blocked because buy lists cannot be executed safely: "
+                    "id=%s buy=%s global_buy=%s",
+                    dest_key,
+                    buy_commodities,
+                    global_buy_commodities,
+                )
+                return False
+            if sell_commodities and sell_commodities != {"All": 0}:
+                self.ap.ap_ckb(
+                    "log",
+                    "Construction services support only the All cargo transfer, not ID-specific sales. "
+                    "Waypoint Assist stopped before transfer.",
+                )
+                logger.warning(
+                    "Construction transfer blocked because SellCommodities is not the All sentinel: id=%s sell=%s",
+                    dest_key,
+                    sell_commodities,
+                )
+                return False
             if colonisation_ship:
                 # Colonisation Ship
                 self.ap.ap_ckb("log", "Executing trade with Colonisation Ship.")
@@ -686,14 +755,36 @@ class EDWayPoint:
             # Fleet Carrier in Transfer mode
             # --------- SELL ----------
             if len(sell_commodities) > 0:
+                if sell_commodities != {"All": 0}:
+                    self.ap.ap_ckb(
+                        "log",
+                        "Fleet Carrier transfer supports only the All cargo transfer, not ID-specific sales. "
+                        "Waypoint Assist stopped before transfer.",
+                    )
+                    logger.warning(
+                        "Fleet Carrier transfer blocked because SellCommodities is not the All sentinel: id=%s sell=%s",
+                        dest_key,
+                        sell_commodities,
+                    )
+                    return False
                 # Transfer to Fleet Carrier
-                self.ap.internal_panel.transfer_to_fleetcarrier(ap)
+                if not self.ap.internal_panel.transfer_to_fleetcarrier(ap):
+                    return False
 
             # --------- BUY ----------
             if len(buy_commodities) > 0:
-                self.ap.internal_panel.transfer_from_fleetcarrier(ap, buy_commodities)
+                if not self.ap.internal_panel.transfer_from_fleetcarrier(ap, buy_commodities):
+                    return False
 
         else:
+            if "All" in sell_commodities:
+                self.ap.ap_ckb(
+                    "log",
+                    "All cargo transfers require a Fleet Carrier transfer or construction service. "
+                    "Waypoint Assist stopped.",
+                )
+                logger.warning("All cargo transfer requested at a regular market: id=%s", dest_key)
+                return False
             # Regular Station or Fleet Carrier in Buy/Sell mode
             self.ap.ap_ckb("log", "Executing trade.")
             logger.debug("Execute Trade: On Regular Station")
@@ -730,7 +821,7 @@ class EDWayPoint:
                     # Check if we have any of the item to sell
                     try:
                         self.cargo_parser.get_cargo_data(force=True)
-                        cargo_item = self.cargo_parser.get_item(key)
+                        cargo_item = self.cargo_parser.get_item_by_commodity_id(key)
                     except (OSError, ValueError) as error:
                         logger.warning(
                             "Waypoint sell cargo check failed: id=%s commodity=%r error=%s", dest_key, key, error
@@ -787,6 +878,20 @@ class EDWayPoint:
                         if not self.save_waypoints():
                             ap.ship_control.goto_cockpit_view(timeout=COCKPIT_VIEW_TIMEOUT)
                             return False
+
+                    try:
+                        cargo_ready = self.cargo_parser.wait_for_quantity(key, available - qty)
+                    except (OSError, ValueError) as error:
+                        logger.warning("Post-sale cargo synchronization failed: commodity_id=%s error=%s", key, error)
+                        cargo_ready = False
+                    if not cargo_ready:
+                        ap.ap_ckb(
+                            "log",
+                            "Sale confirmed, but updated ship cargo could not be verified. "
+                            "Waypoint Assist stopped before further trades; check cargo and remaining requests.",
+                        )
+                        ap.ship_control.goto_cockpit_view(timeout=COCKPIT_VIEW_TIMEOUT)
+                        return False
 
             sleep(1)
 

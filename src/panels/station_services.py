@@ -151,7 +151,7 @@ class EDStationServicesInShip:
         )
         return False
 
-    def buy_commodity(self, keys, name: str, qty: int, free_cargo: int) -> tuple[bool, int]:
+    def buy_commodity(self, keys, commodity_id: str, qty: int, free_cargo: int) -> tuple[bool, int]:
         """Buy qty of commodity. If qty >= 9999 then buy as much as possible.
         Assumed to be in the commodities buy screen in the list."""
 
@@ -161,19 +161,22 @@ class EDStationServicesInShip:
 
         # Determine if station sells the commodity!
         self.market_parser.get_market_data()
-        if not self.market_parser.can_buy_item(name):
-            self.ap_ckb("log+vce", f"'{name}' is not sold or has no stock at {self.market_parser.get_market_name()}.")
-            logger.debug(f"Item '{name}' is not sold or has no stock at {self.market_parser.get_market_name()}.")
+        commodity_id = str(commodity_id)
+        item = self.market_parser.get_item(commodity_id)
+        name = item.get("Name_Localised") if item is not None else None
+        if not isinstance(name, str) or not name or not self.market_parser.can_buy_item(commodity_id):
+            label = f"{name} (ID {commodity_id})" if isinstance(name, str) and name else f"ID {commodity_id}"
+            logger.warning("Cannot buy commodity %s at %s.", label, self.market_parser.get_market_name())
+            self.ap_ckb("log", f"Commodity {label} is not sold or has no stock.")
             return False, 0
 
-        # Find commodity in mar
-        # ket and return the index
+        # Find the ID-matched commodity in the station's buy list.
         index = -1
         stock = 0
         buyable_items = self.market_parser.get_buyable_items()
         if buyable_items is not None:
             for i, value in enumerate(buyable_items):
-                if value["Name_Localised"].upper() == name.upper():
+                if str(value.get("id", "")) == commodity_id:
                     index = i
                     stock = value["Stock"]
                     logger.debug(f"Execute trade: Buy {name} (want {qty} of {stock} avail.) at position {index + 1}.")
@@ -218,12 +221,12 @@ class EDStationServicesInShip:
 
         if act_qty == stock:
             for value in self.market_parser.current_data["Items"]:
-                if value["Name_Localised"].upper() == name.upper():
+                if str(value.get("id", "")) == commodity_id:
                     value["StockBracket"] = 0
 
         return True, act_qty
 
-    def sell_commodity(self, keys, name: str, qty: int, cargo_parser) -> tuple[bool, int]:
+    def sell_commodity(self, keys, commodity_id: str, qty: int, cargo_parser) -> tuple[bool, int]:
         """Sell qty of commodity. If qty >= 9999 then sell as much as possible.
         Assumed to be in the commodities sell screen in the list.
         @param keys: Keys class for sending keystrokes.
@@ -239,9 +242,13 @@ class EDStationServicesInShip:
 
         # Determine if station buys the commodity!
         self.market_parser.get_market_data()
-        if not self.market_parser.can_sell_item(name):
-            self.ap_ckb("log+vce", f"'{name}' is not bought at {self.market_parser.get_market_name()}.")
-            logger.debug(f"Item '{name}' is not bought at {self.market_parser.get_market_name()}.")
+        commodity_id = str(commodity_id)
+        item = self.market_parser.get_item(commodity_id)
+        name = item.get("Name_Localised") if item is not None else None
+        if not isinstance(name, str) or not name or not self.market_parser.can_sell_item(commodity_id):
+            label = f"{name} (ID {commodity_id})" if isinstance(name, str) and name else f"ID {commodity_id}"
+            logger.warning("Cannot sell commodity %s at %s.", label, self.market_parser.get_market_name())
+            self.ap_ckb("log", f"Commodity {label} is not bought.")
             return False, 0
 
         # Find commodity in market and return the index
@@ -250,7 +257,7 @@ class EDStationServicesInShip:
         sellable_items = self.market_parser.get_sellable_items(cargo_parser)
         if sellable_items is not None:
             for i, value in enumerate(sellable_items):
-                if value["Name_Localised"].upper() == name.upper():
+                if str(value.get("id", "")) == commodity_id:
                     index = i
                     demand = value["Demand"]
                     logger.debug(f"Execute trade: Sell {name} ({qty} of {demand} demanded) at position {index + 1}.")

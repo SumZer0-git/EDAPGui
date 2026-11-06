@@ -11,6 +11,7 @@ from core import paths
 from core.constants import GuiFocusInternalPanel
 from core.logger import logger
 from game.status import StatusParser
+from i18n.localization import normalize_text
 from vision.regions import size_scale_for_station
 
 
@@ -26,18 +27,8 @@ class EDInternalStatusPanel:
         self.locale = self.ap.locale
         self.status_parser = StatusParser()
 
-        self.modules_tab_text = self.locale["INT_PNL_TAB_MODULES"]
-        self.fire_groups_tab_text = self.locale["INT_PNL_TAB_FIRE_GROUPS"]
-        self.ship_tab_text = self.locale["INT_PNL_TAB_SHIP"]
-        self.inventory_tab_text = self.locale["INT_PNL_TAB_INVENTORY"]
-        self.storage_tab_text = self.locale["INT_PNL_TAB_STORAGE"]
-        self.status_tab_text = self.locale["INT_PNL_TAB_STATUS"]
-
         # The rect is [L, T, R, B] top left x, y, and bottom right x, y in fraction of screen resolution
-        self.reg = {"right_panel": {"rect": [0.2, 0.2, 1.0, 0.35]}}
-
-        self.nav_pnl_tab_width = 140  # Nav panel tab width in pixels at 1920x1080
-        self.nav_pnl_tab_height = 35  # Nav panel tab height in pixels at 1920x1080
+        self.reg = {"right_panel": {"rect": [0.30, 0.20, 0.91, 0.28]}}
 
     def show_right_panel(self):
         """Shows the Internal (Right) Panel.
@@ -54,7 +45,9 @@ class EDInternalStatusPanel:
             return active, active_tab_name
         else:
             logger.debug("show_right_panel: Open Internal Panel")
-            self.ap.ship_control.goto_cockpit_view()
+            if not self.ap.ship_control.goto_cockpit_view():
+                logger.warning("Could not return to the cockpit before opening the internal panel.")
+                return False, ""
 
             self.keys.send("HeadLookReset")
             self.keys.send("UIFocus", state=1)
@@ -72,7 +65,7 @@ class EDInternalStatusPanel:
             else:
                 return False, ""
 
-    def show_inventory_tab(self) -> bool | None:
+    def show_inventory_tab(self) -> bool:
         """Shows the INVENTORY tab of the Nav Panel. Opens the Nav Panel if not already open.
         Returns True if successful, else False.
         """
@@ -80,31 +73,54 @@ class EDInternalStatusPanel:
 
         # Show nav panel
         active, active_tab_name = self.show_right_panel()
-        if active is None:
-            return None
         if not active:
             logger.warning("Internal (Right) Panel could not be opened")
             return False
-        elif active_tab_name is self.inventory_tab_text:
-            # Do nothing
+        if active_tab_name == "inventory":
             return True
-        elif active_tab_name is self.modules_tab_text:
-            self.keys.send("CycleNextPanel", repeat=3)
+        steps = {"home": 4, "modules": 3, "fire_groups": 2, "ship": 1, "storage": 7, "status": 6, "playlist": 5}
+        if active_tab_name not in steps:
+            logger.warning("Unknown internal panel tab: %r", active_tab_name)
+            return False
+        self.keys.send("CycleNextPanel", repeat=steps[active_tab_name])
+        sleep(0.5)
+        active, tab = self.is_right_panel_active()
+        if active and tab == "inventory":
             return True
-        elif active_tab_name is self.fire_groups_tab_text:
-            self.keys.send("CycleNextPanel", repeat=2)
-            return True
-        elif active_tab_name is self.ship_tab_text:
-            self.keys.send("CycleNextPanel", repeat=1)
-            return True
-        elif active_tab_name is self.storage_tab_text:
-            self.keys.send("CycleNextPanel", repeat=7)
-            return True
-        elif active_tab_name is self.status_tab_text:
-            self.keys.send("CycleNextPanel", repeat=6)
-            return True
+        logger.warning("Internal inventory tab could not be confirmed after navigation.")
+        return False
 
-    def is_right_panel_active(self) -> (bool, str):
+    def _tab_id(self, words) -> str:
+        text = normalize_text(" ".join(words or []))
+        for tab in ("modules", "fire_groups", "ship", "inventory", "storage", "status"):
+            if text in {normalize_text(value) for value in self.locale.all_values(f"INT_PNL_TAB_{tab.upper()}")}:
+                return tab
+        return ""
+
+    def _selected_tab(self) -> str:
+        image = self.ocr.capture_region_pct(self.reg["right_panel"])
+        width, height = size_scale_for_station(35, 30, self.screen.screen_width, self.screen.screen_height)
+        items = self.ocr.solid_highlighted_items(image, width, height)
+        if not items:
+            items = self.ocr.solid_highlighted_items(image, width, height, remove_thin_lines=True)
+        if len(items) != 1:
+            logger.debug("Internal tab highlight count=%s; no unique selected tab.", len(items))
+            return ""
+        cropped, x, _y, w, h = items[0]
+        center = self.reg["right_panel"]["rect"][0] + (x + w / 2) / self.screen.screen_width
+        if 0.7 <= w / h <= 1.8:
+            if 0.315 <= center <= 0.34:
+                return "home"
+            if 0.86 <= center <= 0.90:
+                return "playlist"
+        if cropped.shape[1] < width * 3:
+            return ""
+        words = self.ocr.image_simple_ocr(cropped)
+        tab = self._tab_id(words)
+        logger.debug("Internal selected-tab OCR: words=%r tab=%r", words, tab)
+        return tab
+
+    def is_right_panel_active(self) -> tuple[bool, str]:
         """Determine if the Nav Panel is open and if so, which tab is active.
         Returns True if active, False if not and also the string of the tab name.
         """
@@ -126,50 +142,9 @@ class EDInternalStatusPanel:
         # Try this 'n' times before giving up
         tab_text = ""
         for i in range(10):
-            # Take screenshot of the panel
-            image = self.ocr.capture_region_pct(self.reg["right_panel"])
-            # tab_bar = self.capture_tab_bar()
-            # if tab_bar is None:
-            #     return None
-
-            # Determine the nav panel tab size at this resolution
-            scl_row_w, scl_row_h = size_scale_for_station(
-                self.nav_pnl_tab_width, self.nav_pnl_tab_height, self.screen.screen_width, self.screen.screen_height
-            )
-
-            img_selected, ocr_textlist = self.ocr.get_highlighted_item_data(image, scl_row_w, scl_row_h)
-            if img_selected is not None:
-                logger.debug("is_right_panel_active: image selected")
-                logger.debug(f"is_right_panel_active: OCR: {ocr_textlist}")
-
-                # Overlay OCR result
-                if self.ap.debug_overlay:
-                    self.ap.overlay.overlay_floating_text(
-                        "right_panel_text", f"{ocr_textlist}", abs_rect[0], abs_rect[1] - 25, (0, 255, 0)
-                    )
-                    self.ap.overlay.overlay_paint()
-
-                # Test OCR string
-                if self.modules_tab_text in str(ocr_textlist):
-                    tab_text = self.modules_tab_text
-                    break
-                if self.fire_groups_tab_text in str(ocr_textlist):
-                    tab_text = self.fire_groups_tab_text
-                    break
-                if self.ship_tab_text in str(ocr_textlist):
-                    tab_text = self.ship_tab_text
-                    break
-                if self.inventory_tab_text in str(ocr_textlist):
-                    tab_text = self.inventory_tab_text
-                    break
-                if self.storage_tab_text in str(ocr_textlist):
-                    tab_text = self.storage_tab_text
-                    break
-                if self.status_tab_text in str(ocr_textlist):
-                    tab_text = self.status_tab_text
-                    break
-            else:
-                logger.debug("is_right_panel_active: no image selected")
+            tab_text = self._selected_tab()
+            if tab_text:
+                break
 
             # Wait and retry
             sleep(1)
@@ -201,7 +176,9 @@ class EDInternalStatusPanel:
         self.ap_ckb("log+vce", "Executing transfer to Fleet Carrier.")
         logger.debug("transfer_to_fleetcarrier: entered")
         # Go to the internal (right) panel inventory tab
-        self.show_inventory_tab()
+        if not self.show_inventory_tab():
+            self.ap_ckb("log", "Could not confirm the inventory tab. Fleet Carrier transfer stopped.")
+            return False
 
         # Assumes on the INVENTORY tab
         ap.keys.send("UI_Right")
@@ -225,43 +202,14 @@ class EDInternalStatusPanel:
         sleep(0.2)
         ap.keys.send("HeadLookReset")
         logger.debug("End of unload FC")
+        return True
         # quit()
 
     def transfer_from_fleetcarrier(self, ap, buy_commodities):
-        """Transfer specific good from Fleet Carrier to ship"""
-        self.ap_ckb("log+vce", "Executing transfer from Fleet Carrier.")
-        logger.debug("transfer_to_fleetcarrier: entered")
-        # Go to the internal (right) panel inventory tab
-        self.show_inventory_tab()
-
-        # Assumes on the INVENTORY tab
-        ap.keys.send("UI_Right")
-        sleep(0.1)
-        ap.keys.send("UI_Up")  # To FILTERS
-        sleep(0.1)
-        ap.keys.send("UI_Right")  # To >> TRANSFER
-        sleep(0.1)
-        ap.keys.send("UI_Select")  # Click >> TRANSFER
-        sleep(0.1)
-        ap.keys.send("UI_Up", hold=3)  # go to top of list
-        sleep(0.1)
-
-        index = buy_commodities["Down"]
-
-        ap.keys.send("UI_Down", hold=0.05, repeat=index)  # go down # of times user specified
-        sleep(0.5)
-        ap.keys.send("UI_Left", hold=10)  # Transfer commodity, wait 10 sec to xfer
-
-        sleep(0.1)
-        ap.keys.send("UI_Select")  # Take us down to "Confirm Item Transfer"
-
-        ap.keys.send("UI_Select")  # Click Transfer
-        sleep(0.1)
-
-        ap.keys.send("UI_Back", repeat=4)
-        sleep(0.2)
-        ap.keys.send("HeadLookReset")
-        logger.debug("End of transfer from FC")
+        """Do not reinterpret commodity IDs as the obsolete unverified row-index transfer."""
+        logger.warning("Fleet Carrier withdrawal requires confirmed commodity-to-inventory mapping.")
+        self.ap_ckb("log", "ID-based Fleet Carrier withdrawals are not supported. No transfer inputs were sent.")
+        return False
 
 
 def dummy_cb(msg, body=None):

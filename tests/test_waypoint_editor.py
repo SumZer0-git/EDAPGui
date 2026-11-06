@@ -15,7 +15,7 @@ import ttkbootstrap as ttk
 from core import paths
 from gui.main_window import APGui
 from gui.theme import Metrics, Theme
-from gui.waypoint_editor import CommodityList, WaypointEditor, WaypointForm
+from gui.waypoint_editor import CommodityList, WaypointEditor, WaypointForm, trade_quantity_summary
 from gui.waypoint_model import RouteDocument, new_waypoint
 from gui.widgets import RoundButton
 from gui.window_state import DEFAULTS
@@ -26,6 +26,9 @@ from tests.test_waypoints import GLOBAL_LIST, stop
 
 
 class RouteDocumentTestCase(unittest.TestCase):
+    def test_all_cargo_sentinel_has_explicit_summary(self):
+        self.assertEqual(trade_quantity_summary({"All": 0}), "All cargo")
+
     def test_shipped_examples_pass_editor_validation(self):
         examples = sorted(paths.WAYPOINT_EXAMPLES_DIR.glob("*.json"))
         self.assertTrue(examples)
@@ -45,7 +48,7 @@ class RouteDocumentTestCase(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         self.document = RouteDocument()
-        self.document.data["waypoints"] = [dict(new_waypoint(), SystemName="LHS 20", BuyCommodities={"Polymere": 2})]
+        self.document.data["waypoints"] = [dict(new_waypoint(), SystemName="LHS 20", BuyCommodities={"128049197": 2})]
 
     def test_roundtrip_preserves_ids_and_definition_not_progress(self):
         self.document.save(self.filename)
@@ -56,7 +59,7 @@ class RouteDocumentTestCase(unittest.TestCase):
         self.assertNotIn("Completed", route["waypoints"][0])
         progress = json.loads(self.progress.read_text())
         key = route["waypoints"][0]["Id"]
-        self.assertEqual(progress["waypoints"][key]["buy_commodities"], {"Polymere": 2})
+        self.assertEqual(progress["waypoints"][key]["buy_commodities"], {"128049197": 2})
         self.assertFalse(progress["waypoints"][key]["completed"])
 
     def test_saved_name_follows_filename_including_save_as(self):
@@ -84,14 +87,14 @@ class RouteDocumentTestCase(unittest.TestCase):
         self.assertEqual(json.loads(self.filename.read_text()), legacy)
 
     def test_legacy_import_retains_only_destinations_and_trade_lists(self):
-        old = dict(new_waypoint(), SystemName="Sol", StationName="Port", BuyCommodities={"Gold": 2})
+        old = dict(new_waypoint(), SystemName="Sol", StationName="Port", BuyCommodities={"128049154": 2})
         old.update(Skip=True, GalaxyBookmarkType="Fav", GalaxyBookmarkNumber=3, FleetCarrierTransfer=True)
         raw = {"version": 2, "waypoints": [old, {"SystemName": "REPEAT", "Skip": False}]}
         self.filename.write_text(json.dumps(raw))
         before = self.filename.read_bytes()
         document = RouteDocument.import_legacy(self.filename)
         entry = document.data["waypoints"][0]
-        self.assertEqual(entry["BuyCommodities"], {"Gold": 2})
+        self.assertEqual(entry["BuyCommodities"], {"128049154": 2})
         self.assertNotEqual(entry["Id"], old["Id"])
         self.assertTrue(entry["Enabled"])
         self.assertFalse(entry["FleetCarrierTransfer"])
@@ -103,6 +106,28 @@ class RouteDocumentTestCase(unittest.TestCase):
         self.assertTrue(document.dirty)
         self.assertEqual(self.filename.read_bytes(), before)
         self.assertFalse(self.progress.exists())
+
+    def test_legacy_names_resolve_uniquely_and_ambiguous_names_are_rejected(self):
+        legacy = {
+            "version": 2,
+            "waypoints": [{"SystemName": "Sol", "BuyCommodities": {"Gold": 2}, "SellCommodities": {"ALL": 0}}],
+        }
+        self.filename.write_text(json.dumps(legacy))
+        before = self.filename.read_bytes()
+        document = RouteDocument.import_legacy(self.filename)
+        self.assertEqual(document.data["waypoints"][0]["BuyCommodities"], {"128049154": 2})
+        self.assertEqual(document.data["waypoints"][0]["SellCommodities"], {"All": 0})
+        self.assertEqual(self.filename.read_bytes(), before)
+
+        ambiguous = {
+            "version": 2,
+            "waypoints": [{"SystemName": "Sol", "SellCommodities": {"Gewebeprobe aus dem Schlund einer Titan": 1}}],
+        }
+        self.filename.write_text(json.dumps(ambiguous, ensure_ascii=False))
+        before = self.filename.read_bytes()
+        with self.assertRaisesRegex(ValueError, "unknown or ambiguous"):
+            RouteDocument.import_legacy(self.filename)
+        self.assertEqual(self.filename.read_bytes(), before)
 
     def test_legacy_middle_and_disabled_repeat_entries_are_removed_without_enabling_repeat(self):
         for entries in (
@@ -141,7 +166,7 @@ class RouteDocumentTestCase(unittest.TestCase):
     def test_load_invalid_semantic_fields_for_repair_without_writing(self):
         entry = self.document.data["waypoints"][0]
         entry.update(SystemName="", GalaxyBookmarkType="Bad", GalaxyBookmarkNumber=-4)
-        entry["BuyCommodities"] = {"Gold": "invalid"}
+        entry["BuyCommodities"] = {"128049154": "invalid"}
         self.filename.write_text(json.dumps(self.document.data))
         before = self.filename.read_bytes()
         document = RouteDocument.load(self.filename)
@@ -198,7 +223,7 @@ class RouteDocumentTestCase(unittest.TestCase):
             self.document.data["GlobalShoppingList"]["BuyCommodities"],
         ):
             with self.subTest(values=id(values)):
-                values.update({"Gold": 4, "Silver": 6})
+                values.update({"128049154": 4, "128049155": 6})
                 self.document.save(self.filename)
                 name, quantity = next(iter(values.items()))
                 del values[name]
@@ -212,14 +237,14 @@ class RouteDocumentTestCase(unittest.TestCase):
     def test_overwrite_resets_progress_to_edited_definitions(self):
         self.document.save(self.filename)
         self.progress.write_text(json.dumps({"old": "progress"}))
-        self.document.data["waypoints"][0]["BuyCommodities"]["Polymere"] = 3
+        self.document.data["waypoints"][0]["BuyCommodities"]["128049197"] = 3
         self.document.save(self.filename)
         progress = json.loads(self.progress.read_text())
         key = self.document.data["waypoints"][0]["Id"]
-        self.assertEqual(progress["waypoints"][key]["buy_commodities"], {"Polymere": 3})
+        self.assertEqual(progress["waypoints"][key]["buy_commodities"], {"128049197": 3})
 
     def test_invalid_inputs_do_not_write_files(self):
-        for field, value in (("SystemName", ""), ("GalaxyBookmarkNumber", -1), ("BuyCommodities", {"Gold": True})):
+        for field, value in (("SystemName", ""), ("GalaxyBookmarkNumber", -1), ("BuyCommodities", {"128049154": True})):
             with self.subTest(field=field):
                 document = copy.deepcopy(self.document)
                 document.data["waypoints"][0][field] = value
@@ -664,13 +689,13 @@ class EditorWidgetsTestCase(unittest.TestCase):
             bounds = button.bbox(button.icon_item)
             self.assertGreaterEqual(bounds[0], self.app.metrics.px(8))
             self.assertLessEqual(bounds[2], button.winfo_width() - self.app.metrics.px(8))
-        table.values = {"Gold": 1, "Silver": 2}
+        table.values = {"128049154": 1, "128049155": 2}
         table.refresh()
         table.tree.selection_set(table.tree.get_children()[1])
         table.action_buttons[1].invoke()
-        self.assertEqual(list(table.values), ["Silver", "Gold"])
+        self.assertEqual(list(table.values), ["128049155", "128049154"])
         table.action_buttons[0].invoke()
-        self.assertEqual(table.values, {"Gold": 1})
+        self.assertEqual(table.values, {"128049154": 1})
 
     def test_commodity_rows_have_scaled_gaps_and_no_button_overlap(self):
         self.root.geometry("570x500")
@@ -733,12 +758,14 @@ class EditorWidgetsTestCase(unittest.TestCase):
         self.assertEqual(self.editor.document.data["waypoints"], before)
 
     def test_duplicate_uses_definition_fresh_id_and_independent_lists(self):
-        original = dict(new_waypoint(), SystemName="Sol", BuyCommodities={"Gold": 5}, SellCommodities={"Silver": 2})
+        original = dict(
+            new_waypoint(), SystemName="Sol", BuyCommodities={"128049154": 5}, SellCommodities={"128049155": 2}
+        )
         self.editor.document.data["waypoints"] = [original]
         self.editor.document.filename = Path(self.runtime.filename).resolve()
         self.editor.document.saved = copy.deepcopy(self.editor.document.data)
         self.runtime.waypoints = {
-            original["Id"]: {"Completed": True, "BuyCommodities": {"Gold": 0}, "SellCommodities": {"Silver": 0}}
+            original["Id"]: {"Completed": True, "BuyCommodities": {"128049154": 0}, "SellCommodities": {"128049155": 0}}
         }
         runtime = copy.deepcopy(self.runtime.waypoints)
         self.editor.refresh()
@@ -749,8 +776,8 @@ class EditorWidgetsTestCase(unittest.TestCase):
         duplicate = self.editor.document.data["waypoints"][1]
         self.assertNotEqual(duplicate["Id"], original["Id"])
         self.assertEqual({**duplicate, "Id": original["Id"]}, original)
-        duplicate["BuyCommodities"]["Gold"] = 8
-        self.assertEqual(original["BuyCommodities"], {"Gold": 5})
+        duplicate["BuyCommodities"]["128049154"] = 8
+        self.assertEqual(original["BuyCommodities"], {"128049154": 5})
         self.assertEqual(self.runtime.waypoints, runtime)
         self.assertIn("Pending", self.editor.tree.item(duplicate["Id"], "values")[2])
         self.assertTrue(self.editor.document.dirty)
@@ -939,43 +966,43 @@ class EditorWidgetsTestCase(unittest.TestCase):
         save.assert_not_called()
 
     def test_editor_uses_definitions_and_shows_remaining_progress(self):
-        entry = dict(new_waypoint(), SystemName="Sol", BuyCommodities={"Gold": 10})
+        entry = dict(new_waypoint(), SystemName="Sol", BuyCommodities={"128049154": 10})
         self.editor.document.data["waypoints"] = [entry]
         self.editor.document.filename = Path(self.runtime.filename).resolve()
         self.editor.document.saved = copy.deepcopy(self.editor.document.data)
-        self.runtime.waypoints = {entry["Id"]: {"Completed": True, "BuyCommodities": {"Gold": 0}}}
+        self.runtime.waypoints = {entry["Id"]: {"Completed": True, "BuyCommodities": {"128049154": 0}}}
         self.editor.refresh()
         values = self.editor.tree.item(entry["Id"], "values")
         self.assertIn("Done", values[2])
-        self.assertEqual(self.editor.document.data["waypoints"][0]["BuyCommodities"], {"Gold": 10})
+        self.assertEqual(self.editor.document.data["waypoints"][0]["BuyCommodities"], {"128049154": 10})
 
     def test_waypoint_summary_displays_all_without_summing_marker(self):
         entry = dict(
             new_waypoint(),
             SystemName="Sol",
-            BuyCommodities={"Gold": 9999, "Silver": 3},
-            SellCommodities={"Polymere": 9999},
+            BuyCommodities={"128049154": 9999, "128049155": 3},
+            SellCommodities={"128049197": 9999},
         )
         self.editor.document.data["waypoints"] = [entry]
         self.editor.refresh()
         self.assertEqual(self.editor.tree.item(entry["Id"], "values")[2], "Pending | buy All + 3 | sell All")
-        self.assertEqual(entry["BuyCommodities"]["Gold"], 9999)
+        self.assertEqual(entry["BuyCommodities"]["128049154"], 9999)
         self.editor.document.filename = Path(self.runtime.filename).resolve()
         self.editor.document.saved = copy.deepcopy(self.editor.document.data)
         self.runtime.waypoints = {
-            entry["Id"]: {"BuyCommodities": {"Gold": 9999}, "SellCommodities": {"Polymere": 9995}}
+            entry["Id"]: {"BuyCommodities": {"128049154": 9999}, "SellCommodities": {"128049197": 9995}}
         }
         self.editor.refresh()
         self.assertEqual(self.editor.tree.item(entry["Id"], "values")[2], "Pending | buy All | sell 9995")
 
     def test_commodity_table_validates_pending_edit_and_preserves_quantities(self):
-        table = CommodityList(self.root, {"Gold": 2})
+        table = CommodityList(self.root, {"128049154": 2})
         table.name.set("Polymere")
         table.quantity.set("3")
         with self.assertRaises(ValueError):
             table.get()
         table.set_item()
-        self.assertEqual(table.get(), {"Gold": 2, "Polymere": 3})
+        self.assertEqual(table.get(), {"128049154": 2, "128049197": 3})
         table.name.set("Silver")
         table.quantity.set("-1")
         with mock.patch("gui.waypoint_editor.messagebox.showerror") as error:
@@ -983,25 +1010,50 @@ class EditorWidgetsTestCase(unittest.TestCase):
         error.assert_called_once()
 
     def test_commodity_all_choice_roundtrips_numeric_marker_and_preserves_transfer_all(self):
-        table = CommodityList(self.root, {"Gold": 9999, "All": 0})
+        table = CommodityList(self.root, {"128049154": 9999})
         self.addCleanup(table.destroy)
         first = table.tree.get_children()[0]
         self.assertEqual(table.tree.item(first, "values"), ("All",))
         table.tree.selection_set(first)
         self.root.update()
         self.assertEqual(table.quantity.get(), "All")
-        self.assertEqual(table.get(), {"Gold": 9999, "All": 0})
+        self.assertEqual(table.get(), {"128049154": 9999})
         table.quantity.set("5")
         with self.assertRaises(ValueError):
             table.get()
         table.set_item()
-        self.assertEqual(table.get(), {"Gold": 5, "All": 0})
+        self.assertEqual(table.get(), {"128049154": 5})
         table.name.set("Polymere")
         table.quantity_picker.current(0)
         with self.assertRaises(ValueError):
             table.get()
         table.set_item()
-        self.assertEqual(table.get(), {"Gold": 5, "All": 0, "Polymere": 9999})
+        self.assertEqual(table.get(), {"128049154": 5, "128049197": 9999})
+
+    def test_all_cargo_sentinel_is_distinct_from_commodity_ids_and_quantity_all(self):
+        table = CommodityList(self.root, {}, allow_all=True)
+        self.addCleanup(table.destroy)
+        table.name.set("All")
+        table.quantity.set("0")
+        table.set_item()
+        self.assertEqual(table.get(), {"All": 0})
+        self.assertEqual(table.tree.item("All", "text"), "All cargo")
+
+        table.name.set("All")
+        table.quantity.set("1")
+        with mock.patch("gui.waypoint_editor.messagebox.showerror") as error:
+            table.set_item()
+        error.assert_called_once()
+        self.assertEqual(table.values, {"All": 0})
+
+        ordinary_list = CommodityList(self.root, {})
+        self.addCleanup(ordinary_list.destroy)
+        ordinary_list.name.set("All")
+        ordinary_list.quantity.set("0")
+        with mock.patch("gui.waypoint_editor.messagebox.showerror") as error:
+            ordinary_list.set_item()
+        error.assert_called_once()
+        self.assertEqual(ordinary_list.values, {})
 
     def test_all_choice_applies_to_buy_sell_and_global_lists(self):
         self.editor.add()
@@ -1013,14 +1065,14 @@ class EditorWidgetsTestCase(unittest.TestCase):
             table.set_item()
         form.apply()
         entry = self.editor.document.data["waypoints"][0]
-        self.assertEqual(entry["BuyCommodities"], {"Polymere": 9999})
-        self.assertEqual(entry["SellCommodities"], {"Polymere": 9999})
+        self.assertEqual(entry["BuyCommodities"], {"128049197": 9999})
+        self.assertEqual(entry["SellCommodities"], {"128049197": 9999})
         self.editor.edit_global()
         self.editor.form.buy.name.set("Gold")
         self.editor.form.buy.quantity.set("All")
         self.editor.form.buy.set_item()
         self.editor.form.apply()
-        self.assertEqual(self.editor.document.data["GlobalShoppingList"]["BuyCommodities"], {"Gold": 9999})
+        self.assertEqual(self.editor.document.data["GlobalShoppingList"]["BuyCommodities"], {"128049154": 9999})
 
     def test_pending_all_choice_survives_rebuild(self):
         self.editor.add()
@@ -1036,7 +1088,7 @@ class EditorWidgetsTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             table.get()
         table.set_item()
-        self.assertEqual(table.get(), {"Polymere": 9999})
+        self.assertEqual(table.get(), {"128049197": 9999})
 
     def test_waypoint_form_edits_target_bookmark_and_trade_quantities(self):
         entry = new_waypoint()
@@ -1052,7 +1104,7 @@ class EditorWidgetsTestCase(unittest.TestCase):
         dialog.apply()
         result = applied.call_args.args[0]
         self.assertEqual(result["Id"], entry["Id"])
-        self.assertEqual(result["BuyCommodities"], {"Polymere": 2})
+        self.assertEqual(result["BuyCommodities"], {"128049197": 2})
         self.assertEqual(result["GalaxyBookmarkNumber"], 1)
         self.assertEqual(entry["BuyCommodities"], {})
 
@@ -1073,7 +1125,7 @@ class EditorWidgetsTestCase(unittest.TestCase):
         with mock.patch("tkinter.Toplevel", side_effect=AssertionError("No extra window allowed")):
             self.editor.edit_global()
             self.assertTrue(self.editor.form.global_list)
-            self.editor.form.buy.values["Polymere"] = 2
+            self.editor.form.buy.values["128049197"] = 2
             self.editor.form.cancel_button.invoke()
         self.assertEqual(self.editor.document.data, previous)
         self.assertFalse(self.editor.dialog_open)
@@ -1081,9 +1133,9 @@ class EditorWidgetsTestCase(unittest.TestCase):
     def test_inline_global_apply_updates_draft_and_marks_dirty(self):
         self.editor.edit_global()
         self.editor.form.variables["Enabled"].set(True)
-        self.editor.form.buy.values["Polymere"] = 2
+        self.editor.form.buy.values["128049197"] = 2
         self.editor.form.apply()
-        self.assertEqual(self.editor.document.data["GlobalShoppingList"]["BuyCommodities"], {"Polymere": 2})
+        self.assertEqual(self.editor.document.data["GlobalShoppingList"]["BuyCommodities"], {"128049197": 2})
         self.assertTrue(self.editor.document.data["GlobalShoppingList"]["Enabled"])
         self.assertTrue(self.editor.document.dirty)
         self.assertIsNone(self.editor.form)
@@ -1211,7 +1263,7 @@ class EditorWidgetsTestCase(unittest.TestCase):
         self.editor.refresh()
         self.editor.add()
         table = self.editor.form.buy
-        table.values = {"Gold": 1, "Silver": 2, "Polymere": 3}
+        table.values = {"128049154": 1, "128049155": 2, "128049197": 3}
         table.refresh()
         self.editor.form.notebook.select(table)
         self.root.update()
@@ -1240,7 +1292,7 @@ class EditorWidgetsTestCase(unittest.TestCase):
             (table.tree.tag_configure("even", "background"), table.tree.tag_configure("odd", "background")),
         )
         table.tree.selection_set(table.tree.get_children()[1])
-        table.values.pop("Gold")
+        table.values.pop("128049154")
         table.refresh()
         self.assertEqual([table.tree.item(item, "tags") for item in table.tree.get_children()], [("even",), ("odd",)])
 
@@ -1322,7 +1374,7 @@ class EditorWidgetsTestCase(unittest.TestCase):
                 self.assertEqual(heading.cget("background"), "#5a5a5a")
                 self.assertEqual(body.cget("background"), "#343434")
                 self.assertEqual(body.winfo_y(), heading.winfo_y() + heading.winfo_height())
-                table.values = {"Gold": 1}
+                table.values = {"128049154": 1}
                 table.refresh()
                 self.root.update()
                 self.assertEqual(body.winfo_y(), tree.bbox(tree.get_children()[0])[1])
@@ -1332,49 +1384,67 @@ class EditorWidgetsTestCase(unittest.TestCase):
     def test_searchable_picker_translates_only_selected_suggestions(self):
         self.editor.add()
         table = self.editor.form.buy
+        table.language.set("de")
         table.name.set("polymers")
         self.assertEqual(tuple(table.name_picker.cget("values")), ("Polymere",))
         table.name.set("Polymere")
         table.name_picker.event_generate("<<ComboboxSelected>>")
         table.quantity.set("2")
         table.set_item()
-        self.assertEqual(table.values, {"Polymere": 2})
+        self.assertEqual(table.values, {"128049197": 2})
         table.name.set("Custom commodity")
         table.language.set("en")
         self.assertEqual(table.name.get(), "Custom commodity")
-        self.assertEqual(table.values, {"Polymere": 2})
+        self.assertEqual(table.values, {"128049197": 2})
         self.assertEqual(self.editor.form.sell.language.get(), "en")
-        table.name.set("Polymere")
+        table.name.set("Polymers")
         self.assertEqual(tuple(table.name_picker.cget("values")), ("Polymers [unchecked]",))
         table.name.set("Polymers [unchecked]")
         table.choose_name()
         self.assertEqual(table.name.get(), "Polymers")
         table.set_item()
-        self.assertIn("Polymers", table.get())
-        self.assertNotIn("Polymers [unchecked]", table.get())
+        self.assertIn("128049197", table.get())
+
+    def test_game_language_updates_labels_without_resetting_ids_or_drafts(self):
+        self.editor.edit_global()
+        table = self.editor.form.buy
+        table.values = {"128049197": 4}
+        table.refresh()
+        table.tree.selection_set("128049197")
+        self.root.update()
+        table.set_name("pending name")
+        table.quantity.set("draft quantity")
+        self.editor.set_game_language("de")
+        self.root.update()
+        self.assertEqual(self.editor.form.language.get(), "de")
+        self.assertEqual(table.values, {"128049197": 4})
+        self.assertEqual(table.tree.item("128049197", "text"), "Polymere")
+        self.assertEqual(table.tree.selection(), ("128049197",))
+        self.assertEqual(table.name.get(), "pending name")
+        self.assertEqual(table.quantity.get(), "draft quantity")
 
     def test_picker_preserves_free_text_and_language_across_form_snapshot(self):
         self.editor.edit_global()
         form = self.editor.form
         form.language.set("en")
-        form.buy.name.set("Unknown future commodity")
+        form.buy.name.set("Polymers")
         form.buy.quantity.set("invalid draft")
         state = self.editor.form_state()
         self.editor.cancel_form()
         self.editor.begin_form(state["entry"], state["index"], state["global_list"])
         self.editor.form.restore(state)
         self.assertEqual(self.editor.form.language.get(), "en")
-        self.assertEqual(self.editor.form.buy.name.get(), "Unknown future commodity")
+        self.assertEqual(self.editor.form.buy.name.get(), "Polymers")
         self.assertEqual(self.editor.form.buy.quantity.get(), "invalid draft")
         self.editor.form.buy.quantity.set("3")
         self.editor.form.buy.set_item()
         self.editor.form.apply()
         self.assertEqual(
             self.editor.document.data["GlobalShoppingList"]["BuyCommodities"],
-            {"Unknown future commodity": 3},
+            {"128049197": 3},
         )
 
-    def test_catalogue_failure_is_reported_and_free_input_remains_available(self):
+    def test_catalogue_failure_prevents_creating_an_unidentified_commodity(self):
         with (
             mock.patch("gui.waypoint_editor.load_catalogue", side_effect=OSError("Catalogue unavailable")),
             mock.patch("gui.waypoint_editor.messagebox.showerror") as error,
@@ -1383,8 +1453,10 @@ class EditorWidgetsTestCase(unittest.TestCase):
         error.assert_called_once()
         table = self.editor.form.buy
         table.name.set("Polymere")
-        table.set_item()
-        self.assertEqual(table.get(), {"Polymere": 1})
+        with mock.patch("gui.waypoint_editor.messagebox.showerror") as invalid:
+            table.set_item()
+        invalid.assert_called_once()
+        self.assertEqual(table.values, {})
 
     def prepare_import(self, text=ONE_WAY):
         self.editor.import_route()
@@ -1407,41 +1479,41 @@ class EditorWidgetsTestCase(unittest.TestCase):
         self.assertTrue(self.editor.document.dirty)
         self.assertIsNone(self.editor.document.filename)
         first, second = self.editor.document.data["waypoints"]
-        self.assertEqual(first["BuyCommodities"], {"Polymere": 3})
-        self.assertEqual(second["SellCommodities"], {"Polymere": 3})
+        self.assertEqual(first["BuyCommodities"], {"128049197": 3})
+        self.assertEqual(second["SellCommodities"], {"128049197": 3})
         self.runtime.load_waypoint_file.assert_not_called()
         self.assertIsNone(self.editor.form)
 
     def test_commodity_move_preserves_values_selection_and_applied_order(self):
         self.editor.add()
         table = self.editor.form.buy
-        table.values = {"Gold": 1, "Silver": 2, "Polymere": 3, "Water": 4}
+        table.values = {"128049154": 1, "128049155": 2, "128049197": 3, "128049166": 4}
         table.refresh()
         items = table.tree.get_children()
         table.tree.selection_set(items[1:3])
         table.move(-1)
         self.root.update()
-        self.assertEqual(list(table.get()), ["Silver", "Polymere", "Gold", "Water"])
-        self.assertEqual([table.tree.item(item, "text") for item in table.tree.selection()], ["Silver", "Polymere"])
+        self.assertEqual(list(table.get()), ["128049155", "128049197", "128049154", "128049166"])
+        self.assertEqual([table.tree.item(item, "text") for item in table.tree.selection()], ["Silver", "Polymers"])
         table.move(-1)
-        self.assertEqual(list(table.values), ["Silver", "Polymere", "Gold", "Water"])
+        self.assertEqual(list(table.values), ["128049155", "128049197", "128049154", "128049166"])
         table.move(1)
         self.root.update()
-        self.assertEqual(list(table.values), ["Gold", "Silver", "Polymere", "Water"])
-        self.assertEqual(table.values, {"Gold": 1, "Silver": 2, "Polymere": 3, "Water": 4})
+        self.assertEqual(list(table.values), ["128049154", "128049155", "128049197", "128049166"])
+        self.assertEqual(table.values, {"128049154": 1, "128049155": 2, "128049197": 3, "128049166": 4})
         table.move(1)
         self.root.update()
-        self.assertEqual(list(table.values), ["Gold", "Water", "Silver", "Polymere"])
+        self.assertEqual(list(table.values), ["128049154", "128049166", "128049155", "128049197"])
         table.move(1)
-        self.assertEqual(list(table.values), ["Gold", "Water", "Silver", "Polymere"])
+        self.assertEqual(list(table.values), ["128049154", "128049166", "128049155", "128049197"])
         table.tree.selection_remove(*table.tree.selection())
         table.move(-1)
-        self.assertEqual(list(table.values), ["Gold", "Water", "Silver", "Polymere"])
+        self.assertEqual(list(table.values), ["128049154", "128049166", "128049155", "128049197"])
         self.editor.form.variables["SystemName"].set("Sol")
         self.editor.form.apply()
         self.assertEqual(
             list(self.editor.document.data["waypoints"][0]["BuyCommodities"]),
-            ["Gold", "Water", "Silver", "Polymere"],
+            ["128049154", "128049166", "128049155", "128049197"],
         )
 
     def test_import_sets_quantity_for_all_selected_goods_only(self):
@@ -1453,15 +1525,15 @@ class EditorWidgetsTestCase(unittest.TestCase):
         self.assertEqual(form.quantity.get(), "3")
         form.quantity.set("12")
         form.set_quantity()
-        self.assertEqual(form.quantities, {int(item): 12 for item in items})
+        self.assertEqual(form.quantities, {item: 12 for item in items})
         for item in items:
             self.assertEqual(form.goods.item(item, "values"), ("12",))
         form.goods.selection_set(items[0])
         self.root.update()
         form.quantity.set("4")
         form.set_quantity()
-        self.assertEqual(form.quantities[int(items[0])], 4)
-        self.assertEqual(form.quantities[int(items[1])], 12)
+        self.assertEqual(form.quantities[items[0]], 4)
+        self.assertEqual(form.quantities[items[1]], 12)
         form.goods.selection_set(items)
         self.root.update()
         self.assertEqual(form.quantity.get(), "")
@@ -1491,7 +1563,7 @@ class EditorWidgetsTestCase(unittest.TestCase):
     def test_import_bulk_pending_quantity_and_selection_survive_rebuild(self):
         form = self.prepare_import(ROUND_TRIP)
         items = form.goods.get_children()
-        form.quantities[int(items[1])] = 9
+        form.quantities[items[1]] = 9
         form.goods.selection_set(items)
         self.root.update()
         self.assertEqual(form.quantity.get(), "")

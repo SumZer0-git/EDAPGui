@@ -4,29 +4,45 @@ import json
 from collections import Counter
 
 from core import paths
+from core.commodities import get_localization
+from core.commodities import load_catalogue as load_id_catalogue
 
 
 def load_catalogue():
-    with (paths.DATA / "commodities.json").open(encoding="utf-8") as file:
-        catalogue = json.load(file)
+    catalogue = load_id_catalogue()
     with (paths.DATA / "commodities.verification.json").open(encoding="utf-8") as file:
         verification = json.load(file)
-    if catalogue["version"] != 1 or verification["version"] != 1:
-        raise ValueError("Unsupported commodity catalogue version.")
-    return catalogue["commodities"], {
-        language: set(verification[f"{language}_market_observed_ids"]) for language in ("de", "en")
+    if verification["version"] != 1:
+        raise ValueError("Unsupported commodity verification data version.")
+    verified = {
+        language: set(verification.get(f"{language}_market_observed_ids", []))
+        for language in get_localization().available_languages
     }
+    return catalogue, verified
 
 
-def suggestions(rows, verified, language, query):
-    if language not in ("de", "en"):
-        raise ValueError("Commodity language must be de or en.")
+def suggestions(catalogue, verified, language, query, localization=None):
+    localization = localization or get_localization(language)
+    if language not in localization.available_languages:
+        raise ValueError(f"Commodity language {language!r} is not available.")
     query = query.strip().casefold()
-    counts = Counter(row[f"name_{language}"] for row in rows)
+    names = localization.commodity_names(language)
+    matching_ids = (
+        {
+            commodity_id
+            for code in localization.available_languages
+            for commodity_id, name in localization.commodity_names(code).items()
+            if query in name.casefold()
+        }
+        if query
+        else set()
+    )
+    displayed = {commodity_id: names.get(commodity_id, item["symbol"]) for commodity_id, item in catalogue.items()}
+    counts = Counter(name.casefold() for name in displayed.values())
     return {
-        row[f"name_{language}"]
-        + (f" ({row['symbol']})" if counts[row[f"name_{language}"]] > 1 else "")
-        + ("" if row["id"] in verified[language] else " [unchecked]"): row[f"name_{language}"]
-        for row in sorted(rows, key=lambda row: row[f"name_{language}"].casefold())
-        if not query or any(query in row[key].casefold() for key in ("name_de", "name_en", "symbol"))
+        name
+        + (f" ({catalogue[commodity_id]['symbol']})" if counts[name.casefold()] > 1 else "")
+        + ("" if int(commodity_id) in verified.get(language, set()) else " [unchecked]"): commodity_id
+        for commodity_id, name in sorted(displayed.items(), key=lambda pair: pair[1].casefold())
+        if not query or commodity_id in matching_ids or query in catalogue[commodity_id]["symbol"].casefold()
     }

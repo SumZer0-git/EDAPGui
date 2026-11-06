@@ -12,6 +12,7 @@ none. The file names tell what is expected:
  - galaxy-map: OCR recognizes the map header in each provided color scheme
  - trade-buy / trade-sell: the modal commodity and transaction direction match; background goods do not
  - nav-panel: the selected system/navigation/transactions/contacts tab is identified in both color schemes
+ - internal-panel: the selected right-panel tab, including icon tabs, is identified in both color schemes
 Screenshots whose names contain "crop" or "head-turned" are ignored.
 """
 
@@ -26,6 +27,7 @@ from core import paths
 from core.constants import GuiFocusGalaxyMap
 from i18n.localization import LocalizationManager
 from panels.galaxy_map import EDGalaxyMap
+from panels.internal_status import EDInternalStatusPanel
 from panels.navigation import EDNavigationPanel
 from panels.station_services import EDStationServicesInShip
 from tests.helpers import FIXTURES, ScreenshotScreen, load_screenshot
@@ -45,18 +47,33 @@ STATION_SCREENSHOTS = tuple(sorted(SCREENSHOTS.glob("*p/*station-services*.png")
 TRADE_SCREENSHOTS = tuple(sorted(SCREENSHOTS.glob("*p/*trade-*.png")))
 GALAXY_MAP_SCREENSHOTS = tuple(sorted(SCREENSHOTS.glob("*p/*galaxy-map*.png")))
 NAV_PANEL_SCREENSHOTS = tuple(sorted(SCREENSHOTS.glob("*p/*nav-panel*.png")))
+INTERNAL_PANEL_SCREENSHOTS = tuple(sorted(SCREENSHOTS.glob("*p/*internal-panel*.png")))
+
+
+def screenshot_language(path):
+    return "en" if "en" in path.stem.split("_") else "de"
+
+
+def screenshot_ocr(path, engines):
+    language = screenshot_language(path)
+    if language not in engines:
+        locale = LocalizationManager(str(paths.LOCALES_DIR), language)
+        engines[language] = OCR(screen=None, language=locale.ocr_language)
+    return engines[language]
 
 
 @skipUnless(OCR is not None and NAV_PANEL_SCREENSHOTS, "PaddleOCR or local navigation-panel screenshots unavailable")
 class NavigationPanelScreenshotTestCase(unittest.TestCase):
     def test_selected_tab_and_station_in_both_color_schemes(self):
-        ocr = OCR(screen=None)
-        locale = LocalizationManager(str(paths.LOCALES_DIR), "en")
+        engines = {}
         for path in NAV_PANEL_SCREENSHOTS:
             with self.subTest(screenshot=path.name):
+                ocr = screenshot_ocr(path, engines)
                 screen = ScreenshotScreen(load_screenshot(path))
                 ocr.screen = screen
-                panel = EDNavigationPanel(Mock(ocr=ocr, locale=locale), screen, Mock(), Mock())
+                locale = LocalizationManager(str(paths.LOCALES_DIR), screenshot_language(path))
+                with patch("panels.navigation.StatusParser"):
+                    panel = EDNavigationPanel(Mock(ocr=ocr, locale=locale), screen, Mock(), Mock())
                 expected = path.stem.split("_")[2]
                 self.assertEqual(panel._selected_tab(), expected)
                 if expected == "navigation":
@@ -76,6 +93,21 @@ class NavigationPanelScreenshotTestCase(unittest.TestCase):
                 self.assertEqual(" ".join(ocr.image_simple_ocr(image) or []), name)
 
 
+@skipUnless(OCR is not None and INTERNAL_PANEL_SCREENSHOTS, "PaddleOCR or local internal-panel screenshots unavailable")
+class InternalPanelScreenshotTestCase(unittest.TestCase):
+    def test_selected_tab_in_both_color_schemes(self):
+        engines = {}
+        for path in INTERNAL_PANEL_SCREENSHOTS:
+            with self.subTest(screenshot=path.name):
+                ocr = screenshot_ocr(path, engines)
+                screen = ScreenshotScreen(load_screenshot(path))
+                ocr.screen = screen
+                locale = LocalizationManager(str(paths.LOCALES_DIR), screenshot_language(path))
+                with patch("panels.internal_status.StatusParser"):
+                    panel = EDInternalStatusPanel(Mock(ocr=ocr, locale=locale), screen, Mock(), Mock())
+                self.assertEqual(panel._selected_tab(), path.stem.split("_")[2].replace("-", "_"))
+
+
 class NoOcr:
     def image_simple_ocr(self, image):
         return None
@@ -84,13 +116,6 @@ class NoOcr:
 class Detector(DetectionMixin):
     cv_view = False
     ocr = NoOcr()
-
-
-class AlignmentPromptLocale:
-    def all_values(self, key):
-        if key != "ALIGN_WITH_TARGET_MSG":
-            raise KeyError(key)
-        return ["ALIGN WITH TARGET DESTINATION", "AUF ZIEL AUSRICHTEN"]
 
 
 def screenshots():
@@ -149,11 +174,12 @@ class FsdAlignmentPromptScreenshotTestCase(unittest.TestCase):
     def test_alignment_prompt_is_read_in_all_local_screenshots(self):
         templates = ImageTemplates(2160)
         detector = Detector()
-        detector.ocr = OCR(screen=None)
-        detector.locale = AlignmentPromptLocale()
+        engines = {}
 
         for path in ALIGNMENT_SCREENSHOTS:
             with self.subTest(screenshot=path.name):
+                detector.locale = LocalizationManager(str(paths.LOCALES_DIR), screenshot_language(path))
+                detector.ocr = screenshot_ocr(path, engines)
                 image = load_screenshot(path)
                 regions = ScreenRegions(ScreenshotScreen(image), templates)
                 self.assertTrue(detector.fsd_alignment_prompt(regions))
@@ -162,10 +188,10 @@ class FsdAlignmentPromptScreenshotTestCase(unittest.TestCase):
 @skipUnless(OCR is not None and STATION_SCREENSHOTS, "PaddleOCR or local station-services screenshots unavailable")
 class StationServicesScreenshotTestCase(unittest.TestCase):
     def test_station_header_is_recognized_in_all_color_schemes(self):
-        ocr = OCR(screen=None)
-        locale = LocalizationManager(str(paths.LOCALES_DIR), "en")
+        engines = {}
         for path in STATION_SCREENSHOTS:
             with self.subTest(screenshot=path.name):
+                ocr = screenshot_ocr(path, engines)
                 screen = ScreenshotScreen(load_screenshot(path))
                 ocr.screen = screen
                 services = EDStationServicesInShip.__new__(EDStationServicesInShip)
@@ -174,7 +200,7 @@ class StationServicesScreenshotTestCase(unittest.TestCase):
                 services.ap_ckb = Mock()
                 services.screen = screen
                 services.ocr = ocr
-                services.locale = locale
+                services.locale = LocalizationManager(str(paths.LOCALES_DIR), screenshot_language(path))
                 services.reg = {"connected_to": {"rect": [0.0, 0.0, 0.25, 0.25]}}
                 # One real OCR poll is sufficient for a fully rendered static screenshot.
                 wait = ocr.wait_for_text
@@ -226,11 +252,12 @@ class GalaxyMapScreenshotTestCase(unittest.TestCase):
 @skipUnless(OCR is not None and TRADE_SCREENSHOTS, "PaddleOCR or local trade-dialog screenshots unavailable")
 class TradeDialogScreenshotTestCase(unittest.TestCase):
     def test_selected_commodity_and_direction_in_both_color_schemes(self):
-        ocr = OCR(screen=None)
+        engines = {}
         for path in TRADE_SCREENSHOTS:
             with self.subTest(screenshot=path.name):
+                ocr = screenshot_ocr(path, engines)
                 services = EDStationServicesInShip.__new__(EDStationServicesInShip)
-                services.locale = LocalizationManager(str(paths.LOCALES_DIR), "en")
+                services.locale = LocalizationManager(str(paths.LOCALES_DIR), screenshot_language(path))
                 services.screen = ScreenshotScreen(load_screenshot(path))
                 services.ocr = ocr
                 ocr.screen = services.screen
@@ -244,6 +271,9 @@ class TradeDialogScreenshotTestCase(unittest.TestCase):
 
         for path in STATION_SCREENSHOTS:
             with self.subTest(no_trade_dialog=path.name):
+                ocr = screenshot_ocr(path, engines)
+                services.ocr = ocr
+                services.locale = LocalizationManager(str(paths.LOCALES_DIR), screenshot_language(path))
                 services.screen = ScreenshotScreen(load_screenshot(path))
                 ocr.screen = services.screen
                 self.assertFalse(services.trade_dialog_matches("Polymere", False))

@@ -39,6 +39,8 @@ This document summarizes the behavior currently implemented and lists a small nu
    destination, it can perform configured trades or cargo transfers, then marks the waypoint complete and saves the
    progress separately from the route. Ordinary market trades require confirmation from the game before remaining
    quantities are reduced.
+   Trade requests use commodity IDs; their editor order is preserved and the current market supplies the localized
+   name used for dialog confirmation. A change of display language does not change the requested goods.
 6. **Repeat route** restores the original quantities and makes all stops pending after the last active stop.
    The route then starts again until stopped; a fixed repetition count is not available. Waypoint Assist
    remains docked at the end of a non-repeating route and
