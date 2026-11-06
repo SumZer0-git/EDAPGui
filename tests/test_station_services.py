@@ -9,14 +9,15 @@ from panels.station_services import EDStationServicesInShip, TradeDialogUnconfir
 
 
 class StationServicesTestCase(unittest.TestCase):
-    def test_detects_both_supported_languages_regardless_of_configuration(self):
+    def test_detection_uses_only_the_active_language(self):
         for language in ("en", "de"):
             with self.subTest(language=language):
                 services = self.make_services(language)
                 services.ocr.wait_for_text.return_value = True
                 self.assertTrue(services.goto_station_services())
                 texts = services.ocr.wait_for_text.call_args.args[1]
-                self.assertEqual(set(texts), {"CONNECTED TO", "VERBUNDEN MIT"})
+                expected = {"CONNECTED TO"} if language == "en" else {"VERBUNDEN MIT"}
+                self.assertEqual(set(texts), expected)
                 services.ap_ckb.assert_not_called()
 
     def test_timeout_is_not_reported_as_success(self):
@@ -43,12 +44,22 @@ class TradeDialogSafetyTestCase(unittest.TestCase):
     def setUp(self):
         self.services = StationServicesTestCase.make_services("en")
         self.services.market_parser = mock.Mock()
-        self.services.market_parser.current_data = {"Items": [{"Name_Localised": "Polymere", "StockBracket": 3}]}
+        target = {
+            "id": 128049197,
+            "Name_Localised": "Polymere",
+            "Stock": 2,
+            "Demand": 1,
+            "StockBracket": 3,
+        }
+        self.services.market_parser.current_data = {"Items": [target]}
+        self.services.market_parser.get_item.return_value = target
+        self.services.market_parser.can_buy_item.return_value = True
+        self.services.market_parser.can_sell_item.return_value = True
         self.services.market_parser.get_buyable_items.return_value = [
-            {"Name_Localised": "Halbleiter", "Stock": 10},
-            {"Name_Localised": "Polymere", "Stock": 2},
+            {"id": 128049204, "Name_Localised": "Halbleiter", "Stock": 10},
+            target,
         ]
-        self.services.market_parser.get_sellable_items.return_value = [{"Name_Localised": "Polymere", "Demand": 1}]
+        self.services.market_parser.get_sellable_items.return_value = [target]
         patcher = mock.patch("panels.station_services.sleep")
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -63,9 +74,9 @@ class TradeDialogSafetyTestCase(unittest.TestCase):
                     self.assertRaises(TradeDialogUnconfirmedError),
                 ):
                     if selling:
-                        services.sell_commodity(services.keys, "Polymere", 2, mock.Mock())
+                        services.sell_commodity(services.keys, "128049197", 2, mock.Mock())
                     else:
-                        services.buy_commodity(services.keys, "Polymere", 2, 10)
+                        services.buy_commodity(services.keys, "128049197", 2, 10)
                 calls = services.keys.send.call_args_list
                 self.assertEqual(sum(call.args[0] == "UI_Select" for call in calls), 1)
                 self.assertFalse(any(call.args[0] in ("UI_Right", "UI_Left") for call in calls))
@@ -77,9 +88,9 @@ class TradeDialogSafetyTestCase(unittest.TestCase):
                 self.services.keys.reset_mock()
                 with mock.patch.object(self.services, "confirm_trade_dialog", return_value=True) as confirm:
                     result = (
-                        self.services.sell_commodity(self.services.keys, "Polymere", 2, mock.Mock())
+                        self.services.sell_commodity(self.services.keys, "128049197", 2, mock.Mock())
                         if selling
-                        else self.services.buy_commodity(self.services.keys, "Polymere", 2, 10)
+                        else self.services.buy_commodity(self.services.keys, "128049197", 2, 10)
                     )
                 self.assertEqual(result, (True, 2))
                 confirm.assert_called_once_with("Polymere", selling=selling)
@@ -96,7 +107,12 @@ class TradeDialogSafetyTestCase(unittest.TestCase):
                 other_items = [
                     {"Name_Localised": f"Commodity {index}", "Stock": 10, "Demand": 10} for index in range(14)
                 ]
-                target = {"Name_Localised": "Polymere", "Stock": 2, "Demand": 2}
+                target = {
+                    "id": 128049197,
+                    "Name_Localised": "Polymere",
+                    "Stock": 2,
+                    "Demand": 2,
+                }
                 if selling:
                     self.services.market_parser.get_sellable_items.return_value = [*other_items, target]
                 else:
@@ -104,9 +120,9 @@ class TradeDialogSafetyTestCase(unittest.TestCase):
                 self.services.keys.reset_mock()
                 with mock.patch.object(self.services, "confirm_trade_dialog", return_value=True):
                     result = (
-                        self.services.sell_commodity(self.services.keys, "Polymere", 1, mock.Mock())
+                        self.services.sell_commodity(self.services.keys, "128049197", 1, mock.Mock())
                         if selling
-                        else self.services.buy_commodity(self.services.keys, "Polymere", 1, 10)
+                        else self.services.buy_commodity(self.services.keys, "128049197", 1, 10)
                     )
 
                 self.assertEqual(result, (True, 1))
@@ -117,7 +133,13 @@ class TradeDialogSafetyTestCase(unittest.TestCase):
 
     def test_no_matching_list_item_reports_failure(self):
         self.services.market_parser.get_buyable_items.return_value = []
-        self.assertEqual(self.services.buy_commodity(self.services.keys, "Polymere", 2, 10), (False, 0))
+        self.assertEqual(self.services.buy_commodity(self.services.keys, "128049197", 2, 10), (False, 0))
+        self.services.keys.send.assert_not_called()
+
+    def test_unknown_market_commodity_id_cannot_be_traded(self):
+        self.services.market_parser.get_item.return_value = None
+        self.assertEqual(self.services.buy_commodity(self.services.keys, "999999999", 2, 10), (False, 0))
+        self.assertEqual(self.services.sell_commodity(self.services.keys, "999999999", 2, mock.Mock()), (False, 0))
         self.services.keys.send.assert_not_called()
 
     def test_buy_all_is_limited_by_stock_and_free_cargo(self):
@@ -125,11 +147,11 @@ class TradeDialogSafetyTestCase(unittest.TestCase):
             with self.subTest(stock=stock, free_cargo=free_cargo):
                 self.services.keys.reset_mock()
                 self.services.market_parser.get_buyable_items.return_value = [
-                    {"Name_Localised": "Polymere", "Stock": stock}
+                    {"id": 128049197, "Name_Localised": "Polymere", "Stock": stock}
                 ]
                 with mock.patch.object(self.services, "confirm_trade_dialog", return_value=True):
                     self.assertEqual(
-                        self.services.buy_commodity(self.services.keys, "Polymere", 9999, free_cargo),
+                        self.services.buy_commodity(self.services.keys, "128049197", 9999, free_cargo),
                         (True, expected),
                     )
                 self.assertIn(mock.call("UI_Right", hold=4), self.services.keys.send.call_args_list)
@@ -144,14 +166,16 @@ class TradeDialogSafetyTestCase(unittest.TestCase):
         self.services.ap_ckb.assert_not_called()
 
     def test_text_must_match_whole_name_and_trade_direction(self):
-        for title, name, expected in (
-            ("WARE KAUFEN", "POLYMERE", True),
-            ("BUY COMMODITY", "POLYMERE", True),
-            ("WARE VERKAUFEN", "POLYMERE", False),
-            ("WARE KAUFEN", "POLYMERE EXTRA", False),
-            ("WARE KAUFEN", "", False),
-            ("", "POLYMERE", False),
+        for language, title, name, expected in (
+            ("de", "WARE KAUFEN", "POLYMERE", True),
+            ("en", "BUY COMMODITY", "POLYMERE", True),
+            ("de", "WARE VERKAUFEN", "POLYMERE", False),
+            ("de", "WARE KAUFEN", "POLYMERE EXTRA", False),
+            ("de", "WARE KAUFEN", "", False),
+            ("de", "", "POLYMERE", False),
+            ("en", "WARE KAUFEN", "POLYMERE", False),
         ):
-            with self.subTest(title=title, name=name):
+            with self.subTest(language=language, title=title, name=name):
+                self.services.locale = LocalizationManager(str(paths.LOCALES_DIR), language)
                 self.services.ocr.image_simple_ocr.side_effect = [[title], [name]]
                 self.assertEqual(self.services.trade_dialog_matches("Polymere", False), expected)

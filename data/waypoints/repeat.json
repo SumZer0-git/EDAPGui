@@ -25,10 +25,10 @@
             "SystemBookmarkType": "Station",
             "SystemBookmarkNumber": 1,
             "SellCommodities": {
-                "Lepidolite": 9999
+                "128049161": 9999
             },
             "BuyCommodities": {
-                "Bauxite": 9999
+                "128049165": 9999
             },
             "Comment": null,
             "UpdateCommodityCount": false,
@@ -44,10 +44,10 @@
             "SystemBookmarkType": "Station",
             "SystemBookmarkNumber": 2,
             "SellCommodities": {
-                "Bauxite": 9999
+                "128049165": 9999
             },
             "BuyCommodities": {
-                "Lepidolite": 9999
+                "128049161": 9999
             },
             "Comment": null,
             "UpdateCommodityCount": false,

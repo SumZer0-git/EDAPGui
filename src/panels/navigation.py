@@ -28,10 +28,6 @@ class EDNavigationPanel:
         self.locale = self.ap.locale
         self.status_parser = StatusParser()
 
-        self.navigation_tab_text = self.locale["NAV_PNL_TAB_NAVIGATION"]
-        self.transactions_tab_text = self.locale["NAV_PNL_TAB_TRANSACTIONS"]
-        self.contacts_tab_text = self.locale["NAV_PNL_TAB_CONTACTS"]
-        self.target_tab_text = self.locale["NAV_PNL_TAB_TARGET"]
         self.nav_pnl_coords = None  # [top left, top right, bottom left, bottom right]
 
         # The rect is [L, T, R, B], top left x, y, and bottom right x, y in fraction of screen resolution
@@ -93,6 +89,8 @@ class EDNavigationPanel:
         image = self.ocr.capture_region_pct(region)
         width, height = size_scale_for_station(35, 35, self.screen.screen_width, self.screen.screen_height)
         items = self.ocr.solid_highlighted_items(image, width, height)
+        if not items:
+            items = self.ocr.solid_highlighted_items(image, width, height, remove_thin_lines=True)
         if len(items) != 1:
             logger.debug("Navigation tab highlight count=%s; no unique selected tab.", len(items))
             return None
@@ -116,6 +114,8 @@ class EDNavigationPanel:
         image = self.ocr.capture_region_pct({"rect": [0.11, 0.35, 0.70, 0.86]})
         width, height = size_scale_for_station(350, 25, self.screen.screen_width, self.screen.screen_height)
         items = self.ocr.solid_highlighted_items(image, width, height)
+        if not items:
+            items = self.ocr.solid_highlighted_items(image, width, height, remove_thin_lines=True)
         if len(items) != 1:
             logger.debug("Navigation destination highlight count=%s; row not confirmed.", len(items))
             return ""
@@ -271,15 +271,11 @@ class EDNavigationPanel:
                 )
                 self.ap.overlay.overlay_paint()
 
-            # Test OCR string
-            if self.navigation_tab_text in str(ocr_textlist):
-                tab_text = self.navigation_tab_text
-            if self.transactions_tab_text in str(ocr_textlist):
-                tab_text = self.transactions_tab_text
-            if self.contacts_tab_text in str(ocr_textlist):
-                tab_text = self.contacts_tab_text
-            if self.target_tab_text in str(ocr_textlist):
-                tab_text = self.target_tab_text
+            text = normalize_text(" ".join(ocr_textlist or []))
+            for tab in ("navigation", "transactions", "contacts", "target"):
+                if text in {normalize_text(value) for value in self.locale.all_values(f"NAV_PNL_TAB_{tab.upper()}")}:
+                    tab_text = tab
+                    break
         else:
             logger.debug("is_right_panel_active: no image selected")
 
@@ -290,13 +286,13 @@ class EDNavigationPanel:
             self.keys.send("CycleNextPanel", hold=0.2)
             sleep(0.2)
             self.keys.send("CycleNextPanel", hold=0.2)
-        elif tab_text is self.navigation_tab_text:
+        elif tab_text == "navigation":
             self.keys.send("CycleNextPanel", repeat=2)
-        elif tab_text is self.transactions_tab_text:
+        elif tab_text == "transactions":
             self.keys.send("CycleNextPanel", repeat=1)
-        elif tab_text is self.contacts_tab_text:
+        elif tab_text == "contacts":
             pass
-        elif tab_text is self.target_tab_text:
+        elif tab_text == "target":
             self.keys.send("CycleNextPanel", repeat=4)
 
         # On the CONTACT TAB, go to top selection, do this 4 seconds to ensure at top

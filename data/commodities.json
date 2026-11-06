@@ -4,2878 +4,2056 @@
     {
       "id": 128049152,
       "symbol": "Platinum",
-      "name_de": "Platin",
-      "name_en": "Platinum",
       "rare": false
     },
     {
       "id": 128049153,
       "symbol": "Palladium",
-      "name_de": "Palladium",
-      "name_en": "Palladium",
       "rare": false
     },
     {
       "id": 128049154,
       "symbol": "Gold",
-      "name_de": "Gold",
-      "name_en": "Gold",
       "rare": false
     },
     {
       "id": 128049155,
       "symbol": "Silver",
-      "name_de": "Silber",
-      "name_en": "Silver",
       "rare": false
     },
     {
       "id": 128049156,
       "symbol": "Bertrandite",
-      "name_de": "Bertrandit",
-      "name_en": "Bertrandite",
       "rare": false
     },
     {
       "id": 128049157,
       "symbol": "Indite",
-      "name_de": "Indit",
-      "name_en": "Indite",
       "rare": false
     },
     {
       "id": 128049158,
       "symbol": "Gallite",
-      "name_de": "Gallit",
-      "name_en": "Gallite",
       "rare": false
     },
     {
       "id": 128049159,
       "symbol": "Coltan",
-      "name_de": "Coltan",
-      "name_en": "Coltan",
       "rare": false
     },
     {
       "id": 128049160,
       "symbol": "Uraninite",
-      "name_de": "Uraninit",
-      "name_en": "Uraninite",
       "rare": false
     },
     {
       "id": 128049161,
       "symbol": "Lepidolite",
-      "name_de": "Lepidolith",
-      "name_en": "Lepidolite",
       "rare": false
     },
     {
       "id": 128049162,
       "symbol": "Cobalt",
-      "name_de": "Cobalt",
-      "name_en": "Cobalt",
       "rare": false
     },
     {
       "id": 128049163,
       "symbol": "Rutile",
-      "name_de": "Rutil",
-      "name_en": "Rutile",
       "rare": false
     },
     {
       "id": 128049165,
       "symbol": "Bauxite",
-      "name_de": "Bauxit",
-      "name_en": "Bauxite",
       "rare": false
     },
     {
       "id": 128049166,
       "symbol": "Water",
-      "name_de": "Wasser",
-      "name_en": "Water",
       "rare": false
     },
     {
       "id": 128049168,
       "symbol": "Beryllium",
-      "name_de": "Beryllium",
-      "name_en": "Beryllium",
       "rare": false
     },
     {
       "id": 128049169,
       "symbol": "Indium",
-      "name_de": "Indium",
-      "name_en": "Indium",
       "rare": false
     },
     {
       "id": 128049170,
       "symbol": "Gallium",
-      "name_de": "Gallium",
-      "name_en": "Gallium",
       "rare": false
     },
     {
       "id": 128049171,
       "symbol": "Tantalum",
-      "name_de": "Tantal",
-      "name_en": "Tantalum",
       "rare": false
     },
     {
       "id": 128049172,
       "symbol": "Uranium",
-      "name_de": "Uran",
-      "name_en": "Uranium",
       "rare": false
     },
     {
       "id": 128049173,
       "symbol": "Lithium",
-      "name_de": "Lithium",
-      "name_en": "Lithium",
       "rare": false
     },
     {
       "id": 128049174,
       "symbol": "Titanium",
-      "name_de": "Titan",
-      "name_en": "Titanium",
       "rare": false
     },
     {
       "id": 128049175,
       "symbol": "Copper",
-      "name_de": "Kupfer",
-      "name_en": "Copper",
       "rare": false
     },
     {
       "id": 128049176,
       "symbol": "Aluminium",
-      "name_de": "Aluminium",
-      "name_en": "Aluminium",
       "rare": false
     },
     {
       "id": 128049177,
       "symbol": "Algae",
-      "name_de": "Algen",
-      "name_en": "Algae",
       "rare": false
     },
     {
       "id": 128049178,
       "symbol": "FruitAndVegetables",
-      "name_de": "Obst und Gemüse",
-      "name_en": "Fruit and Vegetables",
       "rare": false
     },
     {
       "id": 128049180,
       "symbol": "Grain",
-      "name_de": "Getreide",
-      "name_en": "Grain",
       "rare": false
     },
     {
       "id": 128049182,
       "symbol": "Animalmeat",
-      "name_de": "Tierfleisch",
-      "name_en": "Animal Meat",
       "rare": false
     },
     {
       "id": 128049183,
       "symbol": "Fish",
-      "name_de": "Fisch",
-      "name_en": "Fish",
       "rare": false
     },
     {
       "id": 128049184,
       "symbol": "FoodCartridges",
-      "name_de": "Nahrungskartuschen",
-      "name_en": "Food Cartridges",
       "rare": false
     },
     {
       "id": 128049185,
       "symbol": "SyntheticMeat",
-      "name_de": "Künstliches Fleisch",
-      "name_en": "Synthetic Meat",
       "rare": false
     },
     {
       "id": 128049188,
       "symbol": "Tea",
-      "name_de": "Tee",
-      "name_en": "Tea",
       "rare": false
     },
     {
       "id": 128049189,
       "symbol": "Coffee",
-      "name_de": "Kaffee",
-      "name_en": "Coffee",
       "rare": false
     },
     {
       "id": 128049190,
       "symbol": "Leather",
-      "name_de": "Leder",
-      "name_en": "Leather",
       "rare": false
     },
     {
       "id": 128049191,
       "symbol": "NaturalFabrics",
-      "name_de": "Naturfasern",
-      "name_en": "Natural Fabrics",
       "rare": false
     },
     {
       "id": 128049193,
       "symbol": "SyntheticFabrics",
-      "name_de": "Chemiefasern",
-      "name_en": "Synthetic Fabrics",
       "rare": false
     },
     {
       "id": 128049197,
       "symbol": "Polymers",
-      "name_de": "Polymere",
-      "name_en": "Polymers",
       "rare": false
     },
     {
       "id": 128049199,
       "symbol": "Semiconductors",
-      "name_de": "Halbleiter",
-      "name_en": "Semiconductors",
       "rare": false
     },
     {
       "id": 128049200,
       "symbol": "Superconductors",
-      "name_de": "Supraleiter",
-      "name_en": "Superconductors",
       "rare": false
     },
     {
       "id": 128049202,
       "symbol": "HydrogenFuel",
-      "name_de": "Wasserstoff-Treibstoff",
-      "name_en": "Hydrogen Fuel",
       "rare": false
     },
     {
       "id": 128049203,
       "symbol": "MineralOil",
-      "name_de": "Mineralöl",
-      "name_en": "Mineral Oil",
       "rare": false
     },
     {
       "id": 128049204,
       "symbol": "Explosives",
-      "name_de": "Sprengstoffe",
-      "name_en": "Explosives",
       "rare": false
     },
     {
       "id": 128049205,
       "symbol": "Pesticides",
-      "name_de": "Pestizide",
-      "name_en": "Pesticides",
       "rare": false
     },
     {
       "id": 128049208,
       "symbol": "AgriculturalMedicines",
-      "name_de": "Agrar-Medikamente",
-      "name_en": "Agri-Medicines",
       "rare": false
     },
     {
       "id": 128049209,
       "symbol": "PerformanceEnhancers",
-      "name_de": "Leistungssteigerer",
-      "name_en": "Performance Enhancers",
       "rare": false
     },
     {
       "id": 128049210,
       "symbol": "BasicMedicines",
-      "name_de": "Allgemeine Medikamente",
-      "name_en": "Basic Medicines",
       "rare": false
     },
     {
       "id": 128049212,
       "symbol": "BasicNarcotics",
-      "name_de": "Drogen",
-      "name_en": "Narcotics",
       "rare": false
     },
     {
       "id": 128049213,
       "symbol": "Tobacco",
-      "name_de": "Tabak",
-      "name_en": "Tobacco",
       "rare": false
     },
     {
       "id": 128049214,
       "symbol": "Beer",
-      "name_de": "Bier",
-      "name_en": "Beer",
       "rare": false
     },
     {
       "id": 128049215,
       "symbol": "Wine",
-      "name_de": "Wein",
-      "name_en": "Wine",
       "rare": false
     },
     {
       "id": 128049216,
       "symbol": "Liquor",
-      "name_de": "Spirituosen",
-      "name_en": "Liquor",
       "rare": false
     },
     {
       "id": 128049217,
       "symbol": "PowerGenerators",
-      "name_de": "Stromerzeuger",
-      "name_en": "Power Generators",
       "rare": false
     },
     {
       "id": 128049218,
       "symbol": "WaterPurifiers",
-      "name_de": "Wasserreiniger",
-      "name_en": "Water Purifiers",
       "rare": false
     },
     {
       "id": 128049220,
       "symbol": "HeliostaticFurnaces",
-      "name_de": "Mikrobielle Öfen",
-      "name_en": "Microbial Furnaces",
       "rare": false
     },
     {
       "id": 128049221,
       "symbol": "MineralExtractors",
-      "name_de": "Mineralextraktoren",
-      "name_en": "Mineral Extractors",
       "rare": false
     },
     {
       "id": 128049222,
       "symbol": "CropHarvesters",
-      "name_de": "Erntemaschinen",
-      "name_en": "Crop Harvesters",
       "rare": false
     },
     {
       "id": 128049223,
       "symbol": "MarineSupplies",
-      "name_de": "Maritimausstattung",
-      "name_en": "Marine Equipment",
       "rare": false
     },
     {
       "id": 128049225,
       "symbol": "ComputerComponents",
-      "name_de": "Computerteile",
-      "name_en": "Computer Components",
       "rare": false
     },
     {
       "id": 128049226,
       "symbol": "HazardousEnvironmentSuits",
-      "name_de": "Schutzanzüge",
-      "name_en": "H.E. Suits",
       "rare": false
     },
     {
       "id": 128049227,
       "symbol": "Robotics",
-      "name_de": "Roboter",
-      "name_en": "Robotics",
       "rare": false
     },
     {
       "id": 128049228,
       "symbol": "AutoFabricators",
-      "name_de": "Fabrikatoren",
-      "name_en": "Auto-Fabricators",
       "rare": false
     },
     {
       "id": 128049229,
       "symbol": "AnimalMonitors",
-      "name_de": "Tierüberwachung",
-      "name_en": "Animal Monitors",
       "rare": false
     },
     {
       "id": 128049230,
       "symbol": "AquaponicSystems",
-      "name_de": "Aquaponiksysteme",
-      "name_en": "Aquaponic Systems",
       "rare": false
     },
     {
       "id": 128049231,
       "symbol": "AdvancedCatalysers",
-      "name_de": "Fortschr. Katalysatoren",
-      "name_en": "Advanced Catalysers",
       "rare": false
     },
     {
       "id": 128049232,
       "symbol": "TerrainEnrichmentSystems",
-      "name_de": "Landanreicherungssysteme",
-      "name_en": "Land Enrichment Systems",
       "rare": false
     },
     {
       "id": 128049233,
       "symbol": "PersonalWeapons",
-      "name_de": "Persönliche Waffen",
-      "name_en": "Personal Weapons",
       "rare": false
     },
     {
       "id": 128049234,
       "symbol": "BattleWeapons",
-      "name_de": "Kriegswaffen",
-      "name_en": "Battle Weapons",
       "rare": false
     },
     {
       "id": 128049235,
       "symbol": "ReactiveArmour",
-      "name_de": "Reaktivrüstung",
-      "name_en": "Reactive Armour",
       "rare": false
     },
     {
       "id": 128049236,
       "symbol": "NonLethalWeapons",
-      "name_de": "Nichttödliche Waffen",
-      "name_en": "Non-Lethal Weapons",
       "rare": false
     },
     {
       "id": 128049238,
       "symbol": "DomesticAppliances",
-      "name_de": "Haushaltsgeräte",
-      "name_en": "Domestic Appliances",
       "rare": false
     },
     {
       "id": 128049240,
       "symbol": "ConsumerTechnology",
-      "name_de": "Unterhaltungselektronik",
-      "name_en": "Consumer Technology",
       "rare": false
     },
     {
       "id": 128049241,
       "symbol": "Clothing",
-      "name_de": "Kleidung",
-      "name_en": "Clothing",
       "rare": false
     },
     {
       "id": 128049243,
       "symbol": "Slaves",
-      "name_de": "Sklaven",
-      "name_en": "Slaves",
       "rare": false
     },
     {
       "id": 128049244,
       "symbol": "Biowaste",
-      "name_de": "Biomüll",
-      "name_en": "Bio-waste",
       "rare": false
     },
     {
       "id": 128049245,
       "symbol": "ToxicWaste",
-      "name_de": "Giftmüll",
-      "name_en": "Toxic Waste",
       "rare": false
     },
     {
       "id": 128049246,
       "symbol": "ChemicalWaste",
-      "name_de": "Chemiemüll",
-      "name_en": "Chemical Waste",
       "rare": false
     },
     {
       "id": 128049248,
       "symbol": "Scrap",
-      "name_de": "Schrott",
-      "name_en": "Scrap",
       "rare": false
     },
     {
       "id": 128049669,
       "symbol": "ProgenitorCells",
-      "name_de": "Vorläuferzellen",
-      "name_en": "Progenitor Cells",
       "rare": false
     },
     {
       "id": 128049670,
       "symbol": "CombatStabilisers",
-      "name_de": "Kampfstabilisatoren",
-      "name_en": "Combat Stabilisers",
       "rare": false
     },
     {
       "id": 128049671,
       "symbol": "ResonatingSeparators",
-      "name_de": "Resonanzabgrenzer",
-      "name_en": "Resonating Separators",
       "rare": false
     },
     {
       "id": 128049672,
       "symbol": "BioReducingLichen",
-      "name_de": "Bioreduzierende Flechten",
-      "name_en": "Bioreducing Lichen",
       "rare": false
     },
     {
       "id": 128064028,
       "symbol": "AtmosphericExtractors",
-      "name_de": "Atmosphärenprozessoren",
-      "name_en": "Atmospheric Processors",
       "rare": false
     },
     {
       "id": 128666746,
       "symbol": "EraninPearlWhisky",
-      "name_de": "Eranin Pearl Whisky",
-      "name_en": "Eranin Pearl Whisky",
       "rare": true
     },
     {
       "id": 128666747,
       "symbol": "LavianBrandy",
-      "name_de": "Lave-Brandy",
-      "name_en": "Lavian Brandy",
       "rare": true
     },
     {
       "id": 128666752,
       "symbol": "USSCargoBlackBox",
-      "name_de": "Black Box",
-      "name_en": "Black Box",
       "rare": false
     },
     {
       "id": 128666754,
       "symbol": "USSCargoTradeData",
-      "name_de": "Handelsdaten",
-      "name_en": "Trade Data",
       "rare": false
     },
     {
       "id": 128666755,
       "symbol": "USSCargoMilitaryPlans",
-      "name_de": "Militärpläne",
-      "name_en": "Military Plans",
       "rare": false
     },
     {
       "id": 128666756,
       "symbol": "USSCargoAncientArtefact",
-      "name_de": "Uraltes Artefakt",
-      "name_en": "Ancient Artifact",
       "rare": false
     },
     {
       "id": 128666757,
       "symbol": "USSCargoRareArtwork",
-      "name_de": "Seltene Kunstgegenstände",
-      "name_en": "Rare Artwork",
       "rare": false
     },
     {
       "id": 128666758,
       "symbol": "USSCargoExperimentalChemicals",
-      "name_de": "Experimentelle Chemikalien",
-      "name_en": "Experimental Chemicals",
       "rare": false
     },
     {
       "id": 128666759,
       "symbol": "USSCargoRebelTransmissions",
-      "name_de": "Rebellenübertragungen",
-      "name_en": "Rebel Transmissions",
       "rare": false
     },
     {
       "id": 128666760,
       "symbol": "USSCargoPrototypeTech",
-      "name_de": "Prototyp-Technologien",
-      "name_en": "Prototype Tech",
       "rare": false
     },
     {
       "id": 128666761,
       "symbol": "USSCargoTechnicalBlueprints",
-      "name_de": "Technische Baupläne",
-      "name_en": "Technical Blueprints",
       "rare": false
     },
     {
       "id": 128667019,
       "symbol": "HIP10175BushMeat",
-      "name_de": "Wildfleisch von HIP 10175",
-      "name_en": "HIP 10175 Bush Meat",
       "rare": true
     },
     {
       "id": 128667020,
       "symbol": "AlbinoQuechuaMammoth",
-      "name_de": "Albinomammut-Fleisch",
-      "name_en": "Albino Quechua Mammoth",
       "rare": true
     },
     {
       "id": 128667021,
       "symbol": "UtgaroarMillenialEggs",
-      "name_de": "Utgaroar-Milleniumeier",
-      "name_en": "Utgaroar Millennial Eggs",
       "rare": true
     },
     {
       "id": 128667022,
       "symbol": "WitchhaulKobeBeef",
-      "name_de": "Witchhaul Kobe-Rindfleisch",
-      "name_en": "Witchhaul Kobe Beef",
       "rare": true
     },
     {
       "id": 128667023,
       "symbol": "KarsukiLocusts",
-      "name_de": "Karsuki-Heuschrecke",
-      "name_en": "Karsuki Locusts",
       "rare": true
     },
     {
       "id": 128667024,
       "symbol": "GiantIrukamaSnails",
-      "name_de": "Irukama-Riesenschnecken",
-      "name_en": "Giant Irukama Snails",
       "rare": true
     },
     {
       "id": 128667025,
       "symbol": "BaltahSineVacuumKrill",
-      "name_de": "Vakuumkrill von Baltah'sine",
-      "name_en": "Baltah Sine Vacuum Krill",
       "rare": true
     },
     {
       "id": 128667026,
       "symbol": "CetiRabbits",
-      "name_de": "Ceti-Kaninchen",
-      "name_en": "Ceti Rabbits",
       "rare": true
     },
     {
       "id": 128667027,
       "symbol": "KachiriginLeaches",
-      "name_de": "Kachirigin-Filter-Egel",
-      "name_en": "Kachirigin Filter Leeches",
       "rare": true
     },
     {
       "id": 128667028,
       "symbol": "LyraeWeed",
-      "name_de": "Lyrae Weed",
-      "name_en": "Lyrae Weed",
       "rare": true
     },
     {
       "id": 128667029,
       "symbol": "OnionHead",
-      "name_de": "Onionhead",
-      "name_en": "Onion Head",
       "rare": true
     },
     {
       "id": 128667030,
       "symbol": "TarachTorSpice",
-      "name_de": "Tarach Spice",
-      "name_en": "Tarach Spice",
       "rare": true
     },
     {
       "id": 128667031,
       "symbol": "Wolf1301Fesh",
-      "name_de": "Wolf Fesh",
-      "name_en": "Wolf Fesh",
       "rare": true
     },
     {
       "id": 128667032,
       "symbol": "BorasetaniPathogenetics",
-      "name_de": "Borasetani-Pathogenetika",
-      "name_en": "Borasetani Pathogenetics",
       "rare": true
     },
     {
       "id": 128667033,
       "symbol": "HIP118311Swarm",
-      "name_de": "HIP 118311 Swarm",
-      "name_en": "HIP 118311 Swarm",
       "rare": true
     },
     {
       "id": 128667034,
       "symbol": "KonggaAle",
-      "name_de": "Kongga Ale",
-      "name_en": "Kongga Ale",
       "rare": true
     },
     {
       "id": 128667035,
       "symbol": "WuthieloKuFroth",
-      "name_de": "Wuthielo Ku Froth",
-      "name_en": "Wuthielo Ku Froth",
       "rare": true
     },
     {
       "id": 128667036,
       "symbol": "AlacarakmoSkinArt",
-      "name_de": "Alacarakmo-Hautinlays",
-      "name_en": "Alacarakmo Skin Art",
       "rare": true
     },
     {
       "id": 128667037,
       "symbol": "EleuThermals",
-      "name_de": "Eleu-Thermotextilien",
-      "name_en": "Eleu Thermals",
       "rare": true
     },
     {
       "id": 128667038,
       "symbol": "EshuUmbrellas",
-      "name_de": "Eshu-Regenschirme",
-      "name_en": "Eshu Umbrellas",
       "rare": true
     },
     {
       "id": 128667039,
       "symbol": "KaretiiCouture",
-      "name_de": "Karetii Couture",
-      "name_en": "Karetii Couture",
       "rare": true
     },
     {
       "id": 128667040,
       "symbol": "NjangariSaddles",
-      "name_de": "Njangari-Sättel",
-      "name_en": "Njangari Saddles",
       "rare": true
     },
     {
       "id": 128667041,
       "symbol": "AnyNaCoffee",
-      "name_de": "Any Na Coffee",
-      "name_en": "Any Na Coffee",
       "rare": true
     },
     {
       "id": 128667042,
       "symbol": "CD75CatCoffee",
-      "name_de": "CD-75 Kitten Brand Coffee",
-      "name_en": "CD-75 Kitten Brand Coffee",
       "rare": true
     },
     {
       "id": 128667043,
       "symbol": "GomanYauponCoffee",
-      "name_de": "Goman Yaupon Coffee",
-      "name_en": "Goman Yaupon Coffee",
       "rare": true
     },
     {
       "id": 128667044,
       "symbol": "VolkhabBeeDrones",
-      "name_de": "Volkhab-Bienendrohnen",
-      "name_en": "Volkhab Bee Drones",
       "rare": true
     },
     {
       "id": 128667045,
       "symbol": "KinagoInstruments",
-      "name_de": "Kinago-Geigen",
-      "name_en": "Kinago Violins",
       "rare": true
     },
     {
       "id": 128667046,
       "symbol": "NgunaModernAntiques",
-      "name_de": "Nguna Moderne Antiquitäten",
-      "name_en": "Nguna Modern Antiques",
       "rare": true
     },
     {
       "id": 128667047,
       "symbol": "RajukruStoves",
-      "name_de": "Rajukru-Universalöfen",
-      "name_en": "Rajukru Multi-Stoves",
       "rare": true
     },
     {
       "id": 128667048,
       "symbol": "TiolceWaste2PasteUnits",
-      "name_de": "Müll-zu-Paste-Einheiten",
-      "name_en": "Tiolce Waste2Paste Units",
       "rare": true
     },
     {
       "id": 128667049,
       "symbol": "ChiEridaniMarinePaste",
-      "name_de": "Chi-Eridani-Meerespaste",
-      "name_en": "Chi Eridani Marine Paste",
       "rare": true
     },
     {
       "id": 128667050,
       "symbol": "EsusekuCaviar",
-      "name_de": "Esuseku-Kaviar",
-      "name_en": "Esuseku Caviar",
       "rare": true
     },
     {
       "id": 128667051,
       "symbol": "LiveHecateSeaWorms",
-      "name_de": "Live-Hecate-Seewürmer",
-      "name_en": "Live Hecate Sea Worms",
       "rare": true
     },
     {
       "id": 128667052,
       "symbol": "HelvetitjPearls",
-      "name_de": "Helvetitj-Perlen",
-      "name_en": "Helvetitj Pearls",
       "rare": true
     },
     {
       "id": 128667053,
       "symbol": "HIP41181Squid",
-      "name_de": "HIP-Proto-Kalmar",
-      "name_en": "HIP Proto-Squid",
       "rare": true
     },
     {
       "id": 128667054,
       "symbol": "CoquimSpongiformVictuals",
-      "name_de": "Coquim Schwammkost",
-      "name_en": "Coquim Spongiform Victuals",
       "rare": true
     },
     {
       "id": 128667055,
       "symbol": "AerialEdenApple",
-      "name_de": "Eden-Luftäpfel",
-      "name_en": "Eden Apples Of Aerial",
       "rare": true
     },
     {
       "id": 128667056,
       "symbol": "NeritusBerries",
-      "name_de": "Neritus-Beeren",
-      "name_en": "Neritus Berries",
       "rare": true
     },
     {
       "id": 128667057,
       "symbol": "OchoengChillies",
-      "name_de": "Ochoeng-Chili",
-      "name_en": "Ochoeng Chillies",
       "rare": true
     },
     {
       "id": 128667058,
       "symbol": "DeuringasTruffles",
-      "name_de": "Deuringas-Trüffel",
-      "name_en": "Deuringas Truffles",
       "rare": true
     },
     {
       "id": 128667059,
       "symbol": "HR7221Wheat",
-      "name_de": "\"HR 7221\"-Weizen",
-      "name_en": "HR 7221 Wheat",
       "rare": true
     },
     {
       "id": 128667060,
       "symbol": "JarouaRice",
-      "name_de": "Jaroua-Reis",
-      "name_en": "Jaroua Rice",
       "rare": true
     },
     {
       "id": 128667061,
       "symbol": "BelalansRayLeather",
-      "name_de": "Belalans-Rochenleder",
-      "name_en": "Belalans Ray Leather",
       "rare": true
     },
     {
       "id": 128667062,
       "symbol": "DamnaCarapaces",
-      "name_de": "Damna-Schildpanzer",
-      "name_en": "Damna Carapaces",
       "rare": true
     },
     {
       "id": 128667063,
       "symbol": "RapaBaoSnakeSkins",
-      "name_de": "Rapa-Bao-Schlangenhäute",
-      "name_en": "Rapa Bao Snake Skins",
       "rare": true
     },
     {
       "id": 128667064,
       "symbol": "VanayequiRhinoFur",
-      "name_de": "Vanayequi-Ceratomorpha-Fell",
-      "name_en": "Vanayequi Ceratomorpha Fur",
       "rare": true
     },
     {
       "id": 128667065,
       "symbol": "BastSnakeGin",
-      "name_de": "Bast Snake Gin",
-      "name_en": "Bast Snake Gin",
       "rare": true
     },
     {
       "id": 128667066,
       "symbol": "ThrutisCream",
-      "name_de": "Thrutis Cream",
-      "name_en": "Thrutis Cream",
       "rare": true
     },
     {
       "id": 128667067,
       "symbol": "WulpaHyperboreSystems",
-      "name_de": "Wulpa-Superbohrer-Systeme",
-      "name_en": "Wulpa Hyperbore Systems",
       "rare": true
     },
     {
       "id": 128667068,
       "symbol": "AganippeRush",
-      "name_de": "Aganippe-Hirnhetzer",
-      "name_en": "Aganippe Rush",
       "rare": true
     },
     {
       "id": 128667069,
       "symbol": "TerraMaterBloodBores",
-      "name_de": "Terra-Mater-Berserker",
-      "name_en": "Terra Mater Blood Bores",
       "rare": true
     },
     {
       "id": 128667070,
       "symbol": "HolvaDuellingBlades",
-      "name_de": "Holva-Duellschwerter",
-      "name_en": "Holva Duelling Blades",
       "rare": true
     },
     {
       "id": 128667071,
       "symbol": "KamorinHistoricWeapons",
-      "name_de": "Histor. Kamorin-Waffen",
-      "name_en": "Kamorin Historic Weapons",
       "rare": true
     },
     {
       "id": 128667072,
       "symbol": "GilyaSignatureWeapons",
-      "name_de": "Gilya-Signaturwaffen",
-      "name_en": "Gilya Signature Weapons",
       "rare": true
     },
     {
       "id": 128667073,
       "symbol": "DeltaPhoenicisPalms",
-      "name_de": "Delta-Phönix-Palmen",
-      "name_en": "Delta Phoenicis Palms",
       "rare": true
     },
     {
       "id": 128667074,
       "symbol": "ToxandjiVirocide",
-      "name_de": "Toxandji Virocide",
-      "name_en": "Toxandji Virocide",
       "rare": true
     },
     {
       "id": 128667075,
       "symbol": "XiheCompanions",
-      "name_de": "Xihe Biomorphic Companions",
-      "name_en": "Xihe Biomorphic Companions",
       "rare": true
     },
     {
       "id": 128667076,
       "symbol": "SanumaMEAT",
-      "name_de": "Sanuma-Dekorfleisch",
-      "name_en": "Sanuma Decorative Meat",
       "rare": true
     },
     {
       "id": 128667077,
       "symbol": "EthgrezeTeaBuds",
-      "name_de": "Ethgreze-Teeknospen",
-      "name_en": "Ethgreze Tea Buds",
       "rare": true
     },
     {
       "id": 128667078,
       "symbol": "CeremonialHeikeTea",
-      "name_de": "Heike-Zeremonientee",
-      "name_en": "Ceremonial Heike Tea",
       "rare": true
     },
     {
       "id": 128667079,
       "symbol": "TanmarkTranquilTea",
-      "name_de": "Tanmark-Besänftigungstee",
-      "name_en": "Tanmark Tranquil Tea",
       "rare": true
     },
     {
       "id": 128667080,
       "symbol": "AZCancriFormula42",
-      "name_de": "AZ Cancri Formel 42",
-      "name_en": "AZ Cancri Formula 42",
       "rare": true
     },
     {
       "id": 128667081,
       "symbol": "KamitraCigars",
-      "name_de": "Kamitra-Zigarren",
-      "name_en": "Kamitra Cigars",
       "rare": true
     },
     {
       "id": 128667082,
       "symbol": "RusaniOldSmokey",
-      "name_de": "Rusani Old Smokey",
-      "name_en": "Rusani Old Smokey",
       "rare": true
     },
     {
       "id": 128667083,
       "symbol": "YasoKondiLeaf",
-      "name_de": "Yaso-Kondi-Blätter",
-      "name_en": "Yaso Kondi Leaf",
       "rare": true
     },
     {
       "id": 128667084,
       "symbol": "ChateauDeAegaeon",
-      "name_de": "Chateau De Aegaeon",
-      "name_en": "Chateau De Aegaeon",
       "rare": true
     },
     {
       "id": 128667085,
       "symbol": "WatersOfShintara",
-      "name_de": "Shintara-Wasser",
-      "name_en": "Waters Of Shintara",
       "rare": true
     },
     {
       "id": 128667668,
       "symbol": "OphiuchiExinoArtefacts",
-      "name_de": "Ophiuch-Exino-Artefakte",
-      "name_en": "Ophiuch Exino Artefacts",
       "rare": true
     },
     {
       "id": 128667669,
       "symbol": "BakedGreebles",
-      "name_de": "Gebackene Greebles",
-      "name_en": "Baked Greebles",
       "rare": true
     },
     {
       "id": 128667670,
       "symbol": "CetiAepyornisEgg",
-      "name_de": "Aepyornis-Eier",
-      "name_en": "Aepyornis Egg",
       "rare": true
     },
     {
       "id": 128667671,
       "symbol": "SaxonWine",
-      "name_de": "Sachsenwein",
-      "name_en": "Saxon Wine",
       "rare": true
     },
     {
       "id": 128667672,
       "symbol": "CentauriMegaGin",
-      "name_de": "Centauri Mega Gin",
-      "name_en": "Centauri Mega Gin",
       "rare": true
     },
     {
       "id": 128667673,
       "symbol": "AnduligaFireWorks",
-      "name_de": "Anduliga-Feuerwerk",
-      "name_en": "Anduliga Fire Works",
       "rare": true
     },
     {
       "id": 128667674,
       "symbol": "BankiAmphibiousLeather",
-      "name_de": "Banki-Amphibienleder",
-      "name_en": "Banki Amphibious Leather",
       "rare": true
     },
     {
       "id": 128667675,
       "symbol": "CherbonesBloodCrystals",
-      "name_de": "Cherbones-Blutkristalle",
-      "name_en": "Cherbones Blood Crystals",
       "rare": true
     },
     {
       "id": 128667676,
       "symbol": "MotronaExperienceJelly",
-      "name_de": "Motrona-Erfahrungsgel",
-      "name_en": "Motrona Experience Jelly",
       "rare": true
     },
     {
       "id": 128667677,
       "symbol": "GeawenDanceDust",
-      "name_de": "Geawen-Tanzstaub",
-      "name_en": "Geawen Dance Dust",
       "rare": true
     },
     {
       "id": 128667678,
       "symbol": "GerasianGueuzeBeer",
-      "name_de": "Gersianisches Gueuze-Bier",
-      "name_en": "Gerasian Gueuze Beer",
       "rare": true
     },
     {
       "id": 128667679,
       "symbol": "HaidneBlackBrew",
-      "name_de": "Haiden-Schwarzbier",
-      "name_en": "Haidne Black Brew",
       "rare": true
     },
     {
       "id": 128667680,
       "symbol": "HavasupaiDreamCatcher",
-      "name_de": "Havasupai-Traumfänger",
-      "name_en": "Havasupai Dream Catcher",
       "rare": true
     },
     {
       "id": 128667681,
       "symbol": "BurnhamBileDistillate",
-      "name_de": "Burnham-Körpersaftdestillat",
-      "name_en": "Burnham Bile Distillate",
       "rare": true
     },
     {
       "id": 128667682,
       "symbol": "HIPOrganophosphates",
-      "name_de": "HIP-Organophosphate",
-      "name_en": "HIP Organophosphates",
       "rare": true
     },
     {
       "id": 128667683,
       "symbol": "JaradharrePuzzlebox",
-      "name_de": "Jaradharre Puzzle-Box",
-      "name_en": "Jaradharre Puzzle Box",
       "rare": true
     },
     {
       "id": 128667684,
       "symbol": "KorroKungPellets",
-      "name_de": "Korro-Kung-Pellets",
-      "name_en": "Koro Kung Pellets",
       "rare": true
     },
     {
       "id": 128667685,
       "symbol": "LFTVoidExtractCoffee",
-      "name_de": "Weltraumvakuum-Kaffee",
-      "name_en": "Void Extract Coffee",
       "rare": true
     },
     {
       "id": 128667686,
       "symbol": "HonestyPills",
-      "name_de": "Ehrlichkeitspillen",
-      "name_en": "Honesty Pills",
       "rare": true
     },
     {
       "id": 128667687,
       "symbol": "NonEuclidianExotanks",
-      "name_de": "Nichteuklidische Exotanks",
-      "name_en": "Non Euclidian Exotanks",
       "rare": true
     },
     {
       "id": 128667688,
       "symbol": "LTTHyperSweet",
-      "name_de": "LTT-Hypersüße",
-      "name_en": "LTT Hypersweet",
       "rare": true
     },
     {
       "id": 128667689,
       "symbol": "MechucosHighTea",
-      "name_de": "Mechucos-High-Tee",
-      "name_en": "Mechucos High Tea",
       "rare": true
     },
     {
       "id": 128667690,
       "symbol": "MedbStarlube",
-      "name_de": "Medb-Sternschmiere",
-      "name_en": "Medb Starlube",
       "rare": true
     },
     {
       "id": 128667691,
       "symbol": "MokojingBeastFeast",
-      "name_de": "Mokojing Monstermüsli",
-      "name_en": "Mokojing Beast Feast",
       "rare": true
     },
     {
       "id": 128667692,
       "symbol": "MukusubiiChitinOs",
-      "name_de": "Mukusubii Chitin-os",
-      "name_en": "Mukusubii Chitin-Os",
       "rare": true
     },
     {
       "id": 128667693,
       "symbol": "MulachiGiantFungus",
-      "name_de": "Mulachi-Riesenpilz",
-      "name_en": "Mulachi Giant Fungus",
       "rare": true
     },
     {
       "id": 128667694,
       "symbol": "NgadandariFireOpals",
-      "name_de": "Ngadandari-Feueropale",
-      "name_en": "Ngadandari Fire Opals",
       "rare": true
     },
     {
       "id": 128667695,
       "symbol": "TiegfriesSynthSilk",
-      "name_de": "Tiegfries-Synthetikseide",
-      "name_en": "Tiegfries Synth Silk",
       "rare": true
     },
     {
       "id": 128667696,
       "symbol": "UzumokuLowGWings",
-      "name_de": "Uzumoku Leichtkraftflügel",
-      "name_en": "Uzumoku Low-G Wings",
       "rare": true
     },
     {
       "id": 128667697,
       "symbol": "VHerculisBodyRub",
-      "name_de": "V Herculis Körperschrubber",
-      "name_en": "V Herculis Body Rub",
       "rare": true
     },
     {
       "id": 128667698,
       "symbol": "WheemeteWheatCakes",
-      "name_de": "Wheemete Weizenküchlein",
-      "name_en": "Wheemete Wheat Cakes",
       "rare": true
     },
     {
       "id": 128667699,
       "symbol": "VegaSlimWeed",
-      "name_de": "Vega-Schlankkraut",
-      "name_en": "Vega Slimweed",
       "rare": true
     },
     {
       "id": 128667700,
       "symbol": "AltairianSkin",
-      "name_de": "Altair-Haut",
-      "name_en": "Altairian Skin",
       "rare": true
     },
     {
       "id": 128667701,
       "symbol": "PavonisEarGrubs",
-      "name_de": "Pavonis-Ohrenlarven",
-      "name_en": "Pavonis Ear Grubs",
       "rare": true
     },
     {
       "id": 128667702,
       "symbol": "JotunMookah",
-      "name_de": "Jotun Mookah",
-      "name_en": "Jotun Mookah",
       "rare": true
     },
     {
       "id": 128667703,
       "symbol": "GiantVerrix",
-      "name_de": "Riesen-Verrix",
-      "name_en": "Giant Verrix",
       "rare": true
     },
     {
       "id": 128667704,
       "symbol": "IndiBourbon",
-      "name_de": "Indi Bourbon",
-      "name_en": "Indi Bourbon",
       "rare": true
     },
     {
       "id": 128667705,
       "symbol": "AroucaConventualSweets",
-      "name_de": "Arouca-Klosterbonbons",
-      "name_en": "Arouca Conventual Sweets",
       "rare": true
     },
     {
       "id": 128667706,
       "symbol": "TauriChimes",
-      "name_de": "Tauri-Glockenspiel",
-      "name_en": "Tauri Chimes",
       "rare": true
     },
     {
       "id": 128667707,
       "symbol": "ZeesszeAntGlue",
-      "name_de": "Zeessze-Ameisenkleber",
-      "name_en": "Zeessze Ant Grub Glue",
       "rare": true
     },
     {
       "id": 128667708,
       "symbol": "PantaaPrayerSticks",
-      "name_de": "Pantaa-Weihrauchstöcke",
-      "name_en": "Pantaa Prayer Sticks",
       "rare": true
     },
     {
       "id": 128667709,
       "symbol": "FujinTea",
-      "name_de": "Fujin-Tee",
-      "name_en": "Fujin Tea",
       "rare": true
     },
     {
       "id": 128667710,
       "symbol": "ChameleonCloth",
-      "name_de": "Chamäleon-Kleidung",
-      "name_en": "Chameleon Cloth",
       "rare": true
     },
     {
       "id": 128667711,
       "symbol": "OrrerianViciousBrew",
-      "name_de": "Orrerianisches Immerwach",
-      "name_en": "Orrerian Vicious Brew",
       "rare": true
     },
     {
       "id": 128667712,
       "symbol": "UszaianTreeGrub",
-      "name_de": "Uszaian-Baumlarven",
-      "name_en": "Uszaian Tree Grub",
       "rare": true
     },
     {
       "id": 128667713,
       "symbol": "MomusBogSpaniel",
-      "name_de": "Momus-Sumpfspaniel",
-      "name_en": "Momus Bog Spaniel",
       "rare": true
     },
     {
       "id": 128667714,
       "symbol": "DisoMaCorn",
-      "name_de": "Diso-Ma-Mais",
-      "name_en": "Diso Ma Corn",
       "rare": true
     },
     {
       "id": 128667715,
       "symbol": "LeestianEvilJuice",
-      "name_de": "Leesti-Teufelssaft",
-      "name_en": "Leestian Evil Juice",
       "rare": true
     },
     {
       "id": 128667716,
       "symbol": "BlueMilk",
-      "name_de": "Azurmilch",
-      "name_en": "Azure Milk",
       "rare": true
     },
     {
       "id": 128667717,
       "symbol": "AlienEggs",
-      "name_de": "Ledrige Eier",
-      "name_en": "Leathery Eggs",
       "rare": true
     },
     {
       "id": 128667718,
       "symbol": "AlyaBodilySoap",
-      "name_de": "Alya-Körperseife",
-      "name_en": "Alya Body Soap",
       "rare": true
     },
     {
       "id": 128667719,
       "symbol": "VidavantianLace",
-      "name_de": "Vidava-Spitze",
-      "name_en": "Vidavantian Lace",
       "rare": true
     },
     {
       "id": 128667728,
       "symbol": "ImperialSlaves",
-      "name_de": "Imperiale Sklaven",
-      "name_en": "Imperial Slaves",
       "rare": false
     },
     {
       "id": 128667760,
       "symbol": "TransgenicOnionHead",
-      "name_de": "Lucan Onionhead",
-      "name_en": "Lucan Onionhead",
       "rare": true
     },
     {
       "id": 128668017,
       "symbol": "JaquesQuinentianStill",
-      "name_de": "Jaques Quinent-Destille",
-      "name_en": "Jaques Quinentian Still",
       "rare": true
     },
     {
       "id": 128668018,
       "symbol": "SoontillRelics",
-      "name_de": "Soontill-Relikte",
-      "name_en": "Soontill Relics",
       "rare": true
     },
     {
       "id": 128668547,
       "symbol": "UnknownArtifact",
-      "name_de": "Thargoidensensor",
-      "name_en": "Thargoid Sensor",
       "rare": false
     },
     {
       "id": 128668548,
       "symbol": "AiRelics",
-      "name_de": "KI-Relikte",
-      "name_en": "Ai Relics",
       "rare": false
     },
     {
       "id": 128668549,
       "symbol": "Hafnium178",
-      "name_de": "Hafnium 178",
-      "name_en": "Hafnium 178",
       "rare": false
     },
     {
       "id": 128668550,
       "symbol": "Painite",
-      "name_de": "Painit",
-      "name_en": "Painite",
       "rare": false
     },
     {
       "id": 128668551,
       "symbol": "Antiquities",
-      "name_de": "Antiquitäten",
-      "name_en": "Antiquities",
       "rare": false
     },
     {
       "id": 128668552,
       "symbol": "MilitaryIntelligence",
-      "name_de": "Militärische Geheimdokumente",
-      "name_en": "Military Intelligence",
       "rare": false
     },
     {
       "id": 128671118,
       "symbol": "Osmium",
-      "name_de": "Osmium",
-      "name_en": "Osmium",
       "rare": false
     },
     {
       "id": 128671119,
       "symbol": "Advert1",
-      "name_de": "Ultrakompakte Prozessorprototypen",
-      "name_en": "Ultra-Compact Processor Prototypes",
       "rare": true
     },
     {
       "id": 128671443,
       "symbol": "SAP8CoreContainer",
-      "name_de": "Container mit SAP 8-Kern",
-      "name_en": "Sap 8 Core Container",
       "rare": false
     },
     {
       "id": 128671444,
       "symbol": "TrinketsOfFortune",
-      "name_de": "Schmuckstücke von unschätzbarem Wert",
-      "name_en": "Trinkets Of Hidden Fortune",
       "rare": false
     },
     {
       "id": 128672121,
       "symbol": "TheHuttonMug",
-      "name_de": "Hutton-Becher",
-      "name_en": "The Hutton Mug",
       "rare": true
     },
     {
       "id": 128672122,
       "symbol": "SothisCrystallineGold",
-      "name_de": "Sothis-Kristallingold",
-      "name_en": "Sothis Crystalline Gold",
       "rare": true
     },
     {
       "id": 128672123,
       "symbol": "WreckageComponents",
-      "name_de": "Wrackteilkomponenten",
-      "name_en": "Salvageable Wreckage",
       "rare": false
     },
     {
       "id": 128672124,
       "symbol": "EncriptedDataStorage",
-      "name_de": "Verschlüsselter Datenträger",
-      "name_en": "Encrypted Data Storage",
       "rare": false
     },
     {
       "id": 128672125,
       "symbol": "OccupiedCryoPod",
-      "name_de": "Besetzte Rettungskapsel",
-      "name_en": "Occupied Escape Pod",
       "rare": false
     },
     {
       "id": 128672126,
       "symbol": "PersonalEffects",
-      "name_de": "Persönliches",
-      "name_en": "Personal Effects",
       "rare": false
     },
     {
       "id": 128672127,
       "symbol": "ComercialSamples",
-      "name_de": "Werbeproben",
-      "name_en": "Commercial Samples",
       "rare": false
     },
     {
       "id": 128672128,
       "symbol": "TacticalData",
-      "name_de": "Aufklärungsdaten",
-      "name_en": "Tactical Data",
       "rare": false
     },
     {
       "id": 128672129,
       "symbol": "AssaultPlans",
-      "name_de": "Angriffspläne",
-      "name_en": "Assault Plans",
       "rare": false
     },
     {
       "id": 128672130,
       "symbol": "EncryptedCorrespondence",
-      "name_de": "Verschlüsselte Korrespondenz",
-      "name_en": "Encrypted Correspondence",
       "rare": false
     },
     {
       "id": 128672131,
       "symbol": "DiplomaticBag",
-      "name_de": "Diplomatentasche",
-      "name_en": "Diplomatic Bag",
       "rare": false
     },
     {
       "id": 128672132,
       "symbol": "ScientificResearch",
-      "name_de": "Wissenschaftliche Forschung",
-      "name_en": "Scientific Research",
       "rare": false
     },
     {
       "id": 128672133,
       "symbol": "ScientificSamples",
-      "name_de": "Wissenschaftliche Proben",
-      "name_en": "Scientific Samples",
       "rare": false
     },
     {
       "id": 128672134,
       "symbol": "PoliticalPrisoner",
-      "name_de": "Politische Gefangene",
-      "name_en": "Political Prisoner",
       "rare": false
     },
     {
       "id": 128672135,
       "symbol": "Hostage",
-      "name_de": "Geiseln",
-      "name_en": "Hostage",
       "rare": false
     },
     {
       "id": 128672136,
       "symbol": "LargeExplorationDataCash",
-      "name_de": "Großer Erkundungsdatenspeicher",
-      "name_en": "Large Survey Data Cache",
       "rare": false
     },
     {
       "id": 128672137,
       "symbol": "SmallExplorationDataCash",
-      "name_de": "Kleiner Erkundungsdatenspeicher",
-      "name_en": "Small Survey Data Cache",
       "rare": false
     },
     {
       "id": 128672159,
       "symbol": "AntiqueJewellery",
-      "name_de": "Antiker Schmuck",
-      "name_en": "Antique Jewelry",
       "rare": false
     },
     {
       "id": 128672160,
       "symbol": "PreciousGems",
-      "name_de": "Edelsteine",
-      "name_en": "Precious Gems",
       "rare": false
     },
     {
       "id": 128672161,
       "symbol": "EarthRelics",
-      "name_de": "Erdrelikte",
-      "name_en": "Earth Relics",
       "rare": false
     },
     {
       "id": 128672162,
       "symbol": "GeneBank",
-      "name_de": "Gen-Datenbank",
-      "name_en": "Gene Bank",
       "rare": false
     },
     {
       "id": 128672163,
       "symbol": "TimeCapsule",
-      "name_de": "Zeitkapsel",
-      "name_en": "Time Capsule",
       "rare": false
     },
     {
       "id": 128672294,
       "symbol": "Cryolite",
-      "name_de": "Kriolyth",
-      "name_en": "Cryolite",
       "rare": false
     },
     {
       "id": 128672295,
       "symbol": "Goslarite",
-      "name_de": "Goslarit",
-      "name_en": "Goslarite",
       "rare": false
     },
     {
       "id": 128672296,
       "symbol": "Moissanite",
-      "name_de": "Moissanit",
-      "name_en": "Moissanite",
       "rare": false
     },
     {
       "id": 128672297,
       "symbol": "Pyrophyllite",
-      "name_de": "Pyrophyllit",
-      "name_en": "Pyrophyllite",
       "rare": false
     },
     {
       "id": 128672298,
       "symbol": "Lanthanum",
-      "name_de": "Lanthan",
-      "name_en": "Lanthanum",
       "rare": false
     },
     {
       "id": 128672299,
       "symbol": "Thallium",
-      "name_de": "Thallium",
-      "name_en": "Thallium",
       "rare": false
     },
     {
       "id": 128672300,
       "symbol": "Bismuth",
-      "name_de": "Bismut",
-      "name_en": "Bismuth",
       "rare": false
     },
     {
       "id": 128672301,
       "symbol": "Thorium",
-      "name_de": "Thorium",
-      "name_en": "Thorium",
       "rare": false
     },
     {
       "id": 128672302,
       "symbol": "CeramicComposites",
-      "name_de": "Keramik-Verbundwerkstoffe",
-      "name_en": "Ceramic Composites",
       "rare": false
     },
     {
       "id": 128672303,
       "symbol": "SyntheticReagents",
-      "name_de": "Synthetische Reagenzstoffe",
-      "name_en": "Synthetic Reagents",
       "rare": false
     },
     {
       "id": 128672304,
       "symbol": "NerveAgents",
-      "name_de": "Nervengas",
-      "name_en": "Nerve Agents",
       "rare": false
     },
     {
       "id": 128672305,
       "symbol": "SurfaceStabilisers",
-      "name_de": "Oberflächenstabilisierer",
-      "name_en": "Surface Stabilisers",
       "rare": false
     },
     {
       "id": 128672306,
       "symbol": "BootlegLiquor",
-      "name_de": "Schmuggelschnaps",
-      "name_en": "Bootleg Liquor",
       "rare": false
     },
     {
       "id": 128672307,
       "symbol": "GeologicalEquipment",
-      "name_de": "Geologie-Ausrüstung",
-      "name_en": "Geological Equipment",
       "rare": false
     },
     {
       "id": 128672308,
       "symbol": "ThermalCoolingUnits",
-      "name_de": "Thermal-Kühleinheiten",
-      "name_en": "Thermal Cooling Units",
       "rare": false
     },
     {
       "id": 128672309,
       "symbol": "BuildingFabricators",
-      "name_de": "Baufabrikatoren",
-      "name_en": "Building Fabricators",
       "rare": false
     },
     {
       "id": 128672310,
       "symbol": "MuTomImager",
-      "name_de": "Myon-Bildgeber",
-      "name_en": "Muon Imager",
       "rare": false
     },
     {
       "id": 128672311,
       "symbol": "StructuralRegulators",
-      "name_de": "Strukturregulatoren",
-      "name_en": "Structural Regulators",
       "rare": false
     },
     {
       "id": 128672312,
       "symbol": "Landmines",
-      "name_de": "Landminen",
-      "name_en": "Landmines",
       "rare": false
     },
     {
       "id": 128672313,
       "symbol": "SkimerComponents",
-      "name_de": "OF-Drohnen-Komponenten",
-      "name_en": "Skimmer Components",
       "rare": false
     },
     {
       "id": 128672314,
       "symbol": "EvacuationShelter",
-      "name_de": "Evakuierungsschutz",
-      "name_en": "Evacuation Shelter",
       "rare": false
     },
     {
       "id": 128672315,
       "symbol": "GeologicalSamples",
-      "name_de": "Geologische Proben",
-      "name_en": "Geological Samples",
       "rare": false
     },
     {
       "id": 128672316,
       "symbol": "MasterChefs",
-      "name_de": "Master Chefs",
-      "name_en": "Master Chefs",
       "rare": true
     },
     {
       "id": 128672431,
       "symbol": "PersonalGifts",
-      "name_de": "Festliche Geschenke",
-      "name_en": "Festive Gifts",
       "rare": true
     },
     {
       "id": 128672432,
       "symbol": "CrystallineSpheres",
-      "name_de": "Kristallkugeln",
-      "name_en": "Crystalline Spheres",
       "rare": true
     },
     {
       "id": 128672701,
       "symbol": "MetaAlloys",
-      "name_de": "Meta-Legierungen",
-      "name_en": "Meta-Alloys",
       "rare": false
     },
     {
       "id": 128672775,
       "symbol": "Taaffeite",
-      "name_de": "Taaffeit",
-      "name_en": "Taaffeite",
       "rare": false
     },
     {
       "id": 128672776,
       "symbol": "Jadeite",
-      "name_de": "Jadeit",
-      "name_en": "Jadeite",
       "rare": false
     },
     {
       "id": 128672810,
       "symbol": "UnstableDataCore",
-      "name_de": "Instabiler Datenkern",
-      "name_en": "Unstable Data Core",
       "rare": false
     },
     {
       "id": 128672811,
       "symbol": "DamagedEscapePod",
-      "name_de": "Beschädigte Rettungskapsel",
-      "name_en": "Damaged Escape Pod",
       "rare": false
     },
     {
       "id": 128672812,
       "symbol": "OnionHeadA",
-      "name_de": "Onionhead (Alpha)",
-      "name_en": "Onionhead Alpha Strain",
       "rare": true
     },
     {
       "id": 128673069,
       "symbol": "OnionHeadB",
-      "name_de": "Onionhead (Beta)",
-      "name_en": "Onionhead Beta Strain",
       "rare": true
     },
     {
       "id": 128673845,
       "symbol": "Praseodymium",
-      "name_de": "Praseodym",
-      "name_en": "Praseodymium",
       "rare": false
     },
     {
       "id": 128673846,
       "symbol": "Bromellite",
-      "name_de": "Bromellit",
-      "name_en": "Bromellite",
       "rare": false
     },
     {
       "id": 128673847,
       "symbol": "Samarium",
-      "name_de": "Samarium",
-      "name_en": "Samarium",
       "rare": false
     },
     {
       "id": 128673848,
       "symbol": "LowTemperatureDiamond",
-      "name_de": "Tieftemperaturdiamanten",
-      "name_en": "Low Temperature Diamonds",
       "rare": false
     },
     {
       "id": 128673850,
       "symbol": "HydrogenPeroxide",
-      "name_de": "Wasserstoffperoxid",
-      "name_en": "Hydrogen Peroxide",
       "rare": false
     },
     {
       "id": 128673851,
       "symbol": "LiquidOxygen",
-      "name_de": "Flüssiger Sauerstoff",
-      "name_en": "Liquid oxygen",
       "rare": false
     },
     {
       "id": 128673852,
       "symbol": "MethanolMonohydrateCrystals",
-      "name_de": "Methanol-Monohydrat-Kristalle",
-      "name_en": "Methanol Monohydrate",
       "rare": false
     },
     {
       "id": 128673853,
       "symbol": "LithiumHydroxide",
-      "name_de": "Lithiumhydroxid",
-      "name_en": "Lithium Hydroxide",
       "rare": false
     },
     {
       "id": 128673854,
       "symbol": "MethaneClathrate",
-      "name_de": "Methanklathrat",
-      "name_en": "Methane Clathrate",
       "rare": false
     },
     {
       "id": 128673855,
       "symbol": "InsulatingMembrane",
-      "name_de": "Isoliermembran",
-      "name_en": "Insulating Membrane",
       "rare": false
     },
     {
       "id": 128673856,
       "symbol": "CMMComposite",
-      "name_de": "CMM-Komposit",
-      "name_en": "CMM Composite",
       "rare": false
     },
     {
       "id": 128673857,
       "symbol": "CoolingHoses",
-      "name_de": "Mikroflecht-Kühlschläuche",
-      "name_en": "Micro-weave Cooling Hoses",
       "rare": false
     },
     {
       "id": 128673858,
       "symbol": "NeofabricInsulation",
-      "name_de": "Neogewebe-Isolierung",
-      "name_en": "Neofabric Insulation",
       "rare": false
     },
     {
       "id": 128673859,
       "symbol": "ArticulationMotors",
-      "name_de": "Gelenkmotoren",
-      "name_en": "Articulation Motors",
       "rare": false
     },
     {
       "id": 128673860,
       "symbol": "HNShockMount",
-      "name_de": "HN-Dämpferaufhängung",
-      "name_en": "HN Shock Mount",
       "rare": false
     },
     {
       "id": 128673861,
       "symbol": "EmergencyPowerCells",
-      "name_de": "Notfall-Energiezellen",
-      "name_en": "Emergency Power Cells",
       "rare": false
     },
     {
       "id": 128673862,
       "symbol": "PowerConverter",
-      "name_de": "Energiekonverter",
-      "name_en": "Power Converter",
       "rare": false
     },
     {
       "id": 128673863,
       "symbol": "PowerGridAssembly",
-      "name_de": "Energienetz-Gruppe",
-      "name_en": "Energy Grid Assembly",
       "rare": false
     },
     {
       "id": 128673864,
       "symbol": "PowerTransferConduits",
-      "name_de": "Energietransferbus",
-      "name_en": "Power Transfer Bus",
       "rare": false
     },
     {
       "id": 128673865,
       "symbol": "RadiationBaffle",
-      "name_de": "Strahlungsabweiser",
-      "name_en": "Radiation Baffle",
       "rare": false
     },
     {
       "id": 128673866,
       "symbol": "ExhaustManifold",
-      "name_de": "Krümmer",
-      "name_en": "Exhaust Manifold",
       "rare": false
     },
     {
       "id": 128673867,
       "symbol": "ReinforcedMountingPlate",
-      "name_de": "Verstärkte Trägerplatte",
-      "name_en": "Reinforced Mounting Plate",
       "rare": false
     },
     {
       "id": 128673868,
       "symbol": "HeatsinkInterlink",
-      "name_de": "Kühlkörperverbinder",
-      "name_en": "Heatsink Interlink",
       "rare": false
     },
     {
       "id": 128673869,
       "symbol": "MagneticEmitterCoil",
-      "name_de": "Magnetische Emitterspule",
-      "name_en": "Magnetic Emitter Coil",
       "rare": false
     },
     {
       "id": 128673870,
       "symbol": "ModularTerminals",
-      "name_de": "Modulterminals",
-      "name_en": "Modular Terminals",
       "rare": false
     },
     {
       "id": 128673871,
       "symbol": "Nanobreakers",
-      "name_de": "Nanozertrümmerer",
-      "name_en": "Nanobreakers",
       "rare": false
     },
     {
       "id": 128673872,
       "symbol": "TelemetrySuite",
-      "name_de": "Telemetrie-Paket",
-      "name_en": "Telemetry Suite",
       "rare": false
     },
     {
       "id": 128673873,
       "symbol": "MicroControllers",
-      "name_de": "Mikrocontroller",
-      "name_en": "Micro Controllers",
       "rare": false
     },
     {
       "id": 128673874,
       "symbol": "IonDistributor",
-      "name_de": "Ionenverteiler",
-      "name_en": "Ion Distributor",
       "rare": false
     },
     {
       "id": 128673875,
       "symbol": "DiagnosticSensor",
-      "name_de": "Hardware-Diagnostiksensor",
-      "name_en": "Hardware Diagnostic Sensor",
       "rare": false
     },
     {
       "id": 128673876,
       "symbol": "UnknownArtifact2",
-      "name_de": "Thargoidensonde",
-      "name_en": "Thargoid Probe",
       "rare": false
     },
     {
       "id": 128682044,
       "symbol": "ConductiveFabrics",
-      "name_de": "Leitfähige Stoffe",
-      "name_en": "Conductive Fabrics",
       "rare": false
     },
     {
       "id": 128682045,
       "symbol": "MilitaryGradeFabrics",
-      "name_de": "Militärische Stoffe",
-      "name_en": "Military Grade Fabrics",
       "rare": false
     },
     {
       "id": 128682046,
       "symbol": "AdvancedMedicines",
-      "name_de": "Fortschrittliche Medikamente",
-      "name_en": "Advanced Medicines",
       "rare": false
     },
     {
       "id": 128682047,
       "symbol": "MedicalDiagnosticEquipment",
-      "name_de": "Medizinische Diagnostikausrüstung",
-      "name_en": "Medical Diagnostic Equipment",
       "rare": false
     },
     {
       "id": 128682048,
       "symbol": "SurvivalEquipment",
-      "name_de": "Überlebensausrüstung",
-      "name_en": "Survival Equipment",
       "rare": false
     },
     {
       "id": 128682049,
       "symbol": "DataCore",
-      "name_de": "Datenkern",
-      "name_en": "Data Core",
       "rare": false
     },
     {
       "id": 128682050,
       "symbol": "GalacticTravelGuide",
-      "name_de": "Galaktischer Reiseführer",
-      "name_en": "Galactic Travel Guide",
       "rare": true
     },
     {
       "id": 128682051,
       "symbol": "MysteriousIdol",
-      "name_de": "Mysteriöses Idol",
-      "name_en": "Mysterious Idol",
       "rare": false
     },
     {
       "id": 128682052,
       "symbol": "ProhibitedResearchMaterials",
-      "name_de": "Verbotene Forschungsmaterialien",
-      "name_en": "Prohibited Research Materials",
       "rare": false
     },
     {
       "id": 128682053,
       "symbol": "AntimatterContainmentUnit",
-      "name_de": "Antimaterie-Transporteinheit",
-      "name_en": "Antimatter Containment Unit",
       "rare": false
     },
     {
       "id": 128682054,
       "symbol": "SpacePioneerRelics",
-      "name_de": "Weltraumpionier-Relikte",
-      "name_en": "Space Pioneer Relics",
       "rare": false
     },
     {
       "id": 128682055,
       "symbol": "FossilRemnants",
-      "name_de": "Fossile Überreste",
-      "name_en": "Fossil Remnants",
       "rare": false
     },
     {
       "id": 128727921,
       "symbol": "AnimalEffigies",
-      "name_de": "Crom Silver Fesh",
-      "name_en": "Crom Silver Fesh",
       "rare": true
     },
     {
       "id": 128732183,
       "symbol": "AncientRelic",
-      "name_de": "Guardian-Relikt",
-      "name_en": "Ancient Relic",
       "rare": false
     },
     {
       "id": 128732184,
       "symbol": "AncientOrb",
-      "name_de": "Guardiankugel",
-      "name_en": "Ancient Orb",
       "rare": false
     },
     {
       "id": 128732185,
       "symbol": "AncientCasket",
-      "name_de": "Guardianschatulle",
-      "name_en": "Ancient Casket",
       "rare": false
     },
     {
       "id": 128732186,
       "symbol": "AncientTablet",
-      "name_de": "Guardiantafel",
-      "name_en": "Ancient Tablet",
       "rare": false
     },
     {
       "id": 128732187,
       "symbol": "AncientUrn",
-      "name_de": "Guardian-Urne",
-      "name_en": "Ancient Urn",
       "rare": false
     },
     {
       "id": 128732188,
       "symbol": "AncientTotem",
-      "name_de": "Guardian-Totem",
-      "name_en": "Ancient Totem",
       "rare": false
     },
     {
       "id": 128732551,
       "symbol": "ShansCharisOrchid",
-      "name_de": "Shans Charis-Orchidee",
-      "name_en": "Shan's Charis Orchid",
       "rare": true
     },
     {
       "id": 128737287,
       "symbol": "UnknownResin",
-      "name_de": "Thargoidenharz",
-      "name_en": "Thargoid Resin",
       "rare": false
     },
     {
       "id": 128737288,
       "symbol": "UnknownBiologicalMatter",
-      "name_de": "Biologische Materie der Thargoiden",
-      "name_en": "Thargoid Biological Matter",
       "rare": false
     },
     {
       "id": 128737289,
       "symbol": "UnknownTechnologySamples",
-      "name_de": "Technologieproben der Thargoiden",
-      "name_en": "Thargoid Technology Samples",
       "rare": false
     },
     {
       "id": 128740752,
       "symbol": "UnknownArtifact3",
-      "name_de": "Thargoidenlink",
-      "name_en": "Thargoid Link",
       "rare": false
     },
     {
       "id": 128748428,
       "symbol": "BuckyballBeerMats",
-      "name_de": "Buckyball-Bierdeckel",
-      "name_en": "Buckyball Beer Mats",
       "rare": true
     },
     {
       "id": 128793113,
       "symbol": "HarmaSilverSeaRum",
-      "name_de": "Harma Silberseerum",
-      "name_en": "Harma Silver Sea Rum",
       "rare": true
     },
     {
       "id": 128793114,
       "symbol": "PlatinumAloy",
-      "name_de": "Platinlegierung",
-      "name_en": "Platinum Alloy",
       "rare": true
     },
     {
       "id": 128793127,
       "symbol": "ThargoidHeart",
-      "name_de": "Thargoidenherz",
-      "name_en": "Thargoid Heart",
       "rare": false
     },
     {
       "id": 128793128,
       "symbol": "ThargoidTissueSampleType1",
-      "name_de": "Gewebeprobe von Thargoidenschiffstyp Cyclops",
-      "name_en": "Thargoid Cyclops Tissue Sample",
       "rare": false
     },
     {
       "id": 128793129,
       "symbol": "ThargoidTissueSampleType2",
-      "name_de": "Gewebeprobe von Thargoidenschiffstyp Basilisk",
-      "name_en": "Thargoid Basilisk Tissue Sample",
       "rare": false
     },
     {
       "id": 128793130,
       "symbol": "ThargoidTissueSampleType3",
-      "name_de": "Gewebeprobe von Thargoidenschiffstyp Medusa",
-      "name_en": "Thargoid Medusa Tissue Sample",
       "rare": false
     },
     {
       "id": 128824468,
       "symbol": "ThargoidScoutTissueSample",
-      "name_de": "Gewebeprobe von Thargoiden-Späher",
-      "name_en": "Thargoid Scout Tissue Sample",
       "rare": false
     },
     {
       "id": 128888499,
       "symbol": "AncientKey",
-      "name_de": "Uralter Schlüssel",
-      "name_en": "Ancient Key",
       "rare": false
     },
     {
       "id": 128902652,
       "symbol": "ThargoidTissueSampleType4",
-      "name_de": "Gewebeprobe von Thargoidenschiffstyp Hydra",
-      "name_en": "Thargoid Hydra Tissue Sample",
       "rare": false
     },
     {
       "id": 128913661,
       "symbol": "Nanomedicines",
-      "name_de": "Nanomedikamente",
-      "name_en": "Nanomedicines",
       "rare": true
     },
     {
       "id": 128922517,
       "symbol": "M_TissueSample_Fluid",
-      "name_de": "Molluskenflüssigkeit",
-      "name_en": "Mollusc Fluid",
       "rare": false
     },
     {
       "id": 128922518,
       "symbol": "M_TissueSample_Soft",
-      "name_de": "Mollusken-Weichgewebe",
-      "name_en": "Mollusc Soft tissue",
       "rare": false
     },
     {
       "id": 128922519,
       "symbol": "M_TissueSample_Nerves",
-      "name_de": "Mollusken-Hirnmasse",
-      "name_en": "Mollusc Brain Tissue",
       "rare": false
     },
     {
       "id": 128922520,
       "symbol": "S_TissueSample_Cells",
-      "name_de": "Hülsenkerngewebe",
-      "name_en": "Pod Core Tissue",
       "rare": false
     },
     {
       "id": 128922521,
       "symbol": "S_TissueSample_Surface",
-      "name_de": "Hülsentotgewebe",
-      "name_en": "Pod Dead Tissue",
       "rare": false
     },
     {
       "id": 128922522,
       "symbol": "S_TissueSample_Core",
-      "name_de": "Hülsenoberflächegewebe",
-      "name_en": "Pod Surface Tissue",
       "rare": false
     },
     {
       "id": 128922523,
       "symbol": "P_ParticulateSample",
-      "name_de": "Anomalie-Partikel",
-      "name_en": "Anomaly Particles",
       "rare": false
     },
     {
       "id": 128922524,
       "symbol": "Duradrives",
-      "name_de": "Duradrives",
-      "name_en": "Duradrives",
       "rare": true
     },
     {
       "id": 128922781,
       "symbol": "S9_TissueSample_Shell",
-      "name_de": "Hülsengewebe",
-      "name_en": "Pod Tissue",
       "rare": false
     },
     {
       "id": 128922782,
       "symbol": "M3_TissueSample_Membrane",
-      "name_de": "Molluskenmembran",
-      "name_en": "Mollusc Membrane",
       "rare": false
     },
     {
       "id": 128922783,
       "symbol": "M3_TissueSample_Mycelium",
-      "name_de": "Molluskenmyzel",
-      "name_en": "Mollusc Mycelium",
       "rare": false
     },
     {
       "id": 128922784,
       "symbol": "M3_TissueSample_Spores",
-      "name_de": "Molluskensporen",
-      "name_en": "Mollusc Spores",
       "rare": false
     },
     {
       "id": 128922785,
       "symbol": "S6_TissueSample_Mesoglea",
-      "name_de": "Hülsen-Mesoglea",
-      "name_en": "Pod Mesoglea",
       "rare": false
     },
     {
       "id": 128922786,
       "symbol": "S6_TissueSample_Cells",
-      "name_de": "Hülsen-Außengewebe",
-      "name_en": "Pod Outer Tissue",
       "rare": false
     },
     {
       "id": 128922787,
       "symbol": "S6_TissueSample_Coenosarc",
-      "name_de": "Hülsen-Schalengewebe",
-      "name_en": "Pod Shell Tissue",
       "rare": false
     },
     {
       "id": 128924325,
       "symbol": "Rhodplumsite",
-      "name_de": "Rhodplumsit",
-      "name_en": "Rhodplumsite",
       "rare": false
     },
     {
       "id": 128924326,
       "symbol": "Serendibite",
-      "name_de": "Serendibit",
-      "name_en": "Serendibite",
       "rare": false
     },
     {
       "id": 128924327,
       "symbol": "Monazite",
-      "name_de": "Monazit",
-      "name_en": "Monazite",
       "rare": false
     },
     {
       "id": 128924328,
       "symbol": "Musgravite",
-      "name_de": "Musgravit",
-      "name_en": "Musgravite",
       "rare": false
     },
     {
       "id": 128924329,
       "symbol": "Benitoite",
-      "name_de": "Benitoit",
-      "name_en": "Benitoite",
       "rare": false
     },
     {
       "id": 128924330,
       "symbol": "Grandidierite",
-      "name_de": "Grandidierit",
-      "name_en": "Grandidierite",
       "rare": false
     },
     {
       "id": 128924331,
       "symbol": "Alexandrite",
-      "name_de": "Alexandrit",
-      "name_en": "Alexandrite",
       "rare": false
     },
     {
       "id": 128924332,
       "symbol": "Opal",
-      "name_de": "Leerenopal",
-      "name_en": "Void Opal",
       "rare": false
     },
     {
       "id": 128924333,
       "symbol": "RockforthFertiliser",
-      "name_de": "Rockforth-Dünger",
-      "name_en": "Rockforth Fertiliser",
       "rare": false
     },
     {
       "id": 128924334,
       "symbol": "AgronomicTreatment",
-      "name_de": "Agronomisches Mittel",
-      "name_en": "Agronomic Treatment",
       "rare": false
     },
     {
       "id": 128958679,
       "symbol": "ApaVietii",
-      "name_de": "Apa Vietii",
-      "name_en": "Apa Vietii",
       "rare": true
     },
     {
       "id": 128961249,
       "symbol": "Tritium",
-      "name_de": "Tritium",
-      "name_en": "Tritium",
       "rare": false
     },
     {
       "id": 128983059,
       "symbol": "OnionHeadC",
-      "name_de": "Onionhead (Gamma)",
-      "name_en": "Onionhead Gamma Strain",
       "rare": false
     },
     {
       "id": 129002574,
       "symbol": "ClassifiedExperimentalEquipment",
-      "name_de": "Geheime experimentelle Ausrüstung",
-      "name_en": "Classified Experimental Equipment",
       "rare": true
     },
     {
       "id": 129015433,
       "symbol": "AncientRelicTG",
-      "name_de": "Nicht klassifiziertes Relikt",
-      "name_en": "Unclassified Relic",
       "rare": false
     },
     {
       "id": 129019258,
       "symbol": "ThargoidTissueSampleType5",
-      "name_de": "Gewebeprobe von Thargoidenschiffstyp Orthrus",
-      "name_en": "Thargoid Orthrus Tissue Sample",
       "rare": false
     },
     {
       "id": 129019259,
       "symbol": "ThargoidGeneratorTissueSample",
-      "name_de": "Proben von kaustischem Gewebe",
-      "name_en": "Caustic Tissue Sample",
       "rare": false
     },
     {
       "id": 129022087,
       "symbol": "UnocuppiedEscapePod",
-      "name_de": "Nicht besetzte Rettungskapsel",
-      "name_en": "Unoccupied Escape Pod",
       "rare": false
     },
     {
       "id": 129022395,
       "symbol": "ThargoidTissueSampleType6",
-      "name_de": "Gewebeprobe von Thargoidenschiffstyp Glaive",
-      "name_en": "Thargoid Glaive Tissue Sample",
       "rare": false
     },
     {
       "id": 129022396,
       "symbol": "ThargoidTissueSampleType7",
-      "name_de": "Gewebeprobe von Thargoidenschiffstyp Scythe",
-      "name_en": "Thargoid Scythe Tissue Sample",
       "rare": false
     },
     {
       "id": 129022398,
       "symbol": "ThargoidTissueSampleType9a",
-      "name_de": "Tiefengewebeprobe von Thargoidenschiffstyp Titan",
-      "name_en": "Titan Deep Tissue Sample",
       "rare": false
     },
     {
       "id": 129022399,
       "symbol": "ThargoidTissueSampleType9b",
-      "name_de": "Gewebeprobe von Thargoidenschiffstyp Titan",
-      "name_en": "Titan Tissue Sample",
       "rare": false
     },
     {
       "id": 129022400,
       "symbol": "ThargoidTissueSampleType9c",
-      "name_de": "Teilgewebeprobe einer Titan",
-      "name_en": "Titan Partial Tissue Sample",
       "rare": false
     },
     {
       "id": 129022402,
       "symbol": "ThargoidTissueSampleType10a",
-      "name_de": "Gewebeprobe aus dem Schlund einer Titan",
-      "name_en": "Titan Maw Deep Tissue Sample",
       "rare": false
     },
     {
       "id": 129022403,
       "symbol": "ThargoidTissueSampleType10b",
-      "name_de": "Gewebeprobe aus dem Schlund einer Titan",
-      "name_en": "Titan Maw Tissue Sample",
       "rare": false
     },
     {
       "id": 129022404,
       "symbol": "ThargoidTissueSampleType10c",
-      "name_de": "Teilgewebeprobe aus dem Schlund einer Titan",
-      "name_en": "Titan Maw Partial Tissue Sample",
       "rare": false
     },
     {
       "id": 129022405,
       "symbol": "UnknownSack",
-      "name_de": "Unbrauchbare Schutzmembran",
-      "name_en": "Protective Membrane Scrap",
       "rare": false
     },
     {
       "id": 129022406,
       "symbol": "ThargoidPod",
-      "name_de": "Thargoid Bio-storage Capsule",
-      "name_en": "Thargoid Bio-storage Capsule",
       "rare": false
     },
     {
       "id": 129022407,
       "symbol": "CoralSap",
-      "name_de": "Korallensaft",
-      "name_en": "Coral Sap",
       "rare": false
     },
     {
       "id": 129022408,
       "symbol": "UnknownMineral",
-      "name_de": "Unreines Turmmineral",
-      "name_en": "Impure Spire Mineral",
       "rare": false
     },
     {
       "id": 129022409,
       "symbol": "UnknownRefinedMineral",
-      "name_de": "Halbraffiniertes Turmmineral",
-      "name_en": "Semi-Refined Spire Mineral",
       "rare": false
     },
     {
       "id": 129030459,
       "symbol": "ThargoidTitanDriveComponent",
-      "name_de": "Titan-Antriebskomponente",
-      "name_en": "Thargoid Titan Drive Component",
       "rare": false
     },
     {
       "id": 129030460,
       "symbol": "ThargoidCystSpecimen",
-      "name_de": "Zysten-Probe",
-      "name_en": "Cyst Specimen",
       "rare": false
     },
     {
       "id": 129030461,
       "symbol": "ThargoidBoneFragments",
-      "name_de": "Knochenfragmente",
-      "name_en": "Bone Fragments",
       "rare": false
     },
     {
       "id": 129030462,
       "symbol": "ThargoidOrganSample",
-      "name_de": "Organprobe",
-      "name_en": "Organ Sample",
       "rare": false
     },
     {
       "id": 129031238,
       "symbol": "Steel",
-      "name_de": "Stahl",
-      "name_en": "Steel",
       "rare": false
     },
     {
       "id": 129031327,
       "symbol": "Haematite",
-      "name_de": "Hämatit",
-      "name_en": "Haematite",
       "rare": false
     },
     {
       "id": 129045961,
       "symbol": "CuratedCommodity",
-      "name_de": "Ausgewähltes Warenpaket",
-      "name_en": "Curated Commodity Package",
       "rare": false
     },
     {
       "id": 129046165,
       "symbol": "Iridium",
-      "name_de": "Iridium",
-      "name_en": "Iridium",
       "rare": false
     },
     {
       "id": 129046166,
       "symbol": "Helium",
-      "name_de": "Helium",
-      "name_en": "Helium",
       "rare": false
     },
     {
       "id": 129046167,
       "symbol": "Helium3",
-      "name_de": "Helium-3",
-      "name_en": "Helium 3",
       "rare": false
     },
     {
       "id": 129046168,
       "symbol": "Bastnasite",
-      "name_de": "Bastnäsit",
-      "name_en": "Bastnasite",
       "rare": false
     },
     {
       "id": 129046169,
       "symbol": "Deuterium",
-      "name_de": "Deuterium",
-      "name_en": "Deuterium",
       "rare": false
     },
     {
       "id": 129046170,
       "symbol": "Thortveitite",
-      "name_de": "Thortveitit",
-      "name_en": "Thortveitite",
       "rare": false
     },
     {
       "id": 129046171,
       "symbol": "QuartzPyroxenite",
-      "name_de": "Quarzpyroxenit",
-      "name_en": "Quartz Pyroxenite",
       "rare": false
     },
     {
       "id": 129046172,
       "symbol": "Olivine",
-      "name_de": "Olivin",
-      "name_en": "Olivine",
       "rare": false
     },
     {
       "id": 129046173,
       "symbol": "PericlaseDunite",
-      "name_de": "Periklas-Dunit",
-      "name_en": "Periclase Dunite",
       "rare": false
     },
     {
       "id": 129046174,
       "symbol": "Sapphire",
-      "name_de": "Saphir",
-      "name_en": "Sapphire",
       "rare": false
     },
     {
       "id": 129046175,
       "symbol": "Diamond",
-      "name_de": "Diamant",
-      "name_en": "Diamond",
       "rare": false
     },
     {
       "id": 129046176,
       "symbol": "Ruby",
-      "name_de": "Rubin",
-      "name_en": "Ruby",
       "rare": false
     },
     {
       "id": 129046177,
       "symbol": "Magnesite",
-      "name_de": "Magnesit",
-      "name_en": "Magnesite",
       "rare": false
     }
   ]

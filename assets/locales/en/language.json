@@ -1,0 +1,5 @@
+{
+    "name": "English",
+    "journal_languages": ["English/UK", "English/US", "English/EN"],
+    "ocr_language": "en"
+}

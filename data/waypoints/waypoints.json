@@ -10,10 +10,10 @@
         "SystemBookmarkNumber": 0,
         "SellCommodities": {},
         "BuyCommodities": {
-            "Indite": 0,
-            "Bertrandite": 999,
-            "Silver": 0,
-            "Gold": 0
+            "128049157": 0,
+            "128049156": 999,
+            "128049155": 0,
+            "128049154": 0
         },
         "Comment": null,
         "UpdateCommodityCount": true,
@@ -60,7 +60,7 @@
             "SystemBookmarkType": "",
             "SystemBookmarkNumber": 0,
             "SellCommodities": {
-                "ALL": 0
+                "All": 0
             },
             "BuyCommodities": {},
             "Comment": null,
@@ -77,10 +77,10 @@
             "SystemBookmarkType": "Station",
             "SystemBookmarkNumber": 1,
             "SellCommodities": {
-                "Water Purifiers": 9999
+                "128049218": 9999
             },
             "BuyCommodities": {
-                "Gold": 9999
+                "128049154": 9999
             },
             "Comment": null,
             "UpdateCommodityCount": false,

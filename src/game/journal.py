@@ -9,7 +9,7 @@ import os
 import threading
 from collections import deque
 from datetime import datetime
-from json import loads
+from json import JSONDecodeError, loads
 from os import listdir
 from os.path import getmtime, isfile, join
 from time import sleep
@@ -118,7 +118,11 @@ class EDJournal:
         self.open_journal(self.current_log)
 
         self.ship = {
-            "time": (datetime.now() - datetime.fromtimestamp(getmtime(self.current_log))).seconds,
+            "language": None,
+            "language_pending": self.current_log is not None,
+            "time": (datetime.now() - datetime.fromtimestamp(getmtime(self.current_log))).seconds
+            if self.current_log
+            else 0,
             "odyssey": True,
             "status": "in_space",
             "type": None,
@@ -169,6 +173,8 @@ class EDJournal:
         """Returns the full path of the latest (most recent) elite log file (journal) from specified path"""
         if not path_logs:
             path_logs = get_path(FOLDERID.SavedGames, UserHandle.current) + r"\Frontier Developments\Elite Dangerous"
+        if not os.path.isdir(path_logs):
+            return None
         list_of_logs = [
             join(path_logs, f) for f in listdir(path_logs) if isfile(join(path_logs, f)) and f.startswith("Journal.")
         ]
@@ -181,6 +187,11 @@ class EDJournal:
         # if journal file is open then close it
         if self.log_file is not None:
             self.log_file.close()
+            self.log_file = None
+
+        if log_name is None:
+            logger.warning("No game journal is available yet.")
+            return
 
         logger.info("Opening new Journal: " + log_name)
 
@@ -188,20 +199,29 @@ class EDJournal:
         self.log_file = open(log_name, encoding="utf-8")
         self.current_log = log_name
         self.last_mod_time = None
+        if hasattr(self, "ship"):
+            self.ship["language"] = None
+            self.ship["language_pending"] = True
 
     def parse_line(self, log):
         # parse data
         try:
             # parse ship status
             log_event = log["event"]
+            self.ship["language_pending"] = False
 
             if log_event in ("MarketBuy", "MarketSell"):
                 self._market_sequence += 1
                 self._market_transactions.append((self._market_sequence, dict(log)))
 
-            elif log_event == "Fileheader":
+            elif log_event.casefold() == "fileheader":
                 # self.ship['odyssey'] = log['Odyssey']
                 self.ship["odyssey"] = True  # hardset to true for ED 4.0 since menus now same for Horizon
+                language = log.get("language")
+                if language is not None and (not isinstance(language, str) or not language.strip()):
+                    logger.warning("Journal header has an invalid language: %r", language)
+                    language = None
+                self.ship["language"] = language
 
             elif log_event == "ShieldState":
                 if log["ShieldsUp"]:
@@ -410,6 +430,8 @@ class EDJournal:
 
     def _read_new_lines(self):
         latest_log = self.get_latest_log()
+        if latest_log is None:
+            return self.ship
 
         # open journal file if not open yet or there is a more recent journal
         if self.current_log is None or self.current_log != latest_log:
@@ -421,13 +443,23 @@ class EDJournal:
             return self.ship
 
         cnt = 0
+        incomplete = False
         while True:
+            position = self.log_file.tell()
             line = self.log_file.readline()
             # if end of file then break from while True
             if not line:
                 break
             else:
-                log = loads(line)
+                try:
+                    log = loads(line)
+                except JSONDecodeError as error:
+                    if not line.endswith("\n"):
+                        self.log_file.seek(position)
+                        incomplete = True
+                        break
+                    logger.warning("Invalid journal record in %s: %s", self.current_log, error)
+                    continue
                 cnt = cnt + 1
                 current_jrnl = self.ship.copy()
                 self.parse_line(log)
@@ -436,7 +468,7 @@ class EDJournal:
                     logger.debug("Journal*.log: read: " + str(cnt) + " ship: " + str(self.ship))
 
         # An append after EOF must still be detected on the next read.
-        self.last_mod_time = modified_time
+        self.last_mod_time = None if incomplete else modified_time
         return self.ship
 
 

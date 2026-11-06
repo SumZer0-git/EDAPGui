@@ -1,6 +1,11 @@
 """Simple check of OCR to bring back text of a known image."""
 
+import os
+import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import cv2
@@ -51,6 +56,30 @@ class OCRTestCase(unittest.TestCase):
 
 @unittest.skipIf(OCR is None, "PaddleOCR is not installed")
 class PaddleOCRV3TestCase(unittest.TestCase):
+    def test_project_cache_is_selected_before_paddlex_import_from_any_working_directory(self):
+        environment = os.environ.copy()
+        environment["PYTHONPATH"] = str(paths.ROOT / "src")
+        environment["PADDLE_PDX_CACHE_HOME"] = str(paths.USER_DATA / "wrong-cache")
+        with tempfile.TemporaryDirectory() as working_directory:
+            environment["EDAP_LOG_DIR"] = str(Path(working_directory) / "logs")
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-c",
+                    "from vision.ocr import OCR; "
+                    "from core import paths; "
+                    "from paddlex.utils.cache import CACHE_DIR; "
+                    "from pathlib import Path; "
+                    "assert Path(CACHE_DIR) == paths.PADDLEX_CACHE_DIR, CACHE_DIR",
+                ],
+                cwd=working_directory,
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def make_ocr(self, results):
         ocr = OCR.__new__(OCR)
         ocr.paddleocr = Mock()
@@ -136,6 +165,18 @@ class PaddleOCRV3TestCase(unittest.TestCase):
         ocr.image_simple_ocr = Mock(return_value=None)
 
         self.assertEqual(ocr.get_highlighted_item_data(image, 10, 10), (None, None))
+
+    def test_solid_highlight_accepts_dense_lettering_but_rejects_hollow_outline(self):
+        ocr = self.make_ocr([])
+        image = np.zeros((100, 400, 3), dtype=np.uint8)
+        cv2.rectangle(image, (20, 20), (380, 80), (0, 255, 255), -1)
+        for x in range(30, 365, 15):
+            cv2.rectangle(image, (x, 25), (x + 7, 75), (0, 0, 0), -1)
+        self.assertEqual(len(ocr.solid_highlighted_items(image, 200, 50)), 1)
+
+        image[:] = 0
+        cv2.rectangle(image, (20, 20), (380, 80), (0, 255, 255), 3)
+        self.assertEqual(ocr.solid_highlighted_items(image, 200, 50), [])
 
     def test_solid_highlight_rectifies_white_and_orange_without_mutating_image(self):
         ocr = self.make_ocr([])

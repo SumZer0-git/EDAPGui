@@ -15,7 +15,7 @@ from gui.theme import BLUE, MUTED, ORANGE, PANEL, TEXT
 
 # The slim CI has no PaddleOCR; these tests never run OCR, so a temporary stub lets core.autopilot import.
 try:
-    import paddleocr  # noqa: F401
+    from vision.ocr import OCR  # noqa: F401
 
     _PADDLEOCR_STUBBED = False
 except ImportError:
@@ -928,6 +928,7 @@ class OverlayRenderingTests(unittest.TestCase):
                 with self.subTest(assist=flag, ending=ending):
                     autopilot = EDAutopilot.__new__(EDAutopilot)
                     autopilot.terminate = False
+                    autopilot.refresh_game_language = Mock(return_value=True)
                     autopilot.gui_loaded = False
                     autopilot._sc_sco_active_loop_thread = Mock(is_alive=Mock(return_value=True))
                     for name, _, _ in assists:

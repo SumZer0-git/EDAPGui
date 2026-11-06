@@ -74,6 +74,14 @@ class Field:
 
 FIELDS = (
     Field(
+        "Language",
+        TAB_SETTINGS,
+        "language",
+        "Game language",
+        setter="set_language",
+        tip="Auto follows the game journal, including after a game restart. This does not translate the application.",
+    ),
+    Field(
         "RollRate",
         TAB_SHIP,
         "float",
@@ -369,6 +377,8 @@ def _log_level(config):
 
 def read(field, ap):
     """Current value of the field in the autopilot: text for entries, bool for checkboxes."""
+    if field.key == "Language":
+        return ap.config.get("Language", "auto")
     if field.target.startswith("attr:"):
         value = getattr(ap, field.target[5:])
     elif field.target == "log_level":
@@ -390,6 +400,10 @@ def parse(field, raw):
     """Convert and check the value typed into the window. Raises ValueError if it is not valid."""
     if field.kind == "bool":
         return bool(raw)
+    if field.kind == "language":
+        if not isinstance(raw, str) or not raw or not all(c.isascii() and (c.isalnum() or c in "_-") for c in raw):
+            raise ValueError("Game language: invalid language code")
+        return raw
     if field.kind == "order":
         return normalize_overlay_line_order(raw)
     if field.kind == "choice":
@@ -451,6 +465,9 @@ def convert_overlay_offsets(values, previous, screen_width, screen_height):
 
 def write(field, ap, value, window_pos=(0, 0)):
     """Apply a parsed value to the autopilot. Persisting the config files is up to the caller."""
+    if field.key == "Language":
+        ap.set_language(value)
+        return
     if field.target.startswith("attr:"):
         setattr(ap, field.target[5:], value)
         return

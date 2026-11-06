@@ -94,15 +94,15 @@ class RouteImportTestCase(unittest.TestCase):
         origin, destination = self.entries(REVERSED)
         self.assertEqual(origin["StationName"], "Fermat's Folly")
         self.assertEqual(origin["SystemName"], "Core Sys Sector YO-R a4-1")
-        self.assertEqual(origin["BuyCommodities"], {"Silber": 7})
+        self.assertEqual(origin["BuyCommodities"], {"128049155": 7})
         self.assertEqual(origin["SellCommodities"], {})
         self.assertEqual(destination["StationName"], "Ohm City")
-        self.assertEqual(destination["SellCommodities"], {"Silber": 7})
+        self.assertEqual(destination["SellCommodities"], {"128049155": 7})
 
     def test_forward_one_way_and_localized_commodity(self):
         origin, destination = self.entries(ONE_WAY, language="en")
-        self.assertEqual(origin["BuyCommodities"], {"Polymers": 7})
-        self.assertEqual(destination["SellCommodities"], {"Polymers": 7})
+        self.assertEqual(origin["BuyCommodities"], {"128049197": 7})
+        self.assertEqual(destination["SellCommodities"], {"128049197": 7})
         self.assertEqual(destination["SystemName"], "WISE 0359-5401")
         self.assertEqual(origin["GalaxyBookmarkNumber"], 0)
         self.assertEqual(origin["SystemBookmarkType"], "")
@@ -141,10 +141,10 @@ class RouteImportTestCase(unittest.TestCase):
         resolved = resolve_commodities(route, self.catalogue, "de")
         quantities = {commodity_id: 3 if name == "Silber" else 8 for commodity_id, name in resolved.values()}
         origin, destination = imported_waypoints(route, resolved, quantities)
-        self.assertEqual(origin["BuyCommodities"], {"Nichttödliche Waffen": 8})
-        self.assertEqual(origin["SellCommodities"], {"Silber": 3})
-        self.assertEqual(destination["SellCommodities"], {"Nichttödliche Waffen": 8})
-        self.assertEqual(destination["BuyCommodities"], {"Silber": 3})
+        self.assertEqual(origin["BuyCommodities"], {"128049236": 8})
+        self.assertEqual(origin["SellCommodities"], {"128049155": 3})
+        self.assertEqual(destination["SellCommodities"], {"128049236": 8})
+        self.assertEqual(destination["BuyCommodities"], {"128049155": 3})
         self.assertEqual(len({entry["Id"] for entry in (origin, destination)}), 2)
         self.assertEqual(len(self.entries(ROUND_TRIP)), 2)
 
@@ -167,7 +167,7 @@ Sell price
 500 Cr"""
         first, second = self.entries(text)
         self.assertEqual(first["StationName"], "Müller's Rest")
-        self.assertEqual(second["SellCommodities"], {"Polymere": 7})
+        self.assertEqual(second["SellCommodities"], {"128049197": 7})
 
     def test_invalid_or_partial_results_are_rejected(self):
         for text in (
@@ -185,6 +185,9 @@ Sell price
         route = parse_trade_route(ONE_WAY.replace("Polymere", "Unknown commodity"))
         with self.assertRaises(ValueError):
             resolve_commodities(route, self.catalogue, "de")
+        route = parse_trade_route(ONE_WAY.replace("Polymere", "Gewebeprobe aus dem Schlund einer Titan"))
+        with self.assertRaisesRegex(ValueError, "unknown or ambiguous"):
+            resolve_commodities(route, self.catalogue, "de")
         route = parse_trade_route(ONE_WAY)
         resolved = resolve_commodities(route, self.catalogue, "de")
         commodity_id = next(iter(resolved.values()))[0]
@@ -192,7 +195,4 @@ Sell price
             with self.subTest(quantity=quantity), self.assertRaises(ValueError):
                 imported_waypoints(route, resolved, {commodity_id: quantity})
         with self.assertRaises(ValueError):
-            resolve_commodities(route, self.catalogue + [self.catalogue[0]], "fr")
-        polymer = next(row for row in self.catalogue if row["symbol"] == "Polymers")
-        with self.assertRaises(ValueError):
-            resolve_commodities(route, [polymer, polymer], "de")
+            resolve_commodities(route, self.catalogue, "fr")

@@ -85,14 +85,16 @@ EDAPGui/
 |       `-- __init__.py             # Package marker
 |-- assets/
 |   |-- templates/                  # Images used for screen matching
-|   |-- locales/                    # English and German language files
+|   |-- locales/                    # Game-language folders: metadata, recognition, commodity names
 |   |-- icons/                      # Application icons
 |   |-- fonts/                      # Bundled fonts and their licenses
 |   `-- keybind_presets/            # Shipped game presets for generated defaults
 |-- data/
+|   |-- commodities.json            # Language-independent commodity identities
 |   |-- configs/                    # Reference configuration copied on first start
 |   `-- waypoints/                  # Example waypoint files
 |-- user_data/                      # Runtime config, waypoints, logs, and debug output
+|   `-- cache/paddlex/              # Downloaded OCR models and PaddleX cache (not versioned)
 |-- tools/
 |   |-- make_keybind_defaults.py    # Generate game keybinding defaults
 |   `-- make_templates.py           # Generate templates from local screenshots

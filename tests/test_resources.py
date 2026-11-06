@@ -1,9 +1,11 @@
 """Tests for localization files, shared paths, reference data and constants."""
 
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from core import paths
 from core.constants import commodities, ship_name_map, ship_size_map, sorted_commodities
@@ -17,8 +19,7 @@ class NormalizeTextTestCase(unittest.TestCase):
     def test_disengage_messages_exist_for_de_and_en(self):
         manager = LocalizationManager(str(paths.LOCALES_DIR), "en")
 
-        self.assertEqual(len(manager.all_values("PRESS_TO_DISENGAGE_MSG")), len(manager.available_languages))
-        self.assertIn("DRÜCKE ZUM DEAKTIVIEREN", manager.all_values("PRESS_TO_DISENGAGE_MSG"))
+        self.assertEqual(manager.all_values("PRESS_TO_DISENGAGE_MSG"), ["PRESS TO DISENGAGE"])
         for language in ("de", "en"):
             manager = LocalizationManager(str(paths.LOCALES_DIR), language)
             with self.subTest(language=language):
@@ -29,9 +30,9 @@ class NormalizeTextTestCase(unittest.TestCase):
         manager = LocalizationManager(str(paths.LOCALES_DIR), "en")
 
         values = manager.all_values("ALIGN_WITH_TARGET_MSG")
-        self.assertEqual(len(values), len(manager.available_languages))
-        self.assertIn("AUF ZIEL AUSRICHTEN", values)
-        self.assertIn("ALIGN WITH TARGET DESTINATION", values)
+        self.assertEqual(values, ["ALIGN WITH TARGET DESTINATION"])
+        manager.change_language("de")
+        self.assertEqual(manager.all_values("ALIGN_WITH_TARGET_MSG"), ["AUF ZIEL AUSRICHTEN"])
 
 
 class LocalizationTestCase(unittest.TestCase):
@@ -48,34 +49,100 @@ class LocalizationTestCase(unittest.TestCase):
     def test_values_are_strings(self):
         manager = LocalizationManager(str(paths.LOCALES_DIR), "en")
 
-        for key in manager._data:
+        for key in manager._packs["en"]["recognition"]:
             self.assertIsInstance(manager[key], str, key)
 
-    def test_unknown_language_raises(self):
+    def test_unknown_language_warns_and_uses_english(self):
         manager = LocalizationManager(str(paths.LOCALES_DIR), "en")
-
-        with self.assertRaises(Exception):
+        with self.assertLogs("ed_log", level="WARNING"):
             manager.change_language("xx")
+        self.assertEqual(manager.language, "en")
 
-    def test_different_keys_are_rejected(self):
+    def test_bad_pack_is_isolated_and_partial_pack_falls_back(self):
         with tempfile.TemporaryDirectory() as folder:
-            Path(folder, "en.json").write_text(json.dumps({"a": "1", "b": "2"}), encoding="utf-8")
-            Path(folder, "de.json").write_text(json.dumps({"a": "1"}), encoding="utf-8")
-
-            with self.assertRaises(Exception):
-                LocalizationManager(folder, "en")
+            shutil.copytree(paths.LOCALES_DIR / "en", Path(folder, "en"))
+            third = Path(folder, "xx")
+            third.mkdir()
+            (third / "language.json").write_text(
+                json.dumps({"name": "Third language", "ocr_language": "en", "journal_languages": ["Third/XX"]}),
+                encoding="utf-8",
+            )
+            (third / "recognition.json").write_text(
+                json.dumps({"ALIGN_WITH_TARGET_MSG": ["THIRD ALIGN", "THIRD ALTERNATIVE"]}), encoding="utf-8"
+            )
+            broken = Path(folder, "broken")
+            broken.mkdir()
+            with self.assertLogs("ed_log", level="WARNING"):
+                manager = LocalizationManager(folder, "xx")
+            self.assertEqual(manager.available_languages, ["en", "xx"])
+            self.assertEqual(manager.resolve_language("auto", "Third/XX"), "xx")
+            self.assertEqual(manager.all_values("ALIGN_WITH_TARGET_MSG"), ["THIRD ALIGN", "THIRD ALTERNATIVE"])
+            self.assertEqual(manager["PRESS_TO_DISENGAGE_MSG"], "PRESS TO DISENGAGE")
+            self.assertEqual(manager.commodity_names()["128049152"], "Platinum")
+            self.assertTrue(any("broken" in text for text in manager.take_warnings()))
 
     def test_lookup_and_refresh(self):
         with tempfile.TemporaryDirectory() as folder:
-            path = Path(folder, "en.json")
-            path.write_text(json.dumps({"hello": "Hello"}), encoding="utf-8")
+            shutil.copytree(paths.LOCALES_DIR / "en", Path(folder, "en"))
+            path = Path(folder, "en", "recognition.json")
+            original = json.loads(path.read_text(encoding="utf-8"))
             manager = LocalizationManager(folder, "en")
-            self.assertEqual(manager["hello"], "Hello")
-
-            path.write_text(json.dumps({"hello": "Hi"}), encoding="utf-8")
+            original["ALIGN_WITH_TARGET_MSG"] = "CHANGED ALIGN"
+            path.write_text(json.dumps(dict(reversed(list(original.items())))), encoding="utf-8")
+            self.assertNotEqual(manager["ALIGN_WITH_TARGET_MSG"], "CHANGED ALIGN")
             manager.refresh()
+            self.assertEqual(manager["ALIGN_WITH_TARGET_MSG"], "CHANGED ALIGN")
 
-            self.assertEqual(manager["hello"], "Hi")
+    def test_auto_and_manual_selection(self):
+        manager = LocalizationManager(str(paths.LOCALES_DIR), "en")
+        self.assertEqual(manager.resolve_language("auto", "German/DE"), "de")
+        self.assertEqual(manager.resolve_language("auto", "English/UK"), "en")
+        self.assertEqual(manager.resolve_language("en", "German/DE"), "en")
+        with self.assertLogs("ed_log", level="WARNING"):
+            self.assertEqual(manager.resolve_language("auto", "Missing/XX"), "en")
+            self.assertEqual(manager.resolve_language("auto", None), "en")
+
+    def test_duplicate_keys_are_not_silently_overwritten(self):
+        with tempfile.TemporaryDirectory() as folder:
+            shutil.copytree(paths.LOCALES_DIR / "en", Path(folder, "en"))
+            Path(folder, "en", "commodities.json").write_text(
+                '{"128049152": "Platinum", "128049152": "Wrong"}', encoding="utf-8"
+            )
+            with self.assertRaisesRegex(ValueError, "duplicate key"):
+                LocalizationManager(folder)
+
+    def test_english_catalogue_must_cover_all_known_ids(self):
+        with tempfile.TemporaryDirectory() as folder:
+            shutil.copytree(paths.LOCALES_DIR / "en", Path(folder, "en"))
+            Path(folder, "en", "commodities.json").write_text('{"128049152": "Platinum"}', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "every catalogue ID"):
+                LocalizationManager(folder)
+
+    def test_unknown_commodity_ids_exclude_additional_pack(self):
+        with tempfile.TemporaryDirectory() as folder:
+            shutil.copytree(paths.LOCALES_DIR / "en", Path(folder, "en"))
+            shutil.copytree(paths.LOCALES_DIR / "de", Path(folder, "de"))
+            Path(folder, "de", "commodities.json").write_text('{"999999999": "Unknown"}', encoding="utf-8")
+            with self.assertLogs("ed_log", level="WARNING"):
+                manager = LocalizationManager(folder)
+            self.assertEqual(manager.available_languages, ["en"])
+            self.assertTrue(any("unknown commodity IDs" in warning for warning in manager.take_warnings()))
+
+    def test_recognition_uses_cached_active_pack_only(self):
+        manager = LocalizationManager(str(paths.LOCALES_DIR), "de")
+        with patch.object(Path, "open", side_effect=AssertionError("Detection must not reopen pack files")):
+            self.assertEqual(manager.all_values("PRESS_TO_DISENGAGE_MSG"), ["DRÜCKE ZUM DEAKTIVIEREN"])
+            manager.change_language("en")
+            self.assertEqual(manager.all_values("PRESS_TO_DISENGAGE_MSG"), ["PRESS TO DISENGAGE"])
+
+    def test_duplicate_journal_alias_is_isolated(self):
+        with tempfile.TemporaryDirectory() as folder:
+            shutil.copytree(paths.LOCALES_DIR / "en", Path(folder, "en"))
+            shutil.copytree(paths.LOCALES_DIR / "en", Path(folder, "xx"))
+            with self.assertLogs("ed_log", level="WARNING"):
+                manager = LocalizationManager(folder)
+            self.assertEqual(manager.available_languages, ["en"])
+            self.assertTrue(any("duplicate journal languages" in warning for warning in manager.take_warnings()))
 
 
 class PathsTestCase(unittest.TestCase):

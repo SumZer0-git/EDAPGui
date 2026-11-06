@@ -30,6 +30,8 @@ def new_journal() -> EDJournal:
     journal._market_sequence = 0
     journal._market_transactions = deque(maxlen=128)
     journal.ship = {
+        "language": None,
+        "language_pending": False,
         "time": 0,
         "odyssey": True,
         "status": "in_space",

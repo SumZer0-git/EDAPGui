@@ -222,8 +222,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             "TCEInstallationPath": "C:\\TCE",
             "AutomaticLogout": False,  # Logout when we are done with the mission
             "FCDepartureTime": 5.0,  # Extra time to fly away from a Fleet Carrier
-            "Language": "en",  # Language (matching assets/locales/xx.json file)
-            "OCRLanguage": "en",  # Language for OCR detection (see OCR language doc in \docs)
+            "Language": "auto",  # Journal language, or a folder name in assets/locales
             "DebugOverlay": False,
         }
         # NOTE!!! When adding a new config value above, add the same after read_config() to set
@@ -261,9 +260,8 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             if "FCDepartureTime" not in cnf:
                 cnf["FCDepartureTime"] = 5.0
             if "Language" not in cnf:
-                cnf["Language"] = "en"
-            if "OCRLanguage" not in cnf:
-                cnf["OCRLanguage"] = "en"
+                cnf["Language"] = "auto"
+            cnf.pop("OCRLanguage", None)
             if "DebugOverlay" not in cnf:
                 cnf["DebugOverlay"] = False
             _set_overlay_config_defaults(cnf)
@@ -286,7 +284,9 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             self.write_config(self.config)
 
         # Load selected language
-        self.locale = LocalizationManager(str(paths.LOCALES_DIR), self.config["Language"])
+        self.locale = LocalizationManager(str(paths.LOCALES_DIR), "en")
+        self._language_signature = None
+        self._language_failed_signature = None
 
         shp_cnf = self.read_ship_configs()
         # if we read it then point to it, otherwise use the default table above
@@ -333,11 +333,12 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
 
         self.scr = vision.screen.Screen(self.ap_ckb)
 
-        self.ocr = OCR(self.scr, self.config["OCRLanguage"])
+        self.jn = EDJournal(self.ap_ckb)
+        if not self.refresh_game_language():
+            raise RuntimeError("The game OCR language could not be initialized. Check the GUI log and technical log.")
         self.templ = vision.templates.ImageTemplates(self.scr.screen_height)
         self.scrReg = vision.regions.ScreenRegions(self.scr, self.templ)
         logger.info(f"Screen {self.scr.screen_width}x{self.scr.screen_height}")
-        self.jn = EDJournal(self.ap_ckb)
         self.keys = EDKeys(self.ap_ckb)
         self.keys.activate_window = self.config["ActivateEliteEachKey"]
         self.afk_combat = AfkCombat(self.keys, self.jn, self.vce)
@@ -405,6 +406,67 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         if not self._tce_integration:
             self._tce_integration = TceIntegration(self, self.ap_ckb)
         return self._tce_integration
+
+    def set_language(self, language: str) -> None:
+        """Queue a game-language selection; only the engine replaces OCR between assists."""
+        if language != "auto" and language not in self.locale.available_languages:
+            raise ValueError(f"Unknown game language: {language!r}")
+        self.config["Language"] = language
+        self._language_failed_signature = None
+        self.notify_user("Game language selection saved. It will be applied between assists.")
+
+    def refresh_game_language(self) -> bool:
+        """Recheck journal headers without replacing an OCR engine during an input sequence."""
+        state = self.jn.ship_state()
+        journal_language = state.get("language")
+        selection = self.config["Language"]
+        signature = (selection, journal_language, self.jn.current_log)
+        if signature == self._language_failed_signature:
+            return False
+        if selection == "auto" and state.get("language_pending") and signature != self._language_signature:
+            logger.debug("Waiting for the new journal's game-language header.")
+            deadline = monotonic() + 15
+            while state.get("language_pending") and monotonic() < deadline:
+                sleep(0.2)
+                state = self.jn.ship_state()
+            journal_language = state.get("language")
+            signature = (selection, journal_language, self.jn.current_log)
+        if signature == self._language_failed_signature:
+            return False
+        if signature != self._language_signature:
+            language = self.locale.resolve_language(selection, journal_language)
+            ocr_language = self.locale.ocr_language_for(language)
+            if not OCR.supports_language(ocr_language):
+                self.locale.warn(f"OCR language {ocr_language!r} in pack {language!r} is not supported. Using English.")
+                language = "en"
+                ocr_language = self.locale.ocr_language_for(language)
+            try:
+                ocr = getattr(self, "ocr", None)
+                if ocr is None or ocr.language != ocr_language:
+                    ocr = OCR(self.scr, ocr_language)
+            except (OSError, ValueError, RuntimeError) as error:
+                logger.exception("Could not initialize OCR for game language %s", language)
+                self.notify_user(f"Could not initialize OCR for {language}: {error}. Change Game language or restart.")
+                self._language_failed_signature = signature
+                return False
+            self.locale.change_language(language)
+            self.ocr = ocr
+            for name in ("internal_panel", "galaxy_map", "system_map", "stn_svcs_in_ship", "nav_panel"):
+                panel = getattr(self, name, None)
+                if panel is not None:
+                    panel.ocr = ocr
+            self._language_signature = signature
+            logger.debug(
+                "Game language selected: setting=%s journal=%r active=%s OCR=%s",
+                selection,
+                journal_language,
+                language,
+                ocr_language,
+            )
+            self.ap_ckb("game_language", language)
+        for warning in self.locale.take_warnings():
+            self.notify_user(warning)
+        return True
 
     # draw the overlay data on the ED Window
     #
@@ -916,6 +978,9 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
     #
     def engine_loop(self):
         while not self.terminate:
+            if not self.refresh_game_language():
+                sleep(1)
+                continue
             self._sc_sco_active_loop_enable = True
 
             if self._sc_sco_active_loop_enable:

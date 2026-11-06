@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
+from core.commodities import commodity_id_matches_name, get_localization, is_commodity_id, load_catalogue
 from core.logger import logger
 from routines.waypoints import EDWayPoint
 
@@ -46,13 +47,21 @@ def entry_issues(entry, index=0, global_list=False):
         issues.append(RouteIssue(severity, None if global_list else index, field, message))
 
     for field in ("BuyCommodities",) if global_list else ("BuyCommodities", "SellCommodities"):
-        for name, quantity in entry[field].items():
-            if not isinstance(name, str) or not name.strip() or name != name.strip():
-                add("error", field, "Commodity names must be non-empty with no surrounding spaces.")
+        for commodity_id, quantity in entry[field].items():
+            is_all_transfer = (
+                field == "SellCommodities" and commodity_id == "All" and type(quantity) is int and quantity == 0
+            )
+            if not is_commodity_id(commodity_id) and not is_all_transfer:
+                add("error", field, f"{commodity_id}: expected a known decimal commodity ID.")
             if type(quantity) is not int or quantity < 0:
-                add("error", field, f"{name}: quantity must be a non-negative whole number.")
+                add("error", field, f"{commodity_id}: quantity must be a non-negative whole number.")
     if global_list:
         return issues
+    if entry["FleetCarrierTransfer"]:
+        if entry["BuyCommodities"]:
+            add("error", "BuyCommodities", "ID-based Fleet Carrier withdrawals are not supported.")
+        if entry["SellCommodities"] and entry["SellCommodities"] != {"All": 0}:
+            add("error", "SellCommodities", "Fleet Carrier inventory deposits support only All cargo with quantity 0.")
     if not entry["SystemName"].strip():
         add("error", "SystemName", "Enter a system name.")
     if entry["SystemName"].strip().upper() == "REPEAT":
@@ -185,6 +194,8 @@ class RouteDocument:
         document = cls()
         document.data["name"] = Path(filename).stem
         removed = 0
+        localization = get_localization()
+        catalogue = load_catalogue()
         for index, old in enumerate(entries):
             system = old.get("SystemName")
             if not isinstance(system, str):
@@ -202,9 +213,30 @@ class RouteDocument:
                 entry[field] = value
             for field in ("BuyCommodities", "SellCommodities"):
                 value = old.get(field, {})
-                if not EDWayPoint._valid_commodity_list(value):
+                if not isinstance(value, dict) or any(
+                    not isinstance(key, str) or type(quantity) is not int or quantity < 0
+                    for key, quantity in value.items()
+                ):
                     raise ValueError(f"Waypoint {index + 1}: invalid {field}.")
-                entry[field] = copy.deepcopy(value)
+                converted = {}
+                for name, quantity in value.items():
+                    if is_commodity_id(name):
+                        commodity_id = name
+                    elif field == "SellCommodities" and name.casefold() == "all" and quantity == 0:
+                        commodity_id = "All"
+                    else:
+                        matches = commodity_id_matches_name(name, localization)
+                        if len(matches) != 1 or not matches.issubset(catalogue):
+                            raise ValueError(
+                                f"Waypoint {index + 1}: commodity {name!r} in {field} is unknown or ambiguous."
+                            )
+                        commodity_id = matches.pop()
+                    if commodity_id in converted:
+                        raise ValueError(
+                            f"Waypoint {index + 1}: multiple {field} names resolve to commodity ID {commodity_id}."
+                        )
+                    converted[commodity_id] = quantity
+                entry[field] = converted
             document.data["waypoints"].append(entry)
         document.load_notes.append(
             "Imported destinations and trade lists only. Review all options and configure bookmarks if needed. "
