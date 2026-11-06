@@ -81,6 +81,8 @@ and run `install_requirements.bat`.
 
 ## Development
 
+Before contributing, read and follow the [project structure and development conventions](docs/Structure.md).
+
 Install the runtime requirements and development tools in the active environment:
 
 ```powershell

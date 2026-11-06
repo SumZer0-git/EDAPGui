@@ -154,6 +154,73 @@ Generated files such as `src/game/keybind_defaults.py` should be regenerated wit
 - Use lowercase `snake_case` for new Python modules and folders; avoid wildcard imports.
 - Add user-visible changes to the `Unreleased` section of `CHANGELOG.md`.
 
+## Commit and branch naming
+
+These conventions apply to new work; do not rewrite existing commits or rename old branches just to normalize names.
+
+### Commit subjects
+
+Use `<type>(<scope>): <imperative subject>`. Omit the scope only for project-wide changes.
+Write in English, start the subject with a lowercase imperative verb, omit a trailing period, and aim for no more
+than 72 characters for the complete subject. Describe a concrete outcome and important constraints rather than
+only saying "update" or "improve".
+
+| Type | Purpose | Example |
+| --- | --- | --- |
+| `feat` | New or substantially redesigned user-facing behavior | `feat(waypoints): add route editor` |
+| `fix` | Correct faulty application behavior | `fix(journal): accept Location events without a station` |
+| `refactor` | Restructure code without intentionally changing behavior | `refactor(logging): centralize runtime output` |
+| `chore` | Repository maintenance, dependencies, interpreter support | `chore(deps): update runtime packages` |
+| `docs` | Documentation-only changes | `docs(changelog): consolidate unreleased entries` |
+| `test` | Add, correct, or isolate tests without application changes | `test(hotkeys): avoid importing the GUI module` |
+| `style` | Formatting-only changes | `style: format code with ruff format` |
+| `ci` | CI and release workflow changes | `ci: add release validation` |
+
+Use stable scopes for the affected area:
+
+| Scopes | Area |
+| --- | --- |
+| `core`, `config`, `logging`, `status`, `updates` | Core infrastructure and the corresponding responsibilities |
+| `gui`, `overlay`, `i18n` | Main interface, status overlay, localization |
+| `hotkeys`, `keys`, `keybinds` | Global hotkey dispatch, key output, game bindings and their fixer |
+| `journal`, `route`, `market` | Game journal, system route data, market and cargo data |
+| `vision`, `ocr` | Screen capture, templates and detection; text recognition |
+| `flight` | Alignment, FSD jumps, supercruise flight and discovery scans |
+| `assists` | Assist orchestration, starting, stopping and handovers |
+| `waypoints`, `trade`, `docking` | Waypoint execution, station trade actions, docking |
+| `deps`, `python`, `release` | Use with `chore` for packages, interpreter support and release preparation |
+| `changelog` | Use with `docs` for release-note changes |
+
+Prefer these names over synonyms such as `fsd`, `honk`, `sc-assist`, or `supercruise`.
+For CI-only changes use the `ci` type, not `fix(ci)`; for test-only fixes use `test(<area>)`, not `fix(tests)`.
+Choose one scope for the main responsibility, not a list of every touched module.
+Keep unrelated outcomes in separate commits; supporting tests and documentation may stay with their implementation.
+For example, split test isolation and a GUI layout fix into `test(waypoints): ...` and `fix(gui): ...`.
+
+### Branch names
+
+Use `<type>/<scope>-<short-description>` in lowercase kebab-case, with the same types and scopes as commits.
+Omit the scope when redundant or when the change is project-wide. Prefer about 40 characters or fewer overall.
+Use `feat/`, not `feature/`; choose the type from the primary purpose, even when the branch includes supporting
+tests, fixes and documentation.
+
+- `fix/flight-compass-scale`
+- `feat/waypoints-route-editor`
+- `chore/deps-paddleocr-3`
+- `docs/readme-badges`
+- `refactor/project-structure`
+- `feat/overlay-rework` for a substantial user-facing redesign
+
+If work is linked to an issue, put its number immediately after the slash, for example `fix/42-docking-slow-ships`.
+Keep GitHub's default `Merge pull request #N from DopeEx/<branch>` subject for merge commits; merge PRs with a merge
+commit rather than squashing or rebasing.
+Release preparation may happen directly on `main`, with the subject
+`chore(release): prepare v<MAJOR>.<MINOR>.<PATCH>`.
+Do not add `Co-authored-by` trailers.
+
+For assistant-assisted changes, branch creation, commits, pushes, merges, tags and releases each require explicit
+maintainer approval; agreement on a name or permission to implement is not permission to perform those actions.
+
 ## Documentation map
 
 - [README](../README.md): project overview and getting started.
