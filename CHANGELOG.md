@@ -15,6 +15,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Recognition, landing-pad sizes and default supercruise turn rates for Anaconda Mk II, Caspian Explorer, Lynx Highliner and Kestrel Mk II.
 - Integrated Waypoints editor for creating, loading, saving, editing, duplicating, reordering and enabling destinations, with validation, unsaved-change protection and editing locks during execution.
 - Trade-list editing with configurable commodity priority and an All quantity choice, plus a searchable German/English catalogue of 411 commodities. Names not yet verified against game exports are marked; custom names remain possible.
 - Trade-route import from copied German/English text, with destination preview, explicit quantities and a choice to create a route or append to one. Legacy JSON import creates a new draft without modifying the original.

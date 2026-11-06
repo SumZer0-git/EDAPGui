@@ -2,12 +2,16 @@
 
 import contextlib
 import io
+import math
 import threading
 import time
 import unittest
 from collections import deque
+from types import SimpleNamespace
 from unittest.mock import patch
 
+from core.config import ConfigMixin
+from core.constants import ship_name_map, ship_rpy_sc_50, ship_rpy_sc_100, ship_size_map
 from game.journal import (
     EDJournal,
     check_adv_docking_computer,
@@ -68,6 +72,14 @@ MODULES = [
     {"Slot": "Slot01", "Item": "int_fuelscoop_size4_class5"},
     {"Slot": "Slot02", "Item": "int_dockingcomputer_advanced"},
 ]
+
+NEW_SHIPS = {
+    # Journal identifier: (display name, pad size, 50% P/R/Y seconds, 100% P/R/Y seconds).
+    "anacondamkii": ("Anaconda Mk II", "L", (16, 5, 32), (25, 7, 50)),
+    "explorer_nx": ("Caspian Explorer", "L", (13, 4, 20), (21, 5, 33)),
+    "mediumtransport01": ("Lynx Highliner", "M", (12, 4, 18), (20, 5, 30)),
+    "smallcombat01_nx": ("Kestrel Mk II", "S", (11, 3, 19), (18, 4, 31)),
+}
 
 
 class ModuleChecksTestCase(unittest.TestCase):
@@ -141,6 +153,65 @@ class ModuleChecksTestCase(unittest.TestCase):
 
 
 class ShipLookupTestCase(unittest.TestCase):
+    def test_ship_catalogue_tables_cover_the_same_flyable_ships(self):
+        self.assertEqual(ship_name_map.keys(), ship_size_map.keys())
+        flyable = {ship for ship, size in ship_size_map.items() if size in ("S", "M", "L")}
+        self.assertEqual(ship_rpy_sc_50.keys(), flyable)
+        self.assertEqual(ship_rpy_sc_100.keys(), flyable)
+
+    def test_all_catalogue_names_and_pad_sizes_are_resolved(self):
+        for ship, name in ship_name_map.items():
+            with self.subTest(ship=ship):
+                self.assertTrue(name)
+                self.assertEqual(ship, ship.lower())
+                self.assertIn(ship_size_map[ship], ("", "S", "M", "L"))
+                for identifier in (ship, ship.upper()):
+                    self.assertEqual(get_ship_fullname(identifier), name)
+                    self.assertEqual(get_ship_size(identifier), ship_size_map[ship])
+
+    def test_all_supercruise_rates_are_complete_and_valid(self):
+        for throttle, table in ((50, ship_rpy_sc_50), (100, ship_rpy_sc_100)):
+            for ship, rates in table.items():
+                with self.subTest(ship=ship, throttle=throttle):
+                    self.assertEqual(set(rates), {"PitchRate", "RollRate", "YawRate", "SunPitchUp+Time"})
+                    for field, value in rates.items():
+                        self.assertIsInstance(value, (int, float))
+                        self.assertNotIsInstance(value, bool)
+                        self.assertTrue(math.isfinite(value))
+                        if field != "SunPitchUp+Time":
+                            self.assertGreater(value, 0)
+
+    def test_new_ship_names_and_pad_sizes(self):
+        for ship, (name, size, _, _) in NEW_SHIPS.items():
+            with self.subTest(ship=ship):
+                self.assertEqual(get_ship_fullname(ship), name)
+                self.assertEqual(get_ship_size(ship), size)
+                self.assertEqual(get_ship_size(ship.upper()), size)
+
+    def test_new_ship_rates_match_source_rotation_times(self):
+        for ship, (_, _, times_50, times_100) in NEW_SHIPS.items():
+            for rates, times in ((ship_rpy_sc_50, times_50), (ship_rpy_sc_100, times_100)):
+                with self.subTest(ship=ship, times=times):
+                    self.assertEqual(set(rates[ship]), {"PitchRate", "RollRate", "YawRate", "SunPitchUp+Time"})
+                    for axis, seconds in zip(("PitchRate", "RollRate", "YawRate"), times):
+                        self.assertEqual(rates[ship][axis], math.floor(2 * 360 / seconds + 0.5) / 2)
+                    self.assertEqual(rates[ship]["SunPitchUp+Time"], 0.0)
+
+    def test_all_ship_configurations_load_defaults_and_preserve_custom_values(self):
+        custom = {"RollRate": 81.0, "PitchRate": 25.0, "YawRate": 9.0, "SunPitchUp+Time": 0.5}
+        for ship, defaults in ship_rpy_sc_50.items():
+            for saved in (None, {}, custom):
+                with self.subTest(ship=ship, saved=saved):
+                    entries = {} if saved is None else {ship: dict(saved)}
+                    config = SimpleNamespace(ship_configs={"Ship_Configs": entries})
+                    ConfigMixin.load_ship_configuration(config, ship)
+                    expected = saved or defaults
+                    self.assertEqual(
+                        (config.rollrate, config.pitchrate, config.yawrate, config.sunpitchuptime),
+                        tuple(expected[key] for key in ("RollRate", "PitchRate", "YawRate", "SunPitchUp+Time")),
+                    )
+                    self.assertEqual(config.ship_configs["Ship_Configs"], {} if saved is None else {ship: saved})
+
     def test_known_ship(self):
         self.assertEqual(get_ship_size("diamondbackxl"), "S")
         self.assertEqual(get_ship_size("DiamondbackXL"), "S")
@@ -155,6 +226,18 @@ class ParseLineTestCase(unittest.TestCase):
     def setUp(self):
         self.journal = new_journal()
         self.ship = self.journal.ship
+
+    def test_all_catalogue_entries_are_recognized_at_login_and_loadout(self):
+        for ship, size in ship_size_map.items():
+            for event in ("LoadGame", "Loadout"):
+                with self.subTest(ship=ship, event=event):
+                    for identifier in (ship, ship.upper()):
+                        journal = new_journal()
+                        journal.parse_line(
+                            {"event": event, "Ship": identifier, "CargoCapacity": 20, "Modules": MODULES}
+                        )
+                        self.assertEqual(journal.ship["type"], ship)
+                        self.assertEqual(journal.ship["ship_size"], size)
 
     def test_market_transactions_preserve_order_and_are_not_consumed(self):
         buy = {"event": "MarketBuy", "MarketID": 42, "Type": "polymers", "Count": 2}
