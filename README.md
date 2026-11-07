@@ -41,6 +41,8 @@ EDAPGui is a Windows autopilot for Elite Dangerous, offering optional assistance
   Contacts and carrier deposits require Inventory; an unconfirmed tab stops the action instead of sending blind inputs.
   English/German screenshot tests cover tab recognition for both HUD color schemes.
   Navigation-row recognition also handles long, narrow selected highlights.
+  Compass marker fallback handles dim HUD markers and hollow markers touching the compass rim,
+  with size checks scaled to the compass sphere.
 
 See the [waypoint guide](docs/Waypoint.md) for waypoint files and trade actions, and the
 [ship tuning guide](docs/RollPitchYaw.md) for roll, pitch, and yaw rates.

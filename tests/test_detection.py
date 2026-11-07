@@ -17,7 +17,7 @@ import numpy as np
 from core import paths
 from gui.cv_view import CvFrames
 from routines.flight import FlightMixin
-from tests.helpers import FakeScreen, load_fixture_image, pad_to_region
+from tests.helpers import FIXTURES, FakeScreen, load_fixture_image, load_screenshot, pad_to_region
 from vision.detection import DetectionMixin
 from vision.regions import ScreenRegions
 from vision.templates import ImageTemplates
@@ -163,6 +163,108 @@ class TemplateTestCase(MatchingTestCase):
 
 
 class CompassTestCase(MatchingTestCase):
+    def test_local_sdr_ring_markers_at_bottom_keep_position_and_direction(self):
+        for filename, expected in (
+            ("19_crop_compass-behind-bottom_sdr-hud100_de.png", (34, 51)),
+            ("21_crop_compass-behind-bottom-glow_sdr-hud50_de.png", (36, 53)),
+        ):
+            path = FIXTURES / "screenshots" / "1080p" / filename
+            if not path.exists():
+                self.skipTest("local SDR compass fixtures unavailable")
+            with self.subTest(filename=filename):
+                image = load_screenshot(path)
+                found = DetectionMixin.find_white_navpoint(image, (33, 32), 28)
+                self.assertIsNotNone(found)
+                self.assertTrue(found[2])
+                self.assertAlmostEqual(found[0], expected[0], delta=2)
+                self.assertAlmostEqual(found[1], expected[1], delta=2)
+
+    def test_hollow_marker_touching_compass_rim_is_found_at_both_scales(self):
+        for radius in (28, 56):
+            with self.subTest(radius=radius):
+                center = radius + 8
+                image = np.zeros((center * 2, center * 2, 3), np.uint8)
+                cv2.circle(image, (center, center), radius, (160, 160, 160), 2)
+                point = (center, center + radius - round(radius * 0.15))
+                marker_radius = round(radius * 0.12)
+                cv2.circle(image, point, marker_radius + 1, (160, 160, 160), -1)
+                cv2.circle(image, point, max(1, round(radius * 0.04)), (20, 50, 60), -1)
+                found = DetectionMixin.find_white_navpoint(image, (center, center), radius)
+                self.assertIsNotNone(found)
+                self.assertTrue(found[2])
+                self.assertAlmostEqual(found[0], point[0], delta=1)
+                self.assertAlmostEqual(found[1], point[1], delta=1)
+
+    def test_ring_hole_fallback_rejects_ambiguous_holes(self):
+        image = np.zeros((80, 80, 3), np.uint8)
+        for point in ((30, 55), (50, 55)):
+            cv2.circle(image, point, 4, (160, 160, 160), -1)
+            cv2.circle(image, point, 1, (20, 50, 60), -1)
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        self.assertIsNone(DetectionMixin._navpoint_ring_hole(hsv, (40, 40), 28))
+
+    def test_dim_markers_keep_position_and_direction_at_both_resolutions(self):
+        for radius in (28, 56):
+            for value in (160, 195, 255):
+                for hollow in (False, True):
+                    with self.subTest(radius=radius, value=value, hollow=hollow):
+                        center = radius + 8
+                        position = (center, center - round(radius * 0.7))
+                        image = np.zeros((center * 2, center * 2, 3), np.uint8)
+                        cv2.circle(image, (center, center), radius, (0, 60, 120), 2)
+                        marker_radius = round(radius * 0.12)
+                        cv2.circle(image, position, marker_radius + 1, (0, 65, 130), -1)
+                        cv2.circle(image, position, marker_radius, (value, value, value), -1)
+                        if hollow:
+                            cv2.circle(image, position, max(1, marker_radius - 2), (0, 65, 130), -1)
+                        found = DetectionMixin.find_white_navpoint(image, (center, center), radius)
+                        self.assertIsNotNone(found)
+                        self.assertAlmostEqual(found[0], position[0], delta=1)
+                        self.assertAlmostEqual(found[1], position[1], delta=1)
+                        self.assertEqual(found[2], hollow)
+
+    def test_colored_compass_lines_and_large_reflections_are_not_markers(self):
+        for radius in (28, 56):
+            center = radius + 8
+            for color in ((0, 100, 200), (180, 150, 0), (180, 180, 180)):
+                with self.subTest(radius=radius, color=color):
+                    image = np.zeros((center * 2, center * 2, 3), np.uint8)
+                    cv2.circle(image, (center, center), radius, color, 2)
+                    cv2.line(image, (center - radius, center), (center + radius, center), color, 1)
+                    cv2.line(image, (center, center - radius), (center, center + radius), color, 1)
+                    self.assertIsNone(DetectionMixin.find_white_navpoint(image, (center, center), radius))
+
+    def test_dim_hollow_marker_is_preferred_to_bright_charging_glow(self):
+        for radius in (28, 56):
+            center = radius + 8
+            image = np.zeros((center * 2, center * 2, 3), np.uint8)
+            point = (center, center - round(radius * 0.7))
+            marker_radius = round(radius * 0.12)
+            cv2.circle(image, (center, center), marker_radius + 1, (255, 255, 255), -1)
+            cv2.circle(image, point, marker_radius + 1, (0, 65, 130), -1)
+            cv2.circle(image, point, marker_radius, (180, 180, 180), -1)
+            cv2.circle(image, point, max(1, marker_radius - 2), (0, 65, 130), -1)
+            found = DetectionMixin.find_white_navpoint(image, (center, center), radius)
+            self.assertIsNotNone(found)
+            self.assertEqual(found[2], True)
+            self.assertAlmostEqual(found[1], point[1], delta=1)
+
+    def test_rejected_filled_match_does_not_confirm_a_weak_behind_match(self):
+        detector = Detector()
+        regions = self.regions("compass")
+        image = np.full((150, 150, 3), (160, 160, 0), np.uint8)
+        regions.compass_debug_context = None
+        regions.match_compass_multiscale = Mock(return_value=(image, (0, 1.0, (0, 0), (5, 5)), 1.0))
+        regions.match_template_in_image_x3 = Mock(
+            side_effect=[(image, (0, 0.9, (0, 0), (10, 10)), None), (image, (0, 0.5, (0, 0), (20, 20)), None)]
+        )
+        with (
+            patch.object(detector, "find_white_navpoint", return_value=None) as fallback,
+            patch.object(detector, "dump_compass_debug"),
+        ):
+            self.assertIsNone(detector.get_nav_offset(regions))
+        fallback.assert_called_once()
+
     def test_missing_compass_measurements_are_debug_only(self):
         with self.assertNoLogs("ed_log", level="INFO"):
             self.assertFalse(self.detect("have_destination", "empty"))

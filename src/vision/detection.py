@@ -130,15 +130,64 @@ class DetectionMixin:
         # second pass opens the mask so thin bright lines drop away and only compact round dots remain.
         size = max(3, round(radius * 0.12) // 2 * 2 + 1)
         opened = cv2.morphologyEx(mask, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (size, size)))
+        # Pixel areas scale with the sphere; the existing limits were tuned at a radius of about 55 pixels.
+        area_scale = (radius / 55) ** 2
         candidates = [
-            DetectionMixin._best_white_blob(hsv, candidate_mask, center, radius, min_area)
+            DetectionMixin._best_white_blob(hsv, candidate_mask, center, radius, max(4, round(min_area * area_scale)))
             for candidate_mask, min_area in ((mask, 25), (opened, 40))
         ]
         candidates = [c for c in candidates if c is not None]
+        dim_mask = ((hsv[..., 1] < 70) & (hsv[..., 2] > 140) & inside).astype(np.uint8)
+        dim = DetectionMixin._best_white_blob(hsv, dim_mask, center, radius, max(4, round(25 * area_scale)))
+        if dim is not None:
+            candidates.append(dim)
+        if not any(candidate[2] for candidate in candidates):
+            ring = DetectionMixin._navpoint_ring_hole(hsv, center, radius)
+            if ring is not None:
+                return ring[0], ring[1], True
         if not candidates:
             return None
         best = max(candidates, key=lambda c: c[3])
         return best[0], best[1], best[2]
+
+    @staticmethod
+    def _navpoint_ring_hole(hsv, center, radius):
+        """Find a compact dark hole with a bright rim, even when the rim touches the compass."""
+        value = hsv[..., 2]
+        mask = ((hsv[..., 1] < 140) & (value > 110)).astype(np.uint8)
+        contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        if hierarchy is None:
+            return None
+        candidates = []
+        for index, contour in enumerate(contours):
+            if hierarchy[0, index, 3] < 0:
+                continue
+            _x, _y, width, height = cv2.boundingRect(contour)
+            if not (
+                max(3, radius * 0.07) <= min(width, height)
+                and max(width, height) <= radius * 0.23
+                and 0.7 <= width / height <= 1.4
+            ):
+                continue
+            moments = cv2.moments(contour)
+            if moments["m00"] < 0.3 * width * height:
+                continue
+            cx, cy = moments["m10"] / moments["m00"], moments["m01"] / moments["m00"]
+            if math.hypot(cx - center[0], cy - center[1]) > radius * 1.05:
+                continue
+            rim_radius = max(width, height) / 2
+            angles = np.arange(8) * np.pi / 4
+            xs = np.rint(cx + np.cos(angles) * rim_radius).astype(int)
+            ys = np.rint(cy + np.sin(angles) * rim_radius).astype(int)
+            if (xs < 0).any() or (ys < 0).any() or (xs >= value.shape[1]).any() or (ys >= value.shape[0]).any():
+                continue
+            contrast = value[ys, xs].astype(float) - float(value[round(cy), round(cx)])
+            if np.count_nonzero(contrast >= 25) < 7:
+                continue
+            candidates.append((cx, cy))
+        if len(candidates) != 1:
+            return None
+        return candidates[0]
 
     @staticmethod
     def _best_white_blob(hsv, mask, center, radius, min_area):
@@ -149,16 +198,18 @@ class DetectionMixin:
             width, height = stats[i, cv2.CC_STAT_WIDTH], stats[i, cv2.CC_STAT_HEIGHT]
             cx, cy = centroids[i]
             if not (
-                min_area <= area <= 400
+                min_area <= area <= 400 * (radius / 55) ** 2
                 and 0.6 <= width / height <= 1.6
                 and math.hypot(cx - center[0], cy - center[1]) <= radius * 1.05
             ):
                 continue
-            # The background shows through the middle of a hollow ring, so its core is saturated
-            core = hsv[round(cy) - 1 : round(cy) + 2, round(cx) - 1 : round(cx) + 2, 1]
-            if not core.size:
-                continue
-            hollow = bool(core.mean() > 100) and area / (width * height) >= 0.35
+            # Small antialiased rings can have a colored hole smaller than the 3x3 sample.
+            core = hsv[
+                max(round(cy) - 1, 0) : round(cy) + 2,
+                max(round(cx) - 1, 0) : round(cx) + 2,
+                1,
+            ]
+            hollow = bool(core.mean() > 100 or hsv[round(cy), round(cx), 1] > 100) and area / (width * height) >= 0.2
             # A thin sliver of a bright edge with a colored fringe can look hollow too, so a ring must be compact
             rank = (hollow, area)
             if best is None or rank > best[4]:
@@ -258,7 +309,7 @@ class DetectionMixin:
             final_z_pct = 1.0  # Ahead
 
         logger.debug(f"Nav point scores: ahead {n_maxVal:.2f}, behind {behind_val:.2f}, ahead={ahead}")
-        if max(n_maxVal, behind_val) < scr_reg.navpoint_match_thresh:
+        if (n_maxVal if ahead else behind_val) < scr_reg.navpoint_match_thresh:
             white = self.find_white_navpoint(compass_image, (pad + c_wid / 2, pad + c_hgt / 2), c_wid / 2)
             logger.debug(f"Weak nav point match at {n_pt}, white blob: {white}")
             self.dump_compass_debug(
