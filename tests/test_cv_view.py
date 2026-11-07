@@ -1,15 +1,33 @@
 """CV frame buffering and GUI window lifecycle tests."""
 
+import sys
 import threading
 import unittest
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import numpy as np
 
-from core.autopilot import EDAutopilot
 from gui import fields
 from gui.cv_view import CvFrames, CvView, fit_window
 from gui.overlay import Overlay
+
+try:
+    from vision.ocr import OCR  # noqa: F401
+
+    _PADDLEOCR_STUBBED = False
+except ModuleNotFoundError as error:
+    if error.name != "paddleocr":
+        raise
+    sys.modules["paddleocr"] = SimpleNamespace(PaddleOCR=None)
+    _PADDLEOCR_STUBBED = True
+
+try:
+    from core.autopilot import EDAutopilot
+finally:
+    if _PADDLEOCR_STUBBED:
+        del sys.modules["paddleocr"]
+        sys.modules.pop("vision.ocr", None)
 
 
 class CvViewTestCase(unittest.TestCase):
