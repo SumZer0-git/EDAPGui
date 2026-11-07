@@ -39,7 +39,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Waypoint navigation tries configured Galaxy Map bookmarks first, falls back to system-name search and reuses a matching station target after arrival.
 - Combined FSD Route Assist and Supercruise Assist into Travel Assist, which follows the system route and continues to a selected local destination when one remains.
 - The footer and overlay show the same current assist status, with more detailed flight phases and route progress. The GUI log retains status history and additional user messages.
-- Updated screen recognition for German/English HUD text, HDR/SDR colors, bright scenes, different compass sizes and targets hidden behind planets. Native 2160p templates scale automatically to other resolutions, replacing manual calibration.
+- Updated screen recognition for German/English HUD text, HDR/SDR colors, bright scenes, different compass sizes and targets hidden behind planets. Native 2160p templates scale automatically to other resolutions, replacing manual calibration. Compass fallback also handles dim markers with sphere-relative size checks and distinguishes small hollow markers touching the compass rim from charging glow.
 - Cockpit panel navigation confirms each tab change instead of relying on counted key presses. Docking and carrier deposits stop if Contacts or Inventory cannot be confirmed, without requiring a particular starting tab.
 - Supercruise travel uses 75% throttle once aligned; alignment and recovery use 50%. The **Set Speed to 75%** binding is required and can be added with `fix_keybinds.bat`.
 - Updated keybinding detection to follow the active game preset and reduce duplicate or harmless collision warnings.

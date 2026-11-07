@@ -54,6 +54,16 @@ The editor's **Plot to System/Station** buttons only select targets; they do not
 
 ### Vision diagnostics
 
+Compass marker fallback uses sphere-relative pixel areas for 1080p and 4K and checks both bright and dim,
+low-saturation markers. Hollow markers are preferred over filled charging glow; small antialiased ring centers
+are checked separately so a behind marker is not mistaken for an ahead dot. A rejected filled-template match
+cannot validate a weak behind-template match. Unknown markers still stop compass alignment rather than providing
+a guessed direction. This is one shared recognition path for SDR/HDR and both HUD color schemes, not a
+resolution-specific mode. Real monitor/HDR and HUD-brightness combinations still require in-game validation.
+If a dim hollow marker merges with the compass rim or charging glow, an additional fallback checks for one
+compact dark hole with a brighter surrounding ring. It requires contrast in at least seven of eight directions
+and rejects multiple candidate holes rather than guessing a position.
+
 Set **Debug > Log level > Debug** before reproducing a recognition problem. Normal technical messages remain in
 `user_data/logs/autopilot.log`; the complete technical log, including those messages and debug details, is written to
 `user_data/debug/debug.log` while Debug is enabled. Both logs rotate separately in their respective folders on the first use of each log in a
