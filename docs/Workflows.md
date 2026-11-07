@@ -87,8 +87,9 @@ Display images may be filtered, cropped, annotated or scaled; they are not alway
 
 **Debug Overlay** takes effect without restarting. It draws search rectangles and OCR results over the game only during
 supported HUD-message and panel/OCR checks, not continuously for compass or target matching. Switching it off removes
-diagnostic markings without clearing normal AP status information. Both CV windows and debug markings can overlap
-screen captures, so disable them for unobstructed diagnostic runs or move CV windows to another monitor.
+diagnostic markings without clearing normal AP status information. CV windows can overlap screen captures, and so can
+debug markings when **Show in screenshots and recordings** is enabled on the Overlay tab; disable them for unobstructed
+diagnostic runs or move CV windows to another monitor.
 
 Diagnostic images are saved directly in `user_data/debug/<category>/`. Images from the same case share a timestamp
 and identifier in their filenames, followed by their role, such as `_evaluated.png` or `_context.png`. The debug log

@@ -25,7 +25,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Active jump-target confirmation for Waypoint and Single Waypoint travel before each jump alignment, including intermediate systems. Unconfirmed targets stop the assist rather than relying on the saved route alone.
 - Optional recognition of the game's FSD alignment prompt, allowing small confirmed course corrections while charging.
 - Redesigned dark interface with a collapsible assist sidebar, Stop All, an always-on-top option and per-monitor scaling. Settings and window layout are saved automatically.
-- Customizable status overlay with colors, fonts, opacity, positioning, optional fuel and route information, configurable line order and jump/distance progress bars.
+- Customizable status overlay with colors, fonts, opacity, positioning, optional fuel and route information, configurable line order and jump/distance progress bars. It is hidden from screenshots and recordings by default; an Overlay tab option lets desktop and window captures include it, while in-game captures never show it.
 - Background update notification and a manual Check for Updates button on the Info tab.
 - Keybinding repair tool (`fix_keybinds.bat`) with German/English messages, conflict confirmation, backups and a preview-only mode.
 - Automated tests, screenshot regressions, Ruff checks and CI/release workflows for contributors.

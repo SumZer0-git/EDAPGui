@@ -270,6 +270,14 @@ FIELDS = (
         tip="Opacity of the background behind the status text.",
     ),
     Field(
+        "OverlayCaptureVisible",
+        TAB_OVERLAY,
+        "bool",
+        "Show in screenshots and recordings",
+        tip="Allow desktop and window captures to include the overlay. Whether a capture tool shows it depends on "
+        "its capture method; in-game captures such as Elite's F10 screenshots or OBS Game Capture never include it.",
+    ),
+    Field(
         "OverlayShowMode",
         TAB_OVERLAY,
         "bool",

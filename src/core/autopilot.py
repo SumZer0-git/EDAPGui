@@ -116,6 +116,7 @@ def _set_overlay_config_defaults(config: dict) -> None:
         ("OverlayPositionAnchor", "Top left"),
         ("OverlayPositionUnit", "Pixels" if uses_legacy_positions else "Percent"),
         ("OverlayPanelOpacity", 50),
+        ("OverlayCaptureVisible", False),
         ("OverlayShowMode", True),
         ("OverlayShowStatus", True),
         ("OverlayShowShip", True),
@@ -197,6 +198,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             "OverlayPositionAnchor": "Top left",
             "OverlayPositionUnit": "Percent",
             "OverlayPanelOpacity": 50,
+            "OverlayCaptureVisible": False,  # True shows the overlay in screenshots, recordings and screen detection
             "OverlayShowMode": True,
             "OverlayShowStatus": True,
             "OverlayShowShip": True,
@@ -780,6 +782,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             self.config["OverlayTextYOffset"],
             self.config["OverlayPanelOpacity"],
         )
+        self.overlay.overlay_set_capture_visible(bool(self.config["OverlayCaptureVisible"]))
         self._overlay_last_frame = None
         if self.config["OverlayTextEnable"]:
             self.update_overlay()
