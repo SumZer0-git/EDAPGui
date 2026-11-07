@@ -117,7 +117,8 @@ class FlightMixin:
 
     def request_docking(self):
         """Request docking from Nav Panel."""
-        self.nav_panel.request_docking()
+        if not self.nav_panel.request_docking():
+            raise RuntimeError("Docking request failed (contacts tab not confirmed)")
 
     def dock(self):
         """Docking sequence.  Assumes in normal space, will get closer to the Station
@@ -424,6 +425,7 @@ class FlightMixin:
                 off = new
             else:
                 logger.debug("  out of fine -not off-" + "\n")
+                self.dump_target_debug()
                 return
 
         # Safety check to ensure off is valid before using it

@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import ctypes
 import json
+import math
 import typing
 
 import cv2
@@ -201,6 +202,20 @@ class Screen:
     def get_screen_region(self, reg, rgb=True):
         image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]), rgb)
         return image
+
+    def get_screen_region_with_context(self, rect, rgb=True, scale=2.0):
+        """Capture an expanded context and return the original region from the same frame."""
+        if not math.isfinite(scale) or scale < 1:
+            raise ValueError("Context scale must be finite and at least 1")
+        left, top, right, bottom = map(int, rect)
+        width, height = right - left, bottom - top
+        extra_width, extra_height = math.ceil(width * (scale - 1)), math.ceil(height * (scale - 1))
+        x0 = max(0, left - extra_width // 2)
+        y0 = max(0, top - extra_height // 2)
+        x1 = min(self.screen_width, right + (extra_width + 1) // 2)
+        y1 = min(self.screen_height, bottom + (extra_height + 1) // 2)
+        context = self.get_screen(x0, y0, x1, y1, rgb)
+        return context[top - y0 : bottom - y0, left - x0 : right - x0], context
 
     def get_screen(self, x_left, y_top, x_right, y_bot, rgb=True):  # if absolute need to scale??
         monitor = {

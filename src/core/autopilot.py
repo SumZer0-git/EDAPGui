@@ -216,7 +216,6 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             "VoiceID": 1,  # my Windows only have 3 defined (0-2)
             "LogDEBUG": False,  # enable for debug messages
             "LogINFO": True,
-            "Enable_CV_View": 0,  # Should CV View be enabled by default
             "ShipConfigFile": None,  # Ship config to load on start - deprecated
             "TCEDestinationFilepath": "C:\\TCE\\DUMP\\Destination.json",  # Destination file for TCE
             "TCEInstallationPath": "C:\\TCE",
@@ -386,9 +385,9 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         self.debug_overlay = self.config["DebugOverlay"]
 
         # debug window
-        self.cv_view = self.config["Enable_CV_View"]
-        self.cv_view_x = 10
-        self.cv_view_y = 10
+        from gui.cv_view import CvFrames
+
+        self.cv_frames = CvFrames()
 
         # start the engine thread
         self.terminate = False  # terminate used by the thread to exit its loop
@@ -911,16 +910,12 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         self.single_waypoint_enabled = True
         return True
 
-    def set_cv_view(self, enable=True, x=0, y=0):
-        self.cv_view = enable
-        self.config["Enable_CV_View"] = int(self.cv_view)  # update the config
-        self.update_config()  # save the config
-        if enable:
-            self.cv_view_x = x
-            self.cv_view_y = y
-        else:
-            cv2.destroyAllWindows()
-            cv2.waitKey(50)
+    def set_debug_overlay(self, enable):
+        self.debug_overlay = enable
+        self.config["DebugOverlay"] = bool(enable)
+        if not enable:
+            self.overlay.overlay_clear_diagnostics()
+        self.overlay.overlay_paint()
 
     def set_randomness(self, enable=False):
         self.config["EnableRandomness"] = enable
@@ -966,6 +961,8 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
     # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
     # have then then kill python exec
     def quit(self):
+        for name in ("compass", "target", "occluded", "hud"):
+            self.cv_frames.close(name)
         if self.vce is not None:
             self.vce.quit()
         if self.overlay is not None:
@@ -1104,7 +1101,6 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                         # Reload templates
                         self.templ.reload_templates()
 
-            cv2.waitKey(10)
             sleep(1)
 
     def ship_tst_pitch(self):
@@ -1171,9 +1167,6 @@ def main():
     #    win32gui.SetForegroundWindow(handle)  # put the window in foreground
 
     ed_ap = EDAutopilot(cb=None, do_thread=False)
-    ed_ap.cv_view = True
-    ed_ap.cv_view_x = 4000
-    ed_ap.cv_view_y = 100
     sleep(2)
 
     for x in range(10):

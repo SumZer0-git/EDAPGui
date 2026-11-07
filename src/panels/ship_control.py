@@ -29,7 +29,7 @@ class EDShipControl:
         while self.status_parser.get_gui_focus() != GuiFocusNoFocus:
             if deadline is not None and monotonic() >= deadline:
                 logger.warning("Unable to return to cockpit view before timeout.")
-                self.ap_ckb("log", "Could not return to cockpit view. Waypoint Assist stopped.")
+                self.ap_ckb("log", "Could not return to cockpit view. Action stopped.")
                 return False
             self.keys.send("UI_Back")  # make sure back in cockpit view
             if deadline is not None:

@@ -22,7 +22,7 @@ class ShipControlTestCase(unittest.TestCase):
             self.assertFalse(ship_control.goto_cockpit_view(timeout=1))
 
         ship_control.keys.send.assert_called_once_with("UI_Back")
-        ship_control.ap_ckb.assert_called_once_with("log", "Could not return to cockpit view. Waypoint Assist stopped.")
+        ship_control.ap_ckb.assert_called_once_with("log", "Could not return to cockpit view. Action stopped.")
 
 
 if __name__ == "__main__":

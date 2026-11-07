@@ -36,8 +36,9 @@ EDAPGui is a Windows autopilot for Elite Dangerous, offering optional assistance
   and German are included; additional recognition and commodity translations can be contributed as data-only packs.
   Auto briefly waits for a new journal header on game restart instead of immediately reporting English fallback.
   The application interface remains English. See [game languages](docs/Localization.md).
-  Right-panel inventory confirmation reads the selected tab highlight before carrier-transfer inputs are sent,
-  with English/German screenshot coverage for both HUD color schemes.
+  Both cockpit panels confirm the selected tab highlight after individual tab switches. Docking requires
+  Contacts and carrier deposits require Inventory; an unconfirmed tab stops the action instead of sending blind inputs.
+  English/German screenshot tests cover tab recognition for both HUD color schemes.
   Navigation-row recognition also handles long, narrow selected highlights.
 
 See the [waypoint guide](docs/Waypoint.md) for waypoint files and trade actions, and the
@@ -74,8 +75,13 @@ Ship, Overlay, Settings, and Debug tabs are saved automatically; the lower right
 are saved. The window position, collapsed state, and pin are remembered in `user_data/configs/gui.json`.
 
 The program stores its settings, ship profiles, waypoint files, route progress, logs, and debug output in `user_data/`.
-In Debug log mode, failed supercruise target searches also save diagnostic images; see the
-[assist troubleshooting guide](docs/Workflows.md#target-detection-diagnostics).
+Recognition measurements and OCR details are logged only at Debug level. In Debug log mode, recognition problems can
+save local diagnostic images, including same-frame compass and target context, alongside a separate detailed log; see the
+[assist troubleshooting guide](docs/Workflows.md#vision-diagnostics).
+Four buttons on the Debug tab open individual CV views with dark title bars; X closes each window.
+Their images scale proportionally when the windows are resized.
+Debug Overlay can be toggled
+without restarting; see the troubleshooting guide above for when its markings appear.
 Downloaded OCR models and the PaddleX cache are stored in the unversioned `user_data/cache/paddlex/`, outside the
 virtual environment. The first OCR run needs internet access to download the required models, including after this
 cache-location change. Existing models in the user's `.paddlex` folder are not moved or deleted automatically.

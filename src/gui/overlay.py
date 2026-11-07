@@ -869,6 +869,11 @@ class Overlay:
             self._floating_text.clear()
             self._bars.clear()
 
+    def overlay_clear_diagnostics(self):
+        with self._lock:
+            self._lines.clear()
+            self._floating_text.clear()
+
     def overlay_remove_rect(self, key):
         with self._lock:
             self._lines.pop(key, None)

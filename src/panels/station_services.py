@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 from time import monotonic, sleep
 
 from core.logger import logger
 from game.market import MarketParser
 from game.status import StatusParser
 from i18n.localization import normalize_text
+from vision.diagnostics import save_case
 from vision.regions import reg_scale_for_station
 
 TRADE_DIALOG_TIMEOUT = 15.0
@@ -119,14 +121,18 @@ class EDStationServicesInShip:
             self.screen.screen_width,
             self.screen.screen_height,
         )
-        title_words = self.ocr.image_simple_ocr(self.ocr.capture_region_pct(title_region))
-        name_words = self.ocr.image_simple_ocr(self.ocr.capture_region_pct(name_region))
+        title_image = self.ocr.capture_region_pct(title_region)
+        title_words = self.ocr.image_simple_ocr(title_image)
+        name_image = self.ocr.capture_region_pct(name_region)
+        name_words = self.ocr.image_simple_ocr(name_image)
         title = normalize_text(" ".join(title_words or []))
         actual = normalize_text(" ".join(name_words or []))
         expected = normalize_text(name)
         title_key = "STN_SVCS_SELL_COMMODITY" if selling else "STN_SVCS_BUY_COMMODITY"
         titles = [normalize_text(value) for value in self.locale.all_values(title_key) if value != "?"]
         matched = bool(expected) and title in titles and actual == expected
+        if logger.isEnabledFor(logging.DEBUG):
+            self._trade_debug_images = (title_image.copy(), name_image.copy()) if not matched else None
         logger.debug(
             "Trade dialog check: selling=%s expected=%r recognized=%r title=%r matched=%s",
             selling,
@@ -149,6 +155,17 @@ class EDStationServicesInShip:
             selling,
             TRADE_DIALOG_TIMEOUT,
         )
+        if logger.isEnabledFor(logging.DEBUG):
+            images = getattr(self, "_trade_debug_images", None)
+            if images is not None:
+                context_region = reg_scale_for_station(
+                    {"rect": [0.20, 0.15, 0.80, 0.85]}, self.screen.screen_width, self.screen.screen_height
+                )
+                context = self.ocr.capture_region_pct(context_region)
+                save_case(
+                    "trade-dialog", "unconfirmed", {"title": images[0], "name": images[1], "later-dialog": context}
+                )
+            self._trade_debug_images = None
         return False
 
     def buy_commodity(self, keys, commodity_id: str, qty: int, free_cargo: int) -> tuple[bool, int]:

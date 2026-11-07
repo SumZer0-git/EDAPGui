@@ -270,24 +270,42 @@ class InternalPanelLanguageTests(unittest.TestCase):
         panel.ocr.image_simple_ocr.assert_not_called()
 
     def test_icon_tabs_navigate_to_inventory_and_require_confirmation(self):
-        for tab, steps in (("home", 4), ("playlist", 5)):
+        from core.constants import GuiFocusInternalPanel
+
+        for tabs in (
+            ["home", "modules", "fire_groups", "ship", "inventory"],
+            ["playlist", "home", "modules", "fire_groups", "ship", "inventory"],
+        ):
             panel = self.make_panel("en")
-            panel.show_right_panel = Mock(return_value=(True, tab))
-            panel.is_right_panel_active = Mock(return_value=(True, "inventory"))
-            with patch("panels.internal_status.sleep"):
+            panel.ap = Mock(debug_overlay=False)
+            panel.status_parser = Mock()
+            panel.status_parser.get_gui_focus.return_value = GuiFocusInternalPanel
+            with patch("panels.tab_navigation.sleep"), patch.object(panel, "_selected_tab", side_effect=tabs):
                 self.assertTrue(panel.show_inventory_tab())
-            panel.keys.send.assert_called_once_with("CycleNextPanel", repeat=steps)
+            cycles = [call for call in panel.keys.send.call_args_list if call.args[0] == "CycleNextPanel"]
+            self.assertEqual(len(cycles), len(tabs) - 1)
+            self.assertTrue(all(not call.kwargs for call in cycles))
 
     def test_navigation_requires_inventory_confirmation(self):
         panel = self.make_panel("de")
-        panel.show_right_panel = Mock(return_value=(True, "modules"))
-        panel.is_right_panel_active = Mock(return_value=(True, "inventory"))
-        with patch("panels.internal_status.sleep"):
+        from core.constants import GuiFocusInternalPanel
+
+        panel.ap = Mock(debug_overlay=False)
+        panel.status_parser = Mock()
+        panel.status_parser.get_gui_focus.return_value = GuiFocusInternalPanel
+        with (
+            patch("panels.tab_navigation.sleep"),
+            patch.object(panel, "_selected_tab", side_effect=["ship", "inventory"]),
+        ):
             self.assertTrue(panel.show_inventory_tab())
-        panel.keys.send.assert_called_once_with("CycleNextPanel", repeat=3)
-        panel.is_right_panel_active.return_value = (False, "")
-        with patch("panels.internal_status.sleep"), self.assertLogs("ed_log"):
+        panel.keys.reset_mock()
+        with (
+            patch("panels.tab_navigation.sleep"),
+            patch.object(panel, "_selected_tab", return_value=""),
+            self.assertLogs("ed_log"),
+        ):
             self.assertFalse(panel.show_inventory_tab())
+        self.assertFalse(any(call.args[0] == "CycleNextPanel" for call in panel.keys.send.call_args_list))
 
     def test_unconfirmed_inventory_never_sends_transfer_inputs(self):
         panel = self.make_panel("de")

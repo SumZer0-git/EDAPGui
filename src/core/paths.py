@@ -31,10 +31,12 @@ GUI_STATE = CONFIG_DIR / "gui.json"
 WAYPOINTS_DIR = USER_DATA / "waypoints"
 WAYPOINT_PROGRESS_DIR = WAYPOINTS_DIR / "progress"
 LAST_WAYPOINT_ROUTE = CONFIG_DIR / "last_waypoint_route.json"
-# The tests set EDAP_LOG_DIR so that they do not rotate away the logs of real sessions
+# Tests override both directories so they do not rotate real logs or diagnostic images.
 LOG_DIR = Path(os.environ["EDAP_LOG_DIR"]) if os.environ.get("EDAP_LOG_DIR") else USER_DATA / "logs"
 LOG_FILE = LOG_DIR / "autopilot.log"
-DEBUG_DIR = USER_DATA / "debug"
+DEBUG_DIR = Path(os.environ["EDAP_DEBUG_DIR"]) if os.environ.get("EDAP_DEBUG_DIR") else USER_DATA / "debug"
+DEBUG_LOG_FILE = DEBUG_DIR / "debug.log"
+INCOMING_DEBUG_DIR = USER_DATA / "incoming-debug"
 
 
 def _copy_missing(source_dir: Path, target_dir: Path) -> None:
@@ -49,7 +51,7 @@ def _copy_missing(source_dir: Path, target_dir: Path) -> None:
 
 def ensure_user_data() -> None:
     """Create the user data folders and seed them with the reference files if missing."""
-    for folder in (CONFIG_DIR, WAYPOINTS_DIR, LOG_DIR, DEBUG_DIR):
+    for folder in (CONFIG_DIR, WAYPOINTS_DIR, LOG_DIR, DEBUG_DIR, INCOMING_DEBUG_DIR):
         folder.mkdir(parents=True, exist_ok=True)
     _copy_missing(DATA_CONFIGS, CONFIG_DIR)
     _copy_missing(WAYPOINT_EXAMPLES_DIR, WAYPOINTS_DIR)

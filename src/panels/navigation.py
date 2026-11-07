@@ -13,6 +13,8 @@ from core.logger import logger
 from game.status import StatusParser
 from i18n.localization import normalize_text
 from panels.ship_control import COCKPIT_VIEW_TIMEOUT
+from panels.tab_navigation import confirm_panel_tab
+from vision.diagnostics import save_case
 from vision.regions import size_scale_for_station
 
 
@@ -62,7 +64,11 @@ class EDNavigationPanel:
         pass
 
     def _navigation_tab(self) -> bool:
+        return self._show_tab("navigation")
+
+    def _show_tab(self, target: str) -> bool:
         if not self.ap.ship_control.goto_cockpit_view(timeout=COCKPIT_VIEW_TIMEOUT):
+            logger.warning("Could not return to the cockpit before opening the navigation panel.")
             return False
         self.keys.send("HeadLookReset")
         self.keys.send("UIFocus", state=1)
@@ -70,19 +76,19 @@ class EDNavigationPanel:
             self.keys.send("UI_Left")
         finally:
             self.keys.send("UIFocus", state=0)
-        for _ in range(5):
-            sleep(0.4)
-            focus = self.status_parser.get_gui_focus()
-            if focus != GuiFocusExternalPanel:
-                logger.debug("Navigation tab check: GUI focus=%s, external panel not ready.", focus)
-                continue
-            selected = self._selected_tab()
-            logger.debug("Navigation tab check: selected=%r", selected)
-            if selected == "navigation":
-                return True
-            self.keys.send("CycleNextPanel")
-        logger.warning("Navigation tab could not be confirmed.")
-        return False
+        overlay_enabled = self.ap.debug_overlay
+        if overlay_enabled:
+            rect = self.screen.screen_rect_to_abs([0.11, 0.21, 0.70, 0.30])
+            self.ap.overlay.overlay_rect1("nav_panel_active", rect, (0, 255, 0), 2)
+            self.ap.overlay.overlay_paint()
+        try:
+            return confirm_panel_tab(
+                self.status_parser, self.keys, self._selected_tab, GuiFocusExternalPanel, target, "Navigation panel"
+            )
+        finally:
+            if overlay_enabled:
+                self.ap.overlay.overlay_remove_rect("nav_panel_active")
+                self.ap.overlay.overlay_paint()
 
     def _selected_tab(self) -> str | None:
         region = {"rect": [0.11, 0.21, 0.70, 0.30]}
@@ -93,12 +99,14 @@ class EDNavigationPanel:
             items = self.ocr.solid_highlighted_items(image, width, height, remove_thin_lines=True)
         if len(items) != 1:
             logger.debug("Navigation tab highlight count=%s; no unique selected tab.", len(items))
+            self._save_recognition_failure("tab", image)
             return None
         cropped, x, _y, w, h = items[0]
         center = region["rect"][0] + (x + w / 2) / self.screen.screen_width
         if 0.115 <= center <= 0.15 and 0.7 <= w / h <= 1.4:
             return "system"
         if cropped.shape[1] < width * 4:
+            self._save_recognition_failure("tab", image)
             return None
         text = normalize_text(" ".join(self.ocr.image_simple_ocr(cropped) or []))
         logger.debug("Navigation selected-tab OCR: text=%r", text)
@@ -108,20 +116,31 @@ class EDNavigationPanel:
             }
             if text in titles:
                 return tab
+        self._save_recognition_failure("tab", image)
         return None
+
+    def _save_recognition_failure(self, reason, image):
+        if logger.isEnabledFor(logging.DEBUG):
+            context = self.ocr.capture_region_pct(self.reg["nav_panel"])
+            save_case("navigation-panel", reason, {"evaluated": image, "later-panel": context})
 
     def _selected_destination(self) -> str:
         image = self.ocr.capture_region_pct({"rect": [0.11, 0.35, 0.70, 0.86]})
+        if logger.isEnabledFor(logging.DEBUG):
+            self._last_destination_image = image.copy()
         width, height = size_scale_for_station(350, 25, self.screen.screen_width, self.screen.screen_height)
         items = self.ocr.solid_highlighted_items(image, width, height)
         if not items:
             items = self.ocr.solid_highlighted_items(image, width, height, remove_thin_lines=True)
         if len(items) != 1:
             logger.debug("Navigation destination highlight count=%s; row not confirmed.", len(items))
+            self._save_recognition_failure("destination", image)
             return ""
         name_image = self._destination_name_image(items[0][0])
         text = normalize_text(" ".join(self.ocr.image_simple_ocr(name_image) or []))
         logger.debug("Navigation destination-name OCR: name=%r", text)
+        if not text:
+            self._save_recognition_failure("destination", image)
         return text
 
     @staticmethod
@@ -158,6 +177,8 @@ class EDNavigationPanel:
         return None if stable_reads >= 3 and change_deadline < deadline else ""
 
     def _lock_visible_destination(self, name: str, expected: str, deadline: float, attempt: int) -> bool:
+        if logger.isEnabledFor(logging.DEBUG):
+            self._last_destination_image = None
         if not self._navigation_tab():
             return False
         self.keys.send("UI_Up", hold=4)
@@ -181,6 +202,7 @@ class EDNavigationPanel:
                 reread = self._selected_destination()
                 if reread != current:
                     logger.debug("Station OCR row changed before selection: previous=%r current=%r", current, reread)
+                    self._save_last_destination_failure("row-changed")
                     return False
                 self.keys.send("UI_Select")
                 sleep(0.5)
@@ -189,6 +211,7 @@ class EDNavigationPanel:
                     logger.debug("Station OCR target confirmed: target=%r attempt=%s", name, attempt + 1)
                     return True
                 logger.warning("Station OCR selection did not confirm the requested target: %r", name)
+                self._save_last_destination_failure("unconfirmed")
                 return False
             current = self._next_destination(current, deadline)
         logger.warning(
@@ -200,7 +223,15 @@ class EDNavigationPanel:
             current,
             monotonic() >= deadline,
         )
+        self._save_last_destination_failure("not-found")
         return False
+
+    def _save_last_destination_failure(self, reason):
+        if logger.isEnabledFor(logging.DEBUG):
+            image = getattr(self, "_last_destination_image", None)
+            if image is not None:
+                self._save_recognition_failure(reason, image)
+            self._last_destination_image = None
 
     def lock_destination(self, name: str) -> bool:
         """Select the first exact name match and verify the selected game target."""
@@ -234,95 +265,25 @@ class EDNavigationPanel:
         )
         return False
 
-    def request_docking(self):
+    def request_docking(self) -> bool:
         """Request docking from Nav Panel."""
-        self.keys.send("UI_Back", repeat=10)
-        self.keys.send("HeadLookReset")
-        self.keys.send("UIFocus", state=1)
-        self.keys.send("UI_Left")
-        self.keys.send("UIFocus", state=0)
-        sleep(0.5)
-
-        # Draw box around region
-        abs_rect = self.screen.screen_rect_to_abs(self.reg["temp_tab_bar"]["rect"])
-        if self.ap.debug_overlay:
-            self.ap.overlay.overlay_rect1("nav_panel_active", abs_rect, (0, 255, 0), 2)
-            self.ap.overlay.overlay_paint()
-
-        tab_text = ""
-
-        # Take screenshot of the panel
-        image = self.ocr.capture_region_pct(self.reg["temp_tab_bar"])
-
-        # Determine the nav panel tab size at this resolution
-        scl_row_w, scl_row_h = size_scale_for_station(
-            self.nav_pnl_tab_width, self.nav_pnl_tab_height, self.screen.screen_width, self.screen.screen_height
-        )
-
-        img_selected, ocr_textlist = self.ocr.get_highlighted_item_data(image, scl_row_w, scl_row_h)
-        if img_selected is not None:
-            logger.debug("is_nav_panel_active: image selected")
-            logger.debug(f"is_nav_panel_active: OCR: {ocr_textlist}")
-
-            # Overlay OCR result
-            if self.ap.debug_overlay:
-                self.ap.overlay.overlay_floating_text(
-                    "nav_panel_text", f"{ocr_textlist}", abs_rect[0], abs_rect[1] - 25, (0, 255, 0)
-                )
-                self.ap.overlay.overlay_paint()
-
-            text = normalize_text(" ".join(ocr_textlist or []))
-            for tab in ("navigation", "transactions", "contacts", "target"):
-                if text in {normalize_text(value) for value in self.locale.all_values(f"NAV_PNL_TAB_{tab.upper()}")}:
-                    tab_text = tab
-                    break
-        else:
-            logger.debug("is_right_panel_active: no image selected")
-
-        if tab_text == "":
-            # we start with the Left Panel having "NAVIGATION" highlighted, we then need to right
-            # twice to "CONTACTS".  Notice of a FSD run, the LEFT panel is reset to "NAVIGATION"
-            # otherwise it is on the last tab you selected. Thus must start AP with "NAVIGATION" selected
-            self.keys.send("CycleNextPanel", hold=0.2)
-            sleep(0.2)
-            self.keys.send("CycleNextPanel", hold=0.2)
-        elif tab_text == "navigation":
-            self.keys.send("CycleNextPanel", repeat=2)
-        elif tab_text == "transactions":
-            self.keys.send("CycleNextPanel", repeat=1)
-        elif tab_text == "contacts":
-            pass
-        elif tab_text == "target":
-            self.keys.send("CycleNextPanel", repeat=4)
-
-        # On the CONTACT TAB, go to top selection, do this 4 seconds to ensure at top
-        # then go right, which will be "REQUEST DOCKING" and select it
-        self.keys.send("UI_Up", hold=4)
-        self.keys.send("UI_Right")
-        self.keys.send("UI_Select")
-
-        sleep(0.5)
-        # Go back to NAVIGATION tab
-        self.keys.send("CycleNextPanel", hold=0.2)  # STATS tab
-        sleep(0.2)
-        self.keys.send("CycleNextPanel", hold=0.2)  # NAVIGATION tab
-
-        # Clean up screen
-        if self.ap.debug_overlay:
-            sleep(2)
-            self.ap.overlay.overlay_remove_rect("nav_panel_active")
-            self.ap.overlay.overlay_remove_floating_text("nav_panel_text")
-            self.ap.overlay.overlay_paint()
-
-        sleep(0.3)
-        self.keys.send("UI_Back")
-        self.keys.send("HeadLookReset")
+        try:
+            if not self._show_tab("contacts"):
+                self.ap_ckb("log", "Could not confirm the contacts tab. Docking request stopped.")
+                return False
+            self.keys.send("UI_Up", hold=4)
+            self.keys.send("UI_Right")
+            self.keys.send("UI_Select")
+            sleep(0.5)
+            return True
+        finally:
+            self.hide_nav_panel()
 
     def hide_nav_panel(self):
         """Hides the Nav Panel if open."""
         # Is nav panel active?
         if self.status_parser.get_gui_focus() == GuiFocusExternalPanel:
-            self.ap.ship_control.goto_cockpit_view()
+            self.ap.ship_control.goto_cockpit_view(timeout=COCKPIT_VIEW_TIMEOUT)
 
 
 def dummy_cb(msg, body=None):

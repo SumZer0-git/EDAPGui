@@ -20,6 +20,9 @@ This document summarizes the behavior currently implemented and lists a small nu
    afterward.
 6. On disengagement, it checks whether docking is possible and whether the destination supports docking. When
    applicable, it approaches, requests docking through the Navigation panel, and waits for the docking computer.
+   It confirms panel focus and the selected Contacts tab before sending the docking inputs. Tab changes are sent
+   individually and checked again; unreadable highlights do not trigger blind switching. If confirmation times out,
+   the docking attempt stops with an error instead of retrying selection in an unknown tab.
 7. Once docked, the docking sequence selects refuel, repair, and ammunition services. The local-target phase does not
    run a waypoint trade sequence.
 
@@ -49,16 +52,64 @@ This document summarizes the behavior currently implemented and lists a small nu
 For route editing, imports, trade options and troubleshooting, see the [Waypoint guide](Waypoint.md).
 The editor's **Plot to System/Station** buttons only select targets; they do not start travel or trading.
 
-### Target detection diagnostics
+### Vision diagnostics
 
-Set **Debug > Log level > Debug** before reproducing a supercruise target loss. When target alignment reports that it
-cannot find or has lost the target, the last failed search is saved in `user_data/debug/target/`. Each PNG contains
-the original-color target search region from the same screen capture used for matching, not the entire screen.
-Its filename includes the capture time and target match score; the log records the detection threshold and image path.
-At most 12 images are saved per application run, and files from earlier runs remain until deleted manually.
+Set **Debug > Log level > Debug** before reproducing a recognition problem. Normal technical messages remain in
+`user_data/logs/autopilot.log`; the complete technical log, including those messages and debug details, is written to
+`user_data/debug/debug.log` while Debug is enabled. Both logs rotate separately in their respective folders on the first use of each log in a
+program run; up to ten older files are kept for each. The GUI's log-file button opens `autopilot.log`.
+Recognition scores, message-gate measurements, OCR text and fallback attempts are Debug-only diagnostics.
+Short user-facing events, such as sending the supercruise exit, remain at Info level.
+The optional CV view draws match boxes on display copies; it does not alter the recognition images or saved context.
+Raw BGRA-backed OCR crops are copied into writable display images before annotations are drawn.
+Its windows are managed by the main GUI thread and open within the work area of the monitor containing the main window.
+Large images are scaled down to fit. You can move the windows; subsequent frames do not reset their positions.
+Resizing a CV window scales its images up or down while preserving their aspect ratios, including the last frame
+when recognition is idle. Only the display is resized; captures, matching and saved diagnostic images are unchanged.
+The Debug tab has four **CV Views** buttons: **Compass**, **Target**, **Occluded Target** and **HUD Messages**.
+A button opens or focuses its window; the title-bar X closes it, and the button opens it again.
+HUD Messages combines the message pre-check and OCR result in two separate display areas.
+Windows initially show "Waiting for recognition..." until the corresponding recognition step runs. There are no
+extra background captures; the last displayed frame remains visible between recognition steps.
+Only opened views prepare display images, and none open automatically at startup. The old global CV switch is no
+longer used. The CV view is independent of Debug logging and diagnostic image recording.
+Display images may be filtered, cropped, annotated or scaled; they are not always unmodified raw search captures.
 
-The target may be outside the search region, so the image alone cannot establish that it was absent from the whole
-screen. Images and logs may contain player information; review and remove sensitive details before sharing them.
+**Debug Overlay** takes effect without restarting. It draws search rectangles and OCR results over the game only during
+supported HUD-message and panel/OCR checks, not continuously for compass or target matching. Switching it off removes
+diagnostic markings without clearing normal AP status information. Both CV windows and debug markings can overlap
+screen captures, so disable them for unobstructed diagnostic runs or move CV windows to another monitor.
+
+Diagnostic images are saved directly in `user_data/debug/<category>/`. Images from the same case share a timestamp
+and identifier in their filenames, followed by their role, such as `_evaluated.png` or `_context.png`. The debug log
+identifies the category, reason and filename prefix; related scores, OCR text and decisions are logged by the recognition
+code. New case prefixes are relative to the program folder, such as `user_data/debug/compass/<case>`, rather than exposing
+the absolute installation path. For a debug-directory override on another drive, prefixes are relative to that debug
+directory instead. Existing logs are not rewritten. At most 50 cases are retained per category across runs: after successfully saving a new case, all images belonging
+to the oldest excess cases in that category are removed. Unmanaged files and older case directories are not rotated.
+Images and logs rotate independently, so their retention periods can differ. Existing logs at the old
+`user_data/logs/debug.log` location are not moved or deleted.
+
+To share a run, review and ZIP `user_data/debug/`; it can also contain earlier cases and rotated logs.
+For maintainers, `user_data/incoming-debug/` is a separate local inbox for debug dumps received from other users.
+The application creates it but does not process or automatically clean its contents. It is not part of the debug ZIP
+and is excluded from Git along with the rest of `user_data/`.
+
+- A failed target alignment saves the original search region used for the last failed match and a same-frame context
+  with 1.5 times its width and height (clipped at screen edges). The search region and matching behavior stay unchanged.
+  While Debug is enabled, each target search captures the larger region; images are saved only for a diagnostic case.
+  The target can still lie outside the context; this is not a full screenshot.
+- Missing compasses and weak nav-point matches save the evaluated image and a larger same-frame context. The search
+  itself still uses the original region. The larger capture is used only while Debug is enabled.
+- Unconfirmed navigation and internal-panel highlights save the evaluated region and a later panel-context image,
+  before the next navigation input. The later image is not necessarily identical to the evaluated frame.
+- An unconfirmed trade dialog saves its separately captured title and commodity regions and a later dialog context.
+  OCR wait timeouts, unreadable disengage messages and ambiguous alignment or line-of-sight text can also save cases.
+
+The program cannot automatically detect every wrong recognition: an apparently successful match can still be wrong.
+Not every absence of HUD text is an error. Images and logs can contain player information; review and remove sensitive
+details before sharing them. Debug images are not captured or saved with Debug disabled. Image encoding and the larger
+compass and target captures can add overhead while debugging.
 
 Navigation destination selection accepts long, narrow filled row highlights without collapsing their corners during
 contour simplification. Thin lines and hollow outlines do not count as selected rows; the destination still requires

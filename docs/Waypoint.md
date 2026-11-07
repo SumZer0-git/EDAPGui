@@ -236,6 +236,8 @@ Restarting or resetting without checking could repeat a purchase or sale.
 
 - At a Fleet Carrier, enable **Fleet Carrier transfer (instead of trading)** to transfer cargo rather than buy or sell.
 - For a full carrier cargo transfer, use the special commodity name `All` with quantity `0`.
+  The internal panel's Inventory tab is confirmed before transfer inputs. Each tab change is checked separately;
+  unreadable or unconfirmed tabs stop the transfer without submitting it. No particular starting tab is required.
 - At a System Colonisation Ship or Orbital Construction Site, `All` with quantity `0` in **Sell / transfer**
   requests delivery of all cargo.
 - ID-specific inventory deposits and withdrawals are not supported in Fleet Carrier transfer mode; only the full
@@ -347,8 +349,10 @@ If you need to report a problem:
 
 1. Stop the assist. Note the approximate time, what you expected and what happened.
 2. For a reproducible problem, select **Debug > Log level > Debug** before the next attempt.
-3. Keep the technical log in `user_data/logs/autopilot.log`. After restarting, the previous log is one of the
-   dated files in the same folder.
+3. Keep `user_data/debug/debug.log` and the diagnostic images for a Debug-mode run; the log includes normal technical
+   messages as well as detailed diagnostics. `user_data/logs/autopilot.log` contains normal messages only. After
+   restarting, previous logs are dated files in their respective folders. See
+   [vision diagnostics](Workflows.md#vision-diagnostics) for local image captures and sharing guidance.
 4. Include the affected route file from `user_data/waypoints/` and, if requested, its progress file from the
    `progress` subfolder. You do not need to interpret these files yourself.
 5. For a trading problem, report the requested quantity and cargo before/after if known.

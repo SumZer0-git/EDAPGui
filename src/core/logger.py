@@ -12,21 +12,20 @@ from core import paths
 _filename = paths.LOG_FILE
 _MAX_ROTATED_LOGS = 10
 
-# Rename existing log file to create new one.
-if os.path.exists(_filename):
-    filename_only = Path(_filename).stem
-    t = os.path.getmtime(_filename)
-    v = datetime.datetime.fromtimestamp(t)
-    x = v.strftime("%Y-%m-%d %H-%M-%S")
-    os.replace(_filename, paths.LOG_DIR / f"{filename_only} {x}.log")
 
-# Keep only the newest rotated log files.
-_rotated = sorted(paths.LOG_DIR.glob(f"{Path(_filename).stem} ????-??-?? ??-??-??.log"))
-for _old in _rotated[:-_MAX_ROTATED_LOGS]:
-    try:
-        _old.unlink()
-    except OSError:
-        pass
+def _rotate_log(filename):
+    if os.path.exists(filename):
+        timestamp = datetime.datetime.fromtimestamp(os.path.getmtime(filename)).strftime("%Y-%m-%d %H-%M-%S")
+        os.replace(filename, filename.parent / f"{filename.stem} {timestamp}.log")
+    rotated = sorted(filename.parent.glob(f"{filename.stem} ????-??-?? ??-??-??.log"))
+    for old in rotated[:-_MAX_ROTATED_LOGS]:
+        try:
+            old.unlink()
+        except OSError as error:
+            logging.getLogger("ed_log").warning("Could not remove old log %s: %s", old, error)
+
+
+_rotate_log(_filename)
 
 _root_logger = logging.getLogger()
 _log_path = Path(_filename).resolve()
@@ -43,6 +42,7 @@ if _file_handler is None:
         _root_logger.setLevel(logging.ERROR)
     _file_handler = logging.FileHandler(_filename, encoding="utf-8")
     _root_logger.addHandler(_file_handler)
+_file_handler.setLevel(logging.INFO)
 _file_handler.setFormatter(logging.Formatter("%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s", "%H:%M:%S"))
 
 logger = colorlog.getLogger("ed_log")
@@ -67,13 +67,23 @@ handler.setFormatter(
 )
 logger.addHandler(handler)
 
+_debug_file_handler = None
+
 
 def set_log_level(level: int, reason: str = "changed") -> None:
     """Central place to switch the log level. Always writes a marker line so the log shows where it changed."""
+    global _debug_file_handler
     old = logging.getLevelName(logger.level)
     new = logging.getLevelName(level)
     if logger.level == level and reason != "at startup":
         return
+    if level == logging.DEBUG and _debug_file_handler is None:
+        _rotate_log(paths.DEBUG_LOG_FILE)
+        _debug_file_handler = logging.FileHandler(paths.DEBUG_LOG_FILE, encoding="utf-8")
+        _debug_file_handler.setFormatter(_file_handler.formatter)
+        _root_logger.addHandler(_debug_file_handler)
+    if _debug_file_handler is not None:
+        _debug_file_handler.setLevel(logging.DEBUG if level == logging.DEBUG else logging.CRITICAL + 1)
     logger.setLevel(logging.DEBUG)  # make sure the marker is written regardless of the old and new level
     logger.info(f"=== Log level {reason}: {old} -> {new} ===")
     logger.setLevel(level)

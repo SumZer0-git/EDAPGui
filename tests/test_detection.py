@@ -15,6 +15,7 @@ import cv2
 import numpy as np
 
 from core import paths
+from gui.cv_view import CvFrames
 from routines.flight import FlightMixin
 from tests.helpers import FakeScreen, load_fixture_image, pad_to_region
 from vision.detection import DetectionMixin
@@ -23,7 +24,8 @@ from vision.templates import ImageTemplates
 
 
 class Detector(DetectionMixin):
-    cv_view = False
+    def __init__(self):
+        self.cv_frames = CvFrames()
 
 
 class MatchingTestCase(unittest.TestCase):
@@ -42,6 +44,81 @@ class MatchingTestCase(unittest.TestCase):
 
     def detect(self, method, image_name):
         return getattr(Detector(), method)(self.regions(image_name))
+
+
+class CvViewTestCase(MatchingTestCase):
+    def test_disengage_cv_view_accepts_bgra_crops_without_changing_ocr_images(self):
+        for success_variant in range(3):
+            with self.subTest(success_variant=success_variant):
+                detector = Detector()
+                detector.cv_frames.open("hud")
+                detector.debug_overlay = False
+                detector.ocr = Mock()
+                detector.locale = Mock()
+                detector.locale.all_values.return_value = ["PRESS TO DISENGAGE"]
+                detector.ocr.string_similarity.side_effect = lambda expected, actual: float(expected == actual)
+                bgra = np.full((80, 140, 4), 123, np.uint8)
+                raw = bgra[:, :, :3]
+                self.assertFalse(raw.flags.c_contiguous)
+                variants = [raw.copy(), raw, cv2.resize(raw, None, fx=2, fy=2)]
+                originals = [image.copy() for image in variants]
+                regions = Mock()
+                regions.message_image.side_effect = variants
+                detector.ocr.image_simple_ocr.side_effect = [
+                    ["PRESS TO DISENGAGE"] if i == success_variant else [] for i in range(3)
+                ]
+                with patch.object(detector, "show_cv_image") as show:
+                    self.assertTrue(detector.sc_disengage_active(regions))
+                show.assert_called_once()
+                displayed = show.call_args.args[1]
+                self.assertTrue(displayed.flags.c_contiguous)
+                for original, image in zip(originals, variants):
+                    self.assertTrue(np.array_equal(original, image))
+                    self.assertFalse(np.shares_memory(displayed, image))
+
+    def test_message_gate_cv_view_does_not_modify_capture(self):
+        detector = Detector()
+        detector.cv_frames.open("hud")
+        regions = Mock()
+        regions.message_text_present.return_value = False
+        regions.last_message_fraction = 0.0
+        regions.last_message_line = 0.0
+        bgra = np.full((80, 140, 4), 123, np.uint8)
+        image = bgra[:, :, :3]
+        regions.message_image.return_value = image
+        original = image.copy()
+        with patch.object(detector, "show_cv_image") as show:
+            self.assertFalse(detector.sc_disengage_label_up(regions))
+        self.assertTrue(np.array_equal(image, original))
+        self.assertFalse(np.shares_memory(show.call_args.args[1], image))
+
+    def test_cv_view_preserves_detection_results_and_source_images(self):
+        for method, image_name in (
+            ("get_nav_offset", "compass"),
+            ("get_destination_offset", "target"),
+            ("is_destination_occluded", "empty"),
+        ):
+            with self.subTest(method=method):
+                expected = self.detect(method, image_name)
+                original = self.images[image_name].copy()
+                detector = Detector()
+                detector.cv_frames.open(
+                    {
+                        "get_nav_offset": "compass",
+                        "get_destination_offset": "target",
+                        "is_destination_occluded": "occluded",
+                    }[method]
+                )
+                with (
+                    patch.object(detector, "show_cv_image") as show,
+                    patch("vision.detection.cv2.moveWindow"),
+                    patch("vision.detection.cv2.waitKey"),
+                    self.assertNoLogs("ed_log", level="ERROR"),
+                ):
+                    result = getattr(detector, method)(self.regions(image_name))
+                self.assertEqual(result, expected)
+                show.assert_called_once()
+                self.assertTrue(np.array_equal(self.images[image_name], original))
 
 
 class TemplateTestCase(MatchingTestCase):
@@ -86,6 +163,15 @@ class TemplateTestCase(MatchingTestCase):
 
 
 class CompassTestCase(MatchingTestCase):
+    def test_missing_compass_measurements_are_debug_only(self):
+        with self.assertNoLogs("ed_log", level="INFO"):
+            self.assertFalse(self.detect("have_destination", "empty"))
+        with self.assertLogs("ed_log", level="DEBUG") as logs:
+            self.assertFalse(self.detect("have_destination", "empty"))
+        measurements = [record for record in logs.records if "Compass not found:" in record.getMessage()]
+        self.assertEqual(len(measurements), 1)
+        self.assertEqual(measurements[0].levelno, logging.DEBUG)
+
     def test_compass_is_found(self):
         for name in ("compass", "navpoint", "navpoint-behind"):
             with self.subTest(image=name):
@@ -191,55 +277,43 @@ class TargetTestCase(MatchingTestCase):
         regions = ScreenRegions(FakeScreen(image), self.templates)
         detector = Detector()
         with tempfile.TemporaryDirectory() as folder, patch.object(paths, "DEBUG_DIR", Path(folder)):
-            with patch.object(DetectionMixin, "_target_dumps", 0), self.assertLogs("ed_log", level="DEBUG") as logs:
+            with self.assertLogs("ed_log", level="DEBUG") as logs:
                 self.assertIsNone(detector.get_destination_offset(regions))
                 image[:] = 0
                 detector.dump_target_debug()
                 detector.dump_target_debug()
 
-            files = list((Path(folder) / "target").glob("*.png"))
-            self.assertEqual(len(files), 1)
-            self.assertRegex(files[0].name, r"^target-missing-\d{8}-\d{6}-\d{6}-s0\.0000\.png$")
-            saved = cv2.imread(str(files[0]))
+            cases = list((Path(folder) / "target").glob("*_evaluated.png"))
+            self.assertEqual(len(cases), 1)
+            saved = cv2.imread(str(cases[0]))
             self.assertTrue(np.all(saved == (40, 20, 10)))
-            self.assertTrue(any("Saved target debug image:" in line for line in logs.output))
+            context = cv2.imread(str(cases[0].with_name(cases[0].name.replace("_evaluated", "_context"))))
+            self.assertTrue(np.all(context == (40, 20, 10)))
+            self.assertTrue(any("Vision diagnostic case:" in line for line in logs.output))
 
     def test_target_debug_is_disabled_outside_debug_and_clears_after_success(self):
         detector = Detector()
         with (
             patch("vision.detection.logger.isEnabledFor", return_value=False),
-            patch("vision.detection.cv2.imwrite") as write,
+            patch("vision.diagnostics.cv2.imwrite") as write,
         ):
             self.assertIsNone(detector.get_destination_offset(self.regions("empty")))
             detector.dump_target_debug()
             write.assert_not_called()
-        with self.assertLogs("ed_log", level="DEBUG"), patch("vision.detection.cv2.imwrite") as write:
+        with self.assertLogs("ed_log", level="DEBUG"), patch("vision.diagnostics.cv2.imwrite") as write:
             self.assertIsNone(detector.get_destination_offset(self.regions("empty")))
             self.assertIsNotNone(detector.get_destination_offset(self.regions("target")))
             detector.dump_target_debug()
             write.assert_not_called()
 
-    def test_target_debug_limit_and_write_failure(self):
+    def test_target_debug_write_failure_is_logged(self):
         detector = Detector()
-        with (
-            self.assertLogs("ed_log", level="DEBUG"),
-            patch.object(DetectionMixin, "_target_dumps", 12),
-            patch("vision.detection.cv2.imwrite") as write,
-        ):
-            detector.get_destination_offset(self.regions("empty"))
-            detector.dump_target_debug()
-            write.assert_not_called()
-        with (
-            patch.object(DetectionMixin, "_target_dumps", 0),
-            patch("vision.detection.paths.debug_path", return_value="target.png"),
-            patch("vision.detection.cv2.imwrite", return_value=False),
-            self.assertLogs("ed_log", level="WARNING") as logs,
-        ):
-            with patch("vision.detection.logger.isEnabledFor", side_effect=lambda level: level >= logging.DEBUG):
-                detector.get_destination_offset(self.regions("empty"))
-                detector.dump_target_debug()
-            self.assertIn("Could not save target debug image", logs.output[-1])
-            self.assertEqual(DetectionMixin._target_dumps, 0)
+        with tempfile.TemporaryDirectory() as folder, patch.object(paths, "DEBUG_DIR", Path(folder)):
+            with patch("vision.diagnostics.cv2.imwrite", return_value=False):
+                with self.assertLogs("ed_log", level="DEBUG") as logs:
+                    detector.get_destination_offset(self.regions("empty"))
+                    detector.dump_target_debug()
+            self.assertTrue(any("Could not save vision diagnostic case" in line for line in logs.output))
 
     def test_no_target_in_other_screens(self):
         for name in ("empty", "compass", "disengage"):
@@ -265,6 +339,34 @@ class TargetTestCase(MatchingTestCase):
 
 
 class DisengageTestCase(MatchingTestCase):
+    def test_message_gate_diagnostics_are_debug_only(self):
+        with self.assertNoLogs("ed_log", level="INFO"):
+            self.assertTrue(Detector().sc_disengage_label_up(self.regions("message")))
+        with self.assertLogs("ed_log", level="DEBUG") as logs:
+            self.assertTrue(Detector().sc_disengage_label_up(self.regions("message")))
+        self.assertTrue(any("Disengage message check:" in record.getMessage() for record in logs.records))
+        self.assertTrue(any("reading it with OCR" in record.getMessage() for record in logs.records))
+        self.assertTrue(all(record.levelno == logging.DEBUG for record in logs.records))
+
+    def test_ocr_diagnostics_are_debug_only_and_exit_status_remains_info(self):
+        detector = Detector()
+        detector.debug_overlay = False
+        detector.ocr = Mock()
+        detector.locale = Mock()
+        detector.locale.all_values.return_value = ["PRESS TO DISENGAGE"]
+        detector.ocr.string_similarity.side_effect = lambda expected, actual: float(expected == actual)
+        for level in ("INFO", "DEBUG"):
+            with self.subTest(level=level):
+                detector.ocr.image_simple_ocr.side_effect = [None, [], ["PRESS TO DISENGAGE"]]
+                with self.assertLogs("ed_log", level=level) as logs:
+                    self.assertTrue(detector.sc_disengage_active(self.regions("empty")))
+                info = [record.getMessage() for record in logs.records if record.levelno == logging.INFO]
+                self.assertEqual(info, ["Disengage message detected, sending the supercruise exit."])
+                if level == "DEBUG":
+                    debug = [record.getMessage() for record in logs.records if record.levelno == logging.DEBUG]
+                    self.assertTrue(any("OCR returned no text" in message for message in debug))
+                    self.assertTrue(any("Disengage similarity" in message for message in debug))
+
     def test_disengage_message_is_recognised(self):
         self.assertTrue(Detector().sc_disengage_label_up(self.regions("message")))
 

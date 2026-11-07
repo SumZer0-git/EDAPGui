@@ -5,6 +5,7 @@ import tkinter as tk
 import ttkbootstrap as ttk
 
 from core.version import EDAP_VERSION
+from gui.cv_view import CV_VIEWS
 from gui.fields import (
     DEFAULT_OVERLAY_LINE_ORDER,
     DSS_BUTTONS,
@@ -247,8 +248,10 @@ def build_debug(app, page):
     logging_card = _card(app, left, "Logging")
     row = _choice(app, logging_card, "log_level", "Log level", LOG_LEVELS, 0)
     _field(app, logging_card, "DebugOverlay", row)
-    _field(app, logging_card, "Enable_CV_View", row + 1)
-    _button(app, logging_card, "Open Log File", app.open_logfile, row + 2)
+    _button(app, logging_card, "Open Log File", app.open_logfile, row + 1)
+    cv_card = _card(app, left, "CV Views")
+    for row, (name, title) in enumerate(CV_VIEWS.items()):
+        _button(app, cv_card, title, lambda name=name: app.cv_view.open_view(name), row)
 
     single = _card(app, right, "Single Waypoint Assist")
     for row, (text, var) in enumerate(
