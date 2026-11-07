@@ -38,6 +38,7 @@ EDAPGui is a Windows autopilot for Elite Dangerous, offering optional assistance
   The application interface remains English. See [game languages](docs/Localization.md).
   Right-panel inventory confirmation reads the selected tab highlight before carrier-transfer inputs are sent,
   with English/German screenshot coverage for both HUD color schemes.
+  Navigation-row recognition also handles long, narrow selected highlights.
 
 See the [waypoint guide](docs/Waypoint.md) for waypoint files and trade actions, and the
 [ship tuning guide](docs/RollPitchYaw.md) for roll, pitch, and yaw rates.

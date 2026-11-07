@@ -201,6 +201,32 @@ class PaddleOCRV3TestCase(unittest.TestCase):
         cv2.rectangle(image, (30, 80), (370, 160), (255, 255, 255), 3)
         self.assertEqual(ocr.solid_highlighted_items(image, 200, 30), [])
 
+    def test_solid_highlight_preserves_long_narrow_slanted_rows(self):
+        ocr = self.make_ocr([])
+        for scale in (1, 2):
+            for filled in (True, False):
+                with self.subTest(scale=scale, filled=filled):
+                    image = np.zeros((160 * scale, 1200 * scale, 3), dtype=np.uint8)
+                    corners = np.array([[60, 75], [1140, 25], [1140, 55], [60, 105]], np.int32) * scale
+                    cv2.polylines(image, [corners], True, (0, 255, 255), 2 * scale)
+                    if filled:
+                        cv2.fillConvexPoly(image, corners, (0, 255, 255))
+                    items = ocr.solid_highlighted_items(image, 700 * scale, 25 * scale)
+                    self.assertEqual(len(items), 1 if filled else 0)
+                    if filled:
+                        self.assertGreater(items[0][0].shape[1], 1000 * scale)
+                        self.assertLess(items[0][0].shape[0], 40 * scale)
+
+    def test_solid_highlight_rejects_long_ellipses_and_triangles(self):
+        ocr = self.make_ocr([])
+        image = np.zeros((160, 1200, 3), dtype=np.uint8)
+        cv2.ellipse(image, (600, 80), (540, 20), 0, 0, 360, (0, 255, 255), -1)
+        self.assertEqual(ocr.solid_highlighted_items(image, 700, 25), [])
+        image[:] = 0
+        corners = np.array([[60, 75], [1140, 25], [1140, 65]], np.int32)
+        cv2.fillConvexPoly(image, corners, (0, 255, 255))
+        self.assertEqual(ocr.solid_highlighted_items(image, 700, 25), [])
+
 
 if __name__ == "__main__":
     unittest.main()

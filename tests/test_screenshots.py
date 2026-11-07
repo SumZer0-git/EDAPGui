@@ -77,7 +77,8 @@ class NavigationPanelScreenshotTestCase(unittest.TestCase):
                 expected = path.stem.split("_")[2]
                 self.assertEqual(panel._selected_tab(), expected)
                 if expected == "navigation":
-                    self.assertEqual(panel._selected_destination(), "OHM CITY")
+                    destination = "NAV BEACON" if "nav-beacon" in path.stem.split("_") else "OHM CITY"
+                    self.assertEqual(panel._selected_destination(), destination)
 
     def test_long_name_and_numeric_suffix_survive_icons_and_noisy_distance_column(self):
         ocr = OCR(screen=None)
