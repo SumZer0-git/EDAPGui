@@ -1,10 +1,11 @@
 """Copied trade-result parsing and draft creation."""
 
+import json
 import re
 import unittest
 
 from gui.commodity_catalogue import load_catalogue
-from gui.route_import import clean_line, imported_waypoints, parse_trade_route, resolve_commodities
+from gui.route_import import clean_line, imported_waypoints, parse_spansh_export, parse_trade_route, resolve_commodities
 
 REVERSED = """Nach [Ohm City | LHS 20](https://inara.cz/elite/station-market/22700/)\ue84f\ufe0e
 \ue81d\ufe0e
@@ -196,3 +197,108 @@ Sell price
                 imported_waypoints(route, resolved, {commodity_id: quantity})
         with self.assertRaises(ValueError):
             resolve_commodities(route, self.catalogue, "fr")
+
+    def test_spansh_galaxy_plotter_imports_entire_jump_sequence(self):
+        source = {
+            "result": {
+                "jumps": [
+                    {"name": "Start", "must_refuel": True},
+                    {"name": "Middle", "must_inject": True},
+                    {"name": "Destination"},
+                ]
+            }
+        }
+        parsed = parse_spansh_export(json.dumps(source), self.catalogue)
+        self.assertEqual(parsed.route_type, "Galaxy Plotter")
+        self.assertEqual([entry["SystemName"] for entry in parsed.entries], ["Start", "Middle", "Destination"])
+        self.assertNotIn("fuel", parsed.summary.casefold())
+        self.assertEqual(parsed.warnings, [])
+
+    def test_spansh_galaxy_csv_imports_every_row_in_order(self):
+        source = (
+            "System Name,Distance,Distance Remaining,Fuel Left,Fuel Used,Refuel,Neutron Star,Injection\n"
+            "Start,0,20,16,0,false,false,false\n"
+            "Middle,10,10,8,8,true,false,false\n"
+            "Destination,10,0,0,8,false,false,true\n"
+        )
+        parsed = parse_spansh_export(source, self.catalogue)
+        self.assertEqual([entry["SystemName"] for entry in parsed.entries], ["Start", "Middle", "Destination"])
+
+    def test_spansh_exploration_json_keeps_endpoints_and_target_systems_once(self):
+        source = {
+            "result": [
+                {"name": "Start", "bodies": []},
+                {"name": "Transit", "bodies": []},
+                {"name": "Target", "bodies": [{"name": "Target 1"}, {"name": "Target 2"}]},
+                {"name": "Target", "bodies": [{"name": "Target 3"}]},
+                {"name": "Destination", "bodies": []},
+            ]
+        }
+        parsed = parse_spansh_export(json.dumps(source), self.catalogue)
+        self.assertEqual(parsed.route_type, "Exploration")
+        self.assertEqual(
+            [entry["SystemName"] for entry in parsed.entries],
+            ["Start", "Target", "Destination"],
+        )
+        self.assertIn("2 selected bodies", parsed.stop_details[1])
+
+    def test_spansh_exploration_csv_groups_target_systems_and_reports_missing_endpoints(self):
+        source = (
+            "System Name,Body Name,Distance To Arrival\n"
+            "Target A,World 1,100\n"
+            "Target B,World 2,200\n"
+            "Target A,World 3,300\n"
+        )
+        parsed = parse_spansh_export(source, self.catalogue)
+        self.assertEqual([entry["SystemName"] for entry in parsed.entries], ["Target A", "Target B"])
+        self.assertIn("start and destination", parsed.warnings[0])
+
+    def test_spansh_empty_exploration_csv_does_not_create_empty_route(self):
+        source = "System Name,Body Name,Distance To Arrival\n"
+        with self.assertRaisesRegex(ValueError, "no selected body targets"):
+            parse_spansh_export(source, self.catalogue)
+
+    def test_spansh_trade_import_merges_adjacent_stations_and_keeps_revisited_stops(self):
+        def station(name, system, market_id):
+            return {"station": name, "system": system, "market_id": market_id}
+
+        source = {
+            "result": [
+                {
+                    "source": station("Port A", "System A", 1),
+                    "destination": station("Port B", "System B", 2),
+                    "commodities": [
+                        {"name": "Polymers", "amount": 17},
+                        {"name": "Unknown item", "amount": 5},
+                    ],
+                },
+                {
+                    "source": station("Port B", "System B", 2),
+                    "destination": station("Port C", "System C", 3),
+                    "commodities": [{"name": "Polymers", "amount": 4}],
+                },
+                {
+                    "source": station("Port C", "System C", 3),
+                    "destination": station("Port B", "System B", 2),
+                    "commodities": [{"name": "Polymers", "amount": 9}],
+                },
+            ]
+        }
+        parsed = parse_spansh_export(json.dumps(source), self.catalogue)
+        self.assertEqual(parsed.route_type, "Trade Planner")
+        self.assertEqual(
+            [(entry["StationName"], entry["SystemName"]) for entry in parsed.entries],
+            [
+                ("Port A", "System A"),
+                ("Port B", "System B"),
+                ("Port C", "System C"),
+                ("Port B", "System B"),
+            ],
+        )
+        self.assertEqual(parsed.entries[0]["BuyCommodities"], {"128049197": 17})
+        self.assertEqual(parsed.entries[1]["SellCommodities"], {"128049197": 17})
+        self.assertEqual(parsed.entries[1]["BuyCommodities"], {"128049197": 4})
+        self.assertEqual(parsed.entries[2]["SellCommodities"], {"128049197": 4})
+        self.assertEqual(parsed.entries[3]["SellCommodities"], {"128049197": 9})
+        self.assertIn("unknown or ambiguous commodity", parsed.warnings[0])
+        self.assertNotIn("no valid commodity actions", parsed.stop_details[0])

@@ -12,7 +12,7 @@ from core import paths
 from core.commodities import commodity_id_matches_name, get_localization, is_commodity_id
 from core.logger import logger
 from gui.commodity_catalogue import load_catalogue, suggestions
-from gui.route_import import imported_waypoints, parse_trade_route, resolve_commodities
+from gui.route_import import imported_waypoints, parse_spansh_export, parse_trade_route, resolve_commodities
 from gui.theme import CARD, FIELD, ORANGE, PANEL, RED, TEXT, Metrics
 from gui.waypoint_model import RouteDocument, RouteIssue, entry_issues, new_waypoint
 from gui.widgets import RoundButton, add_tooltip, section_card
@@ -195,6 +195,9 @@ class ActiveWaypointTable(WaypointTable):
 
 
 class CommodityList(ttk.Frame):
+    ALL_CARGO_LABEL = "All cargo (Carrier / construction only)"
+    NUMBER_QUANTITY_OPTION = "Enter number..."
+
     def __init__(self, parent, values, language=None, catalogue=None, allow_all=False):
         super().__init__(parent)
         self.values = dict(values)
@@ -202,6 +205,7 @@ class CommodityList(ttk.Frame):
         self.allow_all = allow_all
         self.selected_commodity_id = None
         self._updating_name = False
+        self._suggestions_after_id = None
         metrics = Metrics(self)
         self.columnconfigure(0, weight=1)
         self.tree = WaypointTable(self, columns=("quantity",), show="tree headings", height=5)
@@ -222,8 +226,19 @@ class CommodityList(ttk.Frame):
         self.name_picker = ttk.Combobox(self, textvariable=self.name, postcommand=self.filter_names)
         self.name_picker.grid(row=1, column=0, sticky="nsew", pady=metrics.u(8))
         self.name_picker.bind("<<ComboboxSelected>>", self.choose_name)
-        self.quantity_picker = ttk.Combobox(self, textvariable=self.quantity, values=("All",), width=8)
+        self.name_picker.bind("<Button-1>", self.schedule_suggestions, add="+")
+        self.name_picker.bind("<KeyPress>", self.suggestion_key_pressed, add="+")
+        self.name_picker.bind("<<Paste>>", self.schedule_suggestions, add="+")
+        self.name_picker.bind("<<Cut>>", self.schedule_suggestions, add="+")
+        self.quantity_picker = ttk.Combobox(
+            self,
+            textvariable=self.quantity,
+            values=("All", self.NUMBER_QUANTITY_OPTION),
+            width=14,
+        )
         self.quantity_picker.grid(row=1, column=1, sticky="ns", padx=metrics.u(8), pady=metrics.u(8))
+        self.quantity_picker.bind("<<ComboboxSelected>>", self.quantity_choice)
+        self.quantity_picker.bind("<FocusIn>", self.prepare_quantity_input)
         action_button(self, text="Set", command=self.set_item).grid(row=1, column=2, pady=metrics.u(8))
         controls = ttk.Frame(self)
         controls.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(0, metrics.u(8)))
@@ -261,6 +276,9 @@ class CommodityList(ttk.Frame):
 
     def destroyed(self, event):
         if event.widget is self:
+            if self._suggestions_after_id is not None:
+                self.after_cancel(self._suggestions_after_id)
+                self._suggestions_after_id = None
             self.name.trace_remove("write", self.name_trace)
             self.language.trace_remove("write", self.language_trace)
             self.quantity.trace_remove("write", self.quantity_trace)
@@ -292,13 +310,71 @@ class CommodityList(ttk.Frame):
     def filter_names(self, *_args):
         rows, verified = self.catalogue
         self.name_choices = suggestions(rows, verified, self.language.get(), "", self.localization)
+        if self.allow_all:
+            self.name_choices[self.ALL_CARGO_LABEL] = "All"
         matches = suggestions(rows, verified, self.language.get(), self.name.get(), self.localization)
+        query = self.name.get().strip().casefold()
+        if self.allow_all and query in self.ALL_CARGO_LABEL.casefold():
+            matches[self.ALL_CARGO_LABEL] = "All"
         self.name_picker.configure(values=tuple(matches))
         self.changed()
 
+    def quantity_choice(self, _event=None):
+        if self.quantity.get() == self.NUMBER_QUANTITY_OPTION:
+            self.quantity.set("1")
+            self.quantity_picker.selection_range(0, "end")
+        elif self.quantity.get().strip().casefold() == "all":
+            self.quantity_picker.after_idle(lambda: self.quantity_picker.selection_range(0, "end"))
+
+    def prepare_quantity_input(self, _event=None):
+        if self.quantity.get().strip().casefold() == "all":
+            self.quantity_picker.after_idle(lambda: self.quantity_picker.selection_range(0, "end"))
+
+    def suggestion_key_pressed(self, event):
+        if event.keysym in ("BackSpace", "Delete") or event.char.isprintable():
+            self.schedule_suggestions()
+
+    def schedule_suggestions(self, _event=None):
+        if self._suggestions_after_id is None:
+            self._suggestions_after_id = self.after_idle(self.open_suggestions)
+
+    def open_suggestions(self):
+        self._suggestions_after_id = None
+        if not self.winfo_exists() or not self.name_picker.cget("values"):
+            return
+        popdown = self.name_picker.tk.call("ttk::combobox::PopdownWindow", self.name_picker)
+        listbox = f"{popdown}.f.l"
+        if not getattr(self, "_suggestion_listbox", None):
+            self._suggestion_listbox = listbox
+            self._suggestion_key_command = self.name_picker._register(self.suggestion_list_key_pressed)
+            self.name_picker.tk.call(
+                "bind",
+                listbox,
+                "<KeyPress>",
+                f"+{self._suggestion_key_command} %K %A",
+            )
+        if self.name_picker.tk.call("winfo", "ismapped", popdown):
+            self.name_picker.tk.call("ttk::combobox::ConfigureListbox", self.name_picker)
+        else:
+            self.name_picker.tk.call("ttk::combobox::Post", self.name_picker)
+
+    def suggestion_list_key_pressed(self, keysym, char):
+        if keysym not in ("BackSpace", "Delete") and not char.isprintable():
+            return None
+        self.name_picker.tk.call("ttk::combobox::Unpost", self.name_picker)
+        self.name_picker.focus_set()
+        if keysym == "BackSpace":
+            self.name_picker.tk.call("ttk::entry::Backspace", self.name_picker)
+        elif keysym == "Delete":
+            self.name_picker.tk.call("ttk::entry::Delete", self.name_picker)
+        else:
+            self.name_picker.tk.call("ttk::entry::Insert", self.name_picker, char)
+        self.schedule_suggestions()
+        return "break"
+
     def display_name(self, commodity_id):
         if commodity_id == "All":
-            return "All cargo"
+            return self.ALL_CARGO_LABEL if self.allow_all else "All cargo"
         labels = self.name_choices
         for label, item_id in labels.items():
             if item_id == commodity_id:
@@ -313,7 +389,11 @@ class CommodityList(ttk.Frame):
     def choose_name(self, _event=None):
         selected = self.name.get()
         if selected in self.name_choices:
-            self.set_name(selected.removesuffix(" [unchecked]"), self.name_choices[selected])
+            commodity_id = self.name_choices[selected]
+            label = selected if commodity_id == "All" else selected.removesuffix(" [unchecked]")
+            self.set_name(label, commodity_id)
+            if commodity_id == "All":
+                self.quantity.set("0")
 
     def refresh(self):
         selection = self.tree.selection()
@@ -347,20 +427,20 @@ class CommodityList(ttk.Frame):
         try:
             self.choose_name()
             name = self.name.get().strip()
-            quantity = self.quantity_value()
             if self.selected_commodity_id is not None:
                 commodity_id = self.selected_commodity_id
             elif name in self.name_choices:
                 commodity_id = self.name_choices[name]
             elif is_commodity_id(name) and name in self.catalogue[0]:
                 commodity_id = name
-            elif self.allow_all and name.casefold() == "all" and quantity == 0:
+            elif self.allow_all and name.casefold() == "all":
                 commodity_id = "All"
             else:
                 matches = commodity_id_matches_name(name, self.localization)
                 if len(matches) != 1 or not matches <= self.catalogue[0].keys():
                     raise ValueError
                 commodity_id = matches.pop()
+            quantity = self.quantity_value()
             if commodity_id == "All" and (not self.allow_all or quantity != 0):
                 raise ValueError
             if quantity < 0:
@@ -368,7 +448,7 @@ class CommodityList(ttk.Frame):
         except ValueError:
             messagebox.showerror(
                 "Commodity",
-                "Choose one known commodity and enter a non-negative whole quantity, or choose All.",
+                "Choose one known commodity and enter a non-negative whole quantity, or choose All for that commodity.",
                 parent=self,
             )
             return
@@ -667,51 +747,68 @@ class RouteImportForm(ttk.Frame):
     def __init__(self, parent, app, on_apply, on_cancel, on_legacy):
         super().__init__(parent)
         self.app = app
+        self.metrics = app.metrics
         self.on_apply = on_apply
         self.language = tk.StringVar(self, value=_game_language(app))
         self.target = tk.StringVar(self, value="New route")
         self.repeat = tk.BooleanVar(self)
         self.route = None
+        self.spansh_import = None
+        self.spansh_filename = None
         self.quantities = {}
         self.selected_good = None
-        self.card = section_card(app, self, "Import trade route")
+        self.card = section_card(app, self, "Import route")
         self.card.pack_configure(fill="both", expand=True, pady=0)
         self.card.rowconfigure(1, weight=1)
-        options = ttk.Frame(self.card)
-        options.grid(row=0, column=0, sticky="ew", pady=(0, 6))
-        ttk.Combobox(
-            options, textvariable=self.target, values=("New route", "Append to current"), state="readonly", width=18
-        ).pack(side="left")
-        ttk.Label(options, text="Game language").pack(side="left", padx=8)
+        self.options = ttk.Frame(self.card)
+        self.options.grid(row=0, column=0, sticky="ew", pady=(0, self.metrics.u(8)))
+        self.options.columnconfigure(0, weight=0)
+        self.target_picker = ttk.Combobox(
+            self.options,
+            textvariable=self.target,
+            values=("New route", "Append to current"),
+            state="readonly",
+            width=18,
+        )
+        self.target_picker.grid(row=0, column=0, sticky="w", padx=(0, self.metrics.u(12)))
+        self.language_label = ttk.Label(self.options, text="Game language")
+        self.language_label.grid(row=0, column=1, sticky="e", padx=(0, self.metrics.u(6)))
         language_choices = getattr(getattr(app.ed_ap, "locale", None), "available_languages", None)
         if not language_choices:
             language_choices = get_localization(self.language.get()).available_languages
         self.language_picker = ttk.Combobox(
-            options, textvariable=self.language, values=language_choices, state="readonly", width=8
+            self.options, textvariable=self.language, values=language_choices, state="readonly", width=8
         )
-        self.language_picker.pack(side="left")
-        ttk.Checkbutton(options, text="Repeat route", variable=self.repeat).pack(side="left", padx=8)
+        self.language_picker.grid(row=0, column=2, sticky="w")
+        self.repeat_checkbox = ttk.Checkbutton(self.options, text="Repeat route", variable=self.repeat)
+        self.repeat_checkbox.grid(row=0, column=3, sticky="w", padx=(self.metrics.u(12), 0))
+        self.options.bind("<Configure>", self.layout_options, add="+")
         self.notebook = ttk.Notebook(self.card)
         self.notebook.grid(row=1, column=0, sticky="nsew")
         paste = ttk.Frame(self.notebook)
         paste.columnconfigure(0, weight=1)
         paste.rowconfigure(1, weight=1)
         self.notebook.add(paste, text="Paste")
-        ttk.Label(paste, text="Paste one complete trade result (German or English).").grid(
-            row=0, column=0, sticky="w", pady=6
-        )
+        self.paste_description = ttk.Label(paste, text="Paste an Inara route or import a Spansh CSV/JSON file.")
+        self.paste_description.grid(row=0, column=0, sticky="ew", pady=(0, self.metrics.u(6)))
         self.text = tk.Text(paste, wrap="word", height=8, width=35, bg=FIELD, fg=TEXT, insertbackground=TEXT, undo=True)
-        self.text.grid(row=1, column=0, sticky="nsew")
+        self.text.grid(row=1, column=0, sticky="nsew", pady=(0, self.metrics.u(8)))
         scroll = ttk.Scrollbar(paste, command=self.text.yview)
         scroll.grid(row=1, column=1, sticky="ns")
         self.text.configure(yscrollcommand=scroll.set)
-        action_button(paste, text="Preview", command=self.preview).grid(row=2, column=0, sticky="e", pady=6)
+        paste_actions = ttk.Frame(paste)
+        paste_actions.grid(row=2, column=0, sticky="ew")
+        paste_actions.columnconfigure(0, weight=1)
+        action_button(paste_actions, text="Spansh file...", command=self.import_spansh).grid(
+            row=0, column=0, sticky="w"
+        )
+        action_button(paste_actions, text="Preview", command=self.preview).grid(row=0, column=1, sticky="e")
         preview = ttk.Frame(self.notebook)
         preview.columnconfigure(0, weight=1)
         preview.rowconfigure(1, weight=1)
         self.notebook.add(preview, text="Preview")
-        self.description = ttk.Label(preview, text="Paste a route, then choose Preview.", wraplength=450)
-        self.description.grid(row=0, column=0, sticky="ew", pady=6)
+        self.description = ttk.Label(preview, text="Paste a route, then choose Preview.")
+        self.description.grid(row=0, column=0, sticky="ew", pady=(0, self.metrics.u(6)))
         self.goods = WaypointTable(
             preview, columns=("quantity",), show="tree headings", height=3, selectmode="extended"
         )
@@ -723,26 +820,60 @@ class RouteImportForm(ttk.Frame):
         goods_scroll = ttk.Scrollbar(preview, command=self.goods.yview)
         goods_scroll.grid(row=1, column=1, sticky="ns")
         self.goods.configure(yscrollcommand=goods_scroll.set)
-        quantity_row = ttk.Frame(preview)
-        quantity_row.grid(row=2, column=0, sticky="ew", pady=6)
-        ttk.Label(quantity_row, text="Quantity (Ctrl/Shift selection)").pack(side="left")
+        self.quantity_row = ttk.Frame(preview)
+        self.quantity_row.grid(row=2, column=0, sticky="ew", pady=self.metrics.u(4))
+        ttk.Label(self.quantity_row, text="Quantity (Ctrl/Shift selection)").pack(side="left")
         self.quantity = tk.StringVar(self)
-        ttk.Entry(quantity_row, textvariable=self.quantity, width=7).pack(side="left", padx=8)
-        action_button(quantity_row, text="Set", command=self.set_quantity).pack(side="left")
+        ttk.Entry(self.quantity_row, textvariable=self.quantity, width=7).pack(side="left", padx=self.metrics.u(8))
+        action_button(self.quantity_row, text="Set", command=self.set_quantity).pack(side="left")
         self.goods.bind("<<TreeviewSelect>>", self.selected)
-        ttk.Label(
+        self.warnings = tk.Text(
+            preview, wrap="word", height=2, width=35, bg=FIELD, fg=RED, state="disabled", borderwidth=0
+        )
+        self.warnings.grid(row=3, column=0, sticky="ew", pady=(0, self.metrics.u(4)))
+        self.warning_scroll = ttk.Scrollbar(preview, command=self.warnings.yview)
+        self.warning_scroll.grid(row=3, column=1, sticky="ns", pady=(0, self.metrics.u(4)))
+        self.warnings.configure(yscrollcommand=self.warning_scroll.set)
+        self.warnings.grid_remove()
+        self.warning_scroll.grid_remove()
+        self.hint = ttk.Label(
             self.card,
-            text="Set station bookmarks before starting. Import does not save/start.\n[unchecked] = unverified name.",
-            wraplength=450,
-        ).grid(row=2, column=0, sticky="ew", pady=6)
+            text="Set station bookmarks before starting. Import does not save/start. [unchecked] = unverified name.",
+        )
+        self.hint.grid(row=2, column=0, sticky="ew", pady=self.metrics.u(8))
         buttons = ttk.Frame(self.card)
-        buttons.grid(row=3, column=0, sticky="ew")
+        buttons.grid(row=3, column=0, sticky="ew", pady=(self.metrics.u(2), 0))
         self.legacy_button = action_button(buttons, text="Legacy JSON...", command=on_legacy)
-        self.legacy_button.pack(side="left")
-        action_button(buttons, text="Import draft", command=self.apply).pack(side="right")
-        action_button(buttons, text="Cancel", command=on_cancel).pack(side="right", padx=8)
+        self.legacy_button.pack(side="left", padx=(0, self.metrics.u(4)))
+        action_button(buttons, text="Import draft", command=self.apply).pack(side="right", padx=(self.metrics.u(4), 0))
+        action_button(buttons, text="Cancel", command=on_cancel).pack(side="right", padx=self.metrics.u(4))
         self.text.bind("<<Modified>>", self.invalidate)
         self.language.trace_add("write", self.invalidate)
+        self.bind("<Configure>", self.update_wraplengths, add="+")
+        preview.bind("<Configure>", self.update_wraplengths, add="+")
+        self.layout_options()
+        self.update_wraplengths()
+
+    def layout_options(self, _event=None):
+        widgets = (self.target_picker, self.language_label, self.language_picker)
+        required_width = sum(widget.winfo_reqwidth() for widget in widgets) + self.metrics.px(18)
+        if self.options.winfo_width() < (required_width + self.repeat_checkbox.winfo_reqwidth() + self.metrics.px(12)):
+            self.repeat_checkbox.grid_configure(row=1, column=0, padx=0, pady=(self.metrics.u(4), 0))
+        else:
+            self.repeat_checkbox.grid_configure(row=0, column=3, padx=(self.metrics.u(12), 0), pady=0)
+
+    def update_wraplengths(self, _event=None):
+        card_width = self.card.winfo_width()
+        if card_width > 1:
+            self.hint.configure(wraplength=max(self.metrics.px(260), card_width - self.metrics.px(32)))
+        preview = self.notebook.nametowidget(self.notebook.tabs()[1])
+        preview_width = preview.winfo_width()
+        if preview_width > 1:
+            wraplength = max(self.metrics.px(240), preview_width - self.metrics.px(32))
+            self.description.configure(wraplength=wraplength)
+        paste_width = self.notebook.nametowidget(self.notebook.tabs()[0]).winfo_width()
+        if paste_width > 1:
+            self.paste_description.configure(wraplength=max(self.metrics.px(240), paste_width - self.metrics.px(32)))
 
     def set_game_language(self, code):
         if code in self.language_picker["values"]:
@@ -751,12 +882,43 @@ class RouteImportForm(ttk.Frame):
     def invalidate(self, *_args):
         if _args and isinstance(_args[0], tk.Event) and not self.text.edit_modified():
             return
-        self.route = None
+        had_preview = self.route is not None or self.spansh_import is not None
+        if had_preview:
+            self.clear_preview("Preview is out of date. Preview the current input before importing.")
+        else:
+            self.route = None
+            self.spansh_import = None
+            self.spansh_filename = None
         if self.text.edit_modified():
             self.text.edit_modified(False)
 
-    def preview(self):
+    def clear_preview(self, message):
         self.route = None
+        self.spansh_import = None
+        self.spansh_filename = None
+        self.goods.delete(*self.goods.get_children())
+        self.goods.heading("#0", text="Commodity")
+        self.goods.heading("quantity", text="Quantity")
+        self.goods.column("#0", width=230)
+        self.goods.column("quantity", width=100)
+        self.quantity_row.grid()
+        self.set_warnings("")
+        self.description.configure(text=message)
+
+    def set_warnings(self, text):
+        self.warnings.configure(state="normal")
+        self.warnings.delete("1.0", "end")
+        if text:
+            self.warnings.insert("1.0", text)
+            self.warnings.grid()
+            self.warning_scroll.grid()
+        else:
+            self.warnings.grid_remove()
+            self.warning_scroll.grid_remove()
+        self.warnings.configure(state="disabled")
+
+    def preview(self):
+        self.clear_preview("Previewing pasted trade route...")
         self.text.edit_modified(False)
         try:
             route = parse_trade_route(self.text.get("1.0", "end-1c"))
@@ -769,6 +931,10 @@ class RouteImportForm(ttk.Frame):
         self.route, self.resolved = route, resolved
         self.selected_good = None
         self.quantity.set("")
+        self.quantity_row.grid()
+        self.goods.heading("#0", text="Commodity")
+        self.goods.heading("quantity", text="Quantity")
+        self.set_warnings("")
         self.goods.delete(*self.goods.get_children())
         for commodity_id, name in sorted(set(resolved.values()), key=lambda pair: pair[1].casefold()):
             label = name + ("" if int(commodity_id) in verified.get(self.language.get(), set()) else " [unchecked]")
@@ -782,6 +948,53 @@ class RouteImportForm(ttk.Frame):
             ]
             descriptions.append(f"{index + 1}. {station} | {system}: " + "; ".join(actions))
         self.description.configure(text="\n".join(descriptions))
+        self.notebook.select(1)
+
+    def import_spansh(self):
+        filename = filedialog.askopenfilename(
+            parent=self,
+            title="Import Spansh route",
+            filetypes=(
+                ("CSV and JSON files", "*.csv *.json"),
+                ("CSV files", "*.csv"),
+                ("JSON files", "*.json"),
+                ("All files", "*.*"),
+            ),
+        )
+        if not filename:
+            return
+        self.clear_preview("Reading Spansh export...")
+        try:
+            path = Path(filename)
+            if path.stat().st_size > 25 * 1024 * 1024:
+                raise ValueError("The selected file is larger than 25 MB.")
+            text = path.read_text(encoding="utf-8-sig")
+            parsed = parse_spansh_export(text, language=self.language.get())
+        except (OSError, UnicodeError, ValueError, KeyError) as error:
+            logger.warning("Spansh route import preview failed: %s", error)
+            messagebox.showerror("Spansh import", str(error), parent=self)
+            return
+        self.show_spansh_import(parsed, path.name)
+
+    def show_spansh_import(self, parsed, filename=None):
+        self.route = None
+        self.spansh_import = parsed
+        self.spansh_filename = filename
+        self.selected_good = None
+        self.quantity.set("")
+        self.quantity_row.grid_remove()
+        self.goods.heading("#0", text="Waypoint")
+        self.goods.heading("quantity", text="Imported actions")
+        self.goods.column("#0", width=180)
+        self.goods.column("quantity", width=290)
+        self.goods.delete(*self.goods.get_children())
+        for index, (entry, details) in enumerate(zip(parsed.entries, parsed.stop_details)):
+            destination = entry["StationName"] or entry["SystemName"]
+            self.goods.insert("", "end", iid=f"spansh-{index}", text=destination, values=(details,))
+        self.description.configure(
+            text=f"{parsed.route_type}: {parsed.summary}" + (f"\nFile: {filename}" if filename else "")
+        )
+        self.set_warnings("\n".join(parsed.warnings))
         self.notebook.select(1)
 
     def selected(self, _event=None):
@@ -808,16 +1021,19 @@ class RouteImportForm(ttk.Frame):
 
     def apply(self):
         try:
-            if self.route is None:
-                raise ValueError("Preview the current text and game language before importing.")
-            selection = self.goods.selection()
-            if (
-                selection
-                and self.quantity.get()
-                and any(self.quantity.get() != str(self.quantities.get(item, "")) for item in selection)
-            ):
-                raise ValueError("Press Set to apply the pending quantity.")
-            entries = imported_waypoints(self.route, self.resolved, self.quantities)
+            if self.spansh_import is not None:
+                entries = copy.deepcopy(self.spansh_import.entries)
+            else:
+                if self.route is None:
+                    raise ValueError("Preview the current text or select a Spansh file before importing.")
+                selection = self.goods.selection()
+                if (
+                    selection
+                    and self.quantity.get()
+                    and any(self.quantity.get() != str(self.quantities.get(item, "")) for item in selection)
+                ):
+                    raise ValueError("Press Set to apply the pending quantity.")
+                entries = imported_waypoints(self.route, self.resolved, self.quantities)
         except ValueError as error:
             messagebox.showerror("Route import", str(error), parent=self)
             return
@@ -834,6 +1050,8 @@ class RouteImportForm(ttk.Frame):
             "quantity": self.quantity.get(),
             "selection": self.goods.selection(),
             "preview": self.route is not None,
+            "spansh_import": self.spansh_import,
+            "spansh_filename": self.spansh_filename,
         }
 
     def restore(self, state):
@@ -843,7 +1061,9 @@ class RouteImportForm(ttk.Frame):
         self.target.set(state["target"])
         self.repeat.set(state["repeat"])
         self.quantities = dict(state["quantities"])
-        if state["preview"]:
+        if state.get("spansh_import") is not None:
+            self.show_spansh_import(state["spansh_import"], state.get("spansh_filename"))
+        elif state["preview"]:
             self.preview()
             if state["selection"]:
                 self.selected_good = tuple(state["selection"])

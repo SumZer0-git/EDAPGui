@@ -164,9 +164,10 @@ the assist stops rather than continuing to an unknown destination.
 Open a waypoint and choose **Buy** or **Sell / transfer**.
 
 1. Choose a **Game commodity language** for display and suggestions; the active game language is the default.
-2. Type part of a commodity name, then open the dropdown to choose a suggestion.
+2. Click the search field to open suggestions, then type part of a commodity name to narrow the list.
    You can search installed commodity translations or the internal symbol; the selected commodity is stored by ID.
-3. Enter a whole-number quantity, or choose **All**.
+3. Enter a whole-number quantity, or choose **All** for the selected commodity. Use **Enter number...** to reset the
+   quantity field to a number after choosing **All**.
 4. Press **Set**. Repeat for other goods.
 5. Choose **Apply**, then save the route.
 
@@ -235,7 +236,8 @@ Restarting or resetting without checking could repeat a purchase or sale.
 ### Fleet Carrier transfers and construction deliveries
 
 - At a Fleet Carrier, enable **Fleet Carrier transfer (instead of trading)** to transfer cargo rather than buy or sell.
-- For a full carrier cargo transfer, use the special commodity name `All` with quantity `0`.
+- For a full carrier cargo transfer, choose **All cargo (Carrier / construction only)** in **Sell / transfer**.
+  The editor sets its required quantity to `0`. It is not a request to sell all cargo at a regular market.
   The internal panel's Inventory tab is confirmed before transfer inputs. Each tab change is checked separately;
   unreadable or unconfirmed tabs stop the transfer without submitting it. No particular starting tab is required.
 - At a System Colonisation Ship or Orbital Construction Site, `All` with quantity `0` in **Sell / transfer**
@@ -270,7 +272,27 @@ Prices, stock, demand and profit are not used as purchase quantities.
 
 If Preview rejects the result, check that you copied the whole result and that commodity names are recognizable.
 If you change the pasted text or game language, choose Preview again.
-Spansh CSV files and several results pasted together are not supported.
+Several results pasted together are not supported.
+
+## Import a Spansh planner export
+
+Choose **Spansh file...** in the import view and select a CSV or JSON export. EDAPGui detects the supported planner
+format from the file contents; it does not contact Spansh or modify the selected file. Review the preview before
+choosing **Import draft**. The resulting route remains an unsaved, editable draft and does not start the assist.
+
+- **Galaxy Plotter** CSV and JSON imports include the full listed jump sequence, including its start system. Fuel,
+  neutron and injection settings are not imported.
+- **Exploration** JSON imports the exported start and destination, plus one stop for each system with selected body
+  targets. Exploration CSV contains only target systems, so its start and destination are not included. Body-level
+  visits and scans are not converted into route actions. A CSV with no selected body targets cannot create a route.
+- **Trade Planner** JSON imports station stops and the exact commodity amounts as buys at each source and planned
+  sales at each destination. Adjacent legs at the same station are combined; later visits to that station remain
+  separate stops. Commodity names must resolve to one known commodity ID. Unknown, ambiguous or invalid commodity
+  entries are omitted and listed in the preview; their station stops remain. Prices and market snapshots are not
+  imported.
+
+The standard **New route**, **Append to current** and **Repeat route** options still apply. Imported stops have no
+bookmarks; set them in the draft where needed before starting.
 
 Importing does not start the assist. Imported destinations have no bookmarks and use station-name search unless
 you add bookmarks yourself. When appending with repetition enabled, **the entire combined route repeats**,

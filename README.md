@@ -19,7 +19,8 @@ EDAPGui is a Windows autopilot for Elite Dangerous, offering optional assistance
   state-checked recovery attempt if the dialog cannot be read.
   After a confirmed sale, it waits for updated cargo data before selecting another trade.
   The **Waypoints** tab offers an integrated route editor, an ID-based commodity catalogue and copied-text trade-route
-  import (including Legacy JSON inside the import view), route-level repetition, themed activation checkboxes and
+  import from copied text and Spansh planner files (including Legacy JSON inside the import view), route-level
+  repetition, themed activation checkboxes and
   target-only plot buttons. Station-name navigation
   uses name-column OCR when bookmarks are unavailable (no editor warning), selects the first exact name match without a full-list
   rescan, and confirms the selected tab for the standard orange and white/blue

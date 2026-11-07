@@ -19,7 +19,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Integrated Waypoints editor for creating, loading, saving, editing, duplicating, reordering and enabling destinations, with validation, unsaved-change protection and editing locks during execution.
 - Trade-list editing with configurable commodity priority and an All quantity choice, plus a searchable catalogue of 411 commodities. Routes identify goods by ID, independently of display language; missing translations display in English and unverified names are marked.
 - Game language selection in Settings: Auto follows journal headers, including after a game restart, or a language can be selected explicitly. English and German are included; recognition and commodity translations can be contributed as data-only language folders. Missing language support warns and attempts English; the GUI remains English.
-- Trade-route import from copied German/English text, with destination preview, explicit quantities and a choice to create a route or append to one. Legacy JSON import creates a new draft without modifying the original.
+- Trade-route import from copied German/English text and Spansh planner exports (Galaxy Plotter and exploration CSV/JSON; Trade Planner JSON), with a preview and a choice to create a route or append to one. Trade imports retain planned quantities, report omitted unknown goods, and create an editable draft without modifying the source file. Legacy JSON import creates a new draft without modifying the original.
 - Plot to System and Plot to Station buttons for selecting targets without flying, trading or changing route progress.
 - Station-name navigation through the Navigation panel when bookmarks are unavailable, including long, narrow selected row highlights. The search scrolls to the first exact match and confirms the selected target before flight; in-game filters must include the destination.
 - Active jump-target confirmation for Waypoint and Single Waypoint travel before each jump alignment, including intermediate systems. Unconfirmed targets stop the assist rather than relying on the saved route alone.
@@ -32,6 +32,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Commodity suggestions now open when the search field is clicked and narrow as you type.
+- The Sell / transfer commodity suggestions now include the clearly labelled carrier/construction **All cargo** action. Quantity selection also offers a direct switch back to numeric entry.
 - Waypoint routes now keep completion and remaining trade quantities separate from their definitions. Reset and route-level repetition restore the original quantities; the last selected route is remembered. The assist stops if progress cannot be saved.
 - Fleet Carrier inventory transfers support full-cargo deposits only; ID-specific deposits and withdrawals are not supported. Ordinary Fleet Carrier market purchases and sales remain available.
 - Waypoint navigation tries configured Galaxy Map bookmarks first, falls back to system-name search and reuses a matching station target after arrival.

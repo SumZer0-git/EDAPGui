@@ -2,6 +2,7 @@
 
 import copy
 import json
+import sys
 import tempfile
 import tkinter as tk
 import tkinter.font as tkfont
@@ -13,7 +14,6 @@ from unittest import mock
 import ttkbootstrap as ttk
 
 from core import paths
-from gui.main_window import APGui
 from gui.theme import Metrics, Theme
 from gui.waypoint_editor import CommodityList, WaypointEditor, WaypointForm, trade_quantity_summary
 from gui.waypoint_model import RouteDocument, new_waypoint
@@ -23,6 +23,23 @@ from routines.waypoints import EDWayPoint
 from tests.test_gui_fields import make_ap
 from tests.test_route_import import ONE_WAY, ROUND_TRIP
 from tests.test_waypoints import GLOBAL_LIST, stop
+
+try:
+    from vision.ocr import OCR  # noqa: F401
+
+    _PADDLEOCR_STUBBED = False
+except ModuleNotFoundError as error:
+    if error.name != "paddleocr":
+        raise
+    sys.modules["paddleocr"] = SimpleNamespace(PaddleOCR=None)
+    _PADDLEOCR_STUBBED = True
+
+try:
+    from gui.main_window import APGui
+finally:
+    if _PADDLEOCR_STUBBED:
+        del sys.modules["paddleocr"]
+        sys.modules.pop("vision.ocr", None)
 
 
 class RouteDocumentTestCase(unittest.TestCase):
@@ -1033,12 +1050,22 @@ class EditorWidgetsTestCase(unittest.TestCase):
     def test_all_cargo_sentinel_is_distinct_from_commodity_ids_and_quantity_all(self):
         table = CommodityList(self.root, {}, allow_all=True)
         self.addCleanup(table.destroy)
-        table.name.set("All")
-        table.quantity.set("0")
+        self.assertIn(table.ALL_CARGO_LABEL, table.name_picker.cget("values"))
+        table.name.set(table.ALL_CARGO_LABEL)
+        table.name_picker.event_generate("<<ComboboxSelected>>")
+        self.assertEqual(table.quantity.get(), "0")
         table.set_item()
         self.assertEqual(table.get(), {"All": 0})
-        self.assertEqual(table.tree.item("All", "text"), "All cargo")
+        self.assertEqual(table.tree.item("All", "text"), table.ALL_CARGO_LABEL)
+        table.tree.selection_set("All")
+        self.root.update()
+        self.assertEqual(table.name.get(), table.ALL_CARGO_LABEL)
 
+        ordinary_list = CommodityList(self.root, {})
+        self.addCleanup(ordinary_list.destroy)
+        self.assertNotIn(table.ALL_CARGO_LABEL, ordinary_list.name_picker.cget("values"))
+        table.name.set("cargo")
+        self.assertIn(table.ALL_CARGO_LABEL, table.name_picker.cget("values"))
         table.name.set("All")
         table.quantity.set("1")
         with mock.patch("gui.waypoint_editor.messagebox.showerror") as error:
@@ -1054,6 +1081,31 @@ class EditorWidgetsTestCase(unittest.TestCase):
             ordinary_list.set_item()
         error.assert_called_once()
         self.assertEqual(ordinary_list.values, {})
+
+    def test_quantity_dropdown_can_switch_from_all_to_numeric_entry(self):
+        table = CommodityList(self.root, {})
+        self.addCleanup(table.destroy)
+        table.quantity.set("All")
+        table.quantity_picker.current(1)
+        table.quantity_picker.event_generate("<<ComboboxSelected>>")
+        self.root.update()
+        self.assertEqual(table.quantity.get(), "1")
+        self.assertEqual(table.quantity_picker.index("sel.first"), 0)
+        self.assertEqual(table.quantity_picker.index("sel.last"), 1)
+
+        table.quantity_picker.current(0)
+        table.quantity_picker.event_generate("<<ComboboxSelected>>")
+        self.root.update()
+        self.assertEqual(table.quantity_picker.index("sel.first"), 0)
+        self.assertEqual(table.quantity_picker.index("sel.last"), 3)
+
+        table.quantity.set("All")
+        table.quantity_picker.event_generate("<FocusIn>")
+        self.root.update()
+        self.assertEqual(
+            table.quantity_picker.selection_get(),
+            "All",
+        )
 
     def test_all_choice_applies_to_buy_sell_and_global_lists(self):
         self.editor.add()
@@ -1405,6 +1457,38 @@ class EditorWidgetsTestCase(unittest.TestCase):
         table.set_item()
         self.assertIn("128049197", table.get())
 
+    def test_commodity_suggestions_open_on_click_and_filter_while_visible(self):
+        self.root.geometry("700x600")
+        self.root.deiconify()
+        self.editor.add()
+        table = self.editor.form.buy
+        picker = table.name_picker
+        picker.event_generate("<Button-1>", x=5, y=5)
+        self.root.update()
+
+        popdown = picker.tk.call("ttk::combobox::PopdownWindow", picker)
+        listbox = f"{popdown}.f.l"
+        self.assertEqual(picker.tk.call("winfo", "ismapped", popdown), 1)
+        self.assertGreater(len(picker.cget("values")), 2)
+
+        for char in "pol":
+            table.suggestion_list_key_pressed(char, char)
+            self.root.update()
+        self.assertEqual(table.name.get(), "pol")
+        self.assertEqual(picker.tk.call("winfo", "ismapped", popdown), 1)
+
+        values = tuple(picker.tk.call(listbox, "get", 0, "end"))
+        selection = values.index("Polymers [unchecked]")
+        picker.tk.call(listbox, "selection", "clear", 0, "end")
+        picker.tk.call(listbox, "selection", "set", selection)
+        picker.tk.call(listbox, "activate", selection)
+        picker.tk.call("ttk::combobox::LBSelected", listbox)
+        self.root.update()
+
+        self.assertEqual(table.name.get(), "Polymers")
+        self.assertEqual(table.selected_commodity_id, "128049197")
+        self.assertEqual(picker.tk.call("winfo", "ismapped", popdown), 0)
+
     def test_game_language_updates_labels_without_resetting_ids_or_drafts(self):
         self.editor.edit_global()
         table = self.editor.form.buy
@@ -1483,6 +1567,53 @@ class EditorWidgetsTestCase(unittest.TestCase):
         self.assertEqual(second["SellCommodities"], {"128049197": 3})
         self.runtime.load_waypoint_file.assert_not_called()
         self.assertIsNone(self.editor.form)
+
+    def test_spansh_file_import_previews_then_creates_an_editable_draft(self):
+        source = {
+            "result": {
+                "jumps": [
+                    {"name": "Start"},
+                    {"name": "Destination"},
+                ]
+            }
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            filename = Path(directory) / "route.json"
+            filename.write_text(json.dumps(source), encoding="utf-8")
+            form = self.editor.form
+            if form is None:
+                self.editor.import_route()
+                form = self.editor.form
+            self.runtime.load_waypoint_file = mock.Mock()
+            with mock.patch("gui.waypoint_editor.filedialog.askopenfilename", return_value=str(filename)):
+                form.import_spansh()
+            self.assertEqual(form.spansh_import.route_type, "Galaxy Plotter")
+            self.assertEqual(len(form.goods.get_children()), 2)
+            form.apply()
+        self.assertEqual(
+            [entry["SystemName"] for entry in self.editor.document.data["waypoints"]],
+            ["Start", "Destination"],
+        )
+        self.assertTrue(self.editor.document.dirty)
+        self.runtime.load_waypoint_file.assert_not_called()
+        self.assertIsNone(self.editor.form)
+
+    def test_spansh_endpoint_warning_fits_preview_and_is_visible(self):
+        source = "System Name,Body Name,Distance To Arrival\nTarget,World,50\n"
+        with tempfile.TemporaryDirectory() as directory:
+            filename = Path(directory) / "targets.csv"
+            filename.write_text(source, encoding="utf-8")
+            self.editor.import_route()
+            form = self.editor.form
+            self.root.geometry("570x500")
+            self.root.deiconify()
+            with mock.patch("gui.waypoint_editor.filedialog.askopenfilename", return_value=str(filename)):
+                form.import_spansh()
+            self.root.update()
+            self.assertIn("start and destination", form.warnings.get("1.0", "end-1c"))
+            page = form.notebook.nametowidget(form.notebook.tabs()[1])
+            for child in page.winfo_children():
+                self.assertLessEqual(child.winfo_y() + child.winfo_height(), page.winfo_height())
 
     def test_commodity_move_preserves_values_selection_and_applied_order(self):
         self.editor.add()
@@ -1665,6 +1796,10 @@ class EditorWidgetsTestCase(unittest.TestCase):
         self.root.deiconify()
         form = self.prepare_import(ROUND_TRIP)
         self.root.update()
+        options = form.card.grid_slaves(row=0)[0]
+        for child in options.winfo_children():
+            self.assertLessEqual(child.winfo_x() + child.winfo_width(), options.winfo_width())
+        self.assertNotIn("\n", form.hint.cget("text"))
         for tab in form.notebook.tabs():
             form.notebook.select(tab)
             self.root.update()
