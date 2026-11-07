@@ -34,7 +34,9 @@ _STATUS_TEXT_COLORS = {
 }
 
 _WM_REDRAW = win32con.WM_APP + 1
+_WM_CAPTURE_MODE = win32con.WM_APP + 2
 _WM_DPICHANGED = 0x02E0
+_WDA_NONE = 0x0
 _WDA_EXCLUDEFROMCAPTURE = 0x11
 _ULW_ALPHA = 0x2
 _DIB_RGB_COLORS = 0
@@ -452,6 +454,7 @@ class Overlay:
         self._anchor = "Top left"
         self._position_unit = "Pixels"
         self._panel_opacity = 78
+        self._capture_visible = False
         self._bars = {}
         self._lines = {}
         self._text = {}
@@ -626,9 +629,7 @@ class Overlay:
         with self._lock:
             self.hWindow = hwnd
 
-        if not _user32.SetWindowDisplayAffinity(hwnd, _WDA_EXCLUDEFROMCAPTURE):
-            error = ctypes.get_last_error()
-            logger.warning(f"Could not exclude the overlay from screen capture (Windows error {error}).")
+        self._apply_capture_mode(hwnd)
 
         if self.tHwnd is None:
             win32gui.SetWindowPos(
@@ -655,9 +656,21 @@ class Overlay:
         self._surface_origin = (0, 0)
         self._size = (0, 0)
 
+    def _apply_capture_mode(self, hwnd):
+        with self._lock:
+            visible = self._capture_visible
+        affinity = _WDA_NONE if visible else _WDA_EXCLUDEFROMCAPTURE
+        if not _user32.SetWindowDisplayAffinity(hwnd, affinity):
+            error = ctypes.get_last_error()
+            action = "include the overlay in" if visible else "exclude the overlay from"
+            logger.warning(f"Could not {action} screen capture (Windows error {error}).")
+
     def _window_proc(self, hwnd, message, wparam, lparam):
         if message == _WM_DPICHANGED:
             self.overlay_paint()
+            return 0
+        if message == _WM_CAPTURE_MODE:
+            self._apply_capture_mode(hwnd)
             return 0
         if message == _WM_REDRAW:
             try:
@@ -831,6 +844,20 @@ class Overlay:
             self._position_unit = position_unit
             self._pos = (x, y)
             self._panel_opacity = panel_opacity
+
+    def overlay_set_capture_visible(self, visible: bool):
+        """Show the overlay in screenshots and recordings, or exclude it; applied on the overlay thread."""
+        with self._lock:
+            if self._capture_visible == visible:
+                return
+            self._capture_visible = visible
+            hwnd = self.hWindow
+        if hwnd is not None:
+            try:
+                if win32gui.IsWindow(hwnd):
+                    win32gui.PostMessage(hwnd, _WM_CAPTURE_MODE, 0, 0)
+            except pywintypes.error as exc:
+                logger.warning(f"Could not change the overlay capture mode: {exc}")
 
     def overlay_text(self, key, txt, row, col, color):
         with self._lock:

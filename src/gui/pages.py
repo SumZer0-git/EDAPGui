@@ -170,6 +170,23 @@ def build_overlay(app, page):
     ):
         _field(app, position, key, row)
 
+    capture = _card(app, left, "Screen capture")
+    _field(app, capture, "OverlayCaptureVisible", 0)
+    hint = ttk.Label(
+        capture,
+        text="When enabled, the autopilot's own screen detection can also see the overlay. "
+        "Keep it away from the compass, targets, and game text the autopilot reads.",
+        foreground=MUTED,
+        wraplength=app.metrics.px(200),
+        justify="left",
+    )
+    hint.grid(row=1, column=0, columnspan=2, sticky="w", pady=(0, app.metrics.u(4)))
+    capture.bind(
+        "<Configure>",
+        lambda e: hint.configure(wraplength=max(app.metrics.px(200), e.width - app.metrics.px(30))),
+        add="+",
+    )
+
     appearance = _card(app, right, "Appearance")
     _field(app, appearance, "OverlayTextFontSize", 0)
     _field(app, appearance, "OverlayTextFontWeight", 1)

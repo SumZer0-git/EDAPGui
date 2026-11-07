@@ -10,7 +10,15 @@ from PIL import ImageColor
 
 from core.types import EdapInterruptError
 from gui.fields import DEFAULT_OVERLAY_LINE_ORDER
-from gui.overlay import _WM_DPICHANGED, Overlay, _load_font, _render_image
+from gui.overlay import (
+    _WDA_EXCLUDEFROMCAPTURE,
+    _WDA_NONE,
+    _WM_CAPTURE_MODE,
+    _WM_DPICHANGED,
+    Overlay,
+    _load_font,
+    _render_image,
+)
 from gui.theme import BLUE, MUTED, ORANGE, PANEL, TEXT
 
 # The slim CI has no PaddleOCR; these tests never run OCR, so a temporary stub lets core.autopilot import.
@@ -81,6 +89,7 @@ class OverlayRenderingTests(unittest.TestCase):
                 "OverlayPositionAnchor": "Top left",
                 "OverlayPositionUnit": "Percent",
                 "OverlayPanelOpacity": 50,
+                "OverlayCaptureVisible": False,
                 "OverlayShowMode": True,
                 "OverlayShowStatus": True,
                 "OverlayShowShip": True,
@@ -618,12 +627,14 @@ class OverlayRenderingTests(unittest.TestCase):
                 "OverlayTextXOffset": 1,
                 "OverlayTextYOffset": 15,
                 "OverlayPanelOpacity": 50,
+                "OverlayCaptureVisible": True,
             }
         )
 
         autopilot.update_overlay()
         autopilot.apply_overlay_config()
         autopilot.overlay.overlay_setfont.assert_called_once_with("Rajdhani", 14, "SemiBold")
+        autopilot.overlay.overlay_set_capture_visible.assert_called_once_with(True)
         self.assertEqual(autopilot.overlay.overlay_paint.call_count, 2)
 
         autopilot.set_overlay(False)
@@ -662,6 +673,71 @@ class OverlayRenderingTests(unittest.TestCase):
         self.assertEqual(overlay._window_proc(1, _WM_DPICHANGED, 144, 0), 0)
         overlay.overlay_paint.assert_called_once_with()
         overlay._render.assert_not_called()
+
+    def test_new_overlay_window_is_excluded_from_capture_by_default(self):
+        overlay = Overlay.__new__(Overlay)
+        overlay._lock = RLock()
+        overlay._capture_visible = False
+        overlay._class_atom = 1
+        overlay.tHwnd = 7
+        overlay.hWindow = None
+        overlay.overlay_paint = Mock()
+
+        with (
+            patch("gui.overlay.win32gui") as win32gui,
+            patch("gui.overlay.win32api"),
+            patch("gui.overlay._user32.SetWindowDisplayAffinity", return_value=True) as set_affinity,
+        ):
+            win32gui.CreateWindowEx.return_value = 42
+            overlay._create_overlay_window()
+
+        set_affinity.assert_called_once_with(42, _WDA_EXCLUDEFROMCAPTURE)
+
+    def test_capture_visibility_change_is_applied_on_the_overlay_thread(self):
+        overlay = Overlay.__new__(Overlay)
+        overlay._lock = RLock()
+        overlay._capture_visible = False
+        overlay.hWindow = 42
+
+        with patch("gui.overlay.win32gui") as win32gui:
+            win32gui.IsWindow.return_value = True
+            overlay.overlay_set_capture_visible(True)
+            overlay.overlay_set_capture_visible(True)
+
+        win32gui.PostMessage.assert_called_once_with(42, _WM_CAPTURE_MODE, 0, 0)
+
+        for visible, affinity in ((True, _WDA_NONE), (False, _WDA_EXCLUDEFROMCAPTURE)):
+            with self.subTest(visible=visible):
+                overlay._capture_visible = visible
+                with patch("gui.overlay._user32.SetWindowDisplayAffinity", return_value=True) as set_affinity:
+                    self.assertEqual(overlay._window_proc(42, _WM_CAPTURE_MODE, 0, 0), 0)
+                set_affinity.assert_called_once_with(42, affinity)
+
+    def test_capture_visibility_before_window_creation_waits_for_the_window(self):
+        overlay = Overlay.__new__(Overlay)
+        overlay._lock = RLock()
+        overlay._capture_visible = False
+        overlay.hWindow = None
+
+        with patch("gui.overlay.win32gui") as win32gui:
+            overlay.overlay_set_capture_visible(True)
+
+        win32gui.PostMessage.assert_not_called()
+        self.assertTrue(overlay._capture_visible)
+
+    def test_failed_capture_mode_change_is_logged(self):
+        overlay = Overlay.__new__(Overlay)
+        overlay._lock = RLock()
+        overlay._capture_visible = True
+
+        with (
+            patch("gui.overlay._user32.SetWindowDisplayAffinity", return_value=False),
+            patch("gui.overlay.ctypes.get_last_error", return_value=5),
+            patch("gui.overlay.logger") as logger,
+        ):
+            overlay._apply_capture_mode(42)
+
+        logger.warning.assert_called_once_with("Could not include the overlay in screen capture (Windows error 5).")
 
     def test_game_resolution_does_not_change_status_surface_at_same_dpi(self):
         images = [

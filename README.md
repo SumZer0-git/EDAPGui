@@ -30,8 +30,10 @@ EDAPGui is a Windows autopilot for Elite Dangerous, offering optional assistance
 - **AFK Combat Assist** monitors shields and fighter status in a combat zone.
 - **Status overlay** shows the assist mode and status, ship status, fuel, current system, route destination, next star,
   jumps, and route distance on top of the game, with progress bars for jumps and distance. Its AP status matches the
-  main window footer, whose middle shows jumps and route distance while a route assist runs. Position, appearance, and
-  which lines are shown in which order are set on the Overlay tab.
+  main window footer, whose middle shows jumps and route distance while a route assist runs. Position, appearance,
+  which lines are shown in which order, and whether screenshots and recordings may include the overlay are set on the
+  Overlay tab. By default it stays out of captures; when included, it can also interfere with the autopilot's own
+  screen detection.
 - Optional voice feedback, a debug overlay, and loading a TCE destination are also available.
 - **Game language** in Settings follows the game journal automatically or uses a selected language pack. English
   and German are included; additional recognition and commodity translations can be contributed as data-only packs.
