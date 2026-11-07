@@ -236,6 +236,8 @@ Restarting or resetting without checking could repeat a purchase or sale.
 
 - At a Fleet Carrier, enable **Fleet Carrier transfer (instead of trading)** to transfer cargo rather than buy or sell.
 - For a full carrier cargo transfer, use the special commodity name `All` with quantity `0`.
+  The internal panel's Inventory tab is confirmed before transfer inputs. Each tab change is checked separately;
+  unreadable or unconfirmed tabs stop the transfer without submitting it. No particular starting tab is required.
 - At a System Colonisation Ship or Orbital Construction Site, `All` with quantity `0` in **Sell / transfer**
   requests delivery of all cargo.
 - ID-specific inventory deposits and withdrawals are not supported in Fleet Carrier transfer mode; only the full

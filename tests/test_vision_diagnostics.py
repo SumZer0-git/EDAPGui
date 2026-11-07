@@ -11,6 +11,7 @@ import numpy as np
 
 from core import paths
 from core.logger import logger
+from panels.internal_status import EDInternalStatusPanel
 from panels.station_services import EDStationServicesInShip
 from vision.diagnostics import save_case
 
@@ -93,6 +94,20 @@ class VisionDiagnosticTestCase(unittest.TestCase):
                     )
                     save_case("compass", "missing", {"evaluated": image, "context": image})
                 self.assertEqual(set((Path(folder) / "compass").iterdir()), original)
+
+    def test_internal_panel_failure_saves_evaluated_and_later_panel(self):
+        panel = EDInternalStatusPanel.__new__(EDInternalStatusPanel)
+        evaluated = np.full((20, 50, 3), 1, np.uint8)
+        context = np.full((80, 120, 3), 2, np.uint8)
+        panel.reg = {"right_panel": {"rect": [0.30, 0.20, 0.91, 0.28]}}
+        panel.screen = Mock(screen_width=1920, screen_height=1080)
+        panel.ocr = Mock()
+        panel.ocr.capture_region_pct.side_effect = [evaluated, context]
+        panel.ocr.solid_highlighted_items.return_value = []
+        with patch.object(logger, "isEnabledFor", return_value=True), patch("panels.internal_status.save_case") as save:
+            self.assertEqual(panel._selected_tab(), "")
+        self.assertIs(save.call_args.args[2]["evaluated"], evaluated)
+        self.assertIs(save.call_args.args[2]["later-panel"], context)
 
     def test_trade_timeout_saves_the_last_evaluated_images(self):
         services = EDStationServicesInShip.__new__(EDStationServicesInShip)

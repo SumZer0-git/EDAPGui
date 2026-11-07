@@ -132,6 +132,40 @@ class StationNavigationTestCase(unittest.TestCase):
         self.panel.keys.send.assert_not_called()
 
 
+class NavigationDiagnosticTestCase(unittest.TestCase):
+    def test_failed_tab_saves_evaluated_image_before_later_panel_context(self):
+        panel = EDNavigationPanel.__new__(EDNavigationPanel)
+        evaluated = np.full((40, 100, 3), 7, np.uint8)
+        context = np.full((100, 200, 3), 8, np.uint8)
+        panel.screen = mock.Mock(screen_width=1920, screen_height=1080)
+        panel.ocr = mock.Mock()
+        panel.ocr.capture_region_pct.side_effect = [evaluated, context]
+        panel.ocr.solid_highlighted_items.return_value = []
+        panel.reg = {"nav_panel": {"rect": [0.11, 0.21, 0.70, 0.86]}}
+        with (
+            mock.patch("panels.navigation.logger.isEnabledFor", return_value=True),
+            mock.patch("panels.navigation.save_case") as save,
+        ):
+            self.assertIsNone(panel._selected_tab())
+        self.assertIs(save.call_args.args[2]["evaluated"], evaluated)
+        self.assertIs(save.call_args.args[2]["later-panel"], context)
+        self.assertEqual(panel.ocr.capture_region_pct.call_count, 2)
+
+    def test_failed_tab_has_no_extra_capture_with_debug_disabled(self):
+        panel = EDNavigationPanel.__new__(EDNavigationPanel)
+        panel.screen = mock.Mock(screen_width=1920, screen_height=1080)
+        panel.ocr = mock.Mock()
+        panel.ocr.capture_region_pct.return_value = np.zeros((40, 100, 3), np.uint8)
+        panel.ocr.solid_highlighted_items.return_value = []
+        with (
+            mock.patch("panels.navigation.logger.isEnabledFor", return_value=False),
+            mock.patch("panels.navigation.save_case") as save,
+        ):
+            self.assertIsNone(panel._selected_tab())
+        self.assertEqual(panel.ocr.capture_region_pct.call_count, 1)
+        save.assert_not_called()
+
+
 class DestinationNameImageTestCase(unittest.TestCase):
     def test_selected_destination_reads_only_name_crop_and_preserves_numeric_name(self):
         row = np.full((80, 1600, 3), 255, dtype=np.uint8)
@@ -173,13 +207,14 @@ class NavigationTabTestCase(unittest.TestCase):
     def setUp(self):
         self.panel = EDNavigationPanel.__new__(EDNavigationPanel)
         self.panel.ap = mock.Mock()
+        self.panel.ap.debug_overlay = False
         self.panel.keys = mock.Mock()
         self.panel.status_parser = mock.Mock()
         self.panel.status_parser.get_gui_focus.return_value = GuiFocusExternalPanel
 
     def test_tab_changes_are_confirmed_before_navigation(self):
         with (
-            mock.patch("panels.navigation.sleep"),
+            mock.patch("panels.tab_navigation.sleep"),
             mock.patch.object(self.panel, "_selected_tab", side_effect=["contacts", "system", "navigation"]),
         ):
             self.assertTrue(self.panel._navigation_tab())
@@ -188,17 +223,18 @@ class NavigationTabTestCase(unittest.TestCase):
 
     def test_unreadable_tabs_never_confirm_navigation(self):
         with (
-            mock.patch("panels.navigation.sleep"),
+            mock.patch("panels.tab_navigation.sleep"),
             mock.patch.object(self.panel, "_selected_tab", return_value=None) as read,
         ):
             self.assertFalse(self.panel._navigation_tab())
-        self.assertEqual(read.call_count, 5)
+        self.assertEqual(read.call_count, 24)
+        self.assertFalse(any(call.args[0] == "CycleNextPanel" for call in self.panel.keys.send.call_args_list))
         self.assertFalse(any(call.args[0] == "UI_Select" for call in self.panel.keys.send.call_args_list))
 
     def test_closed_panel_is_not_read_or_cycled(self):
         self.panel.status_parser.get_gui_focus.return_value = 0
         with (
-            mock.patch("panels.navigation.sleep"),
+            mock.patch("panels.tab_navigation.sleep"),
             mock.patch.object(self.panel, "_selected_tab") as read,
         ):
             self.assertFalse(self.panel._navigation_tab())

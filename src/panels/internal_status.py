@@ -5,13 +5,13 @@ from __future__ import annotations
 import logging
 from time import sleep
 
-import cv2
-
-from core import paths
 from core.constants import GuiFocusInternalPanel
 from core.logger import logger
 from game.status import StatusParser
 from i18n.localization import normalize_text
+from panels.ship_control import COCKPIT_VIEW_TIMEOUT
+from panels.tab_navigation import confirm_panel_tab
+from vision.diagnostics import save_case
 from vision.regions import size_scale_for_station
 
 
@@ -39,56 +39,54 @@ class EDInternalStatusPanel:
         # Is nav panel active?
         active, active_tab_name = self.is_right_panel_active()
         if active:
-            # Store image
-            image = self.screen.get_screen_full()
-            cv2.imwrite(paths.debug_path("internal-panel", "int_panel_full.png"), image)
             return active, active_tab_name
         else:
             logger.debug("show_right_panel: Open Internal Panel")
-            if not self.ap.ship_control.goto_cockpit_view():
+            if not self.ap.ship_control.goto_cockpit_view(timeout=COCKPIT_VIEW_TIMEOUT):
                 logger.warning("Could not return to the cockpit before opening the internal panel.")
                 return False, ""
 
             self.keys.send("HeadLookReset")
             self.keys.send("UIFocus", state=1)
-            self.keys.send("UI_Right")
-            self.keys.send("UIFocus", state=0)
+            try:
+                self.keys.send("UI_Right")
+            finally:
+                self.keys.send("UIFocus", state=0)
             sleep(0.5)
 
             # Check if it opened
             active, active_tab_name = self.is_right_panel_active()
             if active:
-                # Store image
-                image = self.screen.get_screen_full()
-                cv2.imwrite(paths.debug_path("internal-panel", "internal_panel_full.png"), image)
                 return active, active_tab_name
             else:
                 return False, ""
 
     def show_inventory_tab(self) -> bool:
-        """Shows the INVENTORY tab of the Nav Panel. Opens the Nav Panel if not already open.
-        Returns True if successful, else False.
-        """
+        """Open the internal panel and confirm Inventory before returning success."""
         logger.debug("show_inventory_tab: entered")
 
-        # Show nav panel
-        active, active_tab_name = self.show_right_panel()
-        if not active:
-            logger.warning("Internal (Right) Panel could not be opened")
+        if not self.ap.ship_control.goto_cockpit_view(timeout=COCKPIT_VIEW_TIMEOUT):
+            logger.warning("Could not return to the cockpit before opening the internal panel.")
             return False
-        if active_tab_name == "inventory":
-            return True
-        steps = {"home": 4, "modules": 3, "fire_groups": 2, "ship": 1, "storage": 7, "status": 6, "playlist": 5}
-        if active_tab_name not in steps:
-            logger.warning("Unknown internal panel tab: %r", active_tab_name)
-            return False
-        self.keys.send("CycleNextPanel", repeat=steps[active_tab_name])
-        sleep(0.5)
-        active, tab = self.is_right_panel_active()
-        if active and tab == "inventory":
-            return True
-        logger.warning("Internal inventory tab could not be confirmed after navigation.")
-        return False
+        self.keys.send("HeadLookReset")
+        self.keys.send("UIFocus", state=1)
+        try:
+            self.keys.send("UI_Right")
+        finally:
+            self.keys.send("UIFocus", state=0)
+        overlay_enabled = self.ap.debug_overlay
+        if overlay_enabled:
+            rect = self.screen.screen_rect_to_abs(self.reg["right_panel"]["rect"])
+            self.ap.overlay.overlay_rect1("right_panel_active", rect, (0, 255, 0), 2)
+            self.ap.overlay.overlay_paint()
+        try:
+            return confirm_panel_tab(
+                self.status_parser, self.keys, self._selected_tab, GuiFocusInternalPanel, "inventory", "Internal panel"
+            )
+        finally:
+            if overlay_enabled:
+                self.ap.overlay.overlay_remove_rect("right_panel_active")
+                self.ap.overlay.overlay_paint()
 
     def _tab_id(self, words) -> str:
         text = normalize_text(" ".join(words or []))
@@ -105,6 +103,7 @@ class EDInternalStatusPanel:
             items = self.ocr.solid_highlighted_items(image, width, height, remove_thin_lines=True)
         if len(items) != 1:
             logger.debug("Internal tab highlight count=%s; no unique selected tab.", len(items))
+            self._save_tab_failure(image)
             return ""
         cropped, x, _y, w, h = items[0]
         center = self.reg["right_panel"]["rect"][0] + (x + w / 2) / self.screen.screen_width
@@ -114,11 +113,19 @@ class EDInternalStatusPanel:
             if 0.86 <= center <= 0.90:
                 return "playlist"
         if cropped.shape[1] < width * 3:
+            self._save_tab_failure(image)
             return ""
         words = self.ocr.image_simple_ocr(cropped)
         tab = self._tab_id(words)
         logger.debug("Internal selected-tab OCR: words=%r tab=%r", words, tab)
+        if not tab:
+            self._save_tab_failure(image)
         return tab
+
+    def _save_tab_failure(self, image):
+        if logger.isEnabledFor(logging.DEBUG):
+            context = self.ocr.capture_region_pct({"rect": [0.30, 0.20, 1.0, 0.90]})
+            save_case("internal-panel", "tab", {"evaluated": image, "later-panel": context})
 
     def is_right_panel_active(self) -> tuple[bool, str]:
         """Determine if the Nav Panel is open and if so, which tab is active.
@@ -149,9 +156,6 @@ class EDInternalStatusPanel:
             # Wait and retry
             sleep(1)
 
-            # In case we are on a picture tab, cycle to the next tab
-            self.keys.send("CycleNextPanel")
-
         # Clean up screen
         if self.ap.debug_overlay:
             sleep(2)
@@ -163,6 +167,7 @@ class EDInternalStatusPanel:
         if tab_text != "":
             return True, tab_text
         else:
+            logger.warning("Internal panel selected tab could not be identified.")
             return False, ""
 
     def hide_right_panel(self):

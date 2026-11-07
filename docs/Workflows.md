@@ -20,6 +20,9 @@ This document summarizes the behavior currently implemented and lists a small nu
    afterward.
 6. On disengagement, it checks whether docking is possible and whether the destination supports docking. When
    applicable, it approaches, requests docking through the Navigation panel, and waits for the docking computer.
+   It confirms panel focus and the selected Contacts tab before sending the docking inputs. Tab changes are sent
+   individually and checked again; unreadable highlights do not trigger blind switching. If confirmation times out,
+   the docking attempt stops with an error instead of retrying selection in an unknown tab.
 7. Once docked, the docking sequence selects refuel, repair, and ammunition services. The local-target phase does not
    run a waypoint trade sequence.
 
@@ -98,6 +101,8 @@ and is excluded from Git along with the rest of `user_data/`.
   The target can still lie outside the context; this is not a full screenshot.
 - Missing compasses and weak nav-point matches save the evaluated image and a larger same-frame context. The search
   itself still uses the original region. The larger capture is used only while Debug is enabled.
+- Unconfirmed navigation and internal-panel highlights save the evaluated region and a later panel-context image,
+  before the next navigation input. The later image is not necessarily identical to the evaluated frame.
 - An unconfirmed trade dialog saves its separately captured title and commodity regions and a later dialog context.
   OCR wait timeouts, unreadable disengage messages and ambiguous alignment or line-of-sight text can also save cases.
 

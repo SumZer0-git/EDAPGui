@@ -36,8 +36,9 @@ EDAPGui is a Windows autopilot for Elite Dangerous, offering optional assistance
   and German are included; additional recognition and commodity translations can be contributed as data-only packs.
   Auto briefly waits for a new journal header on game restart instead of immediately reporting English fallback.
   The application interface remains English. See [game languages](docs/Localization.md).
-  Right-panel inventory confirmation reads the selected tab highlight before carrier-transfer inputs are sent,
-  with English/German screenshot coverage for both HUD color schemes.
+  Both cockpit panels confirm the selected tab highlight after individual tab switches. Docking requires
+  Contacts and carrier deposits require Inventory; an unconfirmed tab stops the action instead of sending blind inputs.
+  English/German screenshot tests cover tab recognition for both HUD color schemes.
   Navigation-row recognition also handles long, narrow selected highlights.
 
 See the [waypoint guide](docs/Waypoint.md) for waypoint files and trade actions, and the
