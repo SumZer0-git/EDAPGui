@@ -166,9 +166,13 @@ class OCR:
             long_side, short_side = sorted(rectangle[1], reverse=True)
             if long_side < min_w * 0.9 or short_side < min_h * 0.9:
                 continue
-            if cv2.contourArea(contour) < long_side * short_side * 0.65:
+            fill_fraction = cv2.contourArea(contour) / (long_side * short_side)
+            if fill_fraction < 0.65:
                 continue
             polygon = cv2.approxPolyDP(contour, 0.015 * cv2.arcLength(contour, True), True)
+            # Perimeter-based simplification can collapse nearly rectangular, narrow rows into a line.
+            if len(polygon) != 4 and long_side / short_side >= 10 and fill_fraction >= 0.85:
+                polygon = cv2.boxPoints(rectangle).reshape(4, 1, 2)
             if len(polygon) != 4 or not cv2.isContourConvex(polygon):
                 continue
             points = polygon.reshape(4, 2).astype(np.float32)

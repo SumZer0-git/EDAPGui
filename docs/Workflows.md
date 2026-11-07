@@ -60,6 +60,10 @@ At most 12 images are saved per application run, and files from earlier runs rem
 The target may be outside the search region, so the image alone cannot establish that it was absent from the whole
 screen. Images and logs may contain player information; review and remove sensitive details before sharing them.
 
+Navigation destination selection accepts long, narrow filled row highlights without collapsing their corners during
+contour simplification. Thin lines and hollow outlines do not count as selected rows; the destination still requires
+an exact name match and confirmation from game state.
+
 ### Other assists
 
 - **DSS Assist** monitors the current system while in supercruise and attempts a discovery scan after entering a

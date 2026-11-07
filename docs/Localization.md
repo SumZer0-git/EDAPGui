@@ -109,6 +109,10 @@ sorting can differ by language. A syntactically valid pack is not a guarantee of
 Test at 1080p SDR and 2160p HDR, with the default orange HUD and a custom HUD scheme. Include negative cases:
 wrong commodity, wrong buy/sell direction, unrelated HUD messages and unreadable text must not confirm an action.
 Keep raw screenshots local; do not attach full-screen captures containing player information to public issues or PRs.
+For local fixtures, include an `hdr` or `sdr` filename token only when the capture mode is known. Missing tokens mean
+unknown, not SDR; resolution and HUD colors do not establish the capture mode.
+Full screenshots belong in `tests/fixtures/screenshots/<height>p/`. Saved diagnostic crops belong in
+`tests/fixtures/screenshots/diagnostics/`, separate from full-screen regressions; preserve their timestamped filenames.
 Right-panel recognition checks only the unique filled tab highlight, not neighboring tab labels. Home and playlist
 use their icon positions; text tabs still require an exact active-language match. The inventory tab must be
 confirmed before carrier-transfer inputs are sent.

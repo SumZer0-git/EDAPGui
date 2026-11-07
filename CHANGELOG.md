@@ -21,7 +21,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Game language selection in Settings: Auto follows journal headers, including after a game restart, or a language can be selected explicitly. English and German are included; recognition and commodity translations can be contributed as data-only language folders. Missing language support warns and attempts English; the GUI remains English.
 - Trade-route import from copied German/English text, with destination preview, explicit quantities and a choice to create a route or append to one. Legacy JSON import creates a new draft without modifying the original.
 - Plot to System and Plot to Station buttons for selecting targets without flying, trading or changing route progress.
-- Station-name navigation through the Navigation panel when bookmarks are unavailable. The search scrolls to the first exact match and confirms the selected target before flight; in-game filters must include the destination.
+- Station-name navigation through the Navigation panel when bookmarks are unavailable, including long, narrow selected row highlights. The search scrolls to the first exact match and confirms the selected target before flight; in-game filters must include the destination.
 - Active jump-target confirmation for Waypoint and Single Waypoint travel before each jump alignment, including intermediate systems. Unconfirmed targets stop the assist rather than relying on the saved route alone.
 - Optional recognition of the game's FSD alignment prompt, allowing small confirmed course corrections while charging.
 - Redesigned dark interface with a collapsible assist sidebar, Stop All, an always-on-top option and per-monitor scaling. Settings and window layout are saved automatically.
