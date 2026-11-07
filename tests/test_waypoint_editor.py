@@ -349,6 +349,23 @@ class EditorWidgetsTestCase(unittest.TestCase):
         self.editor = WaypointEditor(self.app, self.root)
         self.root.update_idletasks()
 
+    def test_sidebar_drag_ignores_motion_without_start_and_resets_after_release(self):
+        window = APGui.__new__(APGui)
+        window.root = mock.Mock()
+        window.root.winfo_x.return_value = 100
+        window.root.winfo_y.return_value = 200
+        event = SimpleNamespace(x_root=150, y_root=260)
+
+        window._drag_move(event)
+        window.root.geometry.assert_not_called()
+
+        window._drag_start(event)
+        self.assertEqual(window._drag, (50, 60))
+        window._drag_move(SimpleNamespace(x_root=250, y_root=360))
+        window.root.geometry.assert_called_once_with("+200+300")
+        window._drag_end(event)
+        self.assertIsNone(window._drag)
+
     def test_new_add_move_delete_and_dirty_cancel(self):
         for name in ("Sol", "LHS 20"):
             self.editor.add()

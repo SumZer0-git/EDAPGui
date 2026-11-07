@@ -50,6 +50,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Sidebar drag handling no longer logs callback errors when pointer movement arrives without an active drag.
+
 - Galaxy Map targeting no longer waits indefinitely when a route cannot be confirmed; it retries a limited number of times and then stops.
 - Waypoint market trades no longer submit a neighbouring commodity or assume success from key presses alone. The trade dialog is checked before submission, and only game-confirmed transactions reduce remaining quantities; unreadable dialogs receive one checked recovery attempt.
 - Station-market sales are capped by available cargo. Missing goods are skipped without reducing the request, while unreadable cargo stops trading. After each confirmed sale, updated cargo is required before further trades so removed rows do not shift the next commodity selection.

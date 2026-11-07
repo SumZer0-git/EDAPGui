@@ -122,6 +122,7 @@ class APGui:
         self.vars = {}
         self.applied = {}
         self._loading = False
+        self._drag = None
         self.save_state = {tab: "saved" for tab in SAVE_TABS}
         self.save_faded = {tab: True for tab in SAVE_TABS}
         self._fade_jobs = {}
@@ -243,6 +244,7 @@ class APGui:
         for widget in (self.sidebar, self.bottom):
             widget.bind("<Button-1>", self._drag_start)
             widget.bind("<B1-Motion>", self._drag_move)
+            widget.bind("<ButtonRelease-1>", self._drag_end)
 
     def _layout_bottom(self):
         u = self.metrics.u
@@ -333,7 +335,13 @@ class APGui:
         self._drag = (event.x_root - self.root.winfo_x(), event.y_root - self.root.winfo_y())
 
     def _drag_move(self, event):
-        self.root.geometry(f"+{event.x_root - self._drag[0]}+{event.y_root - self._drag[1]}")
+        drag = getattr(self, "_drag", None)
+        if drag is None:
+            return
+        self.root.geometry(f"+{event.x_root - drag[0]}+{event.y_root - drag[1]}")
+
+    def _drag_end(self, _event):
+        self._drag = None
 
     def _restore_position(self):
         x, y = self.state["x"], self.state["y"]
