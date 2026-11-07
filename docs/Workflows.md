@@ -57,6 +57,26 @@ Set **Debug > Log level > Debug** before reproducing a recognition problem. Norm
 program run; up to ten older files are kept for each. The GUI's log-file button opens `autopilot.log`.
 Recognition scores, message-gate measurements, OCR text and fallback attempts are Debug-only diagnostics.
 Short user-facing events, such as sending the supercruise exit, remain at Info level.
+The optional CV view draws match boxes on display copies; it does not alter the recognition images or saved context.
+Raw BGRA-backed OCR crops are copied into writable display images before annotations are drawn.
+Its windows are managed by the main GUI thread and open within the work area of the monitor containing the main window.
+Large images are scaled down to fit. You can move the windows; subsequent frames do not reset their positions.
+Resizing a CV window scales its images up or down while preserving their aspect ratios, including the last frame
+when recognition is idle. Only the display is resized; captures, matching and saved diagnostic images are unchanged.
+The Debug tab has four **CV Views** buttons: **Compass**, **Target**, **Occluded Target** and **HUD Messages**.
+A button opens or focuses its window; the title-bar X closes it, and the button opens it again.
+HUD Messages combines the message pre-check and OCR result in two separate display areas.
+Windows initially show "Waiting for recognition..." until the corresponding recognition step runs. There are no
+extra background captures; the last displayed frame remains visible between recognition steps.
+Only opened views prepare display images, and none open automatically at startup. The old global CV switch is no
+longer used. The CV view is independent of Debug logging and diagnostic image recording.
+Display images may be filtered, cropped, annotated or scaled; they are not always unmodified raw search captures.
+
+**Debug Overlay** takes effect without restarting. It draws search rectangles and OCR results over the game only during
+supported HUD-message and panel/OCR checks, not continuously for compass or target matching. Switching it off removes
+diagnostic markings without clearing normal AP status information. Both CV windows and debug markings can overlap
+screen captures, so disable them for unobstructed diagnostic runs or move CV windows to another monitor.
+
 Diagnostic images are saved directly in `user_data/debug/<category>/`. Images from the same case share a timestamp
 and identifier in their filenames, followed by their role, such as `_evaluated.png` or `_context.png`. The debug log
 identifies the category, reason and filename prefix; related scores, OCR text and decisions are logged by the recognition

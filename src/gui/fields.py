@@ -355,8 +355,7 @@ FIELDS = (
     ),
     Field("VoiceEnable", TAB_SETTINGS, "bool", "Enable voice", setter="set_voice"),
     Field("log_level", TAB_DEBUG, "choice", "Log level", "log_level"),
-    Field("DebugOverlay", TAB_DEBUG, "bool", "Debug Overlay"),
-    Field("Enable_CV_View", TAB_DEBUG, "bool", "Enable CV View", setter="set_cv_view"),
+    Field("DebugOverlay", TAB_DEBUG, "bool", "Debug Overlay", setter="set_debug_overlay"),
     Field("TCEDestinationFilepath", TAB_DEBUG, "text", "TCE Dest json"),
 )
 
@@ -477,7 +476,5 @@ def write(field, ap, value, window_pos=(0, 0)):
     ap.config[field.key] = value
     if field.key == "ActivateEliteEachKey":
         ap.keys.activate_window = value
-    if field.setter == "set_cv_view":
-        ap.set_cv_view(value, *window_pos)
-    elif field.setter:
+    if field.setter:
         getattr(ap, field.setter)(value)

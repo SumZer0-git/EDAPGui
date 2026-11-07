@@ -15,6 +15,7 @@ import cv2
 import numpy as np
 
 from core import paths
+from gui.cv_view import CvFrames
 from routines.flight import FlightMixin
 from tests.helpers import FakeScreen, load_fixture_image, pad_to_region
 from vision.detection import DetectionMixin
@@ -23,7 +24,8 @@ from vision.templates import ImageTemplates
 
 
 class Detector(DetectionMixin):
-    cv_view = False
+    def __init__(self):
+        self.cv_frames = CvFrames()
 
 
 class MatchingTestCase(unittest.TestCase):
@@ -42,6 +44,81 @@ class MatchingTestCase(unittest.TestCase):
 
     def detect(self, method, image_name):
         return getattr(Detector(), method)(self.regions(image_name))
+
+
+class CvViewTestCase(MatchingTestCase):
+    def test_disengage_cv_view_accepts_bgra_crops_without_changing_ocr_images(self):
+        for success_variant in range(3):
+            with self.subTest(success_variant=success_variant):
+                detector = Detector()
+                detector.cv_frames.open("hud")
+                detector.debug_overlay = False
+                detector.ocr = Mock()
+                detector.locale = Mock()
+                detector.locale.all_values.return_value = ["PRESS TO DISENGAGE"]
+                detector.ocr.string_similarity.side_effect = lambda expected, actual: float(expected == actual)
+                bgra = np.full((80, 140, 4), 123, np.uint8)
+                raw = bgra[:, :, :3]
+                self.assertFalse(raw.flags.c_contiguous)
+                variants = [raw.copy(), raw, cv2.resize(raw, None, fx=2, fy=2)]
+                originals = [image.copy() for image in variants]
+                regions = Mock()
+                regions.message_image.side_effect = variants
+                detector.ocr.image_simple_ocr.side_effect = [
+                    ["PRESS TO DISENGAGE"] if i == success_variant else [] for i in range(3)
+                ]
+                with patch.object(detector, "show_cv_image") as show:
+                    self.assertTrue(detector.sc_disengage_active(regions))
+                show.assert_called_once()
+                displayed = show.call_args.args[1]
+                self.assertTrue(displayed.flags.c_contiguous)
+                for original, image in zip(originals, variants):
+                    self.assertTrue(np.array_equal(original, image))
+                    self.assertFalse(np.shares_memory(displayed, image))
+
+    def test_message_gate_cv_view_does_not_modify_capture(self):
+        detector = Detector()
+        detector.cv_frames.open("hud")
+        regions = Mock()
+        regions.message_text_present.return_value = False
+        regions.last_message_fraction = 0.0
+        regions.last_message_line = 0.0
+        bgra = np.full((80, 140, 4), 123, np.uint8)
+        image = bgra[:, :, :3]
+        regions.message_image.return_value = image
+        original = image.copy()
+        with patch.object(detector, "show_cv_image") as show:
+            self.assertFalse(detector.sc_disengage_label_up(regions))
+        self.assertTrue(np.array_equal(image, original))
+        self.assertFalse(np.shares_memory(show.call_args.args[1], image))
+
+    def test_cv_view_preserves_detection_results_and_source_images(self):
+        for method, image_name in (
+            ("get_nav_offset", "compass"),
+            ("get_destination_offset", "target"),
+            ("is_destination_occluded", "empty"),
+        ):
+            with self.subTest(method=method):
+                expected = self.detect(method, image_name)
+                original = self.images[image_name].copy()
+                detector = Detector()
+                detector.cv_frames.open(
+                    {
+                        "get_nav_offset": "compass",
+                        "get_destination_offset": "target",
+                        "is_destination_occluded": "occluded",
+                    }[method]
+                )
+                with (
+                    patch.object(detector, "show_cv_image") as show,
+                    patch("vision.detection.cv2.moveWindow"),
+                    patch("vision.detection.cv2.waitKey"),
+                    self.assertNoLogs("ed_log", level="ERROR"),
+                ):
+                    result = getattr(detector, method)(self.regions(image_name))
+                self.assertEqual(result, expected)
+                show.assert_called_once()
+                self.assertTrue(np.array_equal(self.images[image_name], original))
 
 
 class TemplateTestCase(MatchingTestCase):

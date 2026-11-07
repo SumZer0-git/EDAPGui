@@ -26,6 +26,7 @@ from core.autopilot import EDAutopilot
 from core.logger import logger
 from core.version import EDAP_VERSION
 from gui import fields, window_state
+from gui.cv_view import CvView
 from gui.fields import FIELDS, TAB_OVERLAY, fields_of
 from gui.pages import PAGES
 from gui.theme import (
@@ -93,6 +94,7 @@ class APGui:
         self.notify_user(f"Starting ED Autopilot {EDAP_VERSION}.")
 
         self.ed_ap = ed_ap if ed_ap is not None else EDAutopilot(cb=self.callback)
+        self.cv_view = CvView(root, self.ed_ap.cv_frames)
         self.mouse = MousePoint()
         self.hotkeys = None
         self.active_hotkeys = {}
@@ -611,6 +613,7 @@ class APGui:
         if self.hotkey_poll_id is not None:
             self.root.after_cancel(self.hotkey_poll_id)
         self.stop_travel()
+        self.cv_view.close()
         self.ed_ap.quit()
         sleep(0.1)
         self.root.destroy()
@@ -833,6 +836,7 @@ class APGui:
 
         self._save_window_state()
         self.stop_travel()
+        self.cv_view.close()
         self.ed_ap.quit()
         sleep(0.1)
 

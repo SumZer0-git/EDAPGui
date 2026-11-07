@@ -77,6 +77,10 @@ The program stores its settings, ship profiles, waypoint files, route progress, 
 Recognition measurements and OCR details are logged only at Debug level. In Debug log mode, recognition problems can
 save local diagnostic images, including same-frame compass and target context, alongside a separate detailed log; see the
 [assist troubleshooting guide](docs/Workflows.md#vision-diagnostics).
+Four buttons on the Debug tab open individual CV views with dark title bars; X closes each window.
+Their images scale proportionally when the windows are resized.
+Debug Overlay can be toggled
+without restarting; see the troubleshooting guide above for when its markings appear.
 Downloaded OCR models and the PaddleX cache are stored in the unversioned `user_data/cache/paddlex/`, outside the
 virtual environment. The first OCR run needs internet access to download the required models, including after this
 cache-location change. Existing models in the user's `.paddlex` folder are not moved or deleted automatically.

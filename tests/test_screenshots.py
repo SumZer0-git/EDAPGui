@@ -25,6 +25,7 @@ import numpy as np
 
 from core import paths
 from core.constants import GuiFocusGalaxyMap
+from gui.cv_view import CvFrames
 from i18n.localization import LocalizationManager
 from panels.galaxy_map import EDGalaxyMap
 from panels.internal_status import EDInternalStatusPanel
@@ -115,7 +116,9 @@ class NoOcr:
 
 
 class Detector(DetectionMixin):
-    cv_view = False
+    def __init__(self):
+        self.cv_frames = CvFrames()
+
     ocr = NoOcr()
 
 

@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from gui import fields, window_state
+from gui.cv_view import CvFrames
 from gui.fields import TAB_OVERLAY
 
 
@@ -15,6 +16,7 @@ def make_ap():
     ap.config = {key: 0 for key in (f.key for f in fields.FIELDS if not f.target)}
     ap.config.update({"LogDEBUG": False, "LogINFO": True})
     ap.rollrate = 80.0
+    ap.cv_frames = CvFrames()
     return ap
 
 

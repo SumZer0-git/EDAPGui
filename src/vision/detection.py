@@ -23,6 +23,9 @@ from vision.diagnostics import save_case
 
 
 class DetectionMixin:
+    def show_cv_image(self, name, image):
+        self.cv_frames.submit(name, image)
+
     def have_destination(self, scr_reg) -> bool:
         """Check to see if the compass is on the screen."""
         icompass_image, (minVal, maxVal, minLoc, maxLoc), template_scale = scr_reg.match_compass_multiscale()
@@ -323,13 +326,12 @@ class DetectionMixin:
             "yaw": round(final_yaw_deg, 2),
         }
 
-        if self.cv_view:
+        if self.cv_frames.is_open("compass"):
             # icompass_image_d = cv2.cvtColor(compass_image_gray, cv2.COLOR_GRAY2RGB)
-            icompass_image_d = icompass_image
-            self.draw_match_rect(icompass_image_d, pt, (pt[0] + c_wid, pt[1] + c_hgt), (0, 0, 255), 2)
+            icompass_image_d = icompass_image.copy()
+            cv2.rectangle(icompass_image_d, pt, (pt[0] + c_wid, pt[1] + c_hgt), (0, 0, 255), 2)
             # cv2.rectangle(icompass_image_display, pt, (pt[0]+c_wid, pt[1]+c_hgt), (0, 0, 255), 2)
-            # self.draw_match_rect(compass_image, n_pt, (n_pt[0] + wid, n_pt[1] + hgt), (255,255,255), 2)
-            self.draw_match_rect(
+            cv2.rectangle(
                 icompass_image_d,
                 (pt[0] + n_pt[0] - pad, pt[1] + n_pt[1] - pad),
                 (pt[0] + n_pt[0] + wid - pad, pt[1] + n_pt[1] + hgt - pad),
@@ -383,9 +385,7 @@ class DetectionMixin:
                 1,
                 cv2.LINE_AA,
             )
-            cv2.imshow("compass", icompass_image_d)
-            cv2.moveWindow("compass", self.cv_view_x - 400, self.cv_view_y + 600)
-            cv2.waitKey(30)
+            self.show_cv_image("compass", icompass_image_d)
 
         return result
 
@@ -401,7 +401,7 @@ class DetectionMixin:
 
         pt = maxLoc
 
-        if self.cv_view:
+        if self.cv_frames.is_open("occluded"):
             dst_image_d = cv2.cvtColor(dst_image, cv2.COLOR_GRAY2RGB)
             destination_width = scr_reg.reg["target"]["width"]
             destination_height = scr_reg.reg["target"]["height"]
@@ -409,7 +409,7 @@ class DetectionMixin:
             width = scr_reg.templates.template["target_occluded"]["width"]
             height = scr_reg.templates.template["target_occluded"]["height"]
             try:
-                self.draw_match_rect(dst_image_d, pt, (pt[0] + width, pt[1] + height), (0, 0, 255), 2)
+                cv2.rectangle(dst_image_d, pt, (pt[0] + width, pt[1] + height), (0, 0, 255), 2)
                 dim = (int(destination_width / 2), int(destination_height / 2))
 
                 img = cv2.resize(dst_image_d, dim, interpolation=cv2.INTER_AREA)
@@ -424,11 +424,9 @@ class DetectionMixin:
                     1,
                     cv2.LINE_AA,
                 )
-                cv2.imshow("occluded", img)
-                cv2.moveWindow("occluded", self.cv_view_x, self.cv_view_y + 650)
+                self.show_cv_image("occluded", img)
             except Exception as e:
                 logger.error(f"Exception in debug view (occluded): {e}")
-            cv2.waitKey(30)
 
         if maxVal > scr_reg.target_occluded_thresh:
             logger.debug(f"Target is occluded ({maxVal:5.4f} > {scr_reg.target_occluded_thresh:5.2f})")
@@ -539,10 +537,10 @@ class DetectionMixin:
         #  print(destination_width, destination_height, width, height)
         #  print(maxLoc)
 
-        if self.cv_view:
+        if self.cv_frames.is_open("target"):
             dst_image_d = cv2.cvtColor(dst_image, cv2.COLOR_GRAY2RGB)
             try:
-                self.draw_match_rect(dst_image_d, pt, (pt[0] + width, pt[1] + height), (0, 0, 255), 2)
+                cv2.rectangle(dst_image_d, pt, (pt[0] + width, pt[1] + height), (0, 0, 255), 2)
                 dim = (int(destination_width / 2), int(destination_height / 2))
 
                 img = cv2.resize(dst_image_d, dim, interpolation=cv2.INTER_AREA)
@@ -557,12 +555,9 @@ class DetectionMixin:
                     1,
                     cv2.LINE_AA,
                 )
-                cv2.imshow("target", img)
-                # cv2.imshow('tt', scr_reg.templates.template['target']['image'])
-                cv2.moveWindow("target", self.cv_view_x, self.cv_view_y + 425)
+                self.show_cv_image("target", img)
             except Exception as e:
                 logger.error(f"Exception in debug view (target): {e}")
-            cv2.waitKey(30)
 
         # print (maxVal)
         # must be > x to have solid hit, otherwise we are facing wrong way (empty circle)
@@ -620,8 +615,8 @@ class DetectionMixin:
             self._message_was_present = text_present
             if text_present:
                 logger.debug("HUD message text detected in the disengage region, reading it with OCR.")
-        if self.cv_view:
-            dis_image = scr_reg.message_image("disengage")
+        if self.cv_frames.is_open("hud"):
+            dis_image = scr_reg.message_image("disengage").copy()
             dis_image = cv2.rectangle(dis_image, (0, 0), (1000, 25), (0, 0, 0), -1)
             cv2.putText(
                 dis_image,
@@ -633,9 +628,7 @@ class DetectionMixin:
                 1,
                 cv2.LINE_AA,
             )
-            cv2.imshow("sc_disengage_label_up", dis_image)
-            cv2.moveWindow("sc_disengage_label_up", self.cv_view_x - 460, self.cv_view_y + 575)
-            cv2.waitKey(1)
+            self.show_cv_image("sc_disengage_label_up", dis_image)
 
         return text_present
 
@@ -673,7 +666,8 @@ class DetectionMixin:
             )
             self.overlay.overlay_paint()
 
-        if self.cv_view:
+        if self.cv_frames.is_open("hud"):
+            image = image.copy()
             image = cv2.rectangle(image, (0, 0), (1000, 30), (0, 0, 0), -1)
             cv2.putText(
                 image,
@@ -695,9 +689,7 @@ class DetectionMixin:
                 1,
                 cv2.LINE_AA,
             )
-            cv2.imshow("disengage2", image)
-            cv2.moveWindow("disengage2", self.cv_view_x - 460, self.cv_view_y + 650)
-            cv2.waitKey(30)
+            self.show_cv_image("disengage2", image)
 
         if sim > sim_match:
             logger.info("Disengage message detected, sending the supercruise exit.")
