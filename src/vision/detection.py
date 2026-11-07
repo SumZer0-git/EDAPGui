@@ -10,7 +10,6 @@ from time import sleep
 import cv2
 import numpy as np
 
-from core import paths
 from core.constants import (
     Flags2FsdHyperdriveCharging,
     FlagsBeingInterdicted,
@@ -20,6 +19,7 @@ from core.constants import (
 )
 from core.logger import logger
 from i18n.localization import normalize_text
+from vision.diagnostics import save_case
 
 
 class DetectionMixin:
@@ -31,7 +31,11 @@ class DetectionMixin:
 
         # need > x in the match to say we do have a destination
         if maxVal < scr_reg.compass_match_thresh:
-            logger.info(
+            if logger.isEnabledFor(logging.DEBUG):
+                self.dump_compass_debug(
+                    icompass_image, f"s{maxVal:.2f}", kind="missing", context=scr_reg.compass_debug_context
+                )
+            logger.debug(
                 f"Compass not found: score {maxVal:5.3f} (needs {scr_reg.compass_match_thresh}), "
                 f"screen {scr_reg.screen.screen_width}x{scr_reg.screen.screen_height}, compass template "
                 f"{scr_reg.templates.template['compass']['width']}x{scr_reg.templates.template['compass']['height']}"
@@ -158,17 +162,14 @@ class DetectionMixin:
                 best = (area, float(cx), float(cy), hollow, rank)
         return None if best is None else (best[1], best[2], best[3], best[4])
 
-    _compass_dumps = {}
-
     @classmethod
-    def dump_compass_debug(cls, compass_image, note="", kind="weak"):
-        """Save the compass crop when the nav point match is weak, or the whole compass region when the compass is
-        not found, so the case can be analysed (max. 12 files per kind)."""
-        if cls._compass_dumps.get(kind, 0) >= 12:
-            return
-        cls._compass_dumps[kind] = cls._compass_dumps.get(kind, 0) + 1
-        name = f"compass-{kind}-{time.strftime('%H%M%S')}-{note}.png"
-        cv2.imwrite(paths.debug_path("compass", name), compass_image)
+    def dump_compass_debug(cls, compass_image, note="", kind="weak", context=None):
+        """Save the evaluated compass image and its same-frame context."""
+        images = {"evaluated": compass_image}
+        if context is not None:
+            images["context"] = context
+        logger.debug("Compass diagnostic: kind=%s scores=%s", kind, note)
+        save_case("compass", kind, images)
 
     def get_nav_offset(self, scr_reg):
         """Determine the x,y offset from center of the compass of the nav point.
@@ -185,7 +186,9 @@ class DetectionMixin:
 
         if maxVal < scr_reg.compass_match_thresh:
             logger.debug(f"Compass not found: score {maxVal:.2f}, scale {template_scale:.2f}")
-            self.dump_compass_debug(icompass_image, f"s{maxVal:.2f}", kind="missing")
+            self.dump_compass_debug(
+                icompass_image, f"s{maxVal:.2f}", kind="missing", context=scr_reg.compass_debug_context
+            )
             return None
 
         pt = maxLoc
@@ -255,7 +258,9 @@ class DetectionMixin:
         if max(n_maxVal, behind_val) < scr_reg.navpoint_match_thresh:
             white = self.find_white_navpoint(compass_image, (pad + c_wid / 2, pad + c_hgt / 2), c_wid / 2)
             logger.debug(f"Weak nav point match at {n_pt}, white blob: {white}")
-            self.dump_compass_debug(compass_image, f"a{n_maxVal:.2f}-b{behind_val:.2f}")
+            self.dump_compass_debug(
+                compass_image, f"a{n_maxVal:.2f}-b{behind_val:.2f}", context=scr_reg.compass_debug_context
+            )
             if white is not None:
                 n_pt = (round(white[0] - wid / 2), round(white[1] - hgt / 2))
                 final_z_pct = -1.0 if white[2] else 1.0
@@ -480,6 +485,8 @@ class DetectionMixin:
 
         sim = self.message_similarity("LINE_OF_SIGHT_MSG", ocr_textlist)
         logger.debug(f"Line of sight similarity with {ocr_textlist} is {sim}")
+        if 0.2 <= sim < 0.5:
+            save_case("hud-line-of-sight", "ambiguous", {"evaluated": image})
         return sim >= 0.5
 
     def fsd_alignment_prompt(self, scr_reg) -> bool:
@@ -492,6 +499,8 @@ class DetectionMixin:
 
         sim = self.message_similarity("ALIGN_WITH_TARGET_MSG", ocr_textlist)
         logger.debug(f"FSD alignment prompt OCR text={ocr_textlist}, similarity={sim:.3f}.")
+        if 0.2 <= sim < 0.5:
+            save_case("hud-fsd-alignment", "ambiguous", {"evaluated": image})
         return sim >= 0.5
 
     def get_destination_offset(self, scr_reg):
@@ -566,33 +575,26 @@ class DetectionMixin:
             result = None
             logger.debug(f"Target detection: {diagnostics} (below threshold)")
             if captured:
-                self._target_debug_capture = (captured[0][0], captured[0][1].copy(), maxVal)
+                context = scr_reg.target_debug_context
+                images = {"evaluated": captured[0][1].copy()}
+                if context is not None:
+                    images["context"] = context.copy()
+                self._target_debug_capture = (captured[0][0], images, maxVal)
         else:
             result = {"x": final_x, "y": final_y}
             logger.debug(f"Target detection: {diagnostics}, offset x={final_x:.1f}, y={final_y:.1f}")
 
         return result
 
-    _target_dumps = 0
-
     def dump_target_debug(self):
         """Save the last failed target search when SC alignment reports a target loss."""
         capture = getattr(self, "_target_debug_capture", None)
         self._target_debug_capture = None
-        if not logger.isEnabledFor(logging.DEBUG) or capture is None or DetectionMixin._target_dumps >= 12:
+        if not logger.isEnabledFor(logging.DEBUG) or capture is None:
             return
-        timestamp, image, score = capture
-        name = f"target-missing-{timestamp:%Y%m%d-%H%M%S-%f}-s{score:.4f}.png"
-        try:
-            path = paths.debug_path("target", name)
-            if not cv2.imwrite(path, image):
-                logger.warning(f"Could not save target debug image: {path}")
-                return
-        except (OSError, cv2.error) as error:
-            logger.warning(f"Could not save target debug image {name}: {error}")
-            return
-        DetectionMixin._target_dumps += 1
-        logger.debug(f"Saved target debug image: {path}")
+        timestamp, images, score = capture
+        logger.debug("Target diagnostic capture time=%s score=%.4f", timestamp.isoformat(), score)
+        save_case("target", "missing", images)
 
     def sc_disengage_label_up(self, scr_reg) -> bool:
         """look for messages like "PRESS [Y] TO DISENGAGE" or "SUPERCRUISE OVERCHARGE ACTIVE",
@@ -608,7 +610,7 @@ class DetectionMixin:
             self._message_log_time = now
             fraction = getattr(scr_reg, "last_message_fraction", 0.0)
             line = getattr(scr_reg, "last_message_line", 0.0)
-            logger.info(
+            logger.debug(
                 f"Disengage message check: message-colored area {fraction:.3f} (needs {scr_reg.message_text_fraction}), "
                 f"longest line {line:.2f} (needs {scr_reg.message_line_fraction})"
             )
@@ -617,7 +619,7 @@ class DetectionMixin:
         if text_present != getattr(self, "_message_was_present", False):
             self._message_was_present = text_present
             if text_present:
-                logger.info("HUD message text detected in the disengage region, reading it with OCR.")
+                logger.debug("HUD message text detected in the disengage region, reading it with OCR.")
         if self.cv_view:
             dis_image = scr_reg.message_image("disengage")
             dis_image = cv2.rectangle(dis_image, (0, 0), (1000, 25), (0, 0, 0), -1)
@@ -644,14 +646,20 @@ class DetectionMixin:
         sim_match = 0.35  # Similarity match 0.0 - 1.0 for 0% - 100%)
         sim = 0.0
         ocr_textlist = None
+        debug_images = {}
+        readable = False
         for variant in ({}, {"raw": True}, {"raw": True, "upscale": 2}):
             image = scr_reg.message_image("disengage", **variant)
             textlist = self.ocr.image_simple_ocr(image)
+            if logger.isEnabledFor(logging.DEBUG):
+                name = "masked" if not variant else ("raw-upscaled" if variant.get("upscale") else "raw")
+                debug_images[name] = image.copy()
+                readable = readable or any(text.strip() for text in (textlist or []))
             if textlist is None:
-                logger.info(f"Disengage OCR returned no text ({variant or 'masked'}).")
+                logger.debug(f"Disengage OCR returned no text ({variant or 'masked'}).")
                 continue
             variant_sim = self.message_similarity("PRESS_TO_DISENGAGE_MSG", textlist)
-            logger.info(f"Disengage similarity with {str(textlist)} is {variant_sim} ({variant or 'masked'})")
+            logger.debug(f"Disengage similarity with {str(textlist)} is {variant_sim} ({variant or 'masked'})")
             if variant_sim > sim or ocr_textlist is None:
                 sim, ocr_textlist = variant_sim, textlist
             if sim > sim_match:
@@ -696,6 +704,8 @@ class DetectionMixin:
             # cv2.imwrite(paths.debug_path('disengage.png'), image)
             return True
 
+        if debug_images and not readable:
+            save_case("hud-disengage", "unreadable", debug_images)
         return False
 
     def is_sun_dead_ahead(self, scr_reg):

@@ -74,8 +74,9 @@ Ship, Overlay, Settings, and Debug tabs are saved automatically; the lower right
 are saved. The window position, collapsed state, and pin are remembered in `user_data/configs/gui.json`.
 
 The program stores its settings, ship profiles, waypoint files, route progress, logs, and debug output in `user_data/`.
-In Debug log mode, failed supercruise target searches also save diagnostic images; see the
-[assist troubleshooting guide](docs/Workflows.md#target-detection-diagnostics).
+Recognition measurements and OCR details are logged only at Debug level. In Debug log mode, recognition problems can
+save local diagnostic images, including same-frame compass and target context, alongside a separate detailed log; see the
+[assist troubleshooting guide](docs/Workflows.md#vision-diagnostics).
 Downloaded OCR models and the PaddleX cache are stored in the unversioned `user_data/cache/paddlex/`, outside the
 virtual environment. The first OCR run needs internet access to download the required models, including after this
 cache-location change. Existing models in the user's `.paddlex` folder are not moved or deleted automatically.

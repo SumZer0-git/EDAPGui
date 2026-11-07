@@ -41,7 +41,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Supercruise travel uses 75% throttle once aligned; alignment and recovery use 50%. The **Set Speed to 75%** binding is required and can be added with `fix_keybinds.bat`.
 - Updated keybinding detection to follow the active game preset and reduce duplicate or harmless collision warnings.
 - Runtime files, including downloaded OCR models in `user_data/cache/paddlex/`, are stored in `user_data/`; launching through `start_ed_ap.bat` remains unchanged. Manual launches now use `python src/main.py`. Models are downloaded again on first use at the new location; existing user-profile caches remain untouched.
-- Normal logging focuses on user status, while detailed flight diagnostics and target-loss images are available in Debug mode. Rotated logs are limited to the ten newest files.
+- Normal technical logs remain concise; Debug mode records a separate detailed log and bounded recognition-diagnostic images for supported failure cases.
 - Updated setup, keybinding and waypoint guides with current workflows and screenshots.
 - Reorganized the source into packages and standardized naming and formatting; contributor details are documented in the project structure guide.
 

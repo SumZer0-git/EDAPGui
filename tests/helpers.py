@@ -41,6 +41,9 @@ class FakeScreen:
     def get_screen_region(self, rect, rgb=True):
         return self.image
 
+    def get_screen_region_with_context(self, rect, rgb=True, scale=2.0):
+        return self.image, self.image
+
 
 class ScreenshotScreen:
     """Stands in for vision.screen.Screen with a full screenshot: region grabs return the cropped region the way
@@ -56,6 +59,14 @@ class ScreenshotScreen:
         if rgb:
             region = cv2.cvtColor(region, cv2.COLOR_RGB2BGR)
         return region
+
+    def get_screen_region_with_context(self, rect, rgb=True, scale=2.0):
+        from vision.screen import Screen
+
+        return Screen.get_screen_region_with_context(self, rect, rgb, scale)
+
+    def get_screen(self, left, top, right, bottom, rgb=True):
+        return self.get_screen_region((left, top, right, bottom), rgb)
 
     def screen_rect_to_abs(self, rect):
         return [

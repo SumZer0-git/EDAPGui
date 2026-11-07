@@ -1,7 +1,11 @@
 """Screen regions to capture, with filters, and template matching within a region."""
 
+import logging
+
 import cv2
 from numpy import array, sum
+
+from core.logger import logger
 
 
 def reg_scale_for_station(region, w: int, h: int) -> [int, int, int, int]:
@@ -214,7 +218,14 @@ class ScreenRegions:
     def capture_region_filtered(self, screen, region_name, inv_col=True, source_callback=None):
         """Grab screen region and call its filter routine.
         Returns the filtered image."""
-        scr = screen.get_screen_region(self.reg[region_name]["rect"], inv_col)
+        if region_name == "target":
+            self.target_debug_context = None
+        if region_name == "target" and source_callback is not None and logger.isEnabledFor(logging.DEBUG):
+            scr, self.target_debug_context = screen.get_screen_region_with_context(
+                self.reg[region_name]["rect"], inv_col, scale=1.5
+            )
+        else:
+            scr = screen.get_screen_region(self.reg[region_name]["rect"], inv_col)
         if source_callback is not None:
             source_callback(scr)
         if self.reg[region_name]["filterCB"] is None:
@@ -240,7 +251,13 @@ class ScreenRegions:
         unless another scale is clearly better. The last good scale is remembered and tried first, so a full scan
         is only needed after a ship change or a poor match. Returns the image, the match details at the best
         scale and that scale."""
-        img_region = self.screen.get_screen_region(self.reg["compass"]["rect"], rgb=False)
+        self.compass_debug_context = None
+        if logger.isEnabledFor(logging.DEBUG):
+            img_region, self.compass_debug_context = self.screen.get_screen_region_with_context(
+                self.reg["compass"]["rect"], rgb=False
+            )
+        else:
+            img_region = self.screen.get_screen_region(self.reg["compass"]["rect"], rgb=False)
         channels = cv2.split(cv2.cvtColor(img_region, cv2.COLOR_BGR2HSV))
         base = self.templates.template["compass"]["image"]
 

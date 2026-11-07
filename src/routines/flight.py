@@ -424,6 +424,7 @@ class FlightMixin:
                 off = new
             else:
                 logger.debug("  out of fine -not off-" + "\n")
+                self.dump_target_debug()
                 return
 
         # Safety check to ensure off is valid before using it
