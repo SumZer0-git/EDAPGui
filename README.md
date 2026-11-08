@@ -29,11 +29,17 @@ EDAPGui is a Windows autopilot for Elite Dangerous, offering optional assistance
 - **DSS Assist** runs a discovery scan when entering systems in supercruise.
 - **AFK Combat Assist** monitors shields and fighter status in a combat zone.
 - **Status overlay** shows the assist mode and status, ship status, fuel, current system, route destination, next star,
-  jumps, and route distance on top of the game, with progress bars for jumps and distance. Its AP status matches the
+  jumps, route distance and an optional learned ETA on top of the game, with progress bars for jumps and distance.
+  ETA combines remaining system travel time with arrival in your PC's local time; it excludes station travel and trading.
+  Its AP status matches the
   main window footer, whose middle shows jumps and route distance while a route assist runs. Position, appearance,
   which lines are shown in which order, and whether screenshots and recordings may include the overlay are set on the
   Overlay tab. By default it stays out of captures; when included, it can also interfere with the autopilot's own
   screen detection.
+- **Assist statistics** on the Info tab retain assisted jumps, distance and active time per account and individual ship.
+  Ship identity includes both the journal ship ID and type as an additional safeguard.
+  Local jump-time history supplies the ETA and survives restarts, with automatic rotating database backups.
+  See [statistics and ETA](docs/Workflows.md#assist-statistics-and-eta) for measurement and backup details.
 - Optional voice feedback, a debug overlay, and loading a TCE destination are also available.
 - **Game language** in Settings follows the game journal automatically or uses a selected language pack. English
   and German are included; additional recognition and commodity translations can be contributed as data-only packs.
@@ -79,7 +85,7 @@ strip, the pin keeps it on top of other windows, and the power button restarts o
 Ship, Overlay, Settings, and Debug tabs are saved automatically; the lower right corner of the tab shows whether they
 are saved. The window position, collapsed state, and pin are remembered in `user_data/configs/gui.json`.
 
-The program stores its settings, ship profiles, waypoint files, route progress, logs, and debug output in `user_data/`.
+The program stores its settings, ship profiles, waypoint files, route progress, statistics, logs, and debug output in `user_data/`.
 Recognition measurements and OCR details are logged only at Debug level. In Debug log mode, recognition problems can
 save local diagnostic images, including same-frame compass and target context, alongside a separate detailed log; see the
 [assist troubleshooting guide](docs/Workflows.md#vision-diagnostics).

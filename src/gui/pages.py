@@ -300,6 +300,11 @@ def build_info(app, page):
     _button(app, about, "Open GitHub Page", app.about, 1)
     _button(app, about, "View Changelog", app.open_changelog, 2)
 
+    statistics = _card(app, left, "Assist statistics")
+    ttk.Label(statistics, textvariable=app.statistics_text, justify="left", wraplength=app.metrics.px(230)).grid(
+        row=0, column=0, columnspan=2, sticky="w", pady=app.metrics.u(4)
+    )
+
     updates_card = _card(app, right, "Updates")
     ttk.Label(updates_card, textvariable=app.update_text).grid(row=0, column=0, sticky="w", pady=app.metrics.u(4))
     _button(app, updates_card, "Check for Updates", app.check_updates, 1)

@@ -52,6 +52,70 @@ This document summarizes the behavior currently implemented and lists a small nu
 For route editing, imports, trade options and troubleshooting, see the [Waypoint guide](Waypoint.md).
 The editor's **Plot to System/Station** buttons only select targets; they do not start travel or trading.
 
+### Assist statistics and ETA
+
+The Info tab shows lifetime assisted jumps, lightyears and active time for the current account and individual ship,
+plus the ship's average jump-cycle duration and lifetime count of valid time measurements. Accounts are separated
+by the journal's commander ID (`FID`); ships use the combination of `ShipID` and the journal ship type,
+not their editable name or registration. The type is an additional safeguard against a different model
+ever receiving the same ID; it does not imply that the game normally reuses IDs.
+Two ships of the same type therefore have independent histories. Switching account or ship ends the active
+measurement chain. There is no reset button.
+
+Travel, Waypoint and Single Waypoint flight contribute active assist time. Target-only plotting, DSS and AFK Combat
+do not contribute. System travel time covers the FSD route phase, including alignment, charging, hyperspace,
+intermediate refueling and positioning. It ends on arrival at the plotted destination, before final-system refueling,
+station approach, docking or trading. Local actions contribute only to overall active assist time.
+
+Only autopilot-requested hyperspace jumps confirmed by new journal events count toward jump and distance totals.
+Past journal records are not imported. The first confirmed jump in each FSD phase counts but establishes only a
+timing baseline. Each following arrival provides one jump-cycle measurement while that phase remains uninterrupted.
+Stopping, switching ships/accounts or entering a new FSD phase breaks the chain. A partial or interrupted cycle
+never becomes a valid time measurement. Ordinary refueling delays remain in the measured duration.
+Durations use a monotonic clock; the measurement timestamp is stored in UTC. Journal polling can introduce small
+timing differences. Batched arrivals without a reliable interval are not used as time measurements.
+
+**Overlay > Estimated arrival** controls one sortable line, for example `ETA: ~1h 12m (00:58)`.
+The footer also shows the ETA while the system route is active. It estimates arrival at the final system of the
+current plotted route, not completion of a whole waypoint list or its station/trade actions. The clock in parentheses
+uses the PC's local timezone. Without three valid measurements for the ship, it shows `Calculating...`; with
+sufficient stored history it is available immediately on a new route. ETA is hidden during local travel,
+when off route or after system arrival.
+
+The estimate is based on remaining jumps, not lightyears. Each valid measurement adjusts a persisted
+ship-specific estimate with a 5% weight for the new cycle; older observations gradually lose influence.
+The lifetime arithmetic average remains separate. Between jumps, elapsed cycle time reduces the estimate.
+An overdue cycle does not consume the estimated time of later jumps or falsely indicate arrival.
+The prediction is approximate, particularly after outfitting changes, during retries or on unusual refueling routes.
+It never changes assist controls, fuel policy or navigation. A completed system route adds one concise summary
+to the GUI log without replacing the AP status.
+
+#### Storage and backups
+
+Statistics are local and unversioned in `user_data/stats/statistics.sqlite3`; Python's built-in SQLite requires no
+additional dependency. The database stores account/ship identifiers, numeric counters and UTC-timestamped duration
+measurements, not commander names, ship names, system names or complete journals.
+Only the latest **1,000 valid time measurements per ship** are retained. Age alone never deletes a measurement.
+Lifetime totals and measurement counts are not reduced when old details are removed.
+
+Writes use transactions. Active time is checkpointed at each confirmed jump and when a phase/assist ends;
+an abrupt process termination can lose active time since the last checkpoint, but not previously committed totals.
+After changed data is committed, a consistent SQLite backup is made if none exists or the previous successful
+regular backup is at least **24 hours** old. Restarting or remaining idle does not itself produce another backup.
+The latest **ten** regular `statistics-backup-*.sqlite3` files are retained in the same folder.
+A new backup is checked before replacing its temporary file and rotating older backups.
+Future schema migrations must first create a separate `statistics-migration-*.sqlite3` backup, outside regular
+rotation. The original statistics format without ship types is migrated automatically after a verified backup.
+Entries without a confirmed type remain intact in account totals, but are not guessed into a ship history or ETA.
+Unknown database schema versions are rejected without rewriting the data.
+
+Storage errors disable statistics/ETA and explicitly notify the user; backup failures warn without stopping flight.
+A damaged database is never silently replaced with empty statistics or automatically restored from an older backup.
+To restore manually, close EDAPGui, preserve the damaged/current file, then copy a known-good backup to
+`statistics.sqlite3`. Restoration recovers only the data present in that backup.
+Same-folder backups protect against individual file damage, not disk failure or deletion of the whole folder;
+include `user_data/stats/` in an external backup for that protection.
+
 ### Vision diagnostics
 
 Compass marker fallback uses sphere-relative pixel areas for 1080p and 4K and checks both bright and dim,

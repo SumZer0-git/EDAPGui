@@ -112,6 +112,7 @@ class APGui:
         self.update_text = tk.StringVar(value="Not checked yet.")
         self.update_tag = None
         self.download_button = None
+        self.statistics_text = tk.StringVar(value=self._statistics_text())
 
         self.TRAVEL_A_running = False
         self.WP_A_running = False
@@ -512,6 +513,8 @@ class APGui:
             self.toggle_single_waypoint()
         elif msg == "route_info":
             self.update_route_info(body)
+        elif msg == "statistics":
+            self.statistics_text.set(self._statistics_text(body))
         elif msg == "game_language":
             self.waypoint_commodity_language = body
             if hasattr(self, "waypoint_editor"):
@@ -530,6 +533,31 @@ class APGui:
         self.load_vars("Ship")
         self._cancel_save_job("Ship")
         self._set_save("Ship", "saved")
+
+    def _statistics_text(self, snapshot=None):
+        from core.statistics import format_duration
+
+        statistics = getattr(self.ed_ap, "statistics", None)
+        if snapshot is None:
+            snapshot = statistics.snapshot() if statistics is not None else None
+        if snapshot is None or not snapshot.available:
+            return "Statistics unavailable."
+        if snapshot.identity is None:
+            return "Waiting for commander and ship."
+        account, ship = snapshot.commander, snapshot.ship
+        average = "Not measured" if ship.average is None else f"{ship.average:.0f} s"
+        return (
+            f"Current account\n"
+            f"Jumps: {account.jumps:,} | Distance: {account.distance:,.1f} ly\n"
+            f"Assist time: {format_duration(account.assist_seconds)}\n"
+            f"System travel: {format_duration(account.travel_seconds)}\n\n"
+            f"Current ship (#{snapshot.identity.ship_id})\n"
+            f"Jumps: {ship.jumps:,} | Distance: {ship.distance:,.1f} ly\n"
+            f"Assist time: {format_duration(ship.assist_seconds)}\n"
+            f"System travel: {format_duration(ship.travel_seconds)}\n"
+            f"Average jump cycle: {average}\n"
+            f"Valid time measurements: {ship.samples:,}"
+        )
 
     def process_hotkey_actions(self):
         self.hotkey_poll_id = self.root.after(50, self.process_hotkey_actions)

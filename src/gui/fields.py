@@ -27,6 +27,7 @@ OVERLAY_LINES = (
     ("next_star", "OverlayShowNextStar"),
     ("jumps", "OverlayShowJumps"),
     ("jumps_bar", "OverlayShowJumpsBar"),
+    ("eta", "OverlayShowETA"),
     ("distance", "OverlayShowDistance"),
     ("distance_bar", "OverlayShowDistanceBar"),
 )
@@ -318,6 +319,13 @@ FIELDS = (
         "bool",
         "Jump progress bar",
         tip="Show a progress bar of the completed jumps on the route.",
+    ),
+    Field(
+        "OverlayShowETA",
+        TAB_OVERLAY,
+        "bool",
+        "Estimated arrival",
+        tip="Show approximate remaining system travel time and arrival in your PC's local time.",
     ),
     Field(
         "OverlayShowDistance",
