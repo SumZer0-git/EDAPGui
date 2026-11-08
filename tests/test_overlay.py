@@ -26,7 +26,9 @@ try:
     from vision.ocr import OCR  # noqa: F401
 
     _PADDLEOCR_STUBBED = False
-except ImportError:
+except ModuleNotFoundError as error:
+    if error.name != "paddleocr":
+        raise
     sys.modules["paddleocr"] = SimpleNamespace(PaddleOCR=None)
     _PADDLEOCR_STUBBED = True
 
@@ -101,6 +103,7 @@ class OverlayRenderingTests(unittest.TestCase):
                 "OverlayShowDestination": True,
                 "OverlayShowNextStar": True,
                 "OverlayShowFuel": True,
+                "OverlayShowETA": True,
                 "OverlayLineOrder": list(DEFAULT_OVERLAY_LINE_ORDER),
             },
         )
@@ -1156,7 +1159,7 @@ class OverlayRenderingTests(unittest.TestCase):
         self.assertEqual(rows, [0, 1, 2])
         autopilot.overlay.overlay_progress_bar.assert_called_once_with("jumps_bar", 0.5, 3)
         removed = {call.args[0] for call in autopilot.overlay.overlay_remove_text.call_args_list}
-        self.assertEqual(removed, {"status", "ship", "fuel", "destination", "next_star", "distance"})
+        self.assertEqual(removed, {"status", "ship", "fuel", "destination", "next_star", "distance", "eta"})
         autopilot.overlay.overlay_remove_progress_bar.assert_called_once_with("distance_bar")
 
     def test_unavailable_status_value_uses_muted_role(self):

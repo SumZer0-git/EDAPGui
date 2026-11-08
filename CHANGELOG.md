@@ -27,6 +27,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Redesigned dark interface with a collapsible assist sidebar, Stop All, an always-on-top option and per-monitor scaling. Settings and window layout are saved automatically.
 - Customizable status overlay with colors, fonts, opacity, positioning, optional fuel and route information, configurable line order and jump/distance progress bars. It is hidden from screenshots and recordings by default; an Overlay tab option lets desktop and window captures include it, while in-game captures never show it.
 - Background update notification and a manual Check for Updates button on the Info tab.
+- Local assist statistics per account and individual ship, with persistent jump-time history and ten rotating database backups. The overlay and footer estimate arrival at the current system-route destination using learned jump times; station travel and trading are excluded.
 - Keybinding repair tool (`fix_keybinds.bat`) with German/English messages, conflict confirmation, backups and a preview-only mode.
 - Automated tests, screenshot regressions, Ruff checks and CI/release workflows for contributors.
 

@@ -16,6 +16,7 @@ def make_ap():
     ap.config = {key: 0 for key in (f.key for f in fields.FIELDS if not f.target)}
     ap.config.update({"LogDEBUG": False, "LogINFO": True})
     ap.rollrate = 80.0
+    ap.statistics = None
     ap.cv_frames = CvFrames()
     return ap
 

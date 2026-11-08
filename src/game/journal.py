@@ -107,6 +107,8 @@ def check_sco_fsd(modules: list[dict[str, any]] | None) -> bool:
 
 
 class EDJournal:
+    _statistics_observer = None
+
     def __init__(self, cb):
         self.ap_ckb = cb
         self._read_lock = threading.RLock()
@@ -126,6 +128,8 @@ class EDJournal:
             "odyssey": True,
             "status": "in_space",
             "type": None,
+            "commander_id": None,
+            "ship_id": None,
             "location": None,
             "star_class": None,
             "target": None,
@@ -330,7 +334,14 @@ class EDJournal:
                 self.ship["interdicted"] = True
 
             # parse ship type
+            elif log_event == "Commander":
+                if log.get("FID") != self.ship.get("commander_id"):
+                    self.ship["ship_id"] = None
+                self.ship["commander_id"] = log.get("FID")
+
             elif log_event == "LoadGame":
+                self.ship["commander_id"] = log.get("FID")
+                self.ship["ship_id"] = log.get("ShipID")
                 self.ship["type"] = log["Ship"].lower()
                 self.ship["ship_size"] = get_ship_size(log["Ship"])
 
@@ -338,6 +349,7 @@ class EDJournal:
             # When written: at startup, when loading from main menu, or when switching ships,
             # or after changing the ship in Outfitting, or when docking SRV back in mothership
             elif log_event == "Loadout":
+                self.ship["ship_id"] = log.get("ShipID")
                 self.ship["type"] = log["Ship"].lower()
                 self.ship["ship_size"] = get_ship_size(log["Ship"])
                 self.ship["cargo_capacity"] = log["CargoCapacity"]
@@ -410,6 +422,16 @@ class EDJournal:
         # exceptions
         except Exception as e:
             logger.error(f"Error while reading journal: {e}")
+            return
+
+        if self._statistics_observer is not None:
+            self._statistics_observer(log, self.ship.copy())
+
+    def set_statistics_observer(self, observer):
+        """Attach after draining startup records, so historical jumps are never counted."""
+        with self._read_lock:
+            self._read_new_lines()
+            self._statistics_observer = observer
 
     def ship_state(self):
         # The assist thread and the overlay refresh thread both read the journal through one file handle.

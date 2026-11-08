@@ -19,6 +19,7 @@ from core import paths
 from core.config import ConfigMixin
 from core.constants import SCOOPABLE_STAR_CLASSES, FlagsScoopingFuel, FlagsSupercruise, ship_size_map
 from core.logger import logger, set_log_level
+from core.statistics import AssistStatistics, format_eta
 from core.types import EdapInterruptError
 from game.graphics_settings import EDGraphicsSettings
 from game.journal import EDJournal, get_ship_fullname
@@ -128,6 +129,7 @@ def _set_overlay_config_defaults(config: dict) -> None:
         ("OverlayShowDestination", True),
         ("OverlayShowNextStar", True),
         ("OverlayShowFuel", True),
+        ("OverlayShowETA", True),
     )
     for key, default in defaults:
         config.setdefault(key, default)
@@ -170,6 +172,8 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
     _overlay_last_frame = None
     _overlay_status = None
     _route_info_text = ""
+    statistics = None
+    _statistics_last_snapshot = None
 
     def __init__(self, cb, do_thread=True):
 
@@ -210,6 +214,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             "OverlayShowDestination": True,
             "OverlayShowNextStar": True,
             "OverlayShowFuel": True,
+            "OverlayShowETA": True,
             "OverlayLineOrder": list(DEFAULT_OVERLAY_LINE_ORDER),
             "DiscordWebhook": False,  # discord not implemented yet
             "DiscordWebhookURL": "",
@@ -337,6 +342,9 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         self.jn = EDJournal(self.ap_ckb)
         if not self.refresh_game_language():
             raise RuntimeError("The game OCR language could not be initialized. Check the GUI log and technical log.")
+        self.statistics = AssistStatistics(paths.STATISTICS_DB, self.notify_user)
+        self.statistics.set_identity(self.jn.ship_state())
+        self.jn.set_statistics_observer(self.statistics.observe)
         self.templ = vision.templates.ImageTemplates(self.scr.screen_height)
         self.scrReg = vision.regions.ScreenRegions(self.scr, self.templ)
         logger.info(f"Screen {self.scr.screen_width}x{self.scr.screen_height}")
@@ -660,7 +668,8 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             route_progress = (
                 self._get_overlay_route_progress(ship_state)
                 if any(
-                    shown(key) for key in ("jumps", "jumps_bar", "distance", "distance_bar", "destination", "next_star")
+                    shown(key)
+                    for key in ("jumps", "jumps_bar", "eta", "distance", "distance_bar", "destination", "next_star")
                 )
                 else None
             )
@@ -713,6 +722,10 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                         lines["jumps"].append((f" ({total - completed} left)", "muted"))
                 if shown("jumps_bar"):
                     lines["jumps_bar"] = completed / total
+                if shown("eta"):
+                    eta = self._route_eta_text(route_progress)
+                    if eta is not None:
+                        lines["eta"] = [("ETA: ", "label"), (eta, "value")]
 
             route_distance = (
                 self._get_overlay_route_distance(route, route_progress[1])
@@ -762,6 +775,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             try:
                 self.update_overlay()
                 self.update_route_info()
+                self.update_statistics()
                 last_error = None
             except Exception as e:
                 if str(e) != last_error:
@@ -803,9 +817,35 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                 if route_distance is not None:
                     remaining, total_distance = route_distance
                     text += f" \u00b7 {total_distance - remaining:,.1f} of {total_distance:,.1f} ly"
+                eta = self._route_eta_text(route_progress)
+                if eta is not None:
+                    text += f" \u00b7 ETA: {eta}"
         if text != self._route_info_text:
             self._route_info_text = text
             self.ap_ckb("route_info", text)
+
+    def _route_eta_text(self, progress) -> str | None:
+        if self.statistics is None or not self.statistics.route_active or progress is None or progress[0] != "on_route":
+            return None
+        remaining = progress[2] - progress[1]
+        seconds = self.statistics.eta_seconds(remaining)
+        return "Calculating..." if seconds is None else format_eta(seconds)
+
+    def update_statistics(self):
+        if self.statistics is not None:
+            self.statistics.set_identity(self.jn.ship_state())
+            snapshot = self.statistics.snapshot()
+            if snapshot != self._statistics_last_snapshot:
+                self._statistics_last_snapshot = snapshot
+                self.ap_ckb("statistics", snapshot)
+
+    def _begin_statistics_assist(self):
+        if self.statistics is not None:
+            self.statistics.begin_assist(self.jn.ship_state())
+
+    def _end_statistics_assist(self):
+        if self.statistics is not None:
+            self.statistics.end_assist()
 
     def set_ap_status(self, txt):
         """Publish the current AP status to the overlay and GUI."""
@@ -827,6 +867,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
 
     def _finish_assist(self, stop_msg):
         """Reports the end of an assist after its thread work is done, so no late status can override Idle."""
+        self._end_statistics_assist()
         self.ap_ckb(stop_msg)
         self.set_ap_status("Idle")
         self.update_route_info()
@@ -871,11 +912,13 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
     #
     def set_travel_assist(self, enable=True):
         if not enable and self.travel_assist_enabled:
+            self._end_statistics_assist()
             self.ctype_async_raise(self.ap_thread, EdapInterruptError)
         self.travel_assist_enabled = enable
 
     def set_waypoint_assist(self, enable=True):
         if not enable and self.waypoint_assist_enabled:
+            self._end_statistics_assist()
             self.ctype_async_raise(self.ap_thread, EdapInterruptError)
         self.waypoint_assist_enabled = enable
 
@@ -891,6 +934,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
 
     def set_single_waypoint_assist(self, system: str, station: str, enable=True):
         if not enable and self.single_waypoint_enabled:
+            self._end_statistics_assist()
             self.ctype_async_raise(self.ap_thread, EdapInterruptError)
         self._single_waypoint_system = system
         self._single_waypoint_station = station
@@ -964,6 +1008,8 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
     # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
     # have then then kill python exec
     def quit(self):
+        if self.statistics is not None:
+            self.statistics.close()
         for name in ("compass", "target", "occluded", "hud"):
             self.cv_frames.close(name)
         if self.vce is not None:
@@ -993,6 +1039,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                 set_focus_elite_window()
                 self.update_overlay()
                 try:
+                    self._begin_statistics_assist()
                     self.travel_assist(self.scrReg)
                 except EdapInterruptError:
                     logger.debug("Caught stop exception")
@@ -1010,6 +1057,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                 self.update_overlay()
                 self.total_dist_jumped = 0
                 try:
+                    self._begin_statistics_assist()
                     self.waypoint_assist(self.keys, self.scrReg)
                 except EdapInterruptError:
                     logger.debug("Caught stop exception")
@@ -1044,6 +1092,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                 try:
                     plot = self._waypoint_plot
                     if plot is None:
+                        self._begin_statistics_assist()
                         self.single_waypoint_assist()
                     else:
                         set_focus_elite_window()

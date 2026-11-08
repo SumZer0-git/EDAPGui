@@ -22,6 +22,7 @@ EDAPGui/
 |   |   |-- config.py               # Read and write app and ship configuration
 |   |   |-- paths.py                # Central paths and user-data initialization
 |   |   |-- logger.py               # Logging setup and log rotation
+|   |   |-- statistics.py           # Local assist counters, jump history, ETA and database backups
 |   |   |-- constants.py            # Shared flags, ship data, and reference tables
 |   |   |-- types.py                # Shared enums and exceptions
 |   |   |-- version.py              # Single source for the app version
@@ -93,7 +94,8 @@ EDAPGui/
 |   |-- commodities.json            # Language-independent commodity identities
 |   |-- configs/                    # Reference configuration copied on first start
 |   `-- waypoints/                  # Example waypoint files
-|-- user_data/                      # Runtime config, waypoints, logs, and debug output
+|-- user_data/                      # Runtime config, waypoints, statistics, logs, and debug output
+|   |-- stats/                      # Local SQLite statistics and rotating backups (not versioned)
 |   `-- cache/paddlex/              # Downloaded OCR models and PaddleX cache (not versioned)
 |-- tools/
 |   |-- make_keybind_defaults.py    # Generate game keybinding defaults

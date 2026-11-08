@@ -180,6 +180,22 @@ class AssistsMixin:
 
     def fsd_assist(self, scr_reg, expected_system: str | None = None) -> FsdAssistResult:
         """FSD Route Assist."""
+        ship = self.jn.ship_state()
+        if ship["target"] and (self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded)):
+            self.update_overlay()
+            self.waypoint_undock_seq()
+        statistics = getattr(self, "statistics", None)
+        if statistics is None:
+            return self._fsd_assist(scr_reg, expected_system)
+        destination = expected_system or self.nav_route.get_last_system()
+        statistics.begin_route(self.jn.ship_state(), destination)
+        try:
+            return self._fsd_assist(scr_reg, expected_system)
+        finally:
+            self.jn.ship_state()
+            statistics.end_route()
+
+    def _fsd_assist(self, scr_reg, expected_system: str | None = None) -> FsdAssistResult:
         # TODO - can we enable this? Seems like a better way
         # nav_route_parser = NavRouteParser()
         logger.debug("self.jn.ship_state=" + str(self.jn.ship_state()))
@@ -187,11 +203,6 @@ class AssistsMixin:
         # TODO - can we enable this? Seems like a better way
         # if nav_route_parser.get_last_system() is not None:
         aborted = False
-        if self.jn.ship_state()["target"]:
-            # if we are starting the waypoint docked at a station, we need to undock first
-            if self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
-                self.update_overlay()
-                self.waypoint_undock_seq()
 
         # Keep jumping as long as there is a system to jump to.
         # TODO - can we enable this? Seems like a better way
@@ -213,6 +224,10 @@ class AssistsMixin:
 
                 self.set_ap_status("Jump")
 
+                statistics = getattr(self, "statistics", None)
+                if statistics is not None:
+                    self.jn.ship_state()
+                    statistics.expect_jump()
                 if not self.jump(scr_reg):
                     aborted = True
                     break
