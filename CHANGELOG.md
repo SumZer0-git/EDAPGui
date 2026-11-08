@@ -60,6 +60,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The global waypoint shopping list now respects whether it is enabled.
 - Routes with no runnable waypoints no longer repeat indefinitely, and missing market-data updates no longer cause an endless wait.
 - Route travel no longer ends prematurely when a station destination remains after the final jump; the game's destination data determines whether local travel is needed.
+- Travel Assist no longer stops with "No local target found" after a route was cleared and re-plotted with the same next system; the system targeted in the game is used even when the journal reports no new jump target.
 - FSD retries realign before charging again, and target alignment accounts for configured ship turn rates to reduce overshooting.
 - Compass alignment no longer steers blindly when its target is unreadable or repeatedly pitches past targets at the compass rim.
 - Supercruise disengage detection continues when the target ring is lost or becomes an open arc near arrival.

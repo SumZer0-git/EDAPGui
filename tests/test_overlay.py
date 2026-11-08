@@ -537,18 +537,44 @@ class OverlayRenderingTests(unittest.TestCase):
         autopilot._overlay_route_systems = []
         autopilot._overlay_route_completed_at = None
 
-        self.assertEqual(
-            autopilot._get_overlay_route_progress({"location": "B", "system_address": 2}), ("on_route", 1, 2)
-        )
+        jumping = {"status": "starting_hyperspace", "location": "B", "system_address": 2}
+        self.assertEqual(autopilot._get_overlay_route_progress(jumping), ("on_route", 1, 2))
         # NavRouteClear arrives while the ship is still in the system before the destination.
-        self.assertEqual(
-            autopilot._get_overlay_route_progress({"location": "B", "system_address": 2}), ("on_route", 1, 2)
-        )
+        self.assertEqual(autopilot._get_overlay_route_progress(jumping), ("on_route", 1, 2))
         with patch("core.autopilot.monotonic", return_value=100.0):
             self.assertEqual(
-                autopilot._get_overlay_route_progress({"location": "C", "system_address": 3}), ("complete", 2, 2)
+                autopilot._get_overlay_route_progress(
+                    {"status": "in_supercruise", "location": "C", "system_address": 3}
+                ),
+                ("complete", 2, 2),
             )
         self.assertIsNone(autopilot._get_overlay_route_progress({"location": "X", "system_address": 9}))
+
+    def test_route_cleared_by_player_before_final_jump_is_hidden_at_once(self):
+        cleared = {"event": "NavRouteClear", "Route": []}
+        cases = {
+            "one-jump route at start": (["A", "B"], "A"),
+            "longer route at second-to-last system": (["A", "B", "C", "D"], "C"),
+        }
+        for name, (systems, location) in cases.items():
+            with self.subTest(name):
+                route = {"event": "NavRoute", "Route": [{"StarSystem": system} for system in systems]}
+                autopilot = EDAutopilot.__new__(EDAutopilot)
+                autopilot.nav_route = SimpleNamespace(get_nav_route_data=Mock(side_effect=[route, cleared, cleared]))
+                autopilot._overlay_route_active = False
+                autopilot._overlay_route_signature = ()
+                autopilot._overlay_route_systems = []
+                autopilot._overlay_route_completed_at = None
+                ship_state = {"status": "in_supercruise", "location": location, "system_address": None}
+
+                self.assertEqual(
+                    autopilot._get_overlay_route_progress(ship_state),
+                    ("on_route", len(systems) - 2, len(systems) - 1),
+                )
+                self.assertIsNone(autopilot._get_overlay_route_progress(ship_state))
+                # A later hyperspace jump must not bring the deleted route back.
+                ship_state["status"] = "starting_hyperspace"
+                self.assertIsNone(autopilot._get_overlay_route_progress(ship_state))
 
     def test_jump_line_is_hidden_without_a_plotted_route(self):
         autopilot = _make_route_overlay(

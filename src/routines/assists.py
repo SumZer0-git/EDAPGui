@@ -178,10 +178,30 @@ class AssistsMixin:
         self.ap_ckb("log", f"Could not confirm jump target {next_name}. Waypoint flight stopped.")
         return False
 
+    def jump_target(self) -> str | None:
+        """Return the targeted next system, or None when no other system is targeted."""
+        ship = self.jn.ship_state()
+        if ship["target"]:
+            return ship["target"]
+        # The game writes no new FSDTarget when a re-plotted route keeps the same next system,
+        # so a NavRouteClear can leave the journal without a target although one is selected.
+        status = self.status.get_cleaned_data()
+        address = status["Destination_System"]
+        name = status["Destination_Name"]
+        if type(address) is not int or address <= 0 or status["Destination_Body"] != 0 or not name:
+            return None
+        current_address = ship.get("system_address")
+        if current_address is not None:
+            if address == current_address:
+                return None
+        elif name.casefold() == (ship.get("location") or "").casefold():
+            return None
+        logger.debug(f"Jump target {name} taken from Status.json; the journal has no current FSDTarget.")
+        return name
+
     def fsd_assist(self, scr_reg, expected_system: str | None = None) -> FsdAssistResult:
         """FSD Route Assist."""
-        ship = self.jn.ship_state()
-        if ship["target"] and (self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded)):
+        if (self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded)) and self.jump_target():
             self.update_overlay()
             self.waypoint_undock_seq()
         statistics = getattr(self, "statistics", None)
@@ -210,7 +230,7 @@ class AssistsMixin:
         while (
             self.jn.ship_state()["cur_star_system"].casefold() != expected_system.casefold()
             if expected_system
-            else self.jn.ship_state()["target"]
+            else self.jump_target()
         ):
             self.update_overlay()
 
@@ -288,7 +308,7 @@ class AssistsMixin:
 
     def travel_assist(self, scr_reg):
         """Choose the required travel phase from the currently targeted system."""
-        if self.jn.ship_state()["target"]:
+        if self.jump_target():
             self.total_dist_jumped = 0
             result = self.fsd_assist(scr_reg)
             if result is FsdAssistResult.InSystemTarget and self.travel_assist_enabled:

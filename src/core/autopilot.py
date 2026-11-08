@@ -172,6 +172,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
     _overlay_last_frame = None
     _overlay_status = None
     _route_info_text = ""
+    _overlay_route_final_jump = False
     statistics = None
     _statistics_last_snapshot = None
 
@@ -380,6 +381,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         self._overlay_route_signature = ()
         self._overlay_route_systems = []
         self._overlay_route_completed_at = None
+        self._overlay_route_final_jump = False
         self.current_ship_type = None
         self.gui_loaded = False
 
@@ -539,6 +541,10 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
             self._overlay_route_completed_at = None
             return ("on_route", index, total)
 
+        if self._overlay_route_active:
+            # The game clears the route itself only after the final jump started; a clear without a
+            # running hyperspace jump was made by the player.
+            self._overlay_route_final_jump = ship_state.get("status") == "starting_hyperspace"
         self._overlay_route_active = False
         route = self._overlay_route_systems
         if len(route) < 2:
@@ -555,7 +561,7 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         )
         if not at_destination:
             # The game clears the route shortly after the final jump starts, before arrival.
-            if self._is_route_system(route[-2], current_address, current_name):
+            if self._overlay_route_final_jump and self._is_route_system(route[-2], current_address, current_name):
                 total = len(route) - 1
                 return ("on_route", total - 1, total)
             self._overlay_route_systems = []
