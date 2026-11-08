@@ -128,6 +128,10 @@ filled area; quadrilateral, size and fill checks still reject text-only areas an
 Tab navigation still requires one uniquely recognized, OCR-confirmed tab before sending a switch or action.
 The left tab capture includes the System icon when the panel appears slightly farther left.
 
+Occluded-target detection checks white and beige dashed rings with their existing color-specific match thresholds.
+If the normal-size template does not match, it also checks templates 5% smaller and larger to tolerate slight
+ring-size variation at the same screen resolution. Bright surfaces alone do not qualify as a ring.
+
 Compass marker fallback uses sphere-relative pixel areas for 1080p and 4K and checks both bright and dim,
 low-saturation markers. Hollow markers are preferred over filled charging glow; small antialiased ring centers
 are checked separately so a behind marker is not mistaken for an ahead dot. A rejected filled-template match

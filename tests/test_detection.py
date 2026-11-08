@@ -439,6 +439,32 @@ class TargetTestCase(MatchingTestCase):
 
         self.assertTrue(Detector().is_destination_occluded(regions))
 
+    def test_occluded_ring_tolerates_small_size_variations_in_white_and_beige(self):
+        for height in (1080, 2160):
+            templates = ImageTemplates(height)
+            template = templates.template["target_occluded"]["image"]
+            for scale in (0.95, 1.05):
+                ring = cv2.resize(template, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+                for hsv in ((0, 0, 240), (20, 100, 200)):
+                    with self.subTest(height=height, scale=scale, hsv=hsv):
+                        image = np.zeros((400, 400, 3), np.uint8)
+                        color = cv2.cvtColor(np.uint8([[hsv]]), cv2.COLOR_HSV2BGR)[0, 0]
+                        image[50 : 50 + ring.shape[0], 60 : 60 + ring.shape[1]][ring > 128] = color
+                        regions = ScreenRegions(FakeScreen(image), templates)
+                        detector = Detector()
+                        with patch.object(detector, "is_destination_hidden_ahead", return_value=False) as hidden:
+                            self.assertTrue(detector.is_destination_occluded(regions))
+                            hidden.assert_not_called()
+
+    def test_beige_surfaces_do_not_become_occluded_targets(self):
+        image = np.zeros((400, 400, 3), np.uint8)
+        color = cv2.cvtColor(np.uint8([[[20, 100, 200]]]), cv2.COLOR_HSV2BGR)[0, 0]
+        cv2.rectangle(image, (50, 50), (300, 300), color.tolist(), -1)
+        detector = Detector()
+        with patch.object(detector, "is_destination_hidden_ahead", return_value=False) as hidden:
+            self.assertFalse(detector.is_destination_occluded(ScreenRegions(FakeScreen(image), self.templates)))
+            hidden.assert_called_once()
+
 
 class DisengageTestCase(MatchingTestCase):
     def test_message_gate_diagnostics_are_debug_only(self):

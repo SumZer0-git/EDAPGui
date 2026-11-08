@@ -483,13 +483,30 @@ class DetectionMixin:
             logger.debug(f"Target is occluded ({maxVal:5.4f} > {scr_reg.target_occluded_thresh:5.2f})")
             return True
 
-        _, (_, tan_val, _, _), _ = scr_reg.match_template_in_region(
+        tan_image, (_, tan_val, _, _), _ = scr_reg.match_template_in_region(
             "target_occluded_tan", "target_occluded", inv_col=False
         )
         if tan_val > scr_reg.target_occluded_tan_thresh:
             logger.debug(f"Target is occluded, beige ring ({tan_val:5.4f} > {scr_reg.target_occluded_tan_thresh:5.2f})")
             return True
         logger.debug(f"Occluded ring scores: white {maxVal:5.4f}, beige {tan_val:5.4f}")
+
+        # Ring size varies slightly even at the same screen height; retain the color-specific thresholds.
+        template = scr_reg.templates.template["target_occluded"]["image"]
+        for scale in (0.95, 1.05):
+            resized = cv2.resize(template, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+            for image, threshold, color in (
+                (dst_image, scr_reg.target_occluded_thresh, "white"),
+                (tan_image, scr_reg.target_occluded_tan_thresh, "beige"),
+            ):
+                if image.shape[0] < resized.shape[0] or image.shape[1] < resized.shape[1]:
+                    continue
+                _, score, _, _ = cv2.minMaxLoc(cv2.matchTemplate(image, resized, cv2.TM_CCOEFF_NORMED))
+                if score > threshold:
+                    logger.debug(
+                        f"Target is occluded, {color} ring at scale {scale:.2f} ({score:.4f} > {threshold:.2f})"
+                    )
+                    return True
 
         return self.is_destination_hidden_ahead(scr_reg)
 
