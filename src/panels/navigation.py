@@ -78,7 +78,7 @@ class EDNavigationPanel:
             self.keys.send("UIFocus", state=0)
         overlay_enabled = self.ap.debug_overlay
         if overlay_enabled:
-            rect = self.screen.screen_rect_to_abs([0.11, 0.21, 0.70, 0.30])
+            rect = self.screen.screen_rect_to_abs([0.10, 0.21, 0.70, 0.30])
             self.ap.overlay.overlay_rect1("nav_panel_active", rect, (0, 255, 0), 2)
             self.ap.overlay.overlay_paint()
         try:
@@ -91,7 +91,7 @@ class EDNavigationPanel:
                 self.ap.overlay.overlay_paint()
 
     def _selected_tab(self) -> str | None:
-        region = {"rect": [0.11, 0.21, 0.70, 0.30]}
+        region = {"rect": [0.10, 0.21, 0.70, 0.30]}
         image = self.ocr.capture_region_pct(region)
         width, height = size_scale_for_station(35, 35, self.screen.screen_width, self.screen.screen_height)
         items = self.ocr.solid_highlighted_items(image, width, height)
@@ -103,7 +103,7 @@ class EDNavigationPanel:
             return None
         cropped, x, _y, w, h = items[0]
         center = region["rect"][0] + (x + w / 2) / self.screen.screen_width
-        if 0.115 <= center <= 0.15 and 0.7 <= w / h <= 1.4:
+        if 0.11 <= center <= 0.15 and 0.7 <= w / h <= 1.4:
             return "system"
         if cropped.shape[1] < width * 4:
             self._save_recognition_failure("tab", image)

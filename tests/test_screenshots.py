@@ -77,7 +77,7 @@ class NavigationPanelScreenshotTestCase(unittest.TestCase):
                     panel = EDNavigationPanel(Mock(ocr=ocr, locale=locale), screen, Mock(), Mock())
                 expected = path.stem.split("_")[2]
                 self.assertEqual(panel._selected_tab(), expected)
-                if expected == "navigation":
+                if expected == "navigation" and "tab-only" not in path.stem.split("_"):
                     destination = "NAV BEACON" if "nav-beacon" in path.stem.split("_") else "OHM CITY"
                     self.assertEqual(panel._selected_destination(), destination)
 
