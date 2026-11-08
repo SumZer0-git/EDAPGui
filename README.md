@@ -49,7 +49,7 @@ EDAPGui is a Windows autopilot for Elite Dangerous, offering optional assistance
   Contacts and carrier deposits require Inventory; an unconfirmed tab stops the action instead of sending blind inputs.
   English/German screenshot tests cover tab recognition for both HUD color schemes.
   Navigation-row recognition also handles long, narrow selected highlights.
-  Dim cockpit highlights use a bounded brightness fallback when normal highlight detection fails.
+  Dim cockpit highlights, including default-orange highlights, use a bounded brightness fallback when normal detection fails.
   Compass marker fallback handles dim HUD markers and hollow markers touching the compass rim,
   with size checks scaled to the compass sphere.
 
