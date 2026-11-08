@@ -18,6 +18,10 @@ def status(name="", body=-1):
     return {"Destination_System": "", "Destination_Name": name, "Destination_Body": body}
 
 
+def system_status(name, address):
+    return {"Destination_System": address, "Destination_Name": name, "Destination_Body": 0}
+
+
 class InSystemTargetTestCase(unittest.TestCase):
     def test_a_station_in_the_status_is_a_target_without_looking_at_the_compass(self):
         assists = Assists([])
@@ -232,6 +236,57 @@ class TravelAssistTestCase(unittest.TestCase):
 
         self.assists.sc_assist.assert_not_called()
 
+    def test_system_target_from_status_runs_fsd_route_without_journal_target(self):
+        # A re-plotted route with the same next system produces no new FSDTarget after NavRouteClear.
+        self.assists.jn.ship_state.return_value = {"target": None, "system_address": 1, "location": "Sol"}
+        self.assists.status.get_cleaned_data.return_value = system_status("Alpha Centauri", 2)
+        self.assists.fsd_assist.return_value = FsdAssistResult.RouteComplete
+
+        self.assists.travel_assist(None)
+
+        self.assists.fsd_assist.assert_called_once_with(None)
+        self.assists.ap_ckb.assert_not_called()
+
+
+class JumpTargetTestCase(unittest.TestCase):
+    def make_assists(self, ship, destination):
+        assists = Assists([])
+        assists.jn = Mock()
+        assists.jn.ship_state.return_value = ship
+        assists.status = Mock()
+        assists.status.get_cleaned_data.return_value = destination
+        return assists
+
+    def test_journal_target_is_preferred(self):
+        assists = self.make_assists({"target": "Arima"}, system_status("Alpha Centauri", 2))
+
+        self.assertEqual(assists.jump_target(), "Arima")
+        assists.status.get_cleaned_data.assert_not_called()
+
+    def test_other_system_in_status_is_used_without_journal_target(self):
+        assists = self.make_assists(
+            {"target": None, "system_address": 1, "location": "Sol"}, system_status("Alpha Centauri", 2)
+        )
+
+        self.assertEqual(assists.jump_target(), "Alpha Centauri")
+
+    def test_status_without_another_system_is_no_jump_target(self):
+        cases = {
+            "no destination": ({"target": None, "system_address": 1, "location": "Sol"}, status()),
+            "current system": ({"target": None, "system_address": 1, "location": "Sol"}, system_status("Sol", 1)),
+            "current system by name": (
+                {"target": None, "system_address": None, "location": "Sol"},
+                system_status("sol", 1),
+            ),
+            "local body": (
+                {"target": None, "system_address": 1, "location": "Sol"},
+                {"Destination_System": 1, "Destination_Name": "Abraham Lincoln", "Destination_Body": 12},
+            ),
+        }
+        for name, (ship, destination) in cases.items():
+            with self.subTest(name):
+                self.assertIsNone(self.make_assists(ship, destination).jump_target())
+
 
 class FsdAssistResultTestCase(unittest.TestCase):
     def make_assists(self):
@@ -287,6 +342,30 @@ class FsdAssistResultTestCase(unittest.TestCase):
             result = assists.fsd_assist(None)
 
         self.assertIs(result, FsdAssistResult.Failed)
+
+    def test_fsd_route_jumps_to_status_target_without_journal_target(self):
+        assists = self.make_assists()
+        ship = assists.jn.ship_state.return_value
+        ship.update({"target": None, "system_address": 1})
+        assists.config["FuelThreasholdAbortAP"] = 10
+        assists.status.get_cleaned_data.return_value = system_status("Arima", 2)
+
+        def arrive(_scr_reg):
+            ship["system_address"] = 2
+            ship["location"] = "Arima"
+            return True
+
+        assists.jump = Mock(side_effect=arrive)
+        assists.mnvr_to_target = Mock()
+        assists.refuel = Mock(return_value=False)
+        assists.position = Mock()
+        assists.honk = Mock()
+
+        with patch("routines.assists.sleep"):
+            result = assists.fsd_assist(None)
+
+        assists.jump.assert_called_once_with(None)
+        self.assertIs(result, FsdAssistResult.RouteComplete)
 
     def test_jump_to_system_accepts_station_bookmark_with_expected_nav_route(self):
         assists = self.make_assists()
