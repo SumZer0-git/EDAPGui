@@ -78,7 +78,8 @@ the currently focused window. A very wide field of view can also make target det
    [keybindings guide](docs/Keybindings.md); `fix_keybinds.bat` can fill missing bindings in a custom preset.
 4. In EDAPGui, set the roll, pitch, and yaw rates for the active ship. See the
    [ship tuning guide](docs/RollPitchYaw.md).
-5. Select an assist in the sidebar of the main window (only one assist runs at a time; **Stop All** stops it). The
+5. Select an assist in the sidebar of the main window (only one assist runs at a time; **Stop All** safely stops it,
+   including while the engine is waiting between actions). The
    default global hotkeys are **Home** (Travel Assist) and **End** (stop); change them in Settings if needed.
 
 The window is always dark and has a fixed size. The arrow at the bottom of the sidebar collapses it to a narrow icon

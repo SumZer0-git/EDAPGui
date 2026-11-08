@@ -888,9 +888,11 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
         #     if res is False:
         #         return False
 
-    # raising an exception to the engine loop thread, so we can terminate its execution
-    #  if thread was in a sleep, the exception seems to not be delivered
+    # Interrupt the engine loop so the active assist can stop promptly.
     def ctype_async_raise(self, thread_obj, exception):
+        if not thread_obj.is_alive():
+            return
+
         found = False
         target_tid = 0
         for tid, tobj in threading._active.items():
@@ -900,12 +902,12 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                 break
 
         if not found:
-            raise ValueError("Invalid thread object")
+            return
 
         ret = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(target_tid), ctypes.py_object(exception))
         # ref: http://docs.python.org/c-api/init.html#PyThreadState_SetAsyncExc
         if ret == 0:
-            raise ValueError("Invalid thread ID")
+            return
         elif ret > 1:
             # Huh? Why would we notify more than one threads?
             # Because we punch a hole into C level interpreter.
@@ -1031,7 +1033,10 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
     def engine_loop(self):
         while not self.terminate:
             if not self.refresh_game_language():
-                sleep(1)
+                try:
+                    sleep(1)
+                except EdapInterruptError:
+                    logger.debug("Caught stop exception while waiting for game language")
                 continue
             self._sc_sco_active_loop_enable = True
 
@@ -1159,7 +1164,10 @@ class EDAutopilot(ConfigMixin, DetectionMixin, FlightMixin, AssistsMixin):
                         # Reload templates
                         self.templ.reload_templates()
 
-            sleep(1)
+            try:
+                sleep(1)
+            except EdapInterruptError:
+                logger.debug("Caught stop exception while waiting for the next engine iteration")
 
     def ship_tst_pitch(self):
         """Performs a ship pitch test by pitching 360 degrees.

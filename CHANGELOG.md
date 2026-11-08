@@ -52,6 +52,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - Sidebar drag handling no longer logs callback errors when pointer movement arrives without an active drag.
+- Stopping an assist during engine polling no longer crashes the autopilot or prevents later stop requests.
 
 - Galaxy Map targeting no longer waits indefinitely when a route cannot be confirmed; it retries a limited number of times and then stops.
 - Waypoint market trades no longer submit a neighbouring commodity or assume success from key presses alone. The trade dialog is checked before submission, and only game-confirmed transactions reduce remaining quantities; unreadable dialogs receive one checked recovery attempt.
