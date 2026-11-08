@@ -24,7 +24,8 @@ EDAPGui is a Windows autopilot for Elite Dangerous, offering optional assistance
   target-only plot buttons. Station-name navigation
   uses name-column OCR when bookmarks are unavailable (no editor warning), selects the first exact name match without a full-list
   rescan, and confirms the selected tab for the standard orange and white/blue
-  HUD schemes. See the [waypoint guide](docs/Waypoint.md) for setup, usage and limitations.
+  HUD schemes. Rare goods held in cargo can be selected for sale even when the market reports zero demand.
+  See the [waypoint guide](docs/Waypoint.md) for setup, usage and limitations.
 - **Single Waypoint Assist** plots and travels to a system entered on the Debug tab.
 - **DSS Assist** runs a discovery scan when entering systems in supercruise.
 - **AFK Combat Assist** monitors shields and fighter status in a combat zone.

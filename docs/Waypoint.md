@@ -225,6 +225,7 @@ If the checks still fail, trading stops with a message.
 Requested trading also stops if market services or cargo information cannot be read.
 The route does not guarantee that a market exists or that the station trades your chosen goods.
 Cargo-dependent sell-list rows require a positive held quantity; zero-count inventory entries do not occupy a row.
+Rare goods held in cargo remain selectable even when the market reports zero demand and no consumer flag.
 After a journal-confirmed sale, the confirmed progress is saved before waiting up to 10 seconds for `Cargo.json`
 to show the expected remaining quantity. No further trade is selected while the cargo snapshot is stale. If the
 update cannot be verified, the assist stops without undoing the already confirmed progress.

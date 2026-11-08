@@ -153,7 +153,7 @@ class MarketParser:
             and (
                 x["Consumer"]
                 or (
-                    (x["Demand"] > 1 or x["Demand"])
+                    (x["Demand"] > 0 or x["Rare"])
                     and (cargo_parser.get_item_by_commodity_id(str(x.get("id", ""))) or {}).get("Count", 0) > 0
                 )
             )

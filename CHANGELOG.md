@@ -57,6 +57,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Galaxy Map targeting no longer waits indefinitely when a route cannot be confirmed; it retries a limited number of times and then stops.
 - Waypoint market trades no longer submit a neighbouring commodity or assume success from key presses alone. The trade dialog is checked before submission, and only game-confirmed transactions reduce remaining quantities; unreadable dialogs receive one checked recovery attempt.
 - Station-market sales are capped by available cargo. Missing goods are skipped without reducing the request, while unreadable cargo stops trading. After each confirmed sale, updated cargo is required before further trades so removed rows do not shift the next commodity selection.
+- Rare goods held in cargo, such as Soontill Relics, are no longer omitted from the sell list when the market reports zero demand and no consumer flag.
 - Waypoint trading no longer reports success without trading after restarting while docked. Missing market services stop the trade, and station-services detection supports both German and English headers.
 - The global waypoint shopping list now respects whether it is enabled.
 - Routes with no runnable waypoints no longer repeat indefinitely, and missing market-data updates no longer cause an endless wait.

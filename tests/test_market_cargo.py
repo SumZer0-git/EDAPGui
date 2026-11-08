@@ -134,6 +134,24 @@ class MarketParserTestCase(TempFileTestCase):
         names = [item["Name_Localised"] for item in self.parser.get_sellable_items(cargo)]
         self.assertEqual(names, ["Water"])
 
+    def test_rare_cargo_with_no_demand_is_in_the_sell_list(self):
+        self.parser.current_data["Items"].append(
+            market_item("Soontill Relics", "Consumer items", id=128668018, Rare=True)
+        )
+        for count in (70, 0):
+            with self.subTest(count=count):
+                cargo = CargoParser(
+                    file_path=str(
+                        write_json(
+                            self.dir / "Cargo.json",
+                            {"Inventory": [{"Name": "soontillrelics", "Count": count}]},
+                        )
+                    )
+                )
+                self.assertTrue(self.parser.can_sell_item("128668018"))
+                names = [item["Name_Localised"] for item in self.parser.get_sellable_items(cargo)]
+                self.assertEqual(names, ["Water", "Soontill Relics"] if count else ["Water"])
+
     def test_delayed_sale_snapshot_removes_row_before_selecting_next_commodity(self):
         self.parser.current_data["Items"] = [
             market_item("Polymers", "Industrial materials", id=128049197, Demand=1),
