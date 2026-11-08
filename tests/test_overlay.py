@@ -1224,5 +1224,47 @@ class OverlayRenderingTests(unittest.TestCase):
         autopilot.overlay.overlay_progress_bar.assert_not_called()
 
 
+class EngineLoopInterruptTests(unittest.TestCase):
+    def test_idle_polling_interrupts_do_not_terminate_engine_loop(self):
+        for language_ready in (False, True):
+            with self.subTest(language_ready=language_ready):
+                autopilot = EDAutopilot.__new__(EDAutopilot)
+                autopilot.terminate = False
+                autopilot.refresh_game_language = Mock(return_value=language_ready)
+                autopilot._sc_sco_active_loop_thread = Mock(is_alive=Mock(return_value=True))
+                autopilot.gui_loaded = False
+                autopilot.travel_assist_enabled = False
+                autopilot.waypoint_assist_enabled = False
+                autopilot.afk_combat_assist_enabled = False
+                autopilot.dss_assist_enabled = False
+                autopilot.single_waypoint_enabled = False
+                autopilot.update_overlay = Mock()
+
+                sleep_calls = 0
+
+                def interrupt_once(_seconds):
+                    nonlocal sleep_calls
+                    sleep_calls += 1
+                    if sleep_calls == 1:
+                        raise EdapInterruptError
+                    autopilot.terminate = True
+
+                with patch("core.autopilot.sleep", side_effect=interrupt_once):
+                    autopilot.engine_loop()
+
+                self.assertEqual(sleep_calls, 2)
+
+    def test_stopping_assist_after_engine_thread_exits_is_safe(self):
+        autopilot = EDAutopilot.__new__(EDAutopilot)
+        autopilot.ap_thread = Mock(is_alive=Mock(return_value=False))
+        autopilot.travel_assist_enabled = True
+        autopilot._end_statistics_assist = Mock()
+
+        autopilot.set_travel_assist(False)
+
+        autopilot._end_statistics_assist.assert_called_once_with()
+        self.assertFalse(autopilot.travel_assist_enabled)
+
+
 if __name__ == "__main__":
     unittest.main()

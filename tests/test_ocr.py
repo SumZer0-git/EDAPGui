@@ -36,12 +36,19 @@ class HighlightTestCase(unittest.TestCase):
     def test_dim_slanted_highlight_is_selected_without_selecting_inactive_tabs(self):
         ocr = HIGHLIGHT_OCR.__new__(HIGHLIGHT_OCR)
         for scale in (1, 2):
-            for value in (170, 195, 207, 255):
-                with self.subTest(scale=scale, value=value):
+            for color in (
+                (146, 146, 146),
+                (170, 170, 170),
+                (195, 195, 195),
+                (207, 207, 207),
+                (255, 255, 255),
+                (0, 135, 225),
+            ):
+                with self.subTest(scale=scale, color=color):
                     image = np.zeros((100 * scale, 600 * scale, 3), np.uint8)
                     cv2.rectangle(image, (320 * scale, 20 * scale), (590 * scale, 65 * scale), (65, 65, 65), -1)
                     polygon = np.array([[20, 35], [290, 20], [290, 65], [20, 80]], np.int32) * scale
-                    cv2.fillConvexPoly(image, polygon, (value, value, value))
+                    cv2.fillConvexPoly(image, polygon, color)
                     cv2.putText(
                         image,
                         "NAVIGATION",
@@ -59,7 +66,7 @@ class HighlightTestCase(unittest.TestCase):
 
     def test_dim_text_lines_and_hollow_highlights_are_not_selected(self):
         ocr = HIGHLIGHT_OCR.__new__(HIGHLIGHT_OCR)
-        for value in (170, 207, 255):
+        for value in (146, 170, 207, 255):
             with self.subTest(value=value):
                 image = np.zeros((100, 600, 3), np.uint8)
                 cv2.rectangle(image, (20, 20), (290, 80), (value, value, value), 3)
@@ -69,9 +76,11 @@ class HighlightTestCase(unittest.TestCase):
     def test_dark_inactive_tabs_are_not_highlights_and_multiple_highlights_stay_ambiguous(self):
         ocr = HIGHLIGHT_OCR.__new__(HIGHLIGHT_OCR)
         image = np.zeros((100, 600, 3), np.uint8)
-        for x in (20, 320):
-            cv2.rectangle(image, (x, 20), (x + 260, 80), (100, 100, 100), -1)
-        self.assertEqual(ocr.solid_highlighted_items(image, 35, 35), [])
+        for value in (100, 139):
+            with self.subTest(inactive_value=value):
+                for x in (20, 320):
+                    cv2.rectangle(image, (x, 20), (x + 260, 80), (value,) * 3, -1)
+                self.assertEqual(ocr.solid_highlighted_items(image, 35, 35), [])
         for x in (20, 320):
             cv2.rectangle(image, (x, 20), (x + 260, 80), (207, 207, 207), -1)
         self.assertEqual(len(ocr.solid_highlighted_items(image, 35, 35)), 2)
@@ -93,9 +102,49 @@ class HighlightTestCase(unittest.TestCase):
         self.assertLess(items[0][1], 100)
         self.assertGreater(items[0][3], 250)
 
+    def test_local_default_orange_highlight_is_extracted(self):
+        path = (
+            paths.ROOT
+            / "tests"
+            / "fixtures"
+            / "screenshots"
+            / "2160p"
+            / "128_crop_cockpit-left-tab-orange_sdr-hud70_en.png"
+        )
+        if not path.exists():
+            self.skipTest("local default-orange navigation crop unavailable")
+        image = cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_COLOR)
+        items = HIGHLIGHT_OCR.__new__(HIGHLIGHT_OCR).solid_highlighted_items(image, 70, 70)
+        self.assertEqual(len(items), 1)
+        self.assertLess(items[0][1], 50)
+        self.assertGreater(items[0][3], 450)
+
 
 @unittest.skipIf(OCR is None, "PaddleOCR is not installed")
 class OCRTestCase(unittest.TestCase):
+    def test_local_default_orange_tab_is_confirmed_with_real_ocr(self):
+        path = (
+            paths.ROOT
+            / "tests"
+            / "fixtures"
+            / "screenshots"
+            / "2160p"
+            / "128_crop_cockpit-left-tab-orange_sdr-hud70_en.png"
+        )
+        if not path.exists():
+            self.skipTest("local default-orange navigation crop unavailable")
+        from i18n.localization import LocalizationManager
+        from panels.navigation import EDNavigationPanel
+
+        image = cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_COLOR)
+        panel = EDNavigationPanel.__new__(EDNavigationPanel)
+        panel.screen = Mock(screen_width=3840, screen_height=2160)
+        panel.locale = LocalizationManager(str(paths.LOCALES_DIR), "en")
+        panel.ocr = OCR(screen=None)
+        panel.ocr.capture_region_pct = Mock(return_value=image)
+        with patch.object(panel, "_save_recognition_failure"):
+            self.assertEqual(panel._selected_tab(), "navigation")
+
     def test_local_dim_navigation_tab_is_confirmed_with_real_ocr(self):
         path = (
             paths.ROOT

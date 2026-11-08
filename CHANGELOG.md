@@ -41,7 +41,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Combined FSD Route Assist and Supercruise Assist into Travel Assist, which follows the system route and continues to a selected local destination when one remains.
 - The footer and overlay show the same current assist status, with more detailed flight phases and route progress. The GUI log retains status history and additional user messages.
 - Updated screen recognition for German/English HUD text, HDR/SDR colors, bright scenes, different compass sizes and targets hidden behind planets. Native 2160p templates scale automatically to other resolutions, replacing manual calibration. Compass fallback also handles dim markers with sphere-relative size checks and distinguishes small hollow markers touching the compass rim from charging glow.
-- Cockpit panel navigation confirms each tab change instead of relying on counted key presses and recognizes dim selected highlights at reduced HUD brightness. Docking and carrier deposits stop if Contacts or Inventory cannot be confirmed, without requiring a particular starting tab.
+- Cockpit panel navigation confirms each tab change instead of relying on counted key presses and recognizes dim selected highlights at reduced HUD brightness, including the default-orange HUD. Docking and carrier deposits stop if Contacts or Inventory cannot be confirmed, without requiring a particular starting tab.
 - Supercruise travel uses 75% throttle once aligned; alignment and recovery use 50%. The **Set Speed to 75%** binding is required and can be added with `fix_keybinds.bat`.
 - Updated keybinding detection to follow the active game preset and reduce duplicate or harmless collision warnings.
 - Runtime files, including downloaded OCR models in `user_data/cache/paddlex/`, are stored in `user_data/`; launching through `start_ed_ap.bat` remains unchanged. Manual launches now use `python src/main.py`. Models are downloaded again on first use at the new location; existing user-profile caches remain untouched.
@@ -52,6 +52,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - Sidebar drag handling no longer logs callback errors when pointer movement arrives without an active drag.
+- Stopping an assist during engine polling no longer crashes the autopilot or prevents later stop requests.
 
 - Galaxy Map targeting no longer waits indefinitely when a route cannot be confirmed; it retries a limited number of times and then stops.
 - Waypoint market trades no longer submit a neighbouring commodity or assume success from key presses alone. The trade dialog is checked before submission, and only game-confirmed transactions reduce remaining quantities; unreadable dialogs receive one checked recovery attempt.

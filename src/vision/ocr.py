@@ -154,8 +154,8 @@ class OCR:
             return items
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         separation, _ = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-        # Keep dark inactive tabs out, but allow selected backgrounds dimmed by the HUD.
-        threshold = max(150, min(210, int(separation) + 1))
+        # Default-orange highlights can fall below gray 150 even at 70% HUD brightness.
+        threshold = max(140, min(210, int(separation) + 1))
         if threshold == 210:
             return []
         return self._highlighted_quadrilaterals(image, min_w, min_h, threshold, remove_thin_lines)

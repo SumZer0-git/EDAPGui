@@ -120,7 +120,9 @@ include `user_data/stats/` in an external backup for that protection.
 
 Cockpit tab and navigation-row recognition first checks the existing bright filled highlights, including
 thin-line removal. If neither check finds a highlight, a bounded adaptive brightness threshold separates
-dim selected backgrounds from dark inactive tabs. The same threshold validates the rectified highlight's
+dim selected backgrounds from dark inactive tabs, including default-orange highlights below grayscale 150.
+The fallback threshold stays between 140 and 210; it does not lower the normal bright-highlight threshold.
+The same threshold validates the rectified highlight's
 filled area; quadrilateral, size and fill checks still reject text-only areas and hollow outlines.
 Tab navigation still requires one uniquely recognized, OCR-confirmed tab before sending a switch or action.
 
