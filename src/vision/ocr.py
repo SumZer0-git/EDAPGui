@@ -145,9 +145,24 @@ class OCR:
         return None, 0, 0
 
     def solid_highlighted_items(self, image, min_w, min_h, *, remove_thin_lines=False):
-        """Extract bright filled quadrilaterals without including neighboring slanted rows."""
+        """Extract filled highlights with bounded brightness adaptation and perspective correction."""
         image = image[:, :, :3]
-        mask = cv2.inRange(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 210, 255)
+        items = self._highlighted_quadrilaterals(image, min_w, min_h, 210, remove_thin_lines)
+        if not items and not remove_thin_lines:
+            items = self._highlighted_quadrilaterals(image, min_w, min_h, 210, True)
+        if items:
+            return items
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        separation, _ = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+        # Keep dark inactive tabs out, but allow selected backgrounds dimmed by the HUD.
+        threshold = max(150, min(210, int(separation) + 1))
+        if threshold == 210:
+            return []
+        return self._highlighted_quadrilaterals(image, min_w, min_h, threshold, remove_thin_lines)
+
+    @staticmethod
+    def _highlighted_quadrilaterals(image, min_w, min_h, threshold, remove_thin_lines):
+        mask = cv2.inRange(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), threshold, 255)
         if remove_thin_lines:
             # Holographic HUD lines can connect an otherwise solid highlight to its surroundings.
             kernel_size = max(1, round(min_h * 0.08)) | 1
@@ -188,7 +203,7 @@ class OCR:
             destination = np.array([[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]], np.float32)
             transform = cv2.getPerspectiveTransform(corners, destination)
             cropped = cv2.warpPerspective(image, transform, (width, height))
-            filled = cv2.inRange(cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY), 210, 255)
+            filled = cv2.inRange(cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY), threshold, 255)
             # Dense dark tab lettering can occupy almost half of a filled highlight.
             if cv2.countNonZero(filled) < width * height * 0.5:
                 continue
