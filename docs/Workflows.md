@@ -120,11 +120,13 @@ include `user_data/stats/` in an external backup for that protection.
 
 Cockpit tab and navigation-row recognition first checks the existing bright filled highlights, including
 thin-line removal. If neither check finds a highlight, a bounded adaptive brightness threshold separates
-dim selected backgrounds from dark inactive tabs, including default-orange highlights below grayscale 150.
-The fallback threshold stays between 140 and 210; it does not lower the normal bright-highlight threshold.
-The same threshold validates the rectified highlight's
+dim selected backgrounds from dark inactive tabs. The fallback uses HSV value (the brightest color channel),
+so shaded default-orange highlights are not rejected merely because their grayscale luminance is low.
+Its threshold stays between 140 and 210; it does not lower the normal bright-highlight threshold.
+The same brightness measure and threshold validate the rectified highlight's
 filled area; quadrilateral, size and fill checks still reject text-only areas and hollow outlines.
 Tab navigation still requires one uniquely recognized, OCR-confirmed tab before sending a switch or action.
+The left tab capture includes the System icon when the panel appears slightly farther left.
 
 Compass marker fallback uses sphere-relative pixel areas for 1080p and 4K and checks both bright and dim,
 low-saturation markers. Hollow markers are preferred over filled charging glow; small antialiased ring centers

@@ -33,6 +33,30 @@ else:
 
 
 class HighlightTestCase(unittest.TestCase):
+    def test_system_tab_near_the_left_edge_is_not_clipped(self):
+        from panels.navigation import EDNavigationPanel
+        from tests.helpers import ScreenshotScreen
+
+        for height in (1080, 2160):
+            with self.subTest(height=height):
+                width = height * 16 // 9
+                image = np.zeros((height, width, 3), np.uint8)
+                cv2.rectangle(
+                    image,
+                    (round(width * 0.103), round(height * 0.224)),
+                    (round(width * 0.126), round(height * 0.260)),
+                    (0, 120, 210),
+                    -1,
+                )
+                screen = ScreenshotScreen(image)
+                panel = EDNavigationPanel.__new__(EDNavigationPanel)
+                panel.screen = screen
+                panel.ocr = HIGHLIGHT_OCR.__new__(HIGHLIGHT_OCR)
+                panel.ocr.screen = screen
+                panel.ocr.image_simple_ocr = Mock()
+                self.assertEqual(panel._selected_tab(), "system")
+                panel.ocr.image_simple_ocr.assert_not_called()
+
     def test_dim_slanted_highlight_is_selected_without_selecting_inactive_tabs(self):
         ocr = HIGHLIGHT_OCR.__new__(HIGHLIGHT_OCR)
         for scale in (1, 2):
@@ -43,6 +67,9 @@ class HighlightTestCase(unittest.TestCase):
                 (207, 207, 207),
                 (255, 255, 255),
                 (0, 135, 225),
+                (0, 120, 210),
+                (0, 100, 180),
+                (180, 100, 0),
             ):
                 with self.subTest(scale=scale, color=color):
                     image = np.zeros((100 * scale, 600 * scale, 3), np.uint8)
@@ -66,12 +93,35 @@ class HighlightTestCase(unittest.TestCase):
 
     def test_dim_text_lines_and_hollow_highlights_are_not_selected(self):
         ocr = HIGHLIGHT_OCR.__new__(HIGHLIGHT_OCR)
-        for value in (146, 170, 207, 255):
-            with self.subTest(value=value):
+        for color in ((146,) * 3, (170,) * 3, (207,) * 3, (255,) * 3, (0, 120, 210)):
+            with self.subTest(color=color):
                 image = np.zeros((100, 600, 3), np.uint8)
-                cv2.rectangle(image, (20, 20), (290, 80), (value, value, value), 3)
-                cv2.putText(image, "CONTACTS", (320, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (value,) * 3, 2)
+                cv2.rectangle(image, (20, 20), (290, 80), color, 3)
+                cv2.putText(image, "CONTACTS", (320, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
                 self.assertEqual(ocr.solid_highlighted_items(image, 35, 35), [])
+
+    def test_shaded_orange_highlight_uses_value_without_lowering_the_brightness_floor(self):
+        ocr = HIGHLIGHT_OCR.__new__(HIGHLIGHT_OCR)
+        for scale in (1, 2):
+            with self.subTest(scale=scale):
+                image = np.zeros((100 * scale, 600 * scale, 3), np.uint8)
+                for y in range(20 * scale, 80 * scale):
+                    color = (0, 110 + y // (3 * scale), 200 + y // (4 * scale))
+                    image[y, 20 * scale : 290 * scale] = color
+                image[20 * scale : 80 * scale, 320 * scale : 590 * scale] = (0, 70, 139)
+                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                self.assertLess(int(gray.max()), 150)
+                items = ocr.solid_highlighted_items(image, 35 * scale, 35 * scale)
+                self.assertEqual(len(items), 1)
+                self.assertLess(items[0][1], 30 * scale)
+
+    def test_bright_highlight_retains_priority_over_saturated_fallback(self):
+        image = np.zeros((100, 600, 3), np.uint8)
+        image[20:80, 20:290] = (255, 255, 255)
+        image[20:80, 320:590] = (0, 120, 210)
+        items = HIGHLIGHT_OCR.__new__(HIGHLIGHT_OCR).solid_highlighted_items(image, 35, 35)
+        self.assertEqual(len(items), 1)
+        self.assertLess(items[0][1], 30)
 
     def test_dark_inactive_tabs_are_not_highlights_and_multiple_highlights_stay_ambiguous(self):
         ocr = HIGHLIGHT_OCR.__new__(HIGHLIGHT_OCR)
