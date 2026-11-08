@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import cv2
@@ -15,12 +16,109 @@ from core import paths
 
 try:
     from vision.ocr import OCR
-except ImportError:  # PaddleOCR is not installed (slim CI)
+except ModuleNotFoundError as error:
+    if error.name != "paddleocr":
+        raise
     OCR = None
+
+if OCR is None:
+    sys.modules["paddleocr"] = SimpleNamespace(PaddleOCR=None)
+    try:
+        from vision.ocr import OCR as HIGHLIGHT_OCR
+    finally:
+        del sys.modules["paddleocr"]
+        sys.modules.pop("vision.ocr", None)
+else:
+    HIGHLIGHT_OCR = OCR
+
+
+class HighlightTestCase(unittest.TestCase):
+    def test_dim_slanted_highlight_is_selected_without_selecting_inactive_tabs(self):
+        ocr = HIGHLIGHT_OCR.__new__(HIGHLIGHT_OCR)
+        for scale in (1, 2):
+            for value in (170, 195, 207, 255):
+                with self.subTest(scale=scale, value=value):
+                    image = np.zeros((100 * scale, 600 * scale, 3), np.uint8)
+                    cv2.rectangle(image, (320 * scale, 20 * scale), (590 * scale, 65 * scale), (65, 65, 65), -1)
+                    polygon = np.array([[20, 35], [290, 20], [290, 65], [20, 80]], np.int32) * scale
+                    cv2.fillConvexPoly(image, polygon, (value, value, value))
+                    cv2.putText(
+                        image,
+                        "NAVIGATION",
+                        (45 * scale, 58 * scale),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6 * scale,
+                        (0, 40, 100),
+                        2 * scale,
+                    )
+                    before = image.copy()
+                    items = ocr.solid_highlighted_items(image, 35 * scale, 35 * scale)
+                    self.assertEqual(len(items), 1)
+                    self.assertLess(items[0][1], 30 * scale)
+                    np.testing.assert_array_equal(image, before)
+
+    def test_dim_text_lines_and_hollow_highlights_are_not_selected(self):
+        ocr = HIGHLIGHT_OCR.__new__(HIGHLIGHT_OCR)
+        for value in (170, 207, 255):
+            with self.subTest(value=value):
+                image = np.zeros((100, 600, 3), np.uint8)
+                cv2.rectangle(image, (20, 20), (290, 80), (value, value, value), 3)
+                cv2.putText(image, "CONTACTS", (320, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (value,) * 3, 2)
+                self.assertEqual(ocr.solid_highlighted_items(image, 35, 35), [])
+
+    def test_dark_inactive_tabs_are_not_highlights_and_multiple_highlights_stay_ambiguous(self):
+        ocr = HIGHLIGHT_OCR.__new__(HIGHLIGHT_OCR)
+        image = np.zeros((100, 600, 3), np.uint8)
+        for x in (20, 320):
+            cv2.rectangle(image, (x, 20), (x + 260, 80), (100, 100, 100), -1)
+        self.assertEqual(ocr.solid_highlighted_items(image, 35, 35), [])
+        for x in (20, 320):
+            cv2.rectangle(image, (x, 20), (x + 260, 80), (207, 207, 207), -1)
+        self.assertEqual(len(ocr.solid_highlighted_items(image, 35, 35)), 2)
+
+    def test_local_dim_navigation_highlight_is_extracted(self):
+        path = (
+            paths.ROOT
+            / "tests"
+            / "fixtures"
+            / "screenshots"
+            / "1080p"
+            / "31_crop_cockpit-left-tab-dim_sdr-hud50_de.png"
+        )
+        if not path.exists():
+            self.skipTest("local dim navigation crop unavailable")
+        image = cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_COLOR)
+        items = HIGHLIGHT_OCR.__new__(HIGHLIGHT_OCR).solid_highlighted_items(image, 35, 35)
+        self.assertEqual(len(items), 1)
+        self.assertLess(items[0][1], 100)
+        self.assertGreater(items[0][3], 250)
 
 
 @unittest.skipIf(OCR is None, "PaddleOCR is not installed")
 class OCRTestCase(unittest.TestCase):
+    def test_local_dim_navigation_tab_is_confirmed_with_real_ocr(self):
+        path = (
+            paths.ROOT
+            / "tests"
+            / "fixtures"
+            / "screenshots"
+            / "1080p"
+            / "31_crop_cockpit-left-tab-dim_sdr-hud50_de.png"
+        )
+        if not path.exists():
+            self.skipTest("local dim navigation crop unavailable")
+        from i18n.localization import LocalizationManager
+        from panels.navigation import EDNavigationPanel
+
+        image = cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_COLOR)
+        panel = EDNavigationPanel.__new__(EDNavigationPanel)
+        panel.screen = Mock(screen_width=1920, screen_height=1080)
+        panel.locale = LocalizationManager(str(paths.LOCALES_DIR), "de")
+        panel.ocr = OCR(screen=None)
+        panel.ocr.capture_region_pct = Mock(return_value=image)
+        with patch.object(panel, "_save_recognition_failure"):
+            self.assertEqual(panel._selected_tab(), "navigation")
+
     def test_simple_ocr(self):
         """Simple check of OCR to bring back text of a known image."""
         ocr = OCR(screen=None)

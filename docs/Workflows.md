@@ -118,6 +118,12 @@ include `user_data/stats/` in an external backup for that protection.
 
 ### Vision diagnostics
 
+Cockpit tab and navigation-row recognition first checks the existing bright filled highlights, including
+thin-line removal. If neither check finds a highlight, a bounded adaptive brightness threshold separates
+dim selected backgrounds from dark inactive tabs. The same threshold validates the rectified highlight's
+filled area; quadrilateral, size and fill checks still reject text-only areas and hollow outlines.
+Tab navigation still requires one uniquely recognized, OCR-confirmed tab before sending a switch or action.
+
 Compass marker fallback uses sphere-relative pixel areas for 1080p and 4K and checks both bright and dim,
 low-saturation markers. Hollow markers are preferred over filled charging glow; small antialiased ring centers
 are checked separately so a behind marker is not mistaken for an ahead dot. A rejected filled-template match
